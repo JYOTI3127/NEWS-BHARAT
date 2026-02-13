@@ -1,0 +1,519 @@
+/* ═══════════════════════════════════════════════════════════════
+   NEWS4BHARAT — Navbar Styles
+   Import in Navbar.jsx: import './Navbar.css';
+═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&family=Playfair+Display:wght@700&family=Source+Sans+3:wght@400;600&display=swap');
+
+/* ── Reset ──────────────────────────────────────────────────── */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Root Variables ─────────────────────────────────────────── */
+:root {
+    --orange: #f97316;
+    --orange-dark: #b45309;
+    --orange-hover: rgba(249, 115, 22, 0.15);
+    --red: #ef4444;
+    --red-dark: #dc2626;
+    --red-deeper: #b91c1c;
+    --green: #22c55e;
+    --navy-dark: #0f172a;
+    --navy-mid: #1e1b4b;
+    --white: #e2e8f0;
+    --muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.15);
+    --border-light: rgba(255, 255, 255, 0.06);
+    --border-orange: rgba(249, 115, 22, 0.3);
+    --border-gold: rgba(234, 179, 8, 0.2);
+    --gold-bg: rgba(234, 179, 8, 0.08);
+    --pill-bg: rgba(255, 255, 255, 0.06);
+    --pill-border: rgba(255, 255, 255, 0.1);
+    --overlay: rgba(0, 0, 0, 0.2);
+    --font-main: 'Source Sans 3', sans-serif;
+}
+
+/* ════════════════════════════════════════════════════════════
+   HEADER WRAPPER
+════════════════════════════════════════════════════════════ */
+.n4b-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    font-family: var(--font-main);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Global Header Background ───────────────────────────── */
+.n4b-header-bg {
+    background: white;
+    border-bottom: 1px solid var(--border-orange);
+}
+
+/* ── Header Top Row ─────────────────────────────────────── */
+.n4b-header-row {
+    max-width: 1211px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Logo ───────────────────────────────────────────────── */
+.n4b-logo-wrap {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.n4b-logo-img {
+    height: 44px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* ── Vertical Divider ───────────────────────────────────── */
+.n4b-divider-v {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+/* ── Date & Time ────────────────────────────────────────── */
+.n4b-date-time {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+.n4b-date-text {
+    color: var(--red-dark);
+    font-size: 11px;
+}
+
+.n4b-time-text {
+    color: black;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Weather ────────────────────────────────────────────── */
+.n4b-weather-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.n4b-weather-icon {
+    font-size: 18px;
+}
+
+.n4b-weather-city {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.n4b-weather-temp {
+    color: var(--orange);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* ── Pills (Markets) ────────────────────────────────────── */
+.n4b-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--pill-bg);
+    border: 1px solid var(--pill-border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    flex-shrink: 0;
+}
+
+/* ── Metal Pills (Gold / Silver) ────────────────────────── */
+.n4b-metal-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--gold-bg);
+    border: 1px solid var(--border-gold);
+    border-radius: 6px;
+    padding: 3px 10px;
+    flex-shrink: 0;
+}
+
+.n4b-metal-icon {
+    font-size: 13px;
+}
+
+.n4b-pill-label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.n4b-pill-value {
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.n4b-pill-change {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.n4b-pill-change--up {
+    color: var(--green);
+}
+
+.n4b-pill-change--down {
+    color: var(--red);
+}
+
+/* ── Spacer ─────────────────────────────────────────────── */
+.n4b-spacer {
+    flex: 1;
+}
+
+/* ── Search Bar ─────────────────────────────────────────── */
+.n4b-search-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.n4b-search-input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--red-dark);
+    border-radius: 20px;
+    color: black;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: var(--font-main);
+    outline: none;
+    width: 200px;
+    transition: all 0.3s;
+}
+
+.n4b-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.n4b-search-input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--orange);
+    width: 260px;
+}
+
+/* ── Generic Button ─────────────────────────────────────── */
+.n4b-btn {
+    background: transparent;
+    border: 1px solid red;
+    color: var(--red-dark);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.n4b-btn:hover {
+    background: var(--orange-hover);
+    border-color: var(--red-dark);
+    color: var(--orange);
+}
+
+/* ── Temp Toggle Button ─────────────────────────────────── */
+.n4b-temp-toggle {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+/* ── Live Buttons ───────────────────────────────────────── */
+.n4b-live-btn {
+    background: var(--red);
+    border: none;
+    color: #fff;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s;
+    animation: pulseBadge 1.8s infinite;
+}
+
+.n4b-live-btn:hover {
+    background: var(--red-dark);
+}
+
+.n4b-live-btn--news {
+    background: var(--red-deeper);
+}
+
+.n4b-live-btn--news:hover {
+    background: var(--red-dark);
+}
+
+.n4b-live-dot {
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MARKETS ROW
+════════════════════════════════════════════════════════════ */
+.n4b-markets-row {
+    background: var(--overlay);
+    border-top: 1px solid var(--border-light);
+}
+
+.n4b-markets-inner {
+    max-width: 1400px;
+    padding: 4px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.n4b-markets-label {
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+/* ════════════════════════════════════════════════════════════
+   TICKER BAR
+════════════════════════════════════════════════════════════ */
+.n4b-ticker-outer {
+    background: var(--orange);
+    overflow: hidden;
+}
+
+.n4b-ticker-container {
+    max-width: 1400px;
+
+}
+
+.n4b-ticker {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    overflow: hidden;
+}
+
+.n4b-ticker-label {
+    background: var(--orange-dark);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 0 10px;
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.n4b-ticker-track {
+    flex: 1;
+    overflow: hidden;
+}
+
+.n4b-ticker-inner {
+    display: inline-flex;
+    animation: tickerScroll 30s linear infinite;
+    white-space: nowrap;
+}
+
+.n4b-ticker-item {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 8px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   PRIMARY NAVIGATION BAR
+════════════════════════════════════════════════════════════ */
+.n4b-navbar {
+    background: linear-gradient(90deg, var(--navy-mid) 0%, var(--navy-dark) 100%);
+    border-bottom: 3px solid var(--orange);
+}
+
+.n4b-navbar-inner {
+    max-width: 1400px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+}
+
+/* ── Nav Links ──────────────────────────────────────────── */
+.n4b-nav-scroll {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.n4b-nav-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.n4b-nav-link {
+    color: var(--white);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s;
+    font-family: var(--font-main);
+}
+
+.n4b-nav-link:hover {
+    color: var(--orange);
+}
+
+.n4b-nav-link.active {
+    color: var(--orange);
+}
+
+.n4b-nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background: var(--orange);
+    border-radius: 2px;
+}
+
+/* ── Live Badge ─────────────────────────────────────────── */
+.n4b-badge {
+    background: var(--red);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    animation: pulseBadge 1.5s infinite;
+}
+
+/* ── Hamburger (Mobile) ─────────────────────────────────── */
+.n4b-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   ANIMATIONS
+════════════════════════════════════════════════════════════ */
+@keyframes pulseBadge {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes tickerScroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════════ */
+
+/* Tablet */
+@media (max-width: 900px) {
+    .n4b-header-row {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .n4b-markets-row {
+        display: none;
+    }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .n4b-header-row {
+        gap: 4px;
+    }
+
+    .n4b-date-time {
+        display: none;
+    }
+
+    .n4b-search-wrap {
+        display: none;
+    }
+}
+
+/* Mobile Nav */
+@media (max-width: 768px) {
+    .n4b-hamburger {
+        display: flex;
+    }
+
+    .n4b-nav-scroll {
+        display: none;
+    }
+
+    .n4b-nav-scroll.open {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .n4b-nav-link {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .n4b-nav-link.active::after {
+        display: none;
+    }
+}

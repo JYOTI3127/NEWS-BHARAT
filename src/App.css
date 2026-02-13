@@ -141,131 +141,6 @@ body {
   color: var(--border-color);
 }
 
-/* ============================================
-   5. NAVBAR
-   ============================================ */
-.navbar {
-  background: var(--bg-white);
-  border-bottom: 3px solid var(--primary-black);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  box-shadow: 0 2px 10px var(--shadow);
-}
-
-.navbar-container {
-  width: 1250px;
-  padding: 1.2rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-}
-
-
-.navbar-logo {
-  display: flex;
-  align-items: center;
-}
-
-.logo-img , .footer-logo {
-  width: 235px; 
-  height: auto;
-  cursor: pointer;
-}
-.footer-logo {
-  width: 100px; 
-  height: auto;
-  cursor: pointer;
-}
-
-
-
-.nav-links {
-  display: flex;
-  list-style: none;
-  gap: 2rem;
-  align-items: center;
-}
-
-.nav-links a {
-  color: var(--text-primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  position: relative;
-  transition: color 0.3s ease;
-}
-
-.nav-links a::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--accent-red);
-  transition: width 0.3s ease;
-}
-
-.nav-links a:hover::after,
-.nav-links a.active::after {
-  width: 100%;
-}
-
-.nav-links a:hover,
-.nav-links a.active {
-  color: var(--accent-red);
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.search-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  transition: transform 0.2s ease;
-}
-
-.search-btn:hover {
-  transform: scale(1.1);
-}
-
-.subscribe-btn {
-  background: var(--accent-red);
-  color: white;
-  border: none;
-  padding: 0.7rem 1.5rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.subscribe-btn:hover {
-  background: var(--primary-black);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
-}
-
-.menu-toggle {
-  display: none;
-  background: transparent;
-  border: none;
-  font-size: 1.8rem;
-  cursor: pointer;
-  color: var(--primary-black);
-}
 
 /* ============================================
    6. BREAKING NEWS TICKER
@@ -916,6 +791,13 @@ body {
   margin-top: 4rem;
 }
 
+.footer-logo {
+  width: 100px; 
+  height: auto;
+  cursor: pointer;
+}
+
+
 .footer-container {
   max-width: var(--container-width);
   padding: 0 2rem 3rem;
@@ -1056,120 +938,10 @@ body {
    12. RESPONSIVE DESIGN - MOBILE & TABLET
    ============================================ */
 
-/* Tablet */
-@media (max-width: 1024px) {
-  /* Navbar */
-  .nav-links {
-    gap: 1.5rem;
-  }
-  
-  .nav-links a {
-    font-size: 0.85rem;
-  }
-  
-  /* News Grid */
-  .news-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .news-card.featured {
-    grid-column: span 2;
-    grid-row: span 1;
-  }
-  
-  .news-card.featured .card-image {
-    height: 300px;
-  }
-  
-  /* Trending */
-  .trending-container {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-  }
-  
-  /* Categories */
-  .categories-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  /* Footer */
-  .footer-container {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  
-  .footer-section:first-child {
-    grid-column: span 3;
-  }
-  
-  .newsletter {
-    grid-column: span 3;
-  }
-}
-
 /* Mobile */
 @media (max-width: 768px) {
   :root {
     --section-padding: 2rem 1rem;
-  }
-  
-  /* Utilities */
-  .section-header {
-    padding: 0 1rem;
-  }
-  
-  .section-header h2 {
-    font-size: 1.8rem;
-  }
-  
-  /* Navbar */
-  .navbar-container {
-    padding: 1rem;
-  }
-  
-  .navbar-logo h1 {
-    font-size: 1.8rem;
-  }
-  
-  .menu-toggle {
-    display: block;
-  }
-  
-  .nav-links {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--bg-white);
-    flex-direction: column;
-    gap: 0;
-    padding: 1rem 0;
-    border-bottom: 3px solid var(--primary-black);
-    transform: translateY(-100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s ease;
-  }
-  
-  .nav-links.active {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: all;
-  }
-  
-  .nav-links li {
-    width: 100%;
-    text-align: center;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--bg-gray);
-  }
-  
-  .nav-actions {
-    gap: 0.5rem;
-  }
-  
-  .subscribe-btn {
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
   }
   
   /* Breaking News */

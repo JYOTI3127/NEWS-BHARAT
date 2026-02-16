@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import logo from "../assets/NEWS4BHARAT LOGO.png";
+import logo from "../assets/NEWS4BHARAT LOGO.png"; // tumhara circular NB logo
 import '../Navbar.css';
+import { WiDayCloudy, WiDaySunny, WiRain, WiCloudy } from "react-icons/wi";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
+// Live clock
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -14,40 +14,50 @@ function useLiveClock() {
 }
 
 const MOCK_DATA = {
-  weather: { city: 'Delhi', tempC: 24, tempF: 75, condition: '⛅' },
-  gold:    { rate: '₹71,450', change: '+0.3%', up: true },
-  silver:  { rate: '₹88,200', change: '-0.1%', up: false },
-  sensex:  { value: '73,845', change: '+312', up: true },
-  nifty:   { value: '22,430', change: '+95',  up: true },
-  usd_inr: { value: '83.42',  change: '-0.05', up: false },
+  weather: { city: 'Delhi', tempC: 24, condition: 'cloudy' },
+  gold: { rate: '₹71,450', change: '+0.3%', up: true },
+  silver: { rate: '₹88,200', change: '-0.1%', up: false },
+  sensex: { value: '73,845', change: '+312', up: true },
+  nifty: { value: '22,430', change: '+95', up: true },
+  usd_inr: { value: '83.42', change: '-0.05', up: false },
+  breakingEN: "PM Modi unveils naming of 'Seva Nidhi Bhavan'",
+  breakingHI: "PM मोदी ने 'सेवा निधि' भवन के नामकरण का अनावरण किया",
+};
+
+const getWeatherIcon = (cond) => {
+  const c = cond.toLowerCase();
+  if (c.includes('sunny')) return <WiDaySunny size={20} color="#f9c74f" />;
+  if (c.includes('cloud')) return <WiDayCloudy size={20} color="#90dbf4" />;
+  if (c.includes('rain')) return <WiRain size={20} color="#4dabf7" />;
+  return <WiCloudy size={20} color="#adb5bd" />;
 };
 
 const NAV_LINKS = [
-  { label: 'Home',          href: '#home' },
+  { label: 'Home', href: '#home' },
   { label: 'Breaking News', href: '#breaking', badge: 'LIVE' },
-  { label: 'India',         href: '#india' },
-  { label: 'World',         href: '#world' },
-  { label: 'Business',      href: '#business' },
-  { label: 'Markets',       href: '#markets' },
+  { label: 'India', href: '#india' },
+  { label: 'World', href: '#world' },
+  { label: 'Business', href: '#business' },
+  { label: 'Markets', href: '#markets' },
   { label: 'Gold & Silver', href: '#gold' },
-  { label: 'Weather',       href: '#weather' },
-  { label: 'Sports',        href: '#sports' },
+  { label: 'Weather', href: '#weather' },
+  { label: 'Sports', href: '#sports' },
   { label: 'Entertainment', href: '#entertainment' },
-  { label: 'Technology',    href: '#technology' },
-  { label: 'Opinion',       href: '#opinion' },
-  { label: 'Videos',        href: '#videos' },
-  { label: 'Sponsored',     href: '#sponsored' },
+  { label: 'Technology', href: '#technology' },
+  { label: 'Opinion', href: '#opinion' },
+  { label: 'Videos', href: '#videos' },
+  { label: 'Sponsored', href: '#sponsored' },
 ];
 
-// ─── Hindi Translations ──────────────────────────────────────────────────────
-function translateLabel(label) {
+const translate = (label, lang) => {
+  if (lang !== 'HI') return label;
   const map = {
     'Home': 'होम',
     'Breaking News': 'ब्रेकिंग न्यूज़',
     'India': 'भारत',
     'World': 'विश्व',
     'Business': 'व्यापार',
-    'Markets': 'बाजार',
+    'Markets': 'बाज़ार',
     'Gold & Silver': 'सोना-चांदी',
     'Weather': 'मौसम',
     'Sports': 'खेल',
@@ -58,216 +68,130 @@ function translateLabel(label) {
     'Sponsored': 'प्रायोजित',
   };
   return map[label] || label;
+};
+
+function MarketPill({ label, value, change, up }) {
+  return (
+    <span className="pill market-pill">
+      {label} {value} <span className={up ? 'up' : 'down'}>{up ? '▲' : '▼'}{change}</span>
+    </span>
+  );
 }
 
-// ─── Ticker ──────────────────────────────────────────────────────────────────
-function Ticker({ items }) {
+function MetalPill({ label, rate, change, up }) {
   return (
-    <div className="n4b-ticker">
-      <span className="n4b-ticker-label">LIVE</span>
-      <div className="n4b-ticker-track">
-        <div className="n4b-ticker-inner">
-          {[...items, ...items].map((item, i) => (
-            <span key={i} className="n4b-ticker-item">
-              {item}&nbsp;&nbsp;●&nbsp;&nbsp;
-            </span>
-          ))}
-        </div>
-      </div>
+    <span className="pill metal-pill">
+      {label} {rate} <span className={up ? 'up' : 'down'}>{up ? '▲' : '▼'}{change}</span>
+    </span>
+  );
+}
+
+function BreakingBanner({ text, lang, onClose }) {
+  return (
+    <div className="breaking-banner">
+      <span className="banner-label">{lang === 'HI' ? 'ब्रेकिंग न्यूज़' : 'BREAKING NEWS'}</span>
+      <span className="banner-text">{text}</span>
+      <button className="banner-close" onClick={onClose}>×</button>
     </div>
   );
 }
 
-// ─── Market Pill ─────────────────────────────────────────────────────────────
-function MarketPill({ label, value, change, up }) {
-  return (
-    <span className="n4b-pill">
-      <span className="n4b-pill-label">{label}</span>
-      <span className="n4b-pill-value">{value}</span>
-      <span className={`n4b-pill-change ${up ? 'n4b-pill-change--up' : 'n4b-pill-change--down'}`}>
-        {up ? '▲' : '▼'} {change}
-      </span>
-    </span>
-  );
-}
-
-// ─── Metal Pill ──────────────────────────────────────────────────────────────
-function MetalPill({ label, rate, change, up }) {
-  return (
-    <span className="n4b-metal-pill">
-      <span className="n4b-metal-icon">{label === 'Gold' ? '🥇' : '🥈'}</span>
-      <span className="n4b-pill-label">{label}</span>
-      <span className="n4b-pill-value">{rate}</span>
-      <span className={`n4b-pill-change ${up ? 'n4b-pill-change--up' : 'n4b-pill-change--down'}`}>
-        {up ? '▲' : '▼'} {change}
-      </span>
-    </span>
-  );
-}
-
-// ─── Main Navbar ─────────────────────────────────────────────────────────────
-function Navbar() {
+export default function Navbar() {
   const now = useLiveClock();
-  const [isCelsius, setIsCelsius]   = useState(true);
-  const [lang, setLang]             = useState('EN');
-  const [search, setSearch]         = useState('');
-  const [menuOpen, setMenuOpen]     = useState(false);
-  const [activeLink, setActiveLink] = useState('#home');
+  const [lang, setLang] = useState('EN');
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showBreaking, setShowBreaking] = useState(true);
 
-  const { weather, gold, silver, sensex, nifty, usd_inr } = MOCK_DATA;
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 120); // ~120px ke baad hide ticker & breaking
+      if (window.scrollY > 120) setShowBreaking(false);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const dateStr = now.toLocaleDateString(lang === 'HI' ? 'hi-IN' : 'en-IN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-  const timeStr = now.toLocaleTimeString(lang === 'HI' ? 'hi-IN' : 'en-IN', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  });
+  const dateTime = now.toLocaleString(lang === 'HI' ? 'hi-IN' : 'en-IN', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
+  }).toUpperCase();
 
-  const temp = isCelsius ? `${weather.tempC}°C` : `${weather.tempF}°F`;
-
-  const tickerItems = [
-    `Sensex ${sensex.value} (${sensex.change})`,
-    `Nifty ${nifty.value} (${nifty.change})`,
-    `USD/INR ${usd_inr.value}`,
-    `Gold ${gold.rate}  ${gold.change}`,
-    `Silver ${silver.rate}  ${silver.change}`,
-    `${weather.city}: ${temp} ${weather.condition}`,
-  ];
+  const breakingText = lang === 'HI' ? MOCK_DATA.breakingHI : MOCK_DATA.breakingEN;
 
   return (
-    <header className="n4b-header">
+    <header className={`n4b-header ${scrolled ? 'scrolled' : ''}`}>
+      {/* Top Ticker - hide on scroll */}
+      {!scrolled && (
+        <div className="ticker-bar">
+          <div className="ticker-inner">
+            <span className="markets-label">Markets :</span>
+            <MarketPill label="Sensex" {...MOCK_DATA.sensex} />
+            <MarketPill label="Nifty 50" {...MOCK_DATA.nifty} />
+            <MarketPill label="USD/INR" {...MOCK_DATA.usd_inr} />
 
-      {/* ══ GLOBAL HEADER (Section 18.1) ══ */}
-      <div className="n4b-header-bg">
+            <div className="ticker-right">
+              <span className="date-time">{dateTime}</span>
+              <button className="lang-btn" onClick={() => setLang(lang === 'EN' ? 'HI' : 'EN')}>
+                {lang === 'EN' ? 'हिंदी' : 'English'}
+              </button>
+              <button className="live-btn">Live TV</button>
+              <button className="live-btn">E-Paper</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {/* Top Row */}
-        <div className="n4b-header-row">
-
-          {/* Logo → Home */}
-          <a href="#home" className="n4b-logo-wrap">
-            <img src={logo} alt="News4Bharat" className="n4b-logo-img" />
+      {/* Main Bar with Logo, Search (hide on scroll), Metals */}
+      <div className="main-header">
+        <div className="header-container">
+          <a href="#home" className="logo-link">
+            <img src={logo} alt="NEWS4BHARAT" className={`main-logo ${scrolled ? 'scrolled-logo' : ''}`} />
           </a>
 
-          <div className="n4b-divider-v" />
+          {!scrolled && (
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder={lang === 'HI' ? 'खोजें...' : 'Search news...'}
+                className="search-input"
+              />
+            </div>
+          )}
 
-          {/* Date & Time */}
-          <div className="n4b-date-time">
-            <span className="n4b-date-text">{dateStr}</span>
-            <span className="n4b-time-text">{timeStr}</span>
+          <div className="metals-container">
+            <MetalPill label="GOLD" {...MOCK_DATA.gold} />
+            <MetalPill label="SILVER" {...MOCK_DATA.silver} />
           </div>
-
-          <div className="n4b-divider-v" />
-
-          {/* Weather + Toggle */}
-          <div className="n4b-weather-wrap">
-            <span className="n4b-weather-icon">{weather.condition}</span>
-            <span className="n4b-weather-city">{weather.city}</span>
-            <span className="n4b-weather-temp">{temp}</span>
-            <button
-              className="n4b-btn n4b-temp-toggle"
-              onClick={() => setIsCelsius(!isCelsius)}
-            >
-              °{isCelsius ? 'F' : 'C'}
-            </button>
-          </div>
-
-          <div className="n4b-divider-v" />
-
-          {/* Gold & Silver */}
-          <MetalPill label="Gold"   rate={gold.rate}   change={gold.change}   up={gold.up} />
-          <MetalPill label="Silver" rate={silver.rate} change={silver.change} up={silver.up} />
-
-          <div className="n4b-spacer" />
-
-          {/* Search Bar */}
-          <div className="n4b-search-wrap">
-            <input
-              className="n4b-search-input"
-              type="text"
-              placeholder={lang === 'HI' ? 'खोजें...' : 'Search news...'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="n4b-divider-v" />
-
-          {/* Language Switcher */}
-          <button
-            className="n4b-btn"
-            onClick={() => setLang(l => l === 'EN' ? 'HI' : 'EN')}
-          >
-            {lang === 'EN' ? '🇮🇳 हिंदी' : '🇬🇧 English'}
-          </button>
-
-          <div className="n4b-divider-v" />
-
-          {/* Live TV */}
-          <button className="n4b-live-btn">
-            <span className="n4b-live-dot">●</span>
-            {lang === 'HI' ? 'लाइव TV' : 'Live TV'}
-          </button>
-
-          {/* Live News */}
-          <button className="n4b-live-btn n4b-live-btn--news">
-            <span className="n4b-live-dot">●</span>
-            {lang === 'HI' ? 'लाइव न्यूज़' : 'Live News'}
-          </button>
-
-        </div>
-
-        {/* Markets Row */}
-        <div className="n4b-markets-row">
-          <div className="n4b-markets-inner">
-            <span className="n4b-markets-label">📈 Markets</span>
-            <MarketPill label="Sensex"   value={sensex.value}         change={sensex.change}  up={sensex.up} />
-            <MarketPill label="Nifty 50" value={nifty.value}          change={nifty.change}   up={nifty.up} />
-            <MarketPill label="USD/INR"  value={`₹${usd_inr.value}`} change={usd_inr.change} up={usd_inr.up} />
-          </div>
-        </div>
-
-      </div>
-
-      {/* ══ TICKER BAR ══ */}
-      <div className="n4b-ticker-outer">
-        <div className="n4b-ticker-container">
-          <Ticker items={tickerItems} />
         </div>
       </div>
 
-      {/* ══ PRIMARY NAV BAR (Section 18.2) ══ */}
-      <nav className="n4b-navbar">
-        <div className="n4b-navbar-inner">
+      {/* Red Breaking Banner - hide on scroll */}
+      {!scrolled && showBreaking && (
+        <BreakingBanner text={breakingText} lang={lang} onClose={() => setShowBreaking(false)} />
+      )}
 
-          {/* Hamburger – mobile only */}
-          <button
-            className="n4b-hamburger"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
-          >
+      {/* Sticky Blue Nav */}
+      <nav className="blue-navbar">
+        <div className="nav-container">
+          <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? '✕' : '☰'}
           </button>
 
-          {/* Nav Links */}
-          <div className={`n4b-nav-scroll ${menuOpen ? 'open' : ''}`}>
-            {NAV_LINKS.map(link => (
+          <div className={`nav-menu ${menuOpen ? 'menu-open' : ''}`}>
+            {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className={`n4b-nav-link ${activeLink === link.href ? 'active' : ''}`}
-                onClick={() => { setActiveLink(link.href); setMenuOpen(false); }}
+                className="nav-link"
+                onClick={() => setMenuOpen(false)}
               >
-                {lang === 'HI' ? translateLabel(link.label) : link.label}
-                {link.badge && <span className="n4b-badge">{link.badge}</span>}
+                {translate(link.label, lang)}
+                {link.badge && <span className="nav-badge">{link.badge}</span>}
               </a>
             ))}
           </div>
-
         </div>
       </nav>
-
     </header>
   );
 }
-
-export default Navbar;

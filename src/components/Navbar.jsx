@@ -1,197 +1,345 @@
-import React, { useState, useEffect } from 'react';
-import logo from "../assets/NEWS4BHARAT LOGO.png"; // tumhara circular NB logo
-import '../Navbar.css';
-import { WiDayCloudy, WiDaySunny, WiRain, WiCloudy } from "react-icons/wi";
+import { useState, useEffect } from "react";
+import logoBig from "../assets/NEWS4BHARAT LOGO 2.png";
+import logoSmall from "../assets/NEWS4BHARAT.png";
 
-// Live clock
-function useLiveClock() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
+import {
+  BarChart2,
+  Search,
+  Mic,
+  Menu,
+  X,
+  Radio,
+  FileText,
+  TrendingUp,
+  TrendingDown,
+  ChevronDown,
+  Flame,
+  Globe,
+  Trophy,
+  Cpu,
+  Film,
+  Heart,
+  PenLine,
+  Zap,
+  GraduationCap,
+  Leaf,
+  Video,
+  Camera,
+  MoreHorizontal,
+  Newspaper,
+} from "lucide-react";
+import "../Navbar.css";
 
-const MOCK_DATA = {
-  weather: { city: 'Delhi', tempC: 24, condition: 'cloudy' },
-  gold: { rate: '₹71,450', change: '+0.3%', up: true },
-  silver: { rate: '₹88,200', change: '-0.1%', up: false },
-  sensex: { value: '73,845', change: '+312', up: true },
-  nifty: { value: '22,430', change: '+95', up: true },
-  usd_inr: { value: '83.42', change: '-0.05', up: false },
-  breakingEN: "PM Modi unveils naming of 'Seva Nidhi Bhavan'",
-  breakingHI: "PM मोदी ने 'सेवा निधि' भवन के नामकरण का अनावरण किया",
-};
-
-const getWeatherIcon = (cond) => {
-  const c = cond.toLowerCase();
-  if (c.includes('sunny')) return <WiDaySunny size={20} color="#f9c74f" />;
-  if (c.includes('cloud')) return <WiDayCloudy size={20} color="#90dbf4" />;
-  if (c.includes('rain')) return <WiRain size={20} color="#4dabf7" />;
-  return <WiCloudy size={20} color="#adb5bd" />;
-};
-
-const NAV_LINKS = [
-  { label: 'Home', href: '#home' },
-  { label: 'Breaking News', href: '#breaking', badge: 'LIVE' },
-  { label: 'India', href: '#india' },
-  { label: 'World', href: '#world' },
-  { label: 'Business', href: '#business' },
-  { label: 'Markets', href: '#markets' },
-  { label: 'Gold & Silver', href: '#gold' },
-  { label: 'Weather', href: '#weather' },
-  { label: 'Sports', href: '#sports' },
-  { label: 'Entertainment', href: '#entertainment' },
-  { label: 'Technology', href: '#technology' },
-  { label: 'Opinion', href: '#opinion' },
-  { label: 'Videos', href: '#videos' },
-  { label: 'Sponsored', href: '#sponsored' },
+// ── Nav Drawer Sections ───────────────────────────────────────
+const NAV_SECTIONS = [
+  {
+    label: "TOP STORIES",
+    Icon: Flame,
+    links: ["Breaking News", "Latest Updates", "Most Read", "Editor's Pick", "Trending Now"],
+  },
+  {
+    label: "INDIA",
+    Icon: Newspaper,
+    links: ["National", "Politics", "Economy", "Law & Order", "States", "Delhi", "Mumbai"],
+  },
+  {
+    label: "WORLD",
+    Icon: Globe,
+    links: ["South Asia", "Middle East", "USA & Canada", "Europe", "China", "UK", "Africa"],
+  },
+  {
+    label: "BUSINESS",
+    Icon: TrendingUp,
+    links: ["Markets", "Stocks & Sensex", "Real Estate", "Banking", "Startups", "Budget", "Trade"],
+  },
+  {
+    label: "SPORTS",
+    Icon: Trophy,
+    links: ["Cricket", "Football", "Hockey", "Tennis", "IPL", "Olympics", "Athletics"],
+  },
+  {
+    label: "TECHNOLOGY",
+    Icon: Cpu,
+    links: ["AI & Machine Learning", "Mobile & Gadgets", "Cybersecurity", "Social Media", "Space Tech"],
+  },
+  {
+    label: "ENTERTAINMENT",
+    Icon: Film,
+    links: ["Bollywood", "Hollywood", "OTT", "Music", "TV Shows", "Celebrity News", "Reviews"],
+  },
+  {
+    label: "HEALTH",
+    Icon: Heart,
+    links: ["COVID Updates", "Mental Health", "Nutrition", "Fitness", "Medical Research"],
+  },
+  {
+    label: "OPINION",
+    Icon: PenLine,
+    links: ["Editorials", "Columns", "Analysis", "Letters", "Fact Check"],
+  },
+  {
+    label: "LIFESTYLE",
+    Icon: Zap,
+    links: ["Fashion", "Food & Recipes", "Travel", "Parenting", "Home & Decor"],
+  },
+  {
+    label: "EDUCATION",
+    Icon: GraduationCap,
+    links: ["Higher Education", "School News", "Results & Exams", "Scholarships", "Study Abroad"],
+  },
+  {
+    label: "ENVIRONMENT",
+    Icon: Leaf,
+    links: ["Climate Change", "Natural Disasters", "Conservation", "Pollution", "Water Crisis"],
+  },
+  {
+    label: "VIDEOS",
+    Icon: Video,
+    links: ["Live TV", "News Clips", "Documentaries", "Interviews", "Press Conferences"],
+  },
+  {
+    label: "PHOTOS",
+    Icon: Camera,
+    links: ["Photo Stories", "In Focus", "Galleries", "Infographics"],
+  },
+  {
+    label: "GOLD & SILVER",
+    Icon: TrendingUp,
+    links: ["Gold Rates", "Silver Rates", "Commodities", "MCX", "Bullion News"],
+  },
+  {
+    label: "MORE",
+    Icon: MoreHorizontal,
+    links: ["Weather", "Horoscope", "Science", "Archives", "About Us", "Contact", "Advertise", "Newsletter"],
+  },
 ];
 
-const translate = (label, lang) => {
-  if (lang !== 'HI') return label;
-  const map = {
-    'Home': 'होम',
-    'Breaking News': 'ब्रेकिंग न्यूज़',
-    'India': 'भारत',
-    'World': 'विश्व',
-    'Business': 'व्यापार',
-    'Markets': 'बाज़ार',
-    'Gold & Silver': 'सोना-चांदी',
-    'Weather': 'मौसम',
-    'Sports': 'खेल',
-    'Entertainment': 'मनोरंजन',
-    'Technology': 'तकनीक',
-    'Opinion': 'राय',
-    'Videos': 'वीडियो',
-    'Sponsored': 'प्रायोजित',
-  };
-  return map[label] || label;
-};
+// ── Logos ─────────────────────────────────────────────────────
+const LogoFull = () => (
+  <div className="logo-full">
+    <img src={logoBig} alt="News4Bharat Logo" />
+  </div>
+);
 
-function MarketPill({ label, value, change, up }) {
-  return (
-    <span className="pill market-pill">
-      {label} {value} <span className={up ? 'up' : 'down'}>{up ? '▲' : '▼'}{change}</span>
-    </span>
-  );
-}
+const LogoScroll = () => (
+  <div className="logo-scroll">
+    <img src={logoSmall} alt="News4Bharat Logo Small" />
+  </div>
+);
 
-function MetalPill({ label, rate, change, up }) {
-  return (
-    <span className="pill metal-pill">
-      {label} {rate} <span className={up ? 'up' : 'down'}>{up ? '▲' : '▼'}{change}</span>
-    </span>
-  );
-}
+// ── navLinks ──────────────────────────────────────────────────
+const navLinks = [
+  "Home", "Breaking News", "India", "World", "Business",
+  "Markets", "Gold & Silver", "Weather", "Sports",
+  "Entertainment", "Technology", "Opinion", "Videos",
+];
 
-function BreakingBanner({ text, lang, onClose }) {
-  return (
-    <div className="breaking-banner">
-      <span className="banner-label">{lang === 'HI' ? 'ब्रेकिंग न्यूज़' : 'BREAKING NEWS'}</span>
-      <span className="banner-text">{text}</span>
-      <button className="banner-close" onClick={onClose}>×</button>
-    </div>
-  );
-}
-
-export default function Navbar() {
-  const now = useLiveClock();
-  const [lang, setLang] = useState('EN');
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showBreaking, setShowBreaking] = useState(true);
+// ── Header Component ──────────────────────────────────────────
+const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 120); // ~120px ke baad hide ticker & breaking
-      if (window.scrollY > 120) setShowBreaking(false);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 0);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const dateTime = now.toLocaleString(lang === 'HI' ? 'hi-IN' : 'en-IN', {
-    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
-  }).toUpperCase();
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
 
-  const breakingText = lang === 'HI' ? MOCK_DATA.breakingHI : MOCK_DATA.breakingEN;
+  const toggleSection = (label) =>
+    setExpandedSection((prev) => (prev === label ? null : label));
 
   return (
-    <header className={`n4b-header ${scrolled ? 'scrolled' : ''}`}>
-      {/* Top Ticker - hide on scroll */}
-      {!scrolled && (
-        <div className="ticker-bar">
-          <div className="ticker-inner">
-            <span className="markets-label">Markets :</span>
-            <MarketPill label="Sensex" {...MOCK_DATA.sensex} />
-            <MarketPill label="Nifty 50" {...MOCK_DATA.nifty} />
-            <MarketPill label="USD/INR" {...MOCK_DATA.usd_inr} />
+    <>
+      {/* ── DRAWER OVERLAY ── */}
+      <div
+        className={`drawer-overlay${isOpen ? " open" : ""}`}
+        onClick={() => setIsOpen(false)}
+      />
 
-            <div className="ticker-right">
-              <span className="date-time">{dateTime}</span>
-              <button className="lang-btn" onClick={() => setLang(lang === 'EN' ? 'HI' : 'EN')}>
-                {lang === 'EN' ? 'हिंदी' : 'English'}
-              </button>
-              <button className="live-btn">Live TV</button>
-              <button className="live-btn">E-Paper</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── DRAWER ── */}
+      <aside className={`nav-drawer${isOpen ? " open" : ""}`}>
 
-      {/* Main Bar with Logo, Search (hide on scroll), Metals */}
-      <div className="main-header">
-        <div className="header-container">
-          <a href="#home" className="logo-link">
-            <img src={logo} alt="NEWS4BHARAT" className={`main-logo ${scrolled ? 'scrolled-logo' : ''}`} />
-          </a>
-
-          {!scrolled && (
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder={lang === 'HI' ? 'खोजें...' : 'Search news...'}
-                className="search-input"
-              />
-            </div>
-          )}
-
-          <div className="metals-container">
-            <MetalPill label="GOLD" {...MOCK_DATA.gold} />
-            <MetalPill label="SILVER" {...MOCK_DATA.silver} />
-          </div>
-        </div>
-      </div>
-
-      {/* Red Breaking Banner - hide on scroll */}
-      {!scrolled && showBreaking && (
-        <BreakingBanner text={breakingText} lang={lang} onClose={() => setShowBreaking(false)} />
-      )}
-
-      {/* Sticky Blue Nav */}
-      <nav className="blue-navbar">
-        <div className="nav-container">
-          <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? '✕' : '☰'}
+        {/* Drawer Header */}
+        <div className="drawer-head">
+          <button className="drawer-close" onClick={() => setIsOpen(false)} aria-label="Close menu"> X
+            <X size={16} color="white" />
           </button>
+        </div>
 
-          <div className={`nav-menu ${menuOpen ? 'menu-open' : ''}`}>
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="nav-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                {translate(link.label, lang)}
-                {link.badge && <span className="nav-badge">{link.badge}</span>}
-              </a>
+        {/* Live Ticker */}
+        <div className="drawer-ticker">
+          <span className="drawer-live-badge">LIVE</span>
+          Breaking: Sensex surges 600 pts — RBI holds repo rate steady
+        </div>
+
+        {/* Search */}
+        <div className="drawer-search-wrap">
+          <div className="drawer-search-box">
+            <Search size={14} color="#aa9988" />
+            <input type="text" placeholder="Search news, topics..." />
+          </div>
+        </div>
+
+        {/* Sections */}
+        <div className="drawer-scroll">
+          {NAV_SECTIONS.map(({ label, Icon, links }) => {
+            const expanded = expandedSection === label;
+            return (
+              <div className="drawer-section" key={label}>
+                <div
+                  className="drawer-section-head"
+                  onClick={() => toggleSection(label)}
+                >
+                  <span className="drawer-section-label">
+                    <Icon size={15} color="#D80100" strokeWidth={2} />
+                    {label}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    color="#aa9977"
+                    style={{
+                      transition: "transform 0.24s ease",
+                      transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                    }}
+                  />
+                </div>
+                <div className={`drawer-sub-links${expanded ? " open" : ""}`}>
+                  {links.map((link) => (
+                    <a
+                      key={link}
+                      href="#"
+                      className="drawer-sub-link"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      {link}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="drawer-foot">
+          <div className="drawer-foot-title">Quick Access</div>
+          <div className="drawer-foot-pills">
+            {["E-Paper", "Live TV", "Newsletter", "Podcast", "App", "RSS"].map((t) => (
+              <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
         </div>
-      </nav>
-    </header>
+      </aside>
+
+      {/* ── MAIN HEADER ── */}
+      <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
+
+        {/* TOP TICKER BAR */}
+        <div className="ticker-bar">
+          <div className="ticker-left">
+            <BarChart2 size={14} className="ticker-icon" />
+            <span className="ticker-label">Markets :</span>
+            <span className="ticker-item">
+              Sensex <strong>73,845</strong>
+              <span className="up"><TrendingUp size={11} /> +303</span>
+            </span>
+            <span className="ticker-sep">|</span>
+            <span className="ticker-item">
+              Nifty 50 <strong>22,430</strong>
+              <span className="up"><TrendingUp size={11} /> +35</span>
+            </span>
+            <span className="ticker-sep">|</span>
+            <span className="ticker-item">
+              USD/INR <strong>83.42</strong>
+              <span className="down"><TrendingDown size={11} /> -0.05</span>
+            </span>
+          </div>
+
+                    <div className="commodity-bar">
+            <span className="commodity gold">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#c8a400">
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              GOLD
+              <span className="up"><TrendingUp size={11} /> +0.3%</span>
+            </span>
+            <span className="commodity-sep">|</span>
+            <span className="commodity silver">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#aaaaaa">
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              SILVER
+              <span className="down"><TrendingDown size={11} /> -1.2%</span>
+            </span>
+          </div>
+          <div className="ticker-right">
+            <div className="ticker-datetime">
+              <span className="t-date">Friday, February 2025</span>
+              <span className="t-time">12:57:56 PM</span>
+            </div>
+            <button className="btn-flag">
+              <svg width="16" height="11" viewBox="0 0 16 11">
+                <rect width="16" height="3.67" fill="#FF9933" />
+                <rect y="3.67" width="16" height="3.67" fill="white" />
+                <rect y="7.33" width="16" height="3.67" fill="#138808" />
+                <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
+              </svg>
+              हि-ही
+            </button>
+            <button className="btn-live">
+              <Radio size={11} /> Live TV
+            </button>
+            <button className="btn-epaper">
+              <FileText size={11} /> E-Paper
+            </button>
+          </div>
+        </div>
+
+        {/* TOP BAR */}
+        <div className="top-bar">
+          <div className="search-row">
+            <div className="search-box">
+              <Search size={14} className="search-icon" />
+              <input type="text" className="search-input" placeholder="Search news..." />
+              <Mic size={14} className="mic-icon" />
+            </div>
+          </div>
+        </div>
+
+        {/* MAIN NAVBAR */}
+        <nav className="main-nav">
+          <div className="nav-left">
+            <button
+              className="hamburger"
+              aria-label="Menu"
+              onClick={() => setIsOpen(true)}
+            >
+              <Menu size={22} color="white" />
+            </button>
+            <div className="logo-area">
+              {!isScrolled ? <LogoFull /> : <LogoScroll />}
+            </div>
+          </div>
+
+          <ul className="nav-links">
+            {navLinks.map((link) => (
+              <li key={link} className="nav-item">
+                <a href="#" className="nav-link">{link}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+      </header>
+    </>
   );
-}
+};
+
+export default Header;

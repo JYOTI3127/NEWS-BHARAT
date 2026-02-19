@@ -1,24 +1,24 @@
-import React from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import BreakingNews from './components/BreakingNews';
-import NewsGrid from './components/NewsGrid';
-import TrendingSection from './components/TrendingSection';
-import CategorySection from './components/CategorySection';
-import './App.css';
-import Footer from './components/Footer';
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import "./App.css";
+import Home from "./pages/Home";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 function App() {
   return (
-    <div className="App">
-      <Navbar />
-      <BreakingNews />
-      <Hero />
-      <NewsGrid />
-      <TrendingSection />
-      <CategorySection />
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <Navbar />   
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/navbar" element={<Navbar />} />
+        <Route path="/footer" element={<Footer />} />
+      </Routes>
+
+      <Footer />   
+    </BrowserRouter>
   );
 }
 

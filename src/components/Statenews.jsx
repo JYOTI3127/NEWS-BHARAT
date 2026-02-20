@@ -1,19 +1,17 @@
 import { useState, useRef } from "react";
+
 const ChevronLeft = () => (
   <span style={{ fontSize: '16px', color: '#fff', lineHeight: 1, fontWeight: 'bold' }}>&#8249;</span>
 );
-
 const ChevronRight = () => (
   <span style={{ fontSize: '16px', color: '#fff', lineHeight: 1, fontWeight: 'bold' }}>&#8250;</span>
 );
-
 const Clock = ({ size = 12 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
-
 const Shield = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -21,616 +19,446 @@ const Shield = ({ size = 20 }) => (
 );
 
 const stateList = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
-  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
-  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
-  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
+  "Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka",
+  "Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram",
+  "Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+  "Tripura","Uttar Pradesh","Uttarakhand","West Bengal"
 ];
 
-const mainNews = {
-  id: 1,
-  image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=700&q=80",
+// Left big featured card
+const featuredCard = {
+  img: "https://images.unsplash.com/photo-1616530940355-351fabd9524b?w=700&q=80",
   title: "रोहित शेट्टी के घर फायरिंग में हरियाणा से 4 अरेस्ट, बिश्नोई गैंग के संपर्क में था शूटर",
-  category: "Crime",
-  time: "2 घंटे पहले",
-  tag: "ब्रेकिंग"
+  tag: "ब्रेकिंग",
 };
 
-const gridNews = [
-  { id: 2, image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है", time: "3 घंटे पहले", tag: "बॉलीवुड" },
-  { id: 3, image: "https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=400&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है", time: "4 घंटे पहले", tag: "मनोरंजन" },
-  { id: 4, image: "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है", time: "5 घंटे पहले", tag: "खेल" },
-  { id: 5, image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है", time: "6 घंटे पहले", tag: "राजनीति" }
+// Bottom left small card (img + text)
+const bottomLeftCard = {
+  img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&q=80",
+  title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+};
+
+// Middle 3 vertical cards (img + text)
+const midCards = [
+  {
+    id: 1,
+    img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&q=80",
+    label: "TritiyaBishwa", hd: false, teaser: false,
+    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+  },
+  {
+    id: 2,
+    img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80",
+    label: "REBOOT", hd: false, teaser: false,
+    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+  },
+  {
+    id: 3,
+    img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=400&q=80",
+    label: "Golmaal", hd: true, teaser: true,
+    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+  },
 ];
 
+// Right defence/news panel
 const defenceNews = [
-  { id: 1, image: "https://images.unsplash.com/photo-1569025743873-ea3a9ade89f9?w=200&q=80", title: "भारतीय सेना ने सीमा पर नई चौकी स्थापित की, सुरक्षा बढ़ाई गई", time: "1 घंटे पहले" },
-  { id: 2, image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&q=80", title: "वायुसेना ने राफेल विमानों के साथ किया सफल अभ्यास, नई तकनीक का प्रयोग", time: "2 घंटे पहले" },
-  { id: 3, image: "https://images.unsplash.com/photo-1562408590-e32931084e23?w=200&q=80", title: "नौसेना ने हिंद महासागर में युद्धाभ्यास किया, 12 देश हुए शामिल", time: "3 घंटे पहले" },
-  { id: 4, image: "https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=200&q=80", title: "रक्षा मंत्रालय ने नई मिसाइल प्रणाली को मंजूरी दी, देश होगा और मजबूत", time: "4 घंटे पहले" },
-  { id: 5, image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=200&q=80", title: "सीमा सड़क संगठन ने लद्दाख में ऐतिहासिक पुल का निर्माण पूरा किया", time: "5 घंटे पहले" },
-  { id: 6, image: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=200&q=80", title: "भारत और अमेरिका के बीच रक्षा सहयोग समझौते पर हस्ताक्षर", time: "6 घंटे पहले" },
-  { id: 7, image: "https://images.unsplash.com/photo-1551268010-b76e4a7ca5f2?w=200&q=80", title: "DRDO ने स्वदेशी टैंक रोधी मिसाइल का सफल परीक्षण किया", time: "7 घंटे पहले" },
+  { id: 1, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { id: 2, img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { id: 3, img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { id: 5, img: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { id: 6, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
 ];
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi:ital@0;1&family=Noto+Sans:wght@400;600;700&family=Bebas+Neue&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  .sn-wrap {
+    font-family: 'Poppins', sans-serif;
+    background: #fff;
+    padding: 14px 18px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  body {
-    font-family: 'Noto Sans', sans-serif;
-    background: #0a0a0f;
-    color: #e8e8f0;
-    min-height: 100vh;
-  }
-
-  .sn-wrapper {
-    max-width: 1262px;
-    padding: 0 16px 40px;
-  }
-
+  /* ── HEADING ── */
   .sn-heading-row {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px 0 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
-
-  .sn-heading-text {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    letter-spacing: 3px;
-    color: #fff;
-    position: relative;
-  }
-
-  .sn-heading-text::before {
-    content: '';
-    position: absolute;
-    left: -14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 70%;
-    background: linear-gradient(180deg, #D80100, #ff4444);
+  .sn-heading-bar {
+    width: 4px; height: 22px;
+    background: #e8001c;
     border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .sn-heading-text {
+    font-size: clamp(13px, 1.5vw, 17px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #111;
   }
 
+  /* ── TABS ── */
   .sn-tabs-container {
     position: relative;
-    margin-bottom: 20px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 2px 50px;
+    margin-bottom: 14px;
+    background: #f7f7f7;
+    border: 1px solid #e0e0e0;
+    border-radius: 30px;
+    padding: 4px 44px;
     overflow: hidden;
   }
-
   .sn-tabs-scroll-area {
     display: flex;
     overflow-x: auto;
-    gap: 4px;
+    gap: 2px;
     scrollbar-width: none;
-    padding: 6px 0;
+    padding: 2px 0;
     scroll-behavior: smooth;
   }
-
-  .sn-tabs-scroll-area::-webkit-scrollbar {
-    display: none;
-  }
-
+  .sn-tabs-scroll-area::-webkit-scrollbar { display: none; }
   .sn-tab-btn {
     flex-shrink: 0;
-    padding: 6px 14px;
+    padding: 5px 14px;
     border-radius: 20px;
-    font-size: 12.5px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
     border: none;
-    transition: all 0.25s ease;
     background: transparent;
-    color: #aaa;
+    color: #555;
     white-space: nowrap;
-    letter-spacing: 0.3px;
-  }
-
-  .sn-tab-btn:hover {
-    background: rgba(216,1,0,0.15);
-    color: #D80100;
-  }
-
-  .sn-tab-btn.sn-tab-active {
-    background: linear-gradient(135deg, #D80100, #a30000);
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(216,1,0,0.4);
-  }
-
-  .sn-scroll-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
+    font-family: 'Poppins', sans-serif;
     transition: all 0.2s;
   }
-
-  .sn-scroll-arrow:hover {
-    background: #D80100;
+  .sn-tab-btn:hover { color: #e8001c; }
+  .sn-tab-btn.active {
+    background: #e8001c;
+    color: #fff;
+    font-weight: 600;
+    border-radius: 20px;
   }
-
-  .sn-scroll-arrow-left {
-    left: 6px;
-  }
-
-  .sn-scroll-arrow-right {
-    right: 6px;
-  }
-
-  .sn-main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 300px;
-    gap: 16px;
-    align-items: start;
-  }
-
-  .sn-hero-card {
-    position: relative;
-    border-radius: 14px;
-    overflow: hidden;
+  .sn-arrow {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    background: #e8001c;
+    border: none;
+    color: #fff;
+    width: 26px; height: 26px;
+    border-radius: 50%;
     cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
   }
+  .sn-arrow-left { left: 6px; }
+  .sn-arrow-right { right: 6px; }
 
-  .sn-hero-card img {
-    width: 100%;
-    height: 320px;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.4s ease;
-  }
-
-  .sn-hero-card:hover img {
-    transform: scale(1.04);
-  }
-
-  .sn-hero-gradient {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 40%, rgba(0,0,0,0.1) 100%);
-  }
-
-  .sn-hero-body {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-  }
-
-  .sn-category-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #D80100, #a30000);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 4px;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-  }
-
-  .sn-hero-title {
-    font-family: 'Tiro Devanagari Hindi', serif;
-    font-size: 17px;
-    line-height: 1.55;
-    color: #fff;
-    font-weight: 700;
-  }
-
-  .sn-time-label {
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
-    margin-top: 8px;
+  /* ── MAIN LAYOUT ──
+     Left: big card + small card below
+     Middle: 3 vertical cards (img+text)
+     Right: Defence/scrollable panel
+  */
+  .sn-main {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    gap: 14px;
+    align-items: flex-start;
   }
 
-  .sn-left-col {
+  /* LEFT BLOCK */
+  .sn-left {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-  }
-
-  .sn-compact-card {
-    display: flex;
-    gap: 12px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.25s ease;
-  }
-
-  .sn-compact-card:hover {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(216,1,0,0.3);
-    transform: translateX(3px);
-  }
-
-  .sn-compact-card img {
-    width: 100px;
-    height: 80px;
-    object-fit: cover;
+    gap: 10px;
+    width: 310px;
     flex-shrink: 0;
   }
 
-  .sn-compact-card-body {
-    padding: 10px 12px 10px 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .sn-compact-card-title {
-    font-family: 'Tiro Devanagari Hindi', serif;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #ddd;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .sn-mid-col {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .sn-four-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .sn-grid-card {
-    border-radius: 10px;
+  /* Big featured card */
+  .sn-big-card {
+    position: relative;
+    width: 100%;
+    height: 230px;
+    border-radius: 7px;
     overflow: hidden;
     cursor: pointer;
-    position: relative;
     background: #111;
   }
-
-  .sn-grid-card img {
-    width: 100%;
-    height: 130px;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.3s ease;
-    opacity: 0.85;
+  .sn-big-card img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    opacity: 0.82;
+    transition: transform 0.4s ease;
   }
-
-  .sn-grid-card:hover img {
-    transform: scale(1.05);
-    opacity: 1;
-  }
-
-  .sn-grid-card-overlay {
+  .sn-big-card:hover img { transform: scale(1.04); }
+  .sn-big-overlay {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.85) 40%, transparent);
+    bottom: 0; left: 0; right: 0;
+    padding: 50px 13px 13px;
+    background: linear-gradient(to top, rgba(0,0,0,0.88), transparent);
   }
-
-  .sn-grid-card-body {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px;
-  }
-
-  .sn-grid-card-title {
-    font-family: 'Tiro Devanagari Hindi', serif;
-    font-size: 12px;
-    line-height: 1.45;
-    color: #eee;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .sn-defence-panel {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    height: fit-content;
-  }
-
-  .sn-defence-panel-header {
-    background: linear-gradient(135deg, #001a3d, #002765);
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 2px solid #D80100;
-  }
-
-  .sn-defence-panel-icon {
+  .sn-big-badge {
+    display: inline-block;
+    background: #e8001c;
     color: #fff;
-    display: flex;
-    align-items: center;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 8px; border-radius: 3px;
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 6px;
   }
-
-  .sn-defence-panel-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px;
-    letter-spacing: 2px;
+  .sn-big-title {
     color: #fff;
+    font-size: clamp(11px, 1.15vw, 13.5px);
+    font-weight: 600;
+    line-height: 1.5;
   }
 
-  .sn-defence-list {
-    overflow-y: auto;
-    max-height: 420px;
-    scrollbar-width: thin;
-    scrollbar-color: #D80100 rgba(255,255,255,0.05);
-    padding: 8px 0;
-  }
-
-  .sn-defence-list::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .sn-defence-list::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.03);
-  }
-
-  .sn-defence-list::-webkit-scrollbar-thumb {
-    background: #D80100;
-    border-radius: 2px;
-  }
-
-  .sn-defence-list-item {
+  /* Bottom small card */
+  .sn-small-card {
     display: flex;
     gap: 10px;
-    padding: 10px 14px;
+    align-items: flex-start;
     cursor: pointer;
-    transition: background 0.2s;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
   }
-
-  .sn-defence-list-item:last-child {
-    border-bottom: none;
+  .sn-sc-img {
+    width: 130px; min-width: 130px; height: 86px;
+    border-radius: 5px; overflow: hidden;
+    flex-shrink: 0; background: #222;
   }
-
-  .sn-defence-list-item:hover {
-    background: rgba(216,1,0,0.08);
+  .sn-sc-img img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    transition: transform 0.3s;
   }
-
-  .sn-defence-list-item img {
-    width: 64px;
-    height: 52px;
-    object-fit: cover;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
-
-  .sn-defence-item-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .sn-defence-item-headline {
-    font-family: 'Tiro Devanagari Hindi', serif;
-    font-size: 12px;
-    line-height: 1.45;
-    color: #ccc;
+  .sn-small-card:hover .sn-sc-img img { transform: scale(1.06); }
+  .sn-sc-title {
+    font-size: 12px; font-weight: 500;
+    color: #1a1a1a; line-height: 1.6;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .sn-defence-item-timestamp {
-    font-size: 10px;
-    color: rgba(255,255,255,0.35);
+  /* MIDDLE BLOCK */
+  .sn-mid {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    align-items: center;
-    gap: 3px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sn-mid-card {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    cursor: pointer;
+  }
+  .sn-mid-img {
+    position: relative;
+    width: 175px; min-width: 175px; height: 108px;
+    border-radius: 5px; overflow: hidden;
+    flex-shrink: 0; background: #222;
+  }
+  .sn-mid-img img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    transition: transform 0.35s;
+  }
+  .sn-mid-card:hover .sn-mid-img img { transform: scale(1.06); }
+  .sn-mov-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.30);
+    color: #fff; font-size: 13px; font-weight: 700;
+    font-style: italic; text-align: center;
+    padding: 8px; pointer-events: none;
+  }
+  .sn-hd-badge {
+    position: absolute; top: 5px; right: 5px;
+    background: #e8001c; color: #fff;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 2px;
+    letter-spacing: 0.8px; z-index: 3;
+  }
+  .sn-teaser-badge {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.72); color: #fff;
+    font-size: 9px; font-weight: 700;
+    text-align: center; padding: 4px 0;
+    letter-spacing: 3px; z-index: 3;
+  }
+  .sn-mid-title {
+    font-size: 12.5px; font-weight: 500;
+    color: #1a1a1a; line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .sn-live-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 9px;
-    color: #4fc3f7;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+  /* RIGHT: Defence panel */
+  .sn-defence {
+    width: 210px;
+    min-width: 200px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.09);
+  }
+  .sn-defence-head {
+    background: #e8001c;
+    color: #fff;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
+    text-align: center;
+    padding: 9px 10px;
+  }
+  .sn-defence-scroll {
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 4px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #e8001c #f5f5f5;
+  }
+  .sn-defence-scroll::-webkit-scrollbar { width: 4px; }
+  .sn-defence-scroll::-webkit-scrollbar-track { background: #f5f5f5; }
+  .sn-defence-scroll::-webkit-scrollbar-thumb { background: #e8001c; border-radius: 4px; }
+  .sn-defence-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sn-defence-item:last-child { border-bottom: none; }
+  .sn-defence-item:hover { background: #fafafa; }
+  .sn-di-img {
+    width: 66px; min-width: 66px; height: 47px;
+    border-radius: 4px; overflow: hidden; flex-shrink: 0;
+  }
+  .sn-di-img img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    transition: transform 0.3s;
+  }
+  .sn-defence-item:hover .sn-di-img img { transform: scale(1.08); }
+  .sn-di-title {
+    font-size: 10px; color: #333;
+    line-height: 1.45; font-weight: 400;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .sn-live-dot {
-    width: 5px;
-    height: 5px;
-    background: #4fc3f7;
-    border-radius: 50%;
-    animation: sn-pulse 1.5s infinite;
+  /* RESPONSIVE */
+  @media (max-width: 1050px) {
+    .sn-mid-img { width: 140px; min-width: 140px; height: 90px; }
+    .sn-left { width: 260px; }
   }
-
-  @keyframes sn-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+  @media (max-width: 800px) {
+    .sn-main { flex-wrap: wrap; }
+    .sn-left { width: 100%; }
+    .sn-defence { width: 100%; }
   }
-
-  @media (max-width: 1024px) {
-    .sn-main-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .sn-defence-panel {
-      grid-column: 1 / -1;
-    }
-    .sn-defence-list {
-      max-height: 260px;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .sn-main-grid {
-      grid-template-columns: 1fr;
-    }
-    .sn-four-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .sn-heading-text {
-      font-size: 22px;
-    }
-    .sn-hero-card img {
-      height: 240px;
-    }
-    .sn-hero-title {
-      font-size: 15px;
-    }
-    .sn-defence-panel {
-      grid-column: 1;
-    }
+  @media (max-width: 560px) {
+    .sn-mid-img { width: 110px; min-width: 110px; height: 76px; }
   }
 `;
 
 export default function StateNews() {
   const [activeState, setActiveState] = useState("Andhra Pradesh");
   const tabsRef = useRef(null);
-
   const scroll = (dir) => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({ left: dir * 200, behavior: "smooth" });
-    }
+    if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 200, behavior: "smooth" });
   };
 
   return (
     <>
       <style>{styles}</style>
-      <div className="sn-wrapper">
+      <div className="sn-wrap">
+
+        {/* Heading */}
         <div className="sn-heading-row">
-          <h2 className="sn-heading-text">STATE NEWS</h2>
+          <div className="sn-heading-bar" />
+          <span className="sn-heading-text">State News</span>
         </div>
 
+        {/* State Tabs */}
         <div className="sn-tabs-container">
-          <button className="sn-scroll-arrow sn-scroll-arrow-left" onClick={() => scroll(-1)}>
-            <ChevronLeft />
-          </button>
+          <button className="sn-arrow sn-arrow-left" onClick={() => scroll(-1)}><ChevronLeft /></button>
           <div className="sn-tabs-scroll-area" ref={tabsRef}>
             {stateList.map(s => (
               <button
                 key={s}
-                className={`sn-tab-btn ${activeState === s ? "sn-tab-active" : ""}`}
+                className={`sn-tab-btn${activeState === s ? " active" : ""}`}
                 onClick={() => setActiveState(s)}
-              >
-                {s}
-              </button>
+              >{s}</button>
             ))}
           </div>
-          <button className="sn-scroll-arrow sn-scroll-arrow-right" onClick={() => scroll(1)}>
-            <ChevronRight />
-          </button>
+          <button className="sn-arrow sn-arrow-right" onClick={() => scroll(1)}><ChevronRight /></button>
         </div>
 
-        <div className="sn-main-grid">
-          <div className="sn-left-col">
-            <div className="sn-hero-card">
-              <img src={mainNews.image} alt="main news" />
-              <div className="sn-hero-gradient" />
-              <div className="sn-hero-body">
-                <div className="sn-category-badge">{mainNews.tag}</div>
-                <div className="sn-hero-title">{mainNews.title}</div>
-                <div className="sn-time-label">
-                  <Clock size={10} />
-                  {mainNews.time}
-                </div>
+        {/* Main Layout */}
+        <div className="sn-main">
+
+          {/* LEFT: Big card + small card below */}
+          <div className="sn-left">
+            <div className="sn-big-card">
+              <img src={featuredCard.img} alt="featured" />
+              <div className="sn-big-overlay">
+                <div className="sn-big-badge">{featuredCard.tag}</div>
+                <p className="sn-big-title">{featuredCard.title}</p>
               </div>
             </div>
-
-            <div className="sn-compact-card">
-              <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&q=80" alt="" />
-              <div className="sn-compact-card-body">
-                <span className="sn-category-badge" style={{ width: 'fit-content' }}>मनोरंजन</span>
-                <div className="sn-compact-card-title">लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है</div>
-                <div className="sn-time-label" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  <Clock size={10} />
-                  5 घंटे पहले
-                </div>
+            <div className="sn-small-card">
+              <div className="sn-sc-img">
+                <img src={bottomLeftCard.img} alt="news" />
               </div>
+              <p className="sn-sc-title">{bottomLeftCard.title}</p>
             </div>
           </div>
 
-          <div className="sn-mid-col">
-            <div className="sn-four-grid">
-              {gridNews.map(n => (
-                <div className="sn-grid-card" key={n.id}>
-                  <img src={n.image} alt="" />
-                  <div className="sn-grid-card-overlay" />
-                  <div className="sn-grid-card-body">
-                    <div className="sn-category-badge" style={{ fontSize: '9px', padding: '2px 7px', marginBottom: '5px' }}>{n.tag}</div>
-                    <div className="sn-grid-card-title">{n.title}</div>
+          {/* MIDDLE: 3 vertical cards */}
+          <div className="sn-mid">
+            {midCards.map(card => (
+              <div className="sn-mid-card" key={card.id}>
+                <div className="sn-mid-img">
+                  <img src={card.img} alt={card.title} />
+                  {card.label && <div className="sn-mov-label">{card.label}</div>}
+                  {card.hd && <span className="sn-hd-badge">HD</span>}
+                  {card.teaser && <span className="sn-teaser-badge">TEASER</span>}
+                </div>
+                <p className="sn-mid-title">{card.title}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* RIGHT: Scrollable defence/news panel */}
+          <div className="sn-defence">
+            <div className="sn-defence-head">डिफेंस न्यूज़</div>
+            <div className="sn-defence-scroll">
+              {defenceNews.map((item, i) => (
+                <div className="sn-defence-item" key={item.id}>
+                  <div className="sn-di-img">
+                    <img src={item.img} alt="news" />
                   </div>
+                  <p className="sn-di-title">{item.title}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="sn-defence-panel">
-            <div className="sn-defence-panel-header">
-              <span className="sn-defence-panel-icon">
-                <Shield size={20} />
-              </span>
-              <span className="sn-defence-panel-title">डिफेंस न्यूज़</span>
-              <span style={{ marginLeft: 'auto' }}>
-                <span className="sn-live-indicator">
-                  <span className="sn-live-dot" />
-                  Live
-                </span>
-              </span>
-            </div>
-            <div className="sn-defence-list">
-              {defenceNews.map((item) => (
-                <div className="sn-defence-list-item" key={item.id}>
-                  <img src={item.image} alt="" />
-                  <div className="sn-defence-item-body">
-                    <div className="sn-defence-item-headline">{item.title}</div>
-                    <div className="sn-defence-item-timestamp">
-                      <Clock size={9} />
-                      {item.time}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </>

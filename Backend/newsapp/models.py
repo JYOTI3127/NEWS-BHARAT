@@ -4,6 +4,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from .workflow import ALLOWED_TRANSITIONS
+from django.core.exceptions import ValidationError
+
 
 class Role(models.Model):
     name = models.CharField(max_length=50)
@@ -14,36 +16,56 @@ class Role(models.Model):
 
 
 class Permission(models.Model):
-    code = models.CharField(max_length=100)   # e.g. create_article, publish_article
+    code = models.CharField(max_length=100)   
     description = models.CharField(max_length=255)
 
     def __str__(self):
         return self.code
-
-
-# class RolePermission(models.Model):
-#     role = models.ForeignKey(Role, on_delete=models.CASCADE)
-#     permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
-
-#     def __str__(self):
-#         return f"{self.role} → {self.permission}"
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    roles = models.ManyToManyField(Role, blank=True)
-    status = models.CharField(max_length=20, default='active')
-
-    def __str__(self):
-        return self.user.username
-
-
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
+
+
+class UserProfile(models.Model):
+
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    roles = models.ManyToManyField(Role, blank=True)
+
+    phone = models.CharField(max_length=15, blank=True)
+    bio = models.TextField(blank=True)
+
+    gender = models.CharField(
+        max_length=10,
+        choices=GENDER_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    assigned_categories = models.ManyToManyField(Category, blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('inactive', 'Inactive'),
+            ('suspended', 'Suspended')
+        ],
+        default='active'
+    )
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.username
 
 class Article(models.Model):
     STATUS_CHOICES = [
@@ -73,6 +95,23 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
 
+    assigned_to = models.ForeignKey(
+    User,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='articles_assigned_to'
+    )
+
+    deadline = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        if self.assigned_to:
+            profile = self.assigned_to.userprofile
+            if self.category not in profile.assigned_categories.all():
+                raise ValidationError("Reporter not allowed for this category")
+
+
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
 
@@ -100,7 +139,7 @@ class Article(models.Model):
             if old_article.status != self.status:
                 allowed = ALLOWED_TRANSITIONS.get(old_article.status, [])
                 if self.status not in allowed:
-                    raise ValueError(f"Invalid status transition from {old_article.status} to {self.status}")
+                    raise ValidationError(f"You can't directly move from {old_article.status} to {self.status}")
 
             # 🔹 Workflow Log Logic (Status Change)
             if old_article.status != self.status:
@@ -116,7 +155,13 @@ class Article(models.Model):
                 if self.status == "published":
                     self.published_at = timezone.now()
 
+            if self.assigned_to:
+                if self.assigned_to.userprofile.status == "suspended":
+                    raise ValidationError("This reporter is suspended.")
+
+        self.full_clean()  
         super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.title
@@ -174,4 +219,61 @@ class FactCheck(models.Model):
 
     def __str__(self):
         return f"FactCheck - {self.article.title}"
+    
+class ReporterPerformance(models.Model):
+    reporter = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    total_articles = models.IntegerField(default=0)
+    published_articles = models.IntegerField(default=0)
+    rejected_articles = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.reporter.username
+    
+class HomepageSlot(models.Model):
+
+    SLOT_CHOICES = [
+        ('hero', 'Hero'),
+        ('breaking', 'Breaking'),
+        ('top_1', 'Top 1'),
+        ('top_2', 'Top 2'),
+        ('featured', 'Featured'),
+    ]
+
+    MODE_CHOICES = [
+        ('manual', 'Manual'),
+        ('auto', 'Auto'),
+    ]
+
+    AUTO_RULE_CHOICES = [
+        ('latest', 'Latest Published'),
+        ('most_viewed', 'Most Viewed'),
+    ]
+
+    slot_name = models.CharField(max_length=20, choices=SLOT_CHOICES, unique=True)
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, default='auto')
+
+    article = models.ForeignKey(
+        'Article',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    auto_rule = models.CharField(
+        max_length=20,
+        choices=AUTO_RULE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    pin_until = models.DateTimeField(blank=True, null=True)
+
+    is_active = models.BooleanField(default=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.slot_name} ({self.mode})"
+
 

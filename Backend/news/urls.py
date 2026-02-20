@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import path, include
+from newsapp.admin import admin_site
 
 urlpatterns = [
     path('', lambda request: HttpResponse("Backend Running ✅")),
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
     path('api/', include('newsapp.urls')),
 ]
 

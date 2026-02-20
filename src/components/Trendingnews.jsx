@@ -1,297 +1,216 @@
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 // ── DATA ──────────────────────────────────────────────────────
 const trendingTopics = [
   "Breaking News",
-  "Top Headlines",
-  "India News",
-  "World News",
-  "Politics",
-  "Business",
-  "Technology",
-  "Entertainment",
-  "Sports",
-  "Health",
-  "Education",
-  "Lifestyle"
-]
-
+  "Politics Today",
+  "Latest India News",
+  "World Headlines",
+  "Business Updates",
+  "Stock Market",
+  "Technology News",
+  "Entertainment Buzz",
+  "Bollywood News",
+  "Sports Highlights",
+  "Cricket Updates",
+  "Weather Today",
+  "Elections 2026"
+];
 const latestNews = [
-  {
-    id: 1,
-    title: "Lorem Ipsum Dolor Sit Amet Consectetur Sadipscing",
-    desc: "Elit Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore",
-  },
-  {
-    id: 2,
-    title: "Lorem Ipsum Dolor Sit Amet Consectetur Sadipscing",
-    desc: "Elit Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore",
-  },
-  {
-    id: 3,
-    title: "Lorem Ipsum Dolor Sit Amet Consectetur Sadipscing",
-    desc: "Elit Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore",
-  },
-  {
-    id: 4,
-    title: "Lorem Ipsum Dolor Sit Amet Consectetur Sadipscing",
-    desc: "Elit Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore",
-  },
+  { id:1, title:"Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc:"Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id:2, title:"Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc:"Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id:3, title:"Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc:"Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id:4, title:"Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc:"Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
 ];
 
 const featureCards = [
-  {
-    id: 1,
-    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-  {
-    id: 2,
-    image: "https://images.unsplash.com/photo-1482731215275-a1f151646268?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-  {
-    id: 3,
-    image: "https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-    {
-    id: 4,
-    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-  {
-    id: 5,
-    image: "https://images.unsplash.com/photo-1482731215275-a1f151646268?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-  {
-    id: 6,
-    image: "https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
-    {
-    id: 7,
-    image: "https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=400&q=80",
-    title: "निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट...",
-  },
+  { id:1, image:"https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
+  { id:2, image:"https://images.unsplash.com/photo-1482731215275-a1f151646268?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
+  { id:3, image:"https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
 ];
 
 const liveUpdates = [
-  { id: 1, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id: 2, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id: 3, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id: 4, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id: 5, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id: 6, time: "3:19 PM", text: "छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:1, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:2, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:3, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:4, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:5, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:6, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:7, time:"3:20 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id:8, time:"3:21 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
 ];
 
-// ── HOOK: window width ─────────────────────────────────────────
-function useWindowWidth() {
-  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const h = () => setW(window.innerWidth);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
-  }, []);
-  return w;
-}
+const bannerSlides = [
+  {
+    leftBg:"#1e5c42",
+    brand1:"PRATIYOGITA", brand2:"DARPAN",
+    price:"PRICE \u20B9125.00", date:"FEBRUARY 2024",
+    tagline:"WHERE EXCELLENCE GUIDES THE SUCCESS",
+    midBg:"#f5a000", midTag:"Semi Annual",
+    midBoxBg:"#6a1fa2",
+    midL1:"Current", midL2:"Affairs", midL3:"Special",
+    rightBg:"#f5e000",
+    rl:"MOST USEFUL FOR", rb:"UNION & STATE", rs:"CIVIL SERVICES EXAM",
+  },
+  {
+    leftBg:"#0d3b6e",
+    brand1:"COMPETITION", brand2:"TIMES",
+    price:"PRICE \u20B9150.00", date:"MARCH 2024",
+    tagline:"YOUR GATEWAY TO SUCCESS",
+    midBg:"#e53935", midTag:"Annual",
+    midBoxBg:"#b71c1c",
+    midL1:"General", midL2:"Knowledge", midL3:"Special",
+    rightBg:"#b2fab4",
+    rl:"BEST RESOURCE FOR", rb:"SSC & BANKING", rs:"EXAMINATION PREP",
+  },
+  {
+    leftBg:"#1a1a2e",
+    brand1:"CAREER", brand2:"LAUNCHER",
+    price:"PRICE \u20B999.00", date:"APRIL 2024",
+    tagline:"LAUNCHING CAREERS SINCE 1995",
+    midBg:"#7b1fa2", midTag:"Monthly",
+    midBoxBg:"#4a148c",
+    midL1:"Reasoning", midL2:"& Aptitude", midL3:"Special",
+    rightBg:"#ffe082",
+    rl:"TOP CHOICE FOR", rb:"UPSC & STATE PSC", rs:"ASPIRANTS NATIONWIDE",
+  },
+];
 
-// ── SUB: Trending Bar ──────────────────────────────────────────
+// ── ICONS ─────────────────────────────────────────────────────
+const ChevL = ({c="#555", s=22}) => (
+  <span style={{color:c, fontSize:s+"px", lineHeight:"1", userSelect:"none", display:"block", fontWeight:"bold"}}>‹</span>
+);
+
+const ChevR = ({c="#555", s=22}) => (
+  <span style={{color:c, fontSize:s+"px", lineHeight:"1", userSelect:"none", display:"block", fontWeight:"bold"}}>›</span>
+);
+
+const ClockSvg = () => (
+  <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#D80100" strokeWidth="2.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+
+const FlameSvg = () => (
+  <svg width={22} height={30} viewBox="0 0 22 30">
+    <path d="M11 2C11 2 5 9 5 16a6 6 0 0 0 12 0C17 9 11 2 11 2z" fill="#f9a825"/>
+    <path d="M11 20a2.5 2.5 0 0 1-2.5-2.5C8.5 15.5 11 12 11 12s2.5 3.5 2.5 5A2.5 2.5 0 0 1 11 20z" fill="#fff"/>
+  </svg>
+);
+
+// ── TRENDING BAR ──────────────────────────────────────────────
 function TrendingBar() {
-  const [offset, setOffset] = useState(0);
-  const visibleCount = 10;
-  const maxOffset = trendingTopics.length - visibleCount;
-
-  const prev = () => setOffset((o) => Math.max(0, o - 1));
-  const next = () => setOffset((o) => Math.min(maxOffset, o + 1));
-
-  const visible = trendingTopics.slice(offset, offset + visibleCount);
+  const [off, setOff] = useState(0);
+  const vis = 8;
+  const max = trendingTopics.length - vis;
 
   return (
     <div style={{
-      display: "flex", alignItems: "center",
-      background: "#fff", borderBottom: "2px solid #e8e8e8",
-      padding: "20px 20px", gap: "10px", flexWrap: "wrap",
+      display:"flex", alignItems:"center",
+      background:"#fff", borderBottom:"2px solid #e0e0e0",
+      padding:"30px 32px", height:"52px", gap:"12px"
     }}>
       {/* Label */}
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "flex-start",
-        minWidth: "80px",
-      }}>
-        <span style={{ fontWeight: "800", fontSize: "12px", color: "#D80100", lineHeight: 1.2, fontFamily: "'Georgia',serif" }}>
-          TRENDING - NEWS :
-        </span>
-        {/* <span style={{ fontWeight: "800", fontSize: "12px", color: "#111", fontFamily: "'Georgia',serif" }}>
-          NEWS :
-        </span> */}
+      <div style={{flexShrink:0}}>
+        <div style={{fontSize:"13px",fontWeight:"600",color:"grey",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>TRENDING</div>
+        <div style={{fontSize:"13px",fontWeight:"600",color:"grey",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>NEWS :</div>
       </div>
 
-      {/* Prev Arrow */}
-      <button onClick={prev} disabled={offset === 0} style={{
-        width: "26px", height: "26px", borderRadius: "50%",
-        border: "1.5px solid #bbb", background: "#fff",
-        cursor: offset === 0 ? "not-allowed" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "13px", color: offset === 0 ? "#ccc" : "#333",
-        flexShrink: 0, transition: "all 0.2s",
-      }}>‹</button>
+      {/* Prev */}
+      <button
+        onClick={()=>setOff(o=>Math.max(0,o-1))}
+        disabled={off===0}
+        style={{width:"28px",height:"28px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off===0?"default":"pointer"}}
+      >
+        <ChevL c={off===0?"#ccc":"#444"} s={22}/>
+      </button>
 
-      {/* Topics */}
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", flex: 1 }}>
-        {visible.map((t, i) => (
-          <button key={i + offset} style={{
-            padding: "5px 14px", border: "1.5px solid #ccc",
-            borderRadius: "3px", background: "#fff",
-            fontSize: "11px", fontWeight: "600", color: "#222",
-            cursor: "pointer", fontFamily: "'Arial',sans-serif",
-            letterSpacing: "0.04em", transition: "all 0.2s",
-            whiteSpace: "nowrap",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#c00"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "#c00"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#222"; e.currentTarget.style.borderColor = "#ccc"; }}
-          >
-            {t}
-          </button>
+      {/* Topic buttons */}
+      <div style={{display:"flex",gap:"8px",flex:1}}>
+        {trendingTopics.slice(off, off+vis).map((t,i)=>(
+          <button key={i+off}
+            style={{padding:"5px 14px",border:"1.5px solid #ccc",borderRadius:"9px",background:"#fff",fontSize:"11.5px",fontWeight:"600",color:"grey",fontFamily:"'Poppins', sans-serif",letterSpacing:"0.02em",whiteSpace:"nowrap",cursor:"pointer",transition:"all 0.15s",flexShrink:0}}
+            onMouseEnter={e=>{e.currentTarget.style.background="#D80100";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#D80100";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.color="#222";e.currentTarget.style.borderColor="#ccc";}}
+          >{t}</button>
         ))}
       </div>
 
-      {/* Next Arrow */}
-      <button onClick={next} disabled={offset >= maxOffset} style={{
-        width: "26px", height: "26px", borderRadius: "50%",
-        border: "1.5px solid #bbb", background: "#fff",
-        cursor: offset >= maxOffset ? "not-allowed" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "13px", color: offset >= maxOffset ? "#ccc" : "#333",
-        flexShrink: 0, transition: "all 0.2s",
-      }}>›</button>
+      {/* Next — ✅ FIX: c aur s pass karo, color/size nahi */}
+      <button
+        onClick={()=>setOff(o=>Math.min(max,o+1))}
+        disabled={off>=max}
+        style={{width:"28px",height:"28px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off>=max?"default":"pointer"}}
+      >
+        <ChevR c={off>=max?"#ccc":"#444"} s={22}/>
+      </button>
     </div>
   );
 }
 
-// ── SUB: Section Header ────────────────────────────────────────
-function SectionHeader({ title }) {
+// ── SECTION HEADER ────────────────────────────────────────────
+function SecHeader({title}) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-      <div style={{ width: "4px", height: "20px", background: "#c00", borderRadius: "2px" }} />
-      <span style={{
-        fontWeight: "800", fontSize: "14px", color: "#111",
-        fontFamily: "'Georgia',serif", letterSpacing: "0.05em",
-        textTransform: "uppercase",
-      }}>{title}</span>
+    <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
+      <div style={{width:"4px",height:"20px",background:"#D80100",borderRadius:"1px"}}/>
+      <span style={{fontSize:"14px",fontWeight:"600",color:"#111",fontFamily:"'Poppins', sans-serif",letterSpacing:"0.04em"}}>{title}</span>
     </div>
   );
 }
 
-// ── SUB: Latest News List ──────────────────────────────────────
-function LatestNewsList() {
+// ── LATEST NEWS ───────────────────────────────────────────────
+function LatestNews() {
   return (
-    <div>
-      <SectionHeader title="LATEST NEWS" />
-      <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-        {latestNews.map((item, i) => (
-          <div key={item.id} style={{
-            padding: "10px 0",
-            borderBottom: i < latestNews.length - 1 ? "1px solid #e8e8e8" : "none",
-            cursor: "pointer",
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = "#fafafa"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-          >
-            <p style={{ fontSize: "13px", fontWeight: "700", color: "#111", margin: "0 0 3px 0", fontFamily: "'Georgia',serif", lineHeight: 1.4 }}>
-              {item.title}
-            </p>
-            <p style={{ fontSize: "11.5px", color: "#666", margin: 0, fontFamily: "'Arial',sans-serif", lineHeight: 1.4 }}>
-              {item.desc}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── SUB: Feature Card ──────────────────────────────────────────
-function FeatureCard({ card }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        flex: "1 1 180px", minWidth: "140px", maxWidth: "260px",
-        cursor: "pointer", overflow: "hidden", borderRadius: "2px",
-        boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.18)" : "0 2px 6px rgba(0,0,0,0.1)",
-        transition: "box-shadow 0.2s",
-      }}
-    >
-      <div style={{ overflow: "hidden", height: "140px" }}>
-        <img
-          src={card.image}
-          alt={card.title}
-          style={{
-            width: "100%", height: "100%", objectFit: "cover",
-            transform: hovered ? "scale(1.05)" : "scale(1)",
-            transition: "transform 0.35s ease",
-          }}
-        />
-      </div>
-      <div style={{ padding: "10px 10px 12px", background: "#fff" }}>
-        <p style={{
-          fontSize: "12px", fontWeight: "600", color: "#111",
-          margin: 0, fontFamily: "'Georgia',serif", lineHeight: 1.5,
-        }}>
-          {card.title}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── SUB: Feature Cards Row ────────────────────────────────────
-function FeatureCards() {
-  return (
-    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-      {featureCards.map((card) => (
-        <FeatureCard key={card.id} card={card} />
+    <div style={{padding:"14px 14px"}}>
+      <SecHeader title="LATEST NEWS"/>
+      {latestNews.map((n,i)=>(
+        <div key={n.id} style={{padding:"13px 0",borderBottom:"1.5px solid #999999",cursor:"pointer"}}
+          onMouseEnter={e=>e.currentTarget.style.opacity="0.8"}
+          onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+        >
+          <div style={{fontSize:"13px",fontWeight:"700",color:"#111",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4",marginBottom:"3px"}}>{n.title}</div>
+          <div style={{fontSize:"11.5px",color:"#666",fontFamily:"'Poppins', sans-serif",fontWeight:"400",lineHeight:"1.35"}}>{n.desc}</div>
+        </div>
       ))}
     </div>
   );
 }
 
-// ── SUB: Live Updates ─────────────────────────────────────────
-function LiveUpdates() {
-  const [activeId, setActiveId] = useState(null);
+// ── FEATURE CARDS ─────────────────────────────────────────────
+function FeatureCards() {
+  const [hov, setHov] = useState(null);
   return (
-    <div style={{ minWidth: "180px" }}>
-      <SectionHeader title="LIVE UPDATES" />
-      <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-        {liveUpdates.map((item, i) => (
-          <div
-            key={item.id}
-            onClick={() => setActiveId(activeId === item.id ? null : item.id)}
-            style={{
-              display: "flex", gap: "8px", alignItems: "flex-start",
-              padding: "8px 0",
-              borderBottom: i < liveUpdates.length - 1 ? "1px solid #e8e8e8" : "none",
-              cursor: "pointer",
-            }}
-          >
-            {/* Red line indicator */}
-            <div style={{
-              width: "3px", minHeight: "36px", background: "#c00",
-              borderRadius: "2px", flexShrink: 0, marginTop: "2px",
-            }} />
-            <div>
-              <span style={{
-                fontSize: "11px", fontWeight: "700", color: "#c00",
-                fontFamily: "'Arial',sans-serif", display: "block", marginBottom: "2px",
-              }}>{item.time}</span>
-              <p style={{
-                fontSize: "11.5px", color: "#333", margin: 0,
-                fontFamily: "'Arial',sans-serif", lineHeight: 1.45,
-              }}>{item.text}</p>
+    <div style={{padding:"10px",display:"flex",gap:"8px",height:"317px"}}>
+      {featureCards.map((c,i)=>(
+        <div key={c.id}
+          onMouseEnter={()=>setHov(c.id)}
+          onMouseLeave={()=>setHov(null)}
+          style={{flex:"1 1 0",minWidth:0,cursor:"pointer",borderRadius:"8px",overflow:"hidden",borderBottom:"1.5px solid #999999",borderLeft:"1.5px solid #999999",borderRight:"1.5px solid #999999",boxShadow:hov===c.id?"0 4px 12px rgba(0,0,0,0.15)":"none",transition:"box-shadow 0.2s"}}
+        >
+          <div style={{height:"160px",overflow:"hidden"}}>
+            <img src={c.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",transform:hov===c.id?"scale(1.05)":"scale(1)",transition:"transform 0.35s ease"}}/>
+          </div>
+          <div style={{padding:"20px 10px 12px",background:"#fff"}}>
+            <div style={{fontSize:"12px",fontWeight:"600",color:"grey",fontFamily:"Georgia,serif",lineHeight:"1.55"}}>{c.title}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── LIVE UPDATES ──────────────────────────────────────────────
+function LiveUpdates() {
+  return (
+    <div style={{padding:"14px 10px 14px 12px",display:"flex",flexDirection:"column",height:"84%"}}>
+      <SecHeader title="LIVE UPDATES"/>
+      <div className="live-scroll" style={{flex:1,overflowY:"auto",maxHeight:"310px"}}>
+        {liveUpdates.map((item,i)=>(
+          <div key={item.id} style={{display:"flex",gap:"6px",alignItems:"flex-start",padding:"7px 0",cursor:"pointer"}}>
+            <div style={{width:"7px",height:"7px",borderRadius:"50%",background:"#D80100",flexShrink:0,marginTop:"3px"}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:"11px",fontWeight:"700",color:"#D80100",fontFamily:"'Poppins', sans-serif",marginBottom:"2px"}}>{item.time}</div>
+              <div style={{fontSize:"11px",color:"#333",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4",wordBreak:"break-word",overflowWrap:"break-word"}}>{item.text}</div>
             </div>
           </div>
         ))}
@@ -300,116 +219,130 @@ function LiveUpdates() {
   );
 }
 
-// ── SUB: Ad Banner ────────────────────────────────────────────
+// ── BANNER ────────────────────────────────────────────────────
+function Banner() {
+  const [cur, setCur] = useState(0);
+  const [fading, setFading] = useState(false);
+  const total = bannerSlides.length;
+
+  useEffect(()=>{
+    const t = setInterval(()=>{
+      setFading(true);
+      setTimeout(()=>{ setCur(c=>(c+1)%total); setFading(false); },350);
+    },4000);
+    return ()=>clearInterval(t);
+  },[]);
+
+  const goTo = idx => { setFading(true); setTimeout(()=>{ setCur(idx); setFading(false); },350); };
+  const s = bannerSlides[cur];
+
+  return (
+    <div style={{marginTop:"14px",border:"1.5px solid #ccc",borderRadius:"2px",overflow:"hidden",position:"relative"}}>
+      {/* Slide */}
+      <div style={{display:"flex",height:"115px",opacity:fading?0:1,transform:fading?"translateY(6px)":"translateY(0)",transition:"opacity 0.35s ease,transform 0.35s ease"}}>
+
+        {/* LEFT */}
+        <div style={{flex:"0 0 38%",background:s.leftBg,position:"relative",display:"flex",alignItems:"center",padding:"12px 14px 12px 18px",overflow:"hidden"}}>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:"8px",background:"#D80100"}}/>
+          <div style={{position:"absolute",bottom:0,left:"8px",right:0,height:"9px",background:"#2e7d32"}}/>
+          <div style={{marginLeft:"4px",flex:1}}>
+            <div style={{fontSize:"9px",color:"#aaa",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4"}}>{s.price}</div>
+            <div style={{fontSize:"9px",color:"#aaa",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4",marginBottom:"4px"}}>{s.date}</div>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+              <div>
+                <div style={{fontSize:"26px",fontWeight:"900",color:"#fff",fontFamily:"Georgia,serif",lineHeight:"1.0",letterSpacing:"0.01em"}}>{s.brand1}</div>
+                <div style={{fontSize:"26px",fontWeight:"900",color:"#fff",fontFamily:"Georgia,serif",lineHeight:"1.0",letterSpacing:"0.01em"}}>{s.brand2}</div>
+              </div>
+              <FlameSvg/>
+            </div>
+            <div style={{fontSize:"7px",color:"#90a4ae",fontFamily:"'Poppins', sans-serif",letterSpacing:"0.07em",marginTop:"4px",paddingBottom:"10px"}}>{s.tagline}</div>
+          </div>
+        </div>
+
+        {/* MIDDLE */}
+        <div style={{flex:"0 0 14%",background:s.midBg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"8px 6px",gap:"6px"}}>
+          <div style={{fontSize:"11px",color:"#fff",fontFamily:"Georgia,serif",fontStyle:"italic",fontWeight:"700",textAlign:"center"}}>{s.midTag}</div>
+          <div style={{background:s.midBoxBg,borderRadius:"3px",padding:"5px 6px",width:"100%",textAlign:"center"}}>
+            <div style={{fontSize:"11px",color:"#fff",fontFamily:"Georgia,serif",fontWeight:"700",lineHeight:"1.3"}}>{s.midL1}</div>
+            <div style={{fontSize:"11px",color:"#fff",fontFamily:"Georgia,serif",fontWeight:"700",lineHeight:"1.3"}}>{s.midL2}</div>
+            <div style={{fontSize:"11px",color:"#fff",fontFamily:"Georgia,serif",fontWeight:"700",lineHeight:"1.3"}}>{s.midL3}</div>
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <div style={{flex:1,background:s.rightBg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 24px",textAlign:"center"}}>
+          <div style={{fontSize:"14px",fontWeight:"700",color:"#111",fontFamily:"'Poppins', sans-serif",marginBottom:"2px"}}>{s.rl}</div>
+          <div style={{fontSize:"32px",fontWeight:"900",color:"#D80100",fontFamily:"Georgia,serif",lineHeight:"1.05"}}>{s.rb}</div>
+          <div style={{fontSize:"17px",fontWeight:"900",color:"#111",fontFamily:"'Poppins', sans-serif",letterSpacing:"0.05em"}}>{s.rs}</div>
+        </div>
+      </div>
 
 
-// ── MAIN COMPONENT ────────────────────────────────────────────
+
+    </div>
+  );
+}
+
+// ── Poppins font inject ───────────────────────────────────────
+if (!document.getElementById("poppins-font")) {
+  const link = document.createElement("link");
+  link.id = "poppins-font";
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap";
+  document.head.appendChild(link);
+}
+
+// ── MAIN ─────────────────────────────────────────────────────
 export default function TrendingNews() {
-  const width = useWindowWidth();
-  const isMobile  = width < 600;
-  const isTablet  = width >= 600 && width < 960;
-  const isDesktop = width >= 960;
-
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #f0f0f0; }
 
-        .tn-wrap {
-          font-family: 'Georgia', serif;
-          background: #f0f0f0;
-          min-height: 100vh;
-          padding: 0 0 24px 0;
+        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+        body { background:#e2e2e2; }
+        button { outline:none; border:none; font-family:inherit; }
+
+        .page {padding-bottom:28px; background:#e2e2e2; }
+        .inner { max-width:1300px; margin:0 auto; padding:30px 32px; background:#ffffff; }
+
+        .grid {
+          display:grid;
+          grid-template-columns:450px 1fr 220px;
+          margin-top:12px;
+          background:#ffffff;
+          height:318px;
         }
 
-        .tn-inner {
-          max-width: 1261px;
-          padding: 0 12px;
-        }
+        .col-news { border-right:1px solid #e0e0e0; }
+        .col-cards { padding:0; }
+        .col-live { height:100%; }
 
-        /* Main content grid */
-        .tn-main-grid {
-          display: grid;
-          gap: 14px;
-          align-items: start;
-          margin-top: 14px;
-        }
+        .live-scroll::-webkit-scrollbar { width:4px; }
+        .live-scroll::-webkit-scrollbar-track { background:#f5f5f5; border-radius:2px; }
+        .live-scroll::-webkit-scrollbar-thumb { background:#d80100; border-radius:2px; }
 
-        /* Desktop: 3 columns */
-        @media (min-width: 960px) {
-          .tn-main-grid {
-            grid-template-columns: 220px 1fr 200px;
-          }
+        @media (max-width:900px) {
+          .grid { grid-template-columns:1fr 1fr; }
+          .col-live { grid-column:1/-1; border-top:1px solid #e0e0e0; }
+          .col-news { border-right:1px solid #e0e0e0; }
         }
-
-        /* Tablet: 2 columns */
-        @media (min-width: 600px) and (max-width: 959px) {
-          .tn-main-grid {
-            grid-template-columns: 1fr 1fr;
-          }
-          .tn-live-col {
-            grid-column: 1 / -1;
-          }
-        }
-
-        /* Mobile: 1 column */
-        @media (max-width: 599px) {
-          .tn-main-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .tn-panel {
-          background: #fff;
-          padding: 14px;
-          border: 1px solid #e0e0e0;
-        }
-
-        .tn-ad-wrap {
-          margin-top: 14px;
-        }
-
-        /* Feature cards responsive */
-        .tn-cards-wrap {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
+        @media (max-width:560px) {
+          .grid { grid-template-columns:1fr; }
+          .col-news,.col-cards { border-right:none; border-bottom:1px solid #e0e0e0; }
         }
       `}</style>
 
-      <div className="tn-wrap">
-        {/* ── Trending Bar ── */}
-        <TrendingBar />
-
-        <div className="tn-inner">
-          {/* ── Main 3-column Grid ── */}
-          <div className="tn-main-grid">
-
-            {/* Col 1 — Latest News */}
-            <div className="tn-panel">
-              <LatestNewsList />
-            </div>
-
-            {/* Col 2 — Feature Cards */}
-            <div className="tn-panel">
-              <div className="tn-cards-wrap">
-                {featureCards.map((card) => (
-                  <FeatureCard key={card.id} card={card} />
-                ))}
-              </div>
-            </div>
-
-            {/* Col 3 — Live Updates */}
-            <div className="tn-panel tn-live-col">
-              <LiveUpdates />
-            </div>
-
+      <div className="page">
+        <TrendingBar/>
+        <div className="inner">
+          <div className="grid">
+            <div className="col-news"><LatestNews/></div>
+            <div className="col-cards"><FeatureCards/></div>
+            <div className="col-live"><LiveUpdates/></div>
           </div>
-
+          <Banner/>
         </div>
       </div>
     </>
   );
 }
-

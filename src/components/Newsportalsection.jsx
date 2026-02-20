@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 
 // ── DATA ──────────────────────────────────────────────────────
@@ -99,8 +98,8 @@ function VisualStories() {
     <div style={{ marginBottom: "22px" }}>
       <SectionHeader title="VISUAL STORIES" />
       <div style={{
-        position: "relative", border: "1px solid #e0e0e0",
-        borderRadius: "4px", padding: "10px 36px", background: "#fff", overflow: "hidden",
+        position: "relative", border: "1px solid #bbb",
+        borderRadius: "10px", padding: "10px 10px", background: "#fff", overflow: "hidden",
       }}>
         <button onClick={prev} disabled={offset === 0} style={{
           position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)",
@@ -114,10 +113,10 @@ function VisualStories() {
 
         <div style={{ display: "flex", gap: "10px", overflow: "hidden" }}>
           {visualStories.slice(offset, offset + visible).map((s) => (
-            <div key={s.id} style={{ flex: "1 1 0", minWidth: 0, cursor: "pointer" }}>
+            <div key={s.id} style={{ flex: "1 1 0", minWidth: 0, cursor: "pointer", borderRadius: "10px", border: "1px solid grey", transition: "transform 0.2s" }}>
               <div style={{
-                borderRadius: "4px", overflow: "hidden", aspectRatio: "3/4",
-                border: "2px solid transparent", transition: "border-color 0.2s", position: "relative",
+                borderRadius: "10px", overflow: "hidden", aspectRatio: "3/4",
+                transition: "border-color 0.2s", position: "relative",
               }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "#cc0000"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
@@ -126,7 +125,7 @@ function VisualStories() {
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
               </div>
               <p style={{
-                fontSize: "11px", color: "#333", marginTop: "5px",
+                fontSize: "11px", color: "#333", marginTop: "5px", padding: "10px",
                 fontFamily: "'Noto Sans Devanagari','Arial',sans-serif", lineHeight: 1.4,
                 display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
               }}>{s.caption}</p>
@@ -148,8 +147,134 @@ function VisualStories() {
   );
 }
 
-// ── Small Scrollable Card ──────────────────────────────────────
-function SmallNewsCard({ item, isLast }) {
+// ── Entertainment Section — EXACT screenshot layout ────────────
+//
+//  ┌─────────────────┐  ┌──────────┐  ┌────────────────────────┐
+//  │                 │  │ img top  │  │  text for top img      │
+//  │  BIG FEATURED   │  ├──────────┤  ├────────────────────────┤
+//  │     CARD        │  │ img bot  │  │  text for bottom img   │
+//  ├────────┬────────┤  └──────────┘  └────────────────────────┘
+//  │sm img  │ text  │  ┌──────────┐  ┌────────────────────────┐
+//  └────────┴────────┘  │ img bot2 │  │  text for bot2 img     │
+//                       └──────────┘  └────────────────────────┘
+//
+// = Col1: big card + horizontal card below
+//   Col2: 3 stacked images (no text)
+//   Col3: 3 stacked text blocks matching col2 images
+
+function EntertainmentSection() {
+  // 3 items for middle image col + right text col
+  const midItems = entertainmentSmall.slice(1, 4);
+
+  return (
+    <div style={{ marginBottom: "22px" }}>
+      <SectionHeader title="ENTERTAINMENT" />
+
+      <div className="ent-outer" style={{
+        display: "grid",
+        gridTemplateColumns: "280px 1fr",
+        gap: "14px",
+        alignItems: "start",
+      }}>
+
+        {/* ── COL 1: Big featured + horizontal small card below ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+          {/* Big featured card */}
+          <div
+            style={{
+              position: "relative", borderRadius: "8px", overflow: "hidden",
+              cursor: "pointer", height: "260px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.14)",
+            }}
+            onMouseEnter={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.transform = "scale(1.04)"; }}
+            onMouseLeave={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.transform = "scale(1)"; }}
+          >
+            <img src={entertainmentFeatured.img} alt="" style={{
+              width: "100%", height: "100%", objectFit: "cover",
+              display: "block", transition: "transform 0.4s ease",
+            }} />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)",
+            }} />
+            <div style={{ position: "absolute", top: "10px", left: "10px" }}>
+              <span style={{
+                background: "#cc0000", color: "#fff", fontSize: "10px",
+                padding: "3px 8px", borderRadius: "2px",
+                fontFamily: "'Arial',sans-serif", fontWeight: "800",
+                letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "5px",
+              }}>
+                <span style={{
+                  width: "7px", height: "7px", borderRadius: "50%",
+                  background: "#fff", display: "inline-block",
+                  animation: "blink 1.2s ease-in-out infinite",
+                }} />
+                BREAKING
+              </span>
+            </div>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "14px 12px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                <TagBadge label={entertainmentFeatured.tag} />
+                <span style={{ color: "rgba(255,255,255,0.65)", fontSize: "9px", fontFamily: "'Arial',sans-serif" }}>
+                  {entertainmentFeatured.time}
+                </span>
+              </div>
+              <p style={{
+                color: "#fff", fontSize: "13px", fontWeight: "700", margin: 0,
+                fontFamily: "'Noto Sans Devanagari','Georgia',serif",
+                lineHeight: 1.35, textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+              }}>{entertainmentFeatured.title}</p>
+            </div>
+          </div>
+
+          {/* Horizontal card below big featured */}
+          <HorizontalSmallCard item={entertainmentSmall[0]} />
+        </div>
+
+        {/* ── COL 2+3: 3 rows of [image LEFT + text RIGHT] ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {midItems.map((item) => (
+            <HorizontalSmallCard key={item.id} item={item} />
+          ))}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Text block aligned with middle image column ─────────────────
+function TextBlock({ item }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        height: "105px", cursor: "pointer",
+        display: "flex", flexDirection: "column", justifyContent: "center", gap: "6px",
+        padding: "6px 0",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <TagBadge label={item.tag} />
+        <span style={{ fontSize: "10px", color: "#aaa", fontFamily: "'Arial',sans-serif" }}>{item.time}</span>
+      </div>
+      <p style={{
+        fontSize: "12.5px", color: hovered ? "#cc0000" : "#222", margin: 0,
+        fontFamily: "'Noto Sans Devanagari','Arial',sans-serif",
+        lineHeight: 1.5, fontWeight: "500",
+        display: "-webkit-box", WebkitLineClamp: 3,
+        WebkitBoxOrient: "vertical", overflow: "hidden",
+        transition: "color 0.18s",
+      }}>{item.title}</p>
+    </div>
+  );
+}
+
+// ── Horizontal small card: image left + text right ─────────────
+function HorizontalSmallCard({ item }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -157,21 +282,24 @@ function SmallNewsCard({ item, isLast }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         display: "flex", gap: "10px", cursor: "pointer",
-        padding: "10px 12px",
         background: hovered ? "#fff9f9" : "#fff",
-        borderBottom: isLast ? "none" : "1px solid #f0f0f0",
-        borderLeft: hovered ? "3px solid #cc0000" : "3px solid transparent",
-        transition: "all 0.18s ease", alignItems: "flex-start",
+        borderRadius: "6px", overflow: "hidden",
+        border: "1px solid #e8e8e8",
+        boxShadow: hovered ? "0 2px 10px rgba(204,0,0,0.10)" : "0 1px 4px rgba(0,0,0,0.06)",
+        transition: "all 0.18s ease",
+        alignItems: "stretch",
       }}
     >
-      <div style={{ width: "88px", height: "64px", borderRadius: "4px", overflow: "hidden", flexShrink: 0 }}>
+      {/* Image - wide like screenshot */}
+      <div style={{ width: "160px", height: "100px", flexShrink: 0, overflow: "hidden" }}>
         <img src={item.img} alt="" style={{
-          width: "100%", height: "100%", objectFit: "cover",
+          width: "100%", height: "100%", objectFit: "cover", display: "block",
           transform: hovered ? "scale(1.06)" : "scale(1)",
-          transition: "transform 0.3s ease", display: "block",
+          transition: "transform 0.3s ease",
         }} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0, padding: "10px 10px 10px 0", display: "flex", flexDirection: "column", gap: "6px", justifyContent: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
           <TagBadge label={item.tag} />
           <span style={{ fontSize: "10px", color: "#aaa", fontFamily: "'Arial',sans-serif" }}>{item.time}</span>
@@ -179,8 +307,8 @@ function SmallNewsCard({ item, isLast }) {
         <p style={{
           fontSize: "12.5px", color: hovered ? "#cc0000" : "#222", margin: 0,
           fontFamily: "'Noto Sans Devanagari','Arial',sans-serif",
-          lineHeight: 1.48, fontWeight: "500",
-          display: "-webkit-box", WebkitLineClamp: 2,
+          lineHeight: 1.5, fontWeight: "500",
+          display: "-webkit-box", WebkitLineClamp: 3,
           WebkitBoxOrient: "vertical", overflow: "hidden",
           transition: "color 0.18s",
         }}>{item.title}</p>
@@ -189,123 +317,44 @@ function SmallNewsCard({ item, isLast }) {
   );
 }
 
-// ── Entertainment Section (Upgraded) ──────────────────────────
-function EntertainmentSection() {
-  const PANEL_HEIGHT = 420;
+// ── Image Top Card: image full, text below ─────────────────────
+function ImageTopCard({ item }) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <div style={{ marginBottom: "22px" }}>
-      <SectionHeader title="ENTERTAINMENT" />
-      <div className="ent-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "14px", alignItems: "start" }}>
-
-        {/* LEFT: Featured Card */}
-        <div style={{
-          position: "relative", borderRadius: "6px", overflow: "hidden",
-          cursor: "pointer", height: `${PANEL_HEIGHT}px`,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.14)",
-        }}
-          onMouseEnter={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.transform = "scale(1.04)"; }}
-          onMouseLeave={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.transform = "scale(1)"; }}
-        >
-          <img src={entertainmentFeatured.img} alt="" style={{
-            width: "100%", height: "100%", objectFit: "cover",
-            display: "block", transition: "transform 0.4s ease",
-          }} />
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 45%, transparent 100%)",
-          }} />
-          {/* Breaking badge */}
-          <div style={{ position: "absolute", top: "12px", left: "12px" }}>
-            <span style={{
-              background: "#cc0000", color: "#fff", fontSize: "10px",
-              padding: "3px 8px", borderRadius: "2px",
-              fontFamily: "'Arial',sans-serif", fontWeight: "800",
-              letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "5px",
-            }}>
-              <span style={{
-                width: "7px", height: "7px", borderRadius: "50%",
-                background: "#fff", display: "inline-block",
-                animation: "blink 1.2s ease-in-out infinite",
-              }} />
-              BREAKING
-            </span>
-          </div>
-          {/* Bottom content */}
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <TagBadge label={entertainmentFeatured.tag} />
-              <span style={{ color: "rgba(255,255,255,0.65)", fontSize: "10.5px", fontFamily: "'Arial',sans-serif" }}>
-                {entertainmentFeatured.time}
-              </span>
-            </div>
-            <p style={{
-              color: "#fff", fontSize: "16px", fontWeight: "700", margin: 0,
-              fontFamily: "'Noto Sans Devanagari','Georgia',serif",
-              lineHeight: 1.45, textShadow: "0 1px 4px rgba(0,0,0,0.4)",
-            }}>{entertainmentFeatured.title}</p>
-            <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
-              <span style={{ color: "#ffcccc", fontSize: "11.5px", fontFamily: "'Arial',sans-serif", fontWeight: "600" }}>पूरी खबर पढ़ें</span>
-              <span style={{ color: "#ff9999", fontSize: "14px" }}>›</span>
-            </div>
-          </div>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        cursor: "pointer", borderRadius: "6px", overflow: "hidden",
+        border: "1px solid #e8e8e8",
+        boxShadow: hovered ? "0 4px 14px rgba(0,0,0,0.14)" : "0 1px 4px rgba(0,0,0,0.07)",
+        transition: "box-shadow 0.2s",
+        background: "#fff",
+        display: "flex", flexDirection: "column",
+      }}
+    >
+      {/* Image */}
+      <div style={{ height: "130px", overflow: "hidden", position: "relative", flexShrink: 0 }}>
+        <img src={item.img} alt="" style={{
+          width: "100%", height: "100%", objectFit: "cover", display: "block",
+          transform: hovered ? "scale(1.06)" : "scale(1)",
+          transition: "transform 0.35s ease",
+        }} />
+      </div>
+      {/* Text below */}
+      <div style={{ padding: "8px 9px 10px", display: "flex", flexDirection: "column", gap: "5px", flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <TagBadge label={item.tag} />
+          <span style={{ fontSize: "10px", color: "#aaa", fontFamily: "'Arial',sans-serif" }}>{item.time}</span>
         </div>
-
-        {/* RIGHT: Scrollable Panel */}
-        <div style={{
-          background: "#fff", borderRadius: "6px",
-          border: "1px solid #e8e8e8", overflow: "hidden",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-          height: `${PANEL_HEIGHT}px`,
-          display: "flex", flexDirection: "column",
-        }}>
-          {/* Panel header */}
-          <div style={{
-            padding: "10px 14px", background: "#fff",
-            borderBottom: "2px solid #cc0000",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexShrink: 0,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-              <div style={{ width: "3px", height: "16px", background: "#cc0000", borderRadius: "2px" }} />
-              <span style={{
-                fontSize: "12px", fontWeight: "800", color: "#111",
-                fontFamily: "'Georgia',serif", letterSpacing: "0.05em", textTransform: "uppercase",
-              }}>ताज़ा खबरें</span>
-            </div>
-            <span style={{
-              background: "#cc0000", color: "#fff", fontSize: "10px",
-              padding: "2px 8px", borderRadius: "10px",
-              fontFamily: "'Arial',sans-serif", fontWeight: "700",
-            }}>{entertainmentSmall.length} News</span>
-          </div>
-
-          {/* Scrollable list */}
-          <div className="ent-scroll" style={{ overflowY: "auto", flex: 1 }}>
-            {entertainmentSmall.map((item, i) => (
-              <SmallNewsCard key={item.id} item={item} isLast={i === entertainmentSmall.length - 1} />
-            ))}
-          </div>
-
-          {/* Load more footer */}
-          <div style={{
-            padding: "9px 12px", borderTop: "1px solid #f0f0f0",
-            flexShrink: 0, background: "#fafafa", textAlign: "center",
-          }}>
-            <button style={{
-              background: "#cc0000", color: "#fff", border: "none",
-              borderRadius: "3px", padding: "6px 24px", fontSize: "11.5px",
-              fontFamily: "'Arial',sans-serif", fontWeight: "700",
-              cursor: "pointer", letterSpacing: "0.04em", width: "100%",
-              transition: "background 0.2s",
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = "#a00000"}
-              onMouseLeave={e => e.currentTarget.style.background = "#cc0000"}
-            >
-              और खबरें लोड करें ↓
-            </button>
-          </div>
-        </div>
-
+        <p style={{
+          fontSize: "12px", color: hovered ? "#cc0000" : "#222", margin: 0,
+          fontFamily: "'Noto Sans Devanagari','Arial',sans-serif",
+          lineHeight: 1.45, fontWeight: "500",
+          display: "-webkit-box", WebkitLineClamp: 3,
+          WebkitBoxOrient: "vertical", overflow: "hidden",
+          transition: "color 0.18s",
+        }}>{item.title}</p>
       </div>
     </div>
   );
@@ -316,18 +365,17 @@ function LiveScoreCard() {
   const [tab, setTab] = useState("LIVE");
   const tabs = ["LIVE", "UPCOMING", "RECENT"];
   return (
-    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "4px", overflow: "hidden", marginBottom: "14px" }}>
-      <div style={{ display: "flex", gap: "10px",padding: "10px"  }}>
+    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "10px", overflow: "hidden", marginBottom: "14px" }}>
+      <div style={{ display: "flex", gap: "10px", padding: "10px", background: "#D80100" }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             flex: 1, padding: "7px 4px", border: "none",
-            background: tab === t ? "#cc0000" : "#fff",
-            color: tab === t ? "#fff" : "#444",
+            background: "#D80100",
+            color: tab === t ? "#fff" : "rgba(255,255,255,0.7)",
             fontSize: "11px", fontWeight: "700", cursor: "pointer", marginTop: "5px",
             fontFamily: "'Arial',sans-serif", letterSpacing: "0.04em",
-            borderBottom: tab === t ? "none" : "2px solid #e0e0e0",
-            transition: "background 0.15s",
-            
+            borderBottom: tab === t ? "2px solid #fff" : "2px solid transparent",
+            transition: "all 0.15s",
           }}>{t}</button>
         ))}
       </div>
@@ -335,7 +383,7 @@ function LiveScoreCard() {
         <p style={{ fontSize: "11px", color: "#555", fontFamily: "'Arial',sans-serif", marginBottom: "4px" }}>
           फ़ेब 29, आईसीसी टेस्ट टी20 वर्ल्ड कप, 2026
         </p>
-        <p style={{ fontSize: "11px", color: "#cc0000", fontFamily: "'Arial',sans-serif", fontWeight: "700", marginBottom: "10px" }}>
+        <p style={{ fontSize: "11px", color: "#D80100", fontFamily: "'Arial',sans-serif", fontWeight: "700", marginBottom: "10px" }}>
           Feb 16, 15:00 (IST) | <span style={{ color: "#27ae60" }}>खेल जारी है</span>
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -346,7 +394,7 @@ function LiveScoreCard() {
             <p style={{ fontSize: "15px", fontWeight: "900", color: "#111", fontFamily: "'Georgia',serif", margin: 0 }}>43/3</p>
             <p style={{ fontSize: "10px", color: "#888", margin: "2px 0 0", fontFamily: "'Arial',sans-serif" }}>(5.5 OV)</p>
           </div>
-          <div style={{ fontWeight: "900", fontSize: "13px", color: "#cc0000", fontFamily: "'Georgia',serif", flexShrink: 0 }}>VS</div>
+          <div style={{ fontWeight: "900", fontSize: "13px", color: "#D80100", fontFamily: "'Georgia',serif", flexShrink: 0 }}>VS</div>
           <div style={{ flex: 1, textAlign: "center" }}>
             <div style={{ border: "1.5px solid #ddd", borderRadius: "4px", padding: "8px 4px", marginBottom: "4px", background: "#fafafa" }}>
               <span style={{ fontSize: "13px", fontWeight: "800", fontFamily: "'Arial',sans-serif", color: "#111" }}>ENGLAND</span>
@@ -368,7 +416,7 @@ function LiveScoreCard() {
 // ── Health Sidebar ─────────────────────────────────────────────
 function HealthSidebar() {
   return (
-    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "4px", overflow: "hidden" , marginTop: "87px" }}>
+    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "4px", overflow: "hidden" }}>
       <div style={{ background: "#cc0000", padding: "8px 12px" }}>
         <span style={{ color: "#fff", fontWeight: "800", fontSize: "13px", fontFamily: "'Georgia',serif", letterSpacing: "0.06em" }}>HEALTH</span>
       </div>
@@ -408,12 +456,6 @@ export default function NewsPortalSection() {
 
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-        /* Custom scrollbar */
-        .ent-scroll::-webkit-scrollbar { width: 4px; }
-        .ent-scroll::-webkit-scrollbar-track { background: #f5f5f5; }
-        .ent-scroll::-webkit-scrollbar-thumb { background: #cc0000; border-radius: 4px; }
-        .ent-scroll::-webkit-scrollbar-thumb:hover { background: #a00000; }
-
         .nps-wrap {
           background: #f4f4f4;
           min-height: 100vh;
@@ -422,6 +464,7 @@ export default function NewsPortalSection() {
         }
         .nps-inner {
           max-width: 1200px;
+          margin: 0 auto;
         }
         .nps-layout {
           display: grid;
@@ -430,14 +473,16 @@ export default function NewsPortalSection() {
         }
         @media (min-width: 960px) {
           .nps-layout { grid-template-columns: 1fr 220px; }
+          .ent-outer { grid-template-columns: 280px 1fr !important; }
         }
         @media (max-width: 959px) {
           .nps-layout { grid-template-columns: 1fr; }
           .nps-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+          .ent-outer { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 599px) {
           .nps-sidebar { grid-template-columns: 1fr; }
-          .ent-grid { grid-template-columns: 1fr !important; }
+          .ent-outer { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -452,7 +497,7 @@ export default function NewsPortalSection() {
             </div>
 
             {/* ── Sidebar ── */}
-            <div className="nps-sidebar" style={{ marginTop: isMobile ? "36px" : "36px" }}>
+            <div className="nps-sidebar" style={{ marginTop: isMobile ? "0" : "36px" }}>
               <LiveScoreCard />
               <HealthSidebar />
             </div>
@@ -463,4 +508,3 @@ export default function NewsPortalSection() {
     </>
   );
 }
-

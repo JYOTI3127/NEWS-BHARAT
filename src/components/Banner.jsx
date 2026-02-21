@@ -1,33 +1,36 @@
 import { useState, useEffect } from "react";
+import newsImg from "../assets/1770841302874.webp";
+import { Share2 } from "lucide-react";
 
 const slides = [
   {
     id: 1,
-    author: "Grace Eliza Goodwin",
+    author: "Politics",
     title: "Bondi Criticised After Saying All Epstein Files Have Been Released",
     category: "Politics",
-    image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1200&q=80",
+    image: newsImg,
+   
   },
   {
     id: 2,
-    author: "James Mitchell",
+    author: "Environment",
     title: "Climate Summit Reaches Historic Agreement on Carbon Emissions",
     category: "Environment",
     image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&q=80",
   },
   {
     id: 3,
-    author: "Sarah Chen",
+    author: "Technology",
     title: "Tech Giants Face New Antitrust Regulations Across Europe",
     category: "Technology",
     image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80",
   },
   {
     id: 4,
-    author: "Ahmed Al-Rashid",
+    author: "World",
     title: "Middle East Peace Talks Resume After Years of Stalemate",
     category: "World",
-    image: "https://images.unsplash.com/photo-1479615201589-f23d8ebf12b0?w=1200&q=80",
+     image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1200&q=80",
   },
 ];
 
@@ -78,12 +81,16 @@ const ShareCircleIcon = () => (
   <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
     stroke="rgba(255,255,255,0.82)" strokeWidth="1.4"
     strokeLinecap="round" strokeLinejoin="round">
+    {/* Border circle */}
     <circle cx="12" cy="12" r="10" />
-    <circle cx="15.5" cy="9" r="1.1" fill="rgba(255,255,255,0.82)" stroke="none" />
-    <circle cx="8.5" cy="12" r="1.1" fill="rgba(255,255,255,0.82)" stroke="none" />
-    <circle cx="15.5" cy="15" r="1.1" fill="rgba(255,255,255,0.82)" stroke="none" />
-    <line x1="9.9" y1="11.3" x2="14.1" y2="9.7" strokeWidth="1.2" />
-    <line x1="9.9" y1="12.7" x2="14.1" y2="14.3" strokeWidth="1.2" />
+    {/* Share icon */}
+    <g transform="translate(5.5, 5.5) scale(0.54)">
+      <circle cx="18" cy="5" r="3" fill="rgba(255,255,255,0.82)" stroke="none"/>
+      <circle cx="6" cy="12" r="3" fill="rgba(255,255,255,0.82)" stroke="none"/>
+      <circle cx="18" cy="19" r="3" fill="rgba(255,255,255,0.82)" stroke="none"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" strokeWidth="2"/>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" strokeWidth="2"/>
+    </g>
   </svg>
 );
 
@@ -128,7 +135,7 @@ export default function NewsBanner() {
           max-width: 1400px;
           position: relative;
           overflow: hidden;
-          height: 450px;
+          height: 487px;
         }
 
       /* ── FULL background image — covers entire banner including bottom news ── */
@@ -212,7 +219,7 @@ export default function NewsBanner() {
 
         /* ── Hero text area ── */
         .nb-hero {
-          min-height: 310px;
+          min-height: 370px;
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
@@ -236,8 +243,8 @@ export default function NewsBanner() {
 
         .nb-author-name {
           color: #fff;
-          font-size: 13px;
-          font-family: 'Poppins-Regular';
+          font-size: 15px;
+          font-family: 'Poppins';
           font-weight: 400; 
           letter-spacing: 0.02em;
           opacity: 0.92;
@@ -326,7 +333,7 @@ export default function NewsBanner() {
         .nb-news-title {
           color: rgba(255,255,255,0.88);
           font-size: 12.5px;
-          font-family: 'Georgia', serif;
+         font-family: "Poppins", sans-serif;
           line-height: 1.5;
           margin-bottom: 6px;
           font-weight: 400;

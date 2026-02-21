@@ -24,20 +24,32 @@ const latestNews = [
 ];
 
 const featureCards = [
-  { id:1, image:"https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
-  { id:2, image:"https://images.unsplash.com/photo-1482731215275-a1f151646268?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
-  { id:3, image:"https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=600&q=80", title:"निखिल गुप्ता की कहानी तो धुंध में है, लेकिन जब दुनिया में धराए CIA एजेंट..." },
+  { 
+    id: 1, 
+    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&q=80", 
+    title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." 
+  },
+  { 
+    id: 2, 
+    image: "https://images.unsplash.com/photo-1482731215275-a1f151646268?w=600&q=80", 
+    title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." 
+  },
+  { 
+    id: 3, 
+    image: "https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=600&q=80", 
+    title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." 
+  },
 ];
 
 const liveUpdates = [
-  { id:1, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:2, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:3, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:4, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:5, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:6, time:"3:19 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:7, time:"3:20 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
-  { id:8, time:"3:21 PM", text:"छोटा प्रश्न था फिर भी 3 हजार लोग आए थे। आए थे। आए थे।" },
+  { id: 1, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 2, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 3, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 4, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 5, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 6, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 7, time: "3:20 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 8, time: "3:21 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
 ];
 
 const bannerSlides = [
@@ -107,22 +119,22 @@ function TrendingBar() {
   return (
     <div style={{
       display:"flex", alignItems:"center",
-      background:"#fff", borderBottom:"2px solid #e0e0e0",
-      padding:"30px 32px", height:"52px", gap:"12px"
+      background:"#fff",
+      padding:"30px 12px", height:"52px", gap:"12px"
     }}>
       {/* Label */}
       <div style={{flexShrink:0}}>
-        <div style={{fontSize:"13px",fontWeight:"600",color:"grey",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>TRENDING</div>
-        <div style={{fontSize:"13px",fontWeight:"600",color:"grey",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>NEWS :</div>
+        <div style={{fontSize:"13px",fontWeight:"600",color:"#333",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>TRENDING</div>
+        <div style={{fontSize:"13px",fontWeight:"600",color:"#333",fontFamily:"'Poppins', sans-serif",lineHeight:"1.15"}}>NEWS :</div>
       </div>
 
       {/* Prev */}
       <button
         onClick={()=>setOff(o=>Math.max(0,o-1))}
         disabled={off===0}
-        style={{width:"28px",height:"28px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off===0?"default":"pointer"}}
+        style={{width:"0px",height:"31px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off===0?"default":"pointer"}}
       >
-        <ChevL c={off===0?"#ccc":"#444"} s={22}/>
+        <ChevL c={off===0?"black":"black"} s={22}/>
       </button>
 
       {/* Topic buttons */}
@@ -153,7 +165,7 @@ function SecHeader({title}) {
   return (
     <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
       <div style={{width:"4px",height:"20px",background:"#D80100",borderRadius:"1px"}}/>
-      <span style={{fontSize:"14px",fontWeight:"600",color:"#111",fontFamily:"'Poppins', sans-serif",letterSpacing:"0.04em"}}>{title}</span>
+      <span style={{fontSize:"20px",fontWeight:"bold",color:"#111",fontFamily:"'Poppins'",letterSpacing:"0.02em"}}>{title}</span>
     </div>
   );
 }
@@ -168,7 +180,7 @@ function LatestNews() {
           onMouseEnter={e=>e.currentTarget.style.opacity="0.8"}
           onMouseLeave={e=>e.currentTarget.style.opacity="1"}
         >
-          <div style={{fontSize:"13px",fontWeight:"700",color:"#111",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4",marginBottom:"3px"}}>{n.title}</div>
+          <div style={{fontSize:"13px",fontWeight:"500",color:"#111",fontFamily:"'Poppins', sans-serif",lineHeight:"1.4",marginBottom:"3px"}}>{n.title}</div>
           <div style={{fontSize:"11.5px",color:"#666",fontFamily:"'Poppins', sans-serif",fontWeight:"400",lineHeight:"1.35"}}>{n.desc}</div>
         </div>
       ))}
@@ -237,7 +249,7 @@ function Banner() {
   const s = bannerSlides[cur];
 
   return (
-    <div style={{marginTop:"14px",border:"1.5px solid #ccc",borderRadius:"2px",overflow:"hidden",position:"relative"}}>
+    <div style={{marginTop:"14px",border:"1.5px solid #ccc",borderRadius:"2px",overflow:"hidden",position:"relative",padding:"10px"}}>
       {/* Slide */}
       <div style={{display:"flex",height:"115px",opacity:fading?0:1,transform:fading?"translateY(6px)":"translateY(0)",transition:"opacity 0.35s ease,transform 0.35s ease"}}>
 
@@ -313,7 +325,6 @@ export default function TrendingNews() {
           height:318px;
         }
 
-        .col-news { border-right:1px solid #e0e0e0; }
         .col-cards { padding:0; }
         .col-live { height:100%; }
 

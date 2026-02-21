@@ -44,10 +44,10 @@ const WhatsappIcon = () => (
 );
 
 const footerLinks = {
-  "समाचार": ["देश", "विदेश", "राजनीति", "अपराध", "कारोबार", "विज्ञान"],
-  "मनोरंजन": ["बॉलीवुड", "हॉलीवुड", "OTT", "म्यूजिक", "फैशन", "अवार्ड्स"],
-  "खेल": ["क्रिकेट", "फुटबॉल", "कबड्डी", "हॉकी", "टेनिस", "IPL"],
-  "और भी": ["लाइफस्टाइल", "टेक्नोलॉजी", "ऑटो", "ट्रैवल", "धर्म", "शिक्षा"],
+  "News": ["India", "World", "Politics", "Crime", "Business", "Science"],
+  "Entertainment": ["Bollywood", "Hollywood", "OTT", "Music", "Fashion", "Awards"],
+  "Sports": ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
+  "More": ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
 };
 
 const styles = `
@@ -64,9 +64,6 @@ const styles = `
     font-family: 'Hind', sans-serif;
   }
 
-  /* ══════════════════════════
-     ROOT
-  ══════════════════════════ */
   .ft-root {
     background: #07070e;
     border-top: 3px solid #D80100;
@@ -75,9 +72,6 @@ const styles = `
     width: 100%;
   }
 
-  /* ══════════════════════════
-     TOP BRAND + LINKS SECTION
-  ══════════════════════════ */
   .ft-top {
     max-width: 1262px;
     margin: 0 auto;
@@ -87,7 +81,6 @@ const styles = `
     gap: 60px;
   }
 
-  /* LEFT BRAND */
   .ft-brand {
     display: flex;
     flex-direction: column;
@@ -95,8 +88,7 @@ const styles = `
   }
 
   .ft-logo-img {
-    height: 50px;
-    width: auto;
+    width: 223px;
     object-fit: contain;
     object-position: left;
   }
@@ -107,7 +99,6 @@ const styles = `
     color: rgba(255,255,255,0.38);
   }
 
-  /* SOCIAL ROW */
   .ft-social-title {
     font-size: 11px;
     letter-spacing: 2.5px;
@@ -147,7 +138,6 @@ const styles = `
   .ft-social-icon.ig:hover { background: linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366); border-color: transparent; color: #fff; }
   .ft-social-icon.wa:hover { background: #25d366; border-color: #25d366; color: #fff; }
 
-  /* PLAY STORE */
   .ft-playstore {
     display: flex;
     align-items: center;
@@ -193,7 +183,6 @@ const styles = `
     color: #fff;
   }
 
-  /* RIGHT LINKS GRID */
   .ft-links-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -250,9 +239,6 @@ const styles = `
     border-left: 2px solid #D80100;
   }
 
-  /* ══════════════════════════
-     MIDDLE DIVIDER
-  ══════════════════════════ */
   .ft-mid-divider {
     max-width: 1262px;
     margin: 0 auto;
@@ -264,9 +250,6 @@ const styles = `
     background: rgba(255,255,255,0.06);
   }
 
-  /* ══════════════════════════
-     BOTTOM BAR
-  ══════════════════════════ */
   .ft-bottom {
     max-width: 1262px;
     margin: 0 auto;
@@ -317,9 +300,6 @@ const styles = `
     flex-shrink: 0;
   }
 
-  /* ══════════════════════════
-     RESPONSIVE
-  ══════════════════════════ */
   @media (max-width: 1024px) {
     .ft-top {
       grid-template-columns: 260px 1fr;
@@ -369,19 +349,18 @@ export default function Footer() {
           {/* LEFT BRAND */}
           <div className="ft-brand">
 
-            {/* LOGO — apni image ka src yahan daal dena */}
             <img
               className="ft-logo-img"
-               src={logo}
-              alt="News Bharat"
+              src={logo}
+              alt="News4Bharat"
             />
 
             <p className="ft-brand-desc">
-              न्यूज़ भारत — देश और दुनिया की ताज़ा खबरें, ब्रेकिंग न्यूज़ और निष्पक्ष पत्रकारिता। हर पल, हर खबर।
+              News4Bharat — Latest news from India and the world, breaking news and unbiased journalism. Every moment, every story.
             </p>
 
             <div>
-              <div className="ft-social-title" style={{ marginBottom: '10px' }}>हमें फॉलो करें</div>
+              <div className="ft-social-title" style={{ marginBottom: '10px' }}>Follow Us</div>
               <div className="ft-social-row">
                 <a className="ft-social-icon fb" href="#" title="Facebook"><FacebookIcon /></a>
                 <a className="ft-social-icon tw" href="#" title="Twitter/X"><TwitterIcon /></a>
@@ -425,16 +404,16 @@ export default function Footer() {
         {/* BOTTOM BAR */}
         <div className="ft-bottom">
           <p className="ft-copyright">
-            © {year} <strong>News Bharat</strong>. सर्वाधिकार सुरक्षित। सभी समाचार एवं सामग्री कॉपीराइट के अधीन हैं।
+            © {year} <strong>News4Bharat</strong>. All rights reserved. All news and content are protected under copyright.
           </p>
           <div className="ft-policy-links">
-            <a className="ft-policy-link" href="#">गोपनीयता नीति</a>
+            <a className="ft-policy-link" href="#">Privacy Policy</a>
             <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">नियम एवं शर्तें</a>
+            <a className="ft-policy-link" href="#">Terms & Conditions</a>
             <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">विज्ञापन</a>
+            <a className="ft-policy-link" href="#">Advertise</a>
             <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">हमसे संपर्क करें</a>
+            <a className="ft-policy-link" href="#">Contact Us</a>
           </div>
         </div>
 

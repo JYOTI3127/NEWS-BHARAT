@@ -15,13 +15,13 @@ const C = {
   titleColor:      "#ffffff",                  // Card title color
   headerColor:     "#ffffff",                  // Section header text
   headerBarColor:  "#FFD24D",                  // Header left/right bar
-  featuredBorder:  "rgba(255,255,255,0.85)",   // Featured player border
+  featuredBorder:  "rgba(255,255,255,0.85)",   
   featuredGradient:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
 };
 
 const F = {
   hindi:   "'Noto Sans Devanagari', 'Arial', sans-serif",
-  base:    "'Georgia', serif",
+  base:    "poppins",
   mono:    "'Arial', sans-serif",
 };
 
@@ -32,6 +32,7 @@ const STYLES = {
     background: C.sectionBg,
     padding: "20px 16px 24px",
     fontFamily: F.base,
+    height: "450px",
   },
   inner: {
     maxWidth: "1120px",
@@ -53,8 +54,8 @@ const STYLES = {
   },
   headerText: {
     color: C.headerColor,
-    fontWeight: "800",
-    fontSize: "14px",
+    fontWeight: "bold",
+    fontSize: "16px",
     fontFamily: F.base,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
@@ -351,7 +352,7 @@ export default function VideoSection() {
 
             {/* Center Featured */}
             <div className="vs-featured-col">
-              {isDesktop && <div style={{ marginBottom: "32px" }} />}
+              {isDesktop && <div style={{ marginBottom: "40px" }} />}
               <FeaturedPlayer video={featured} />
             </div>
 

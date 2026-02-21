@@ -242,7 +242,17 @@ const Header = () => {
       <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
         {/* TOP TICKER BAR */}
-        <div className="ticker-bar">
+          <div
+          className="ticker-bar"
+          style={{
+            maxHeight: isScrolled ? "0px" : "200px",
+            opacity: isScrolled ? 0 : 1,
+            overflow: "hidden",
+            padding: isScrolled ? "0 18px" : "5px 18px",
+              borderBottom: isScrolled ? "none" : "1px solid #ebebeb",
+            transition: "max-height 0.3s ease, opacity 0.3s ease",
+          }}
+        >
           <div className="ticker-left">
             <BarChart2 size={14} className="ticker-icon" />
             <span className="ticker-label">Markets :</span>
@@ -291,7 +301,7 @@ const Header = () => {
                 <rect y="7.33" width="16" height="3.67" fill="#138808" />
                 <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
               </svg>
-              हि-ही
+               हिंदी
             </button>
             <button className="btn-live">
               <Radio size={11} /> Live TV
@@ -303,7 +313,17 @@ const Header = () => {
         </div>
 
         {/* TOP BAR */}
-        <div className="top-bar">
+        <div
+          className="top-bar"
+          style={{
+            maxHeight: isScrolled ? "0px" : "200px",
+            opacity: isScrolled ? 0 : 1,
+            overflow: "hidden",
+             padding: isScrolled ? "0 18px" : "6px 18px", 
+               borderBottom: isScrolled ? "none" : "1px solid #ebebeb",
+            transition: "max-height 0.3s ease, opacity 0.3s ease",
+          }}
+        >
           <div className="search-row">
             <div className="search-box">
               <Search size={14} className="search-icon" />

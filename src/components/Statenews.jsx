@@ -19,24 +19,24 @@ const Shield = ({ size = 20 }) => (
 );
 
 const stateList = [
-  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
-  "Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka",
-  "Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram",
-  "Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
-  "Tripura","Uttar Pradesh","Uttarakhand","West Bengal"
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
 
 // Left big featured card
 const featuredCard = {
   img: "https://images.unsplash.com/photo-1616530940355-351fabd9524b?w=700&q=80",
-  title: "रोहित शेट्टी के घर फायरिंग में हरियाणा से 4 अरेस्ट, बिश्नोई गैंग के संपर्क में था शूटर",
-  tag: "ब्रेकिंग",
+  title: "Four arrested from Haryana in firing incident at Rohit Shetty’s house; shooter linked to Bishnoi gang",
+  tag: "BREAKING",
 };
 
 // Bottom left small card (img + text)
 const bottomLeftCard = {
   img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&q=80",
-  title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+  title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
 };
 
 // Middle 3 vertical cards (img + text)
@@ -44,31 +44,61 @@ const midCards = [
   {
     id: 1,
     img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&q=80",
-    label: "TritiyaBishwa", hd: false, teaser: false,
-    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+    label: "TritiyaBishwa",
+    hd: false,
+    teaser: false,
+    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
   },
   {
     id: 2,
     img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80",
-    label: "REBOOT", hd: false, teaser: false,
-    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+    label: "REBOOT",
+    hd: false,
+    teaser: false,
+    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
   },
   {
     id: 3,
     img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=400&q=80",
-    label: "Golmaal", hd: true, teaser: true,
-    title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है। यह न केवल पांच शताब्दियों तक जीवित रहा है",
+    label: "Golmaal",
+    hd: true,
+    teaser: true,
+    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
   },
 ];
 
 // Right defence/news panel
 const defenceNews = [
-  { id: 1, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
-  { id: 2, img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
-  { id: 3, img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
-  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
-  { id: 5, img: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
-  { id: 6, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", title: "लोरेम इप्सम उद्योग का मानक डमी टेक्स्ट रहा है यह न केवल पांच शताब्दियों त..." },
+  { 
+    id: 1, 
+    img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
+  { 
+    id: 2, 
+    img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
+  { 
+    id: 3, 
+    img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
+  { 
+    id: 4, 
+    img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
+  { 
+    id: 5, 
+    img: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
+  { 
+    id: 6, 
+    img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", 
+    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+  },
 ];
 
 const styles = `
@@ -78,7 +108,7 @@ const styles = `
   .sn-wrap {
     font-family: 'Poppins', sans-serif;
     background: #fff;
-    padding: 14px 18px;
+    padding: 24px 32px;
     width: 100%;
     margin: 0 auto;
   }
@@ -108,7 +138,7 @@ const styles = `
   .sn-tabs-container {
     position: relative;
     margin-bottom: 14px;
-    background: #f7f7f7;
+    background: #D80100;
     border: 1px solid #e0e0e0;
     border-radius: 30px;
     padding: 4px 44px;
@@ -132,17 +162,17 @@ const styles = `
     cursor: pointer;
     border: none;
     background: transparent;
-    color: #555;
+    color: white;
     white-space: nowrap;
     font-family: 'Poppins', sans-serif;
     transition: all 0.2s;
   }
-  .sn-tab-btn:hover { color: #e8001c; }
   .sn-tab-btn.active {
-    background: #e8001c;
+    border: 1px solid #fff;
     color: #fff;
     font-weight: 600;
     border-radius: 20px;
+
   }
   .sn-arrow {
     position: absolute;
@@ -155,6 +185,8 @@ const styles = `
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     z-index: 10;
+    border: 1px solid #fff;
+     transition: background 0.3s;
   }
   .sn-arrow-left { left: 6px; }
   .sn-arrow-right { right: 6px; }
@@ -182,8 +214,8 @@ const styles = `
   /* Big featured card */
   .sn-big-card {
     position: relative;
-    width: 100%;
-    height: 230px;
+    width: 30rem;
+    height: 256px;
     border-radius: 7px;
     overflow: hidden;
     cursor: pointer;
@@ -224,9 +256,12 @@ const styles = `
     gap: 10px;
     align-items: flex-start;
     cursor: pointer;
+        width: 452px;
   }
   .sn-sc-img {
-    width: 130px; min-width: 130px; height: 86px;
+    width: 211px;
+    min-width: 130px;
+    height: 100px;
     border-radius: 5px; overflow: hidden;
     flex-shrink: 0; background: #222;
   }
@@ -237,12 +272,13 @@ const styles = `
   }
   .sn-small-card:hover .sn-sc-img img { transform: scale(1.06); }
   .sn-sc-title {
-    font-size: 12px; font-weight: 500;
+    font-size: 14px; font-weight: 500;
     color: #1a1a1a; line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    padding: 17px;
   }
 
   /* MIDDLE BLOCK */
@@ -252,6 +288,7 @@ const styles = `
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding-left: 15%;
   }
   .sn-mid-card {
     display: flex;
@@ -294,12 +331,13 @@ const styles = `
     letter-spacing: 3px; z-index: 3;
   }
   .sn-mid-title {
-    font-size: 12.5px; font-weight: 500;
+    font-size: 16px; font-weight: 500;
     color: #1a1a1a; line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    padding: 19px;
   }
 
   /* RIGHT: Defence panel */
@@ -316,17 +354,17 @@ const styles = `
     background: #e8001c;
     color: #fff;
     font-size: 13px; font-weight: 700;
-    letter-spacing: 1.5px;
     text-transform: uppercase;
     text-align: center;
     padding: 9px 10px;
   }
   .sn-defence-scroll {
-    max-height: 360px;
+    max-height: 313px;
     overflow-y: auto;
     padding: 4px 8px;
     scrollbar-width: thin;
     scrollbar-color: #e8001c #f5f5f5;
+    border-top: 1px solid #999999;
   }
   .sn-defence-scroll::-webkit-scrollbar { width: 4px; }
   .sn-defence-scroll::-webkit-scrollbar-track { background: #f5f5f5; }

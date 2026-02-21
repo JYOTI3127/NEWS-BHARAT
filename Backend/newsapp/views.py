@@ -267,23 +267,51 @@ def weather_api(request):
         return Response({"error": "Weather service unavailable"}, status=500)
     
 @api_view(['GET'])
-def metal_rates(request):
+def metal_ticker(request):
 
-    url = "https://api.metalpriceapi.com/v1/latest"
-    params = {
-        "api_key": METAL_API_KEY,
-        "base": "INR",
-        "currencies": "XAU,XAG"
-    }
+    gold = MetalRate.objects.filter(
+        metal_type="gold"
+    ).order_by('-created_at').first()
 
-    try:
-        res = requests.get(url, params=params, timeout=5)
-        data = res.json()
+    silver = MetalRate.objects.filter(
+        metal_type="silver"
+    ).order_by('-created_at').first()
 
-        return Response({
-            "gold_price_inr": round(data["rates"]["XAU"], 2),
-            "silver_price_inr": round(data["rates"]["XAG"], 2)
-        })
+    return Response({
+        "gold": {
+            "price": gold.price if gold else 0,
+            "change": gold.change if gold else 0,
+            "percent_change": gold.percent_change if gold else 0,
+            "trend": gold.trend if gold else "neutral"
+        },
+        "silver": {
+            "price": silver.price if silver else 0,
+            "change": silver.change if silver else 0,
+            "percent_change": silver.percent_change if silver else 0,
+            "trend": silver.trend if silver else "neutral"
+        }
+    })
 
-    except Exception:
-        return Response({"error": "Metal rates fetch failed"}, status=400)
+from .utils import fetch_and_store_metal_rates
+
+
+@api_view(['GET'])
+def update_metal_rates(request):
+    fetch_and_store_metal_rates()
+    return Response({"message": "Rates updated successfully"})
+
+from .utils import fetch_index_data
+
+
+@api_view(['GET'])
+def market_indices(request):
+
+    nifty = fetch_index_data("^NSEI")
+    sensex = fetch_index_data("^BSESN")
+
+    return Response({
+        "nifty": nifty,
+        "sensex": sensex
+    })
+    
+

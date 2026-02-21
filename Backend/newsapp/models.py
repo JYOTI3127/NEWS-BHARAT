@@ -162,7 +162,6 @@ class Article(models.Model):
         self.full_clean()  
         super().save(*args, **kwargs)
 
-
     def __str__(self):
         return self.title
 
@@ -275,5 +274,23 @@ class HomepageSlot(models.Model):
 
     def __str__(self):
         return f"{self.slot_name} ({self.mode})"
+    
+
+class MetalRate(models.Model):
+    METAL_CHOICES = [
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
+    ]
+
+    metal_type = models.CharField(max_length=10, choices=METAL_CHOICES)
+    price = models.FloatField()  # store in final display unit
+    change = models.FloatField(default=0)
+    percent_change = models.FloatField(default=0)
+    trend = models.CharField(max_length=10, default="neutral")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.metal_type} - {self.price}"
 
 

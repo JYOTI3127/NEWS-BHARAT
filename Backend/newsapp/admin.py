@@ -316,6 +316,7 @@ admin_site.register(Role)
 admin_site.register(Article)
 admin_site.register(User, UserAdmin)
 admin_site.register(Group)
+admin_site.register(MetalRate)
 
 admin_site.register(HomepageSlot)
 

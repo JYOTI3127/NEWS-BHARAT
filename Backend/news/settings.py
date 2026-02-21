@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'newsapp',
+    'django_crontab',
 
 ]
 
@@ -133,4 +134,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 OPENWEATHER_API_KEY = "bad03cf01c063dcee90194478cda4bff"
 METAL_API_KEY = "776f81dc7c1d552466ac6d57852228ea"
+TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
+
+CRONJOBS = [
+    ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
+]
 

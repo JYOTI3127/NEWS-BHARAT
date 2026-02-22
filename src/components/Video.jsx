@@ -32,7 +32,7 @@ const STYLES = {
     background: C.sectionBg,
     padding: "20px 16px 24px",
     fontFamily: F.base,
-    height: "450px",
+    height: "460px",
   },
   inner: {
     maxWidth: "1120px",
@@ -180,11 +180,37 @@ const STYLES = {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const videos = [
-  { id:1, title:"प्रतापगढ़ में समाजवादी पार्टी नेता की हादसे में मौत CCTV में कैद", thumb:"https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=400&q=80", duration:"2:34" },
-  { id:2, title:"प्रतापगढ़ में समाजवादी पार्टी नेता की हादसे में मौत CCTV में कैद", thumb:"https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80", duration:"4:12" },
-  { id:3, title:"प्रतापगढ़ में समाजवादी पार्टी नेता की हादसे में मौत CCTV में कैद", thumb:"https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80", duration:"1:58", featured:true },
-  { id:4, title:"प्रतापगढ़ में समाजवादी पार्टी नेता की हादसे में मौत CCTV में कैद", thumb:"https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&q=80", duration:"3:45" },
-  { id:5, title:"प्रतापगढ़ में समाजवादी पार्टी नेता की हादसे में मौत CCTV में कैद", thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80", duration:"5:20" },
+  { 
+    id: 1, 
+    title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", 
+    thumb: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=400&q=80", 
+    duration: "2:34" 
+  },
+  { 
+    id: 2, 
+    title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", 
+    thumb: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80", 
+    duration: "4:12" 
+  },
+  { 
+    id: 3, 
+    title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", 
+    thumb: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80", 
+    duration: "1:58", 
+    featured: true 
+  },
+  { 
+    id: 4, 
+    title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", 
+    thumb: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&q=80", 
+    duration: "3:45" 
+  },
+  { 
+    id: 5, 
+    title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", 
+    thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80", 
+    duration: "5:20" 
+  },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -352,7 +378,7 @@ export default function VideoSection() {
 
             {/* Center Featured */}
             <div className="vs-featured-col">
-              {isDesktop && <div style={{ marginBottom: "40px" }} />}
+              {isDesktop && <div style={{ marginBottom: "48px" }} />}
               <FeaturedPlayer video={featured} />
             </div>
 

@@ -16,21 +16,21 @@ const slides = [
     author: "Environment",
     title: "Climate Summit Reaches Historic Agreement on Carbon Emissions",
     category: "Environment",
-    image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&q=80",
+       image: newsImg,
   },
   {
     id: 3,
     author: "Technology",
     title: "Tech Giants Face New Antitrust Regulations Across Europe",
     category: "Technology",
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80",
+      image: newsImg,
   },
   {
     id: 4,
     author: "World",
     title: "Middle East Peace Talks Resume After Years of Stalemate",
     category: "World",
-     image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1200&q=80",
+     image: newsImg,
   },
 ];
 
@@ -135,7 +135,7 @@ export default function NewsBanner() {
           max-width: 1400px;
           position: relative;
           overflow: hidden;
-          height: 487px;
+          height: 590px;
         }
 
       /* ── FULL background image — covers entire banner including bottom news ── */
@@ -206,6 +206,35 @@ export default function NewsBanner() {
     rgba(0,0,0,0.2) 80%,
     transparent 100%
   );
+}
+
+/* ── CLEAN PROFESSIONAL NEWS GRADIENT ── */
+.nb-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  background:
+    /* LEFT SIDE TEXT DARK */
+    linear-gradient(
+      90deg,
+      rgba(0,0,0,0.85) 0%,
+      rgba(0,0,0,0.65) 18%,
+      rgba(0,0,0,0.35) 35%,
+      rgba(0,0,0,0.15) 50%,
+      transparent 65%
+    ),
+
+    /* BOTTOM NEWS DARK */
+    linear-gradient(
+      0deg,
+      rgba(0,0,0,0.85) 0%,
+      rgba(0,0,0,0.6) 15%,
+      rgba(0,0,0,0.3) 30%,
+      rgba(0,0,0,0.12) 45%,
+      transparent 65%
+    );
 }
 
 
@@ -387,8 +416,8 @@ export default function NewsBanner() {
           />
 
           {/* Overlays */}
-          <div className="nb-overlay-left" />
-          <div className="nb-overlay-bottom" />
+<div className="nb-gradient-overlay" />
+          
 
           {/* All content above overlays */}
           <div

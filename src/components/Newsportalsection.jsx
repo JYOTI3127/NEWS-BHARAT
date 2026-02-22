@@ -5,37 +5,37 @@ const visualStories = [
   { 
     id: 1, 
     img: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 2, 
     img: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 3, 
     img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 4, 
     img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 5, 
     img: "https://images.unsplash.com/photo-1479615201589-f23d8ebf12b0?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 6, 
     img: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
   { 
     id: 7, 
     img: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=300&q=80", 
-    caption: "In the discussion around speed reaching 1,500, the newspaper editorial brought this issue into focus." 
+    caption: "In the discussion around speed reaching 1,500, the newspaper editorial." 
   },
 ];
 
@@ -46,7 +46,7 @@ const entMidCards = [
     label: "TritiyaBishwa",
     hd: false,
     teaser: false,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text survived to the principal.",
   },
   {
     id: 2,
@@ -54,7 +54,7 @@ const entMidCards = [
     label: "REBOOT",
     hd: false,
     teaser: false,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text survived to the principal.",
   },
   {
     id: 3,
@@ -62,7 +62,7 @@ const entMidCards = [
     label: "Golmaal",
     hd: true,
     teaser: true,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text survived to the principal.",
   },
 ];
 
@@ -71,42 +71,42 @@ const healthNews = [
   { 
     id: 1, 
     img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 2, 
     img: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 3, 
     img: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 4, 
     img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 5, 
     img: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 6, 
     img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 7, 
     img: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
   { 
     id: 8, 
     img: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=200&q=80", 
-    text: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries." 
+    text: "Lorem Ipsum has been the industry's standard dummy." 
   },
 ];
 
@@ -129,7 +129,7 @@ function SectionHeader({ title }) {
         <div style={{ width: "4px", height: "20px", background: "#cc0000", borderRadius: "2px", flexShrink: 0 }} />
         <span style={{
           fontWeight: "bold", fontSize: "18px", color: "#111",
-          fontFamily: "'Poppins', sans-serif", letterSpacing: "0.06em",
+          fontFamily: "'Poppins', sans-serif",
           textTransform: "uppercase",
         }}>{title}</span>
       </div>
@@ -298,7 +298,7 @@ function EntertainmentSection() {
                 padding: "50px 13px 13px",
                 background: "linear-gradient(to top, rgba(0,0,0,0.88), transparent)",
               }}>
-                <p style={{ color: "#fff", fontSize: "13px", fontWeight: 600, lineHeight: 1.5, fontFamily: "'Poppins', sans-serif" }}>
+                <p style={{ color: "#fff", fontSize: "13px", fontWeight: 600, lineHeight: 1.5, fontFamily: "'Poppins', sans-serif",borderLeft: "2px solid yellow", paddingLeft: "2%" }}>
                   रोहित शेट्टी के घर फायरिंग में हरियाणा से 4 अरेस्ट,<br />
                   बिश्नोई गैंग के संपर्क में था शूटर
                 </p>
@@ -337,7 +337,7 @@ function EntertainmentSection() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "15.5px", fontWeight: 500, color: "#1a1a1a", lineHeight: 1.6, fontFamily: "'Poppins', sans-serif", padding: "20px", borderRadius: "5px",
-                    display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden",width: "253px" }}>{card.title}</p>
+                    display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden",width: "400px" }}>{card.title}</p>
                 </div>
               </div>
             ))}
@@ -386,12 +386,13 @@ export default function NewsPortalSection() {
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         .nps-wrap {
-          background: #f4f4f4;
+          background: white;
           min-height: 100vh;
           padding: 40px 20px 28px;
           font-family: 'Georgia', serif;
         }
-        .nps-inner { max-width: 1200px; margin: 0 auto; }
+        .nps-inner { max-width: 1261px;
+    margin: 0 20px;}
 
         .nps-layout {
           display: block;

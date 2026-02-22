@@ -314,7 +314,7 @@ export default function TrendingNews() {
         body { background:#e2e2e2; }
         button { outline:none; border:none; font-family:inherit; }
 
-        .page {padding-bottom:28px; background:#e2e2e2; }
+        .page {padding-bottom:28px; background:white; }
         .inner { max-width:1300px; margin:0 auto; padding:30px 32px; background:#ffffff; }
 
         .grid {

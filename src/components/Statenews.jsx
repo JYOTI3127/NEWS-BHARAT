@@ -36,7 +36,7 @@ const featuredCard = {
 // Bottom left small card (img + text)
 const bottomLeftCard = {
   img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&q=80",
-  title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+  title: "Lorem Ipsum has been the industry's standard dummy text and has survived.",
 };
 
 // Middle 3 vertical cards (img + text)
@@ -72,32 +72,32 @@ const defenceNews = [
   { 
     id: 1, 
     img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
   { 
     id: 2, 
     img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
   { 
     id: 3, 
     img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
   { 
     id: 4, 
     img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
   { 
     id: 5, 
     img: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
   { 
     id: 6, 
     img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", 
-    title: "Lorem Ipsum has been the industry’s standard dummy text and has lasted for centuries..." 
+    title: "Lorem Ipsum has been the industry’s standard dummy." 
   },
 ];
 
@@ -129,7 +129,6 @@ const styles = `
   .sn-heading-text {
     font-size: clamp(13px, 1.5vw, 17px);
     font-weight: 700;
-    letter-spacing: 2px;
     text-transform: uppercase;
     color: #111;
   }
@@ -248,6 +247,8 @@ const styles = `
     font-size: clamp(11px, 1.15vw, 13.5px);
     font-weight: 600;
     line-height: 1.5;
+    border-left: 2px solid yellow;
+    padding-left: 2%;
   }
 
   /* Bottom small card */

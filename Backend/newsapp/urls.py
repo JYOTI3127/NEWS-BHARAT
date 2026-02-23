@@ -8,4 +8,8 @@ urlpatterns = [
     path("metal-ticker/", metal_ticker),
     path("update-metal/", update_metal_rates),
     path('market-indices/', market_indices),
+    path("weather/", weather_api),
+    path("metal-ticker/", metal_ticker),
+    path("update-metal/", update_metal_rates),
+    path('market-indices/', market_indices),
 ]

@@ -1,0 +1,191 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+{% if top_performer %}
+<div class="tp-card">
+  <div class="tp-card__glow"></div>
+
+  <div class="tp-card__label">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+    Top Performer — {{ current_month }}
+  </div>
+
+  <div class="tp-card__body">
+
+    <div class="tp-avatar">
+      {{ top_performer.reporter.username|first|upper }}
+    </div>
+
+    <div class="tp-info">
+      <div class="tp-info__name">{{ top_performer.reporter.username }}</div>
+      <div class="tp-stats">
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Published
+          </div>
+          <div class="tp-stat__value tp-stat__value--accent">{{ top_performer.articles_published }}</div>
+        </div>
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Avg Views
+          </div>
+          <div class="tp-stat__value">{{ top_performer.avg_views }}</div>
+        </div>
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Engagement
+          </div>
+          <div class="tp-stat__value">{{ top_performer.avg_engagement_score }}</div>
+        </div>
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Deadline %
+          </div>
+          <div class="tp-stat__value">{{ top_performer.deadline_adherence_rate }}%</div>
+        </div>
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Assigned
+          </div>
+          <div class="tp-stat__value">{{ top_performer.articles_assigned }}</div>
+        </div>
+
+        <div class="tp-stat">
+          <div class="tp-stat__label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Rejected
+          </div>
+          <div class="tp-stat__value">{{ top_performer.articles_rejected }}</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tp-score">
+      <div class="tp-score__number">{{ top_performer.performance_score }}</div>
+      <div class="tp-score__sub">out of 100</div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+
+{% if ranked_reporters %}
+<div class="rank-wrap">
+  <div class="rank-header">
+    <span class="rank-header__title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      All Reporters Ranking
+    </span>
+    <span class="rank-header__month">{{ current_month }}</span>
+  </div>
+
+  <div class="rank-scroll">
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Reporter</th>
+          <th>Assigned</th>
+          <th>Submitted</th>
+          <th>Published</th>
+          <th>Rejected</th>
+          <th>Rej %</th>
+          <th>Deadline %</th>
+          <th>Avg Views</th>
+          <th>Engagement</th>
+          <th>Plagiarism</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in ranked_reporters %}
+        <tr>
+
+          <td class="td--rank">
+            {% if forloop.counter == 1 %}
+              <span class="medal medal--gold">1</span>
+            {% elif forloop.counter == 2 %}
+              <span class="medal medal--silver">2</span>
+            {% elif forloop.counter == 3 %}
+              <span class="medal medal--bronze">3</span>
+            {% else %}
+              <span class="rank-num">#{{ forloop.counter }}</span>
+            {% endif %}
+          </td>
+
+          <td class="td--name">
+            <div class="reporter-cell">
+              <div class="reporter-cell__avatar">
+                {{ p.reporter.username|first|upper }}
+              </div>
+              {{ p.reporter.username }}
+            </div>
+          </td>
+
+          <td>{{ p.articles_assigned }}</td>
+          <td>{{ p.articles_submitted }}</td>
+          <td class="td--pub">{{ p.articles_published }}</td>
+          <td class="td--rej">{{ p.articles_rejected }}</td>
+
+          <td>
+            <span class="badge {% if p.rejection_rate > 15 %}badge--danger{% else %}badge--success{% endif %}">
+              {{ p.rejection_rate }}%
+            </span>
+          </td>
+
+          <td>{{ p.deadline_adherence_rate }}%</td>
+          <td>{{ p.avg_views }}</td>
+          <td>{{ p.avg_engagement_score }}</td>
+
+          <td class="{% if p.plagiarism_avg_score > 3 %}txt--danger{% else %}txt--muted{% endif %}">
+            {{ p.plagiarism_avg_score }}%
+          </td>
+
+          <td>
+            <div class="score-cell">
+              <div class="score-bar__track">
+                <div class="score-bar__fill
+                  {% if p.performance_score >= 85 %}score-bar__fill--high
+                  {% elif p.performance_score >= 70 %}score-bar__fill--medium
+                  {% else %}score-bar__fill--low{% endif %}"
+                  style="width: {{ p.performance_score }}%">
+                </div>
+              </div>
+              <span class="
+                {% if p.performance_score >= 85 %}score-val--high
+                {% elif p.performance_score >= 70 %}score-val--medium
+                {% else %}score-val--low{% endif %}">
+                {{ p.performance_score }}
+              </span>
+            </div>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

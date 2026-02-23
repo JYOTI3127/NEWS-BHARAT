@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'newsapp',
+    'django_crontab',
 
 ]
 
@@ -56,10 +58,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'news.urls'
 
+import os
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS':  [BASE_DIR / 'templates'],
+        'DIRS':  [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -120,7 +124,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+OPENWEATHER_API_KEY = "bad03cf01c063dcee90194478cda4bff"
+METAL_API_KEY = "776f81dc7c1d552466ac6d57852228ea"
+TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
+
+CRONJOBS = [
+    ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
+]
 

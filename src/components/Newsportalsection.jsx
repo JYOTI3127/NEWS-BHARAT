@@ -140,7 +140,7 @@ function SectionHeader({ title }) {
       }}
         onMouseEnter={e => e.currentTarget.style.borderColor = "#cc0000"}
         onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
-      >और देखें ›</a>
+      >Read More›</a>
     </div>
   );
 }
@@ -166,7 +166,7 @@ function LiveScoreCard() {
       </div>
       <div style={{ padding: "30px 12px" }}>
         <p style={{ fontSize: "11px", color: "#555", fontFamily: "'Poppins', sans-serif", marginBottom: "4px" }}>
-          फ़ेब 29, आईसीसी टेस्ट टी20 वर्ल्ड कप, 2026
+       Feb 29, ICC Test & T20 World Cup, 2026
         </p>
         <p style={{ fontSize: "11px", color: "#D80100", fontFamily: "'Poppins', sans-serif", fontWeight: "700", marginBottom: "10px" }}>
           Feb 16, 15:00 (IST) | <span style={{ color: "#27ae60" }}>खेल जारी है</span>
@@ -190,7 +190,7 @@ function LiveScoreCard() {
         </div>
         <div style={{ marginTop: "10px", padding: "6px 8px", background: "#fff8f8", borderRadius: "3px", border: "1px solid #fdd" }}>
           <p style={{ fontSize: "11px", color: "#cc0000", margin: 0, fontFamily: "'Poppins', sans-serif", lineHeight: 1.4, fontWeight: "600" }}>
-            इटली को 44 मैच में 11.25 पर्स ओवर और 160 रन चाहिए
+           Italy need 160 runs in 44 matches at 11.25 RPO.
           </p>
         </div>
       </div>
@@ -222,11 +222,11 @@ function VisualStoriesRow() {
           }}>
             <button onClick={prev} disabled={offset === 0} style={{
               position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)",
-              width: "26px", height: "26px", borderRadius: "50%",
+              width: "32px", height: "29px", borderRadius: "50%",
               border: "1.5px solid #bbb", background: "#fff",
               cursor: offset === 0 ? "not-allowed" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "16px", color: offset === 0 ? "#ccc" : "#333", zIndex: 2,
+              fontSize: "16px", color: offset === 0 ? "black" : "#333", zIndex: 2,
               boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
             }}>‹</button>
 
@@ -337,7 +337,7 @@ function EntertainmentSection() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "15.5px", fontWeight: 500, color: "#1a1a1a", lineHeight: 1.6, fontFamily: "'Poppins', sans-serif", padding: "20px", borderRadius: "5px",
-                    display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden",width: "400px" }}>{card.title}</p>
+                    display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden",width: "310px" }}>{card.title}</p>
                 </div>
               </div>
             ))}

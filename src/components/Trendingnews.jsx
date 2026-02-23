@@ -132,7 +132,7 @@ function TrendingBar() {
       <button
         onClick={()=>setOff(o=>Math.max(0,o-1))}
         disabled={off===0}
-        style={{width:"0px",height:"31px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off===0?"default":"pointer"}}
+        style={{width:"0px",height:"29px",borderRadius:"50%",border:"1.5px solid #bbb",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:off===0?"default":"pointer"}}
       >
         <ChevL c={off===0?"black":"black"} s={22}/>
       </button>

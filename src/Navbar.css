@@ -195,7 +195,7 @@
   border-bottom: 1px solid #ebebeb;
   position: relative;
   z-index: 1;
-   transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
 }
 
 /* =============================================
@@ -300,8 +300,7 @@
   display: flex;
   align-items: center;
   background: var(--navy);
-  height: 45px;
-  min-height: 64px;
+  min-height: 40px;
   padding: 0 24px;
   overflow-x: auto;
   overflow-y: visible;
@@ -351,7 +350,8 @@
   overflow: visible;
   min-width: 120px;
   z-index: 999;
-  /* 👈 jagah do logo ko */
+  padding-left: 9%;
+  padding-top: 4%;
 }
 
 /* =========================
@@ -469,7 +469,7 @@
   font-family: 'Montserrat', sans-serif;
   font-weight: 800;
   font-size: 12px;
-  
+
   border-radius: 4px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -477,7 +477,7 @@
   flex-shrink: 0;
   font-style: italic;
   background-color: transparent !important;
-  
+
 }
 
 .breaking-sep {
@@ -507,8 +507,13 @@
 }
 
 @keyframes ticker-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .breaking-close {
@@ -544,6 +549,7 @@
   transition: opacity 0.32s ease;
   backdrop-filter: blur(2px);
 }
+
 .drawer-overlay.open {
   opacity: 1;
   pointer-events: all;
@@ -564,6 +570,7 @@
   transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 8px 0 40px rgba(0, 0, 0, 0.22);
 }
+
 .nav-drawer.open {
   transform: translateX(0);
 }
@@ -580,8 +587,9 @@
   color: white !important;
   padding-left: 89%;
 
-  
+
 }
+
 .drawer-close {
   background: #D80100;
   border: none;
@@ -595,6 +603,7 @@
   justify-content: center;
   transition: background 0.2s;
 }
+
 .drawer-close:hover {
   background: rgba(255, 255, 255, 0.22);
 }
@@ -614,6 +623,7 @@
   overflow: hidden;
   flex-shrink: 0;
 }
+
 .drawer-live-badge {
   background: white;
   color: #e05a00;
@@ -630,6 +640,7 @@
   border-bottom: 1px solid #e8e0d6;
   flex-shrink: 0;
 }
+
 .drawer-search-box {
   display: flex;
   align-items: center;
@@ -640,9 +651,11 @@
   padding: 8px 12px;
   transition: border-color 0.2s;
 }
+
 .drawer-search-box:focus-within {
   border-color: #e05a00;
 }
+
 .drawer-search-box input {
   border: none;
   background: none;
@@ -651,6 +664,7 @@
   color: #1a1a1a;
   flex: 1;
 }
+
 .drawer-search-box input::placeholder {
   color: #aa9988;
 }
@@ -661,14 +675,25 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.drawer-scroll::-webkit-scrollbar { width: 4px; }
-.drawer-scroll::-webkit-scrollbar-track { background: #f0ebe3; }
-.drawer-scroll::-webkit-scrollbar-thumb { background: #c8b89a; border-radius: 2px; }
+
+.drawer-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drawer-scroll::-webkit-scrollbar-track {
+  background: #f0ebe3;
+}
+
+.drawer-scroll::-webkit-scrollbar-thumb {
+  background: #c8b89a;
+  border-radius: 2px;
+}
 
 /* Section */
 .drawer-section {
   border-bottom: 1px solid #ede7dc;
 }
+
 .drawer-section-head {
   display: flex;
   align-items: center;
@@ -678,9 +703,11 @@
   transition: background 0.15s;
   user-select: none;
 }
+
 .drawer-section-head:hover {
   background: #faf5ee;
 }
+
 .drawer-section-label {
   display: flex;
   align-items: center;
@@ -699,9 +726,11 @@
   transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   background: #faf7f2;
 }
+
 .drawer-sub-links.open {
   max-height: 600px;
 }
+
 .drawer-sub-link {
   display: flex;
   align-items: center;
@@ -714,17 +743,20 @@
   border-left: 3px solid transparent;
   transition: all 0.14s;
 }
+
 .drawer-sub-link::before {
   content: "›";
   color: #c8b89a;
   font-size: 16px;
 }
+
 .drawer-sub-link:hover {
   color: #D80100;
   background: #fff5ee;
   border-left-color: #D80100;
   padding-left: 46px;
 }
+
 .drawer-sub-link:hover::before {
   color: #D80100;
 }
@@ -736,6 +768,7 @@
   background: #faf7f2;
   flex-shrink: 0;
 }
+
 .drawer-foot-title {
   font-size: 10px;
   font-weight: 700;
@@ -744,11 +777,13 @@
   text-transform: uppercase;
   margin-bottom: 9px;
 }
+
 .drawer-foot-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
+
 .drawer-foot-pill {
   font-size: 11px;
   font-weight: 600;
@@ -759,6 +794,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .drawer-foot-pill:hover {
   background: #1a1a1a;
   color: white;

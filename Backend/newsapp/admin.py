@@ -104,7 +104,6 @@ class NewsAdminSite(AdminSite):
                 Article,
                 ArticleWorkflowLog,
                 FactCheck,
-                ReporterPerformance,
                 Category,
                 UserProfile,
             )
@@ -190,9 +189,10 @@ class NewsAdminSite(AdminSite):
 
             # ── TOP REPORTERS (by published_articles) ────────────
             top_reporters = (
-                ReporterPerformance.objects
+                ReporterMonthlyPerformance.objects
+                .filter(month=now.month, year=now.year)
                 .select_related('reporter')
-                .order_by('-published_articles')[:5]
+                .order_by('-articles_published')[:5]
             )
 
             # ── MONTHLY PUBLISH DATA for bar chart (last 8 months) ─
@@ -310,7 +310,6 @@ admin_site.register(ArticleAssignment)
 admin_site.register(ArticleVersion)
 admin_site.register(ArticleWorkflowLog)
 admin_site.register(FactCheck)
-admin_site.register(ReporterPerformance)
 admin_site.register(UserProfile)
 admin_site.register(Role)
 admin_site.register(Article)
@@ -323,4 +322,80 @@ admin_site.register(HomepageSlot)
 class HomepageSlotAdmin(admin.ModelAdmin):
     list_display = ('slot_name', 'mode', 'article', 'is_active', 'pin_until')
     list_filter = ('mode', 'is_active')
+
+class ReporterAdmin(admin.ModelAdmin):
+    list_display = ("user", "employee_id", "designation", "employment_type", "is_active", "get_categories")
+    search_fields = ("user__username", "employee_id")
+    list_filter = ("employment_type", "is_active")
+    filter_horizontal = ("assigned_categories",)
+
+    def get_categories(self, obj):
+        return ", ".join([c.name for c in obj.assigned_categories.all()]) or "—"
+    get_categories.short_description = "Categories"
+
+admin_site.register(Reporter, ReporterAdmin)
+
+class ReporterMonthlyPerformanceAdmin(admin.ModelAdmin):
+    list_display = (
+        "reporter", "month", "year",
+        "articles_assigned", "articles_submitted",
+        "articles_published", "articles_rejected",
+        "rejection_rate", "deadline_adherence_rate",
+        "avg_views", "avg_engagement_score",
+        "plagiarism_avg_score", "get_score_badge",
+    )
+    list_filter = ("month", "year")
+    search_fields = ("reporter__username",)
+    ordering = ("-performance_score",)
+
+    def get_score_badge(self, obj):
+        from django.utils.html import format_html
+        score = obj.performance_score
+        if score >= 85:
+            color = "#22c55e"
+        elif score >= 70:
+            color = "#f59e0b"
+        else:
+            color = "#ef4444"
+        return format_html(
+            '<span style="background:{}22; color:{}; padding:3px 10px; '
+            'border-radius:12px; font-weight:700;">{}</span>',
+            color, color, score
+        )
+    get_score_badge.short_description = "Score"
+    get_score_badge.allow_tags = True
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+
+        from django.utils import timezone
+        now = timezone.now()
+
+        # Top performer this month
+        top = (
+            ReporterMonthlyPerformance.objects
+            .filter(month=now.month, year=now.year)
+            .select_related('reporter')
+            .order_by('-performance_score')
+            .first()
+        )
+
+        # All reporters this month ranked
+        ranked = (
+            ReporterMonthlyPerformance.objects
+            .filter(month=now.month, year=now.year)
+            .select_related('reporter')
+            .order_by('-performance_score')
+        )
+
+        extra_context.update({
+            'top_performer': top,
+            'ranked_reporters': ranked,
+            'current_month': now.strftime('%B %Y'),
+        })
+
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 

@@ -219,16 +219,6 @@ class FactCheck(models.Model):
     def __str__(self):
         return f"FactCheck - {self.article.title}"
     
-class ReporterPerformance(models.Model):
-    reporter = models.OneToOneField(User, on_delete=models.CASCADE)
-
-    total_articles = models.IntegerField(default=0)
-    published_articles = models.IntegerField(default=0)
-    rejected_articles = models.IntegerField(default=0)
-
-    def __str__(self):
-        return self.reporter.username
-    
 class HomepageSlot(models.Model):
 
     SLOT_CHOICES = [
@@ -292,5 +282,60 @@ class MetalRate(models.Model):
 
     def __str__(self):
         return f"{self.metal_type} - {self.price}"
+
+class Reporter(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    employee_id = models.CharField(max_length=50, unique=True)
+    phone = models.CharField(max_length=15, blank=True)
+
+    designation = models.CharField(max_length=100, default="Reporter")
+    employment_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("full_time", "Full Time"),
+            ("part_time", "Part Time"),
+            ("freelancer", "Freelancer"),
+        ],
+        default="full_time"
+    )
+
+    assigned_categories = models.ManyToManyField("Category", blank=True)
+
+    is_active = models.BooleanField(default=True)
+    joining_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} ({self.employee_id})"
+
+class ReporterMonthlyPerformance(models.Model):
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    month = models.IntegerField()
+    year = models.IntegerField()
+
+    # Work Stats
+    articles_assigned = models.IntegerField(default=0)
+    articles_submitted = models.IntegerField(default=0)
+    articles_published = models.IntegerField(default=0)
+    articles_rejected = models.IntegerField(default=0)
+
+    # Metrics
+    rejection_rate = models.FloatField(default=0)
+    deadline_adherence_rate = models.FloatField(default=0)
+
+    avg_views = models.IntegerField(default=0)
+    avg_engagement_score = models.FloatField(default=0)
+    plagiarism_avg_score = models.FloatField(default=0)
+
+    performance_score = models.FloatField(default=0)
+
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("reporter", "month", "year")
+
+    def __str__(self):
+        return f"{self.reporter.username} - {self.month}/{self.year}"
 
 

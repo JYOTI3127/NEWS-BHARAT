@@ -135,7 +135,7 @@ export default function NewsBanner() {
           max-width: 1400px;
           position: relative;
           overflow: hidden;
-          height: 590px;
+          height: 550px;
         }
 
       /* ── FULL background image — covers entire banner including bottom news ── */
@@ -248,7 +248,7 @@ export default function NewsBanner() {
 
         /* ── Hero text area ── */
         .nb-hero {
-          min-height: 370px;
+          min-height: 405px;
           display: flex;
           flex-direction: column;
           justify-content: flex-end;

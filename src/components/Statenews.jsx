@@ -47,7 +47,7 @@ const midCards = [
     label: "TritiyaBishwa",
     hd: false,
     teaser: false,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text and has centuries.",
   },
   {
     id: 2,
@@ -55,7 +55,7 @@ const midCards = [
     label: "REBOOT",
     hd: false,
     teaser: false,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text and has centuries.",
   },
   {
     id: 3,
@@ -63,7 +63,7 @@ const midCards = [
     label: "Golmaal",
     hd: true,
     teaser: true,
-    title: "Lorem Ipsum has been the industry's standard dummy text and has survived for over five centuries.",
+    title: "Lorem Ipsum has been the industry's standard dummy text and has centuries.",
   },
 ];
 

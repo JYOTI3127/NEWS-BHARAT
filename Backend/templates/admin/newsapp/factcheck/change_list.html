@@ -1,0 +1,239 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{# Override these blocks so Django's default table doesn't render #}
+{% block result_list %}{% endblock %}
+{% block pagination %}{% endblock %}
+
+{% block content %}
+
+<!-- ── HEADER ─────────────────────────────────────────── -->
+<div class="fc-header">
+  <div class="fc-header__left">
+    <div class="fc-header__icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <div>
+      <div class="fc-header__title">Fact Check &amp; Legal Review</div>
+      <div class="fc-header__sub">Source verification, legal flags &amp; approval pipeline</div>
+    </div>
+  </div>
+  <div class="fc-header__stats">
+    <div class="fc-hstat fc-hstat--warn">
+      <div class="fc-hstat__val">{{ pending_count|default:"0" }}</div>
+      <div class="fc-hstat__label">Pending</div>
+    </div>
+    <div class="fc-hstat fc-hstat--green">
+      <div class="fc-hstat__val">{{ verified_count|default:"0" }}</div>
+      <div class="fc-hstat__label">Verified</div>
+    </div>
+    <div class="fc-hstat fc-hstat--red">
+      <div class="fc-hstat__val">{{ issues_count|default:"0" }}</div>
+      <div class="fc-hstat__label">Issues Found</div>
+    </div>
+    <div class="fc-hstat fc-hstat--purple">
+      <div class="fc-hstat__val">{{ legal_risk_count|default:"0" }}</div>
+      <div class="fc-hstat__label">Legal Risk</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TABLE WRAP ─────────────────────────────────────── -->
+<div class="fc-wrap">
+
+  <div class="fc-tabs">
+    <button class="fc-tab fc-tab--active" onclick="fcTab(this,'all')">All</button>
+    <button class="fc-tab" onclick="fcTab(this,'pending')">Pending</button>
+    <button class="fc-tab" onclick="fcTab(this,'verified')">Verified</button>
+    <button class="fc-tab" onclick="fcTab(this,'issues_found')">Issues Found</button>
+    <button class="fc-tab" onclick="fcTab(this,'legal')">Legal Risk</button>
+  </div>
+
+  <div class="fc-scroll">
+    <table class="fc-table" id="fcTable">
+      <thead>
+        <tr>
+          <th style="width:220px;">Article</th>
+          <th style="width:130px;">FC Status</th>
+          <th style="width:170px;">Verification Checklist</th>
+          <th style="width:170px;">Legal Review</th>
+          <th style="width:160px;">Remarks</th>
+          <th style="width:110px;">Checked At</th>
+          <th style="width:100px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fc in factcheck_rows %}
+        <tr class="fc-row"
+            data-status="{{ fc.status }}"
+            data-legal="{% if fc.is_legal_risk %}true{% else %}false{% endif %}">
+
+          <!-- ── COL 1: ARTICLE ── -->
+          <td>
+            <div class="fc-article-cell">
+              <span class="fc-article__cat">{{ fc.article.category.name }}</span>
+              <a href="/admin/newsapp/article/{{ fc.article.id }}/change/" class="fc-article__title">
+                {{ fc.article.title|truncatechars:48 }}
+              </a>
+              <div class="fc-article__meta">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                {{ fc.article.author.username }} &nbsp;·&nbsp; {{ fc.article.created_at|date:"d M Y" }}
+              </div>
+              <span class="fc-art-status status--{{ fc.article.status }}">{{ fc.article.status }}</span>
+            </div>
+          </td>
+
+          <!-- ── COL 2: FC STATUS ── -->
+          <td>
+            <div class="fc-status-cell">
+              {% if fc.status == 'verified' %}
+                <div class="fc-badge fc-badge--verified">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Verified
+                </div>
+              {% elif fc.status == 'issues_found' %}
+                <div class="fc-badge fc-badge--issues_found">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                  Issues Found
+                </div>
+              {% else %}
+                <div class="fc-badge fc-badge--pending">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Pending
+                </div>
+              {% endif %}
+              {% if fc.checked_by %}
+                <div class="fc-checker">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                  {{ fc.checked_by.username }}
+                </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- ── COL 3: VERIFICATION CHECKLIST ── -->
+          <td>
+            <div class="checklist">
+              <div class="checklist-item {% if fc.status == 'verified' %}checklist-item--done{% elif fc.status == 'issues_found' %}checklist-item--fail{% else %}checklist-item--pending{% endif %}">
+                {% if fc.status == 'verified' %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {% elif fc.status == 'issues_found' %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                {% else %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>{% endif %}
+                Source Verification
+              </div>
+              <div class="checklist-item {% if fc.status == 'verified' %}checklist-item--done{% else %}checklist-item--pending{% endif %}">
+                {% if fc.status == 'verified' %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {% else %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>{% endif %}
+                Fact-checked Badge
+              </div>
+              <div class="checklist-item {% if fc.status == 'verified' %}checklist-item--done{% else %}checklist-item--pending{% endif %}">
+                {% if fc.status == 'verified' %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {% else %}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>{% endif %}
+                Cross-reference
+              </div>
+            </div>
+          </td>
+
+          <!-- ── COL 4: LEGAL REVIEW ── -->
+          <td>
+            <div class="legal-cell">
+              {% if fc.is_legal_risk %}
+                <div class="legal-flag legal-flag--risk">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                  High Risk
+                </div>
+                <div class="legal-item legal-item--alert">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+                  Defamation Risk
+                </div>
+                <div class="legal-item legal-item--alert">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Approval Required
+                </div>
+                <div class="legal-item" style="color:#5b21b6; display:flex; align-items:center; gap:4px; font-size:11px;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                  Disclaimer: Applied
+                </div>
+              {% else %}
+                <div class="legal-flag legal-flag--clear">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Clear
+                </div>
+                <div class="legal-item legal-item--ok">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  No defamation risk
+                </div>
+                <div class="legal-item legal-item--ok">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  No disclaimer needed
+                </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- ── COL 5: REMARKS ── -->
+          <td>
+            {% if fc.remarks %}
+              <div class="fc-remark">"{{ fc.remarks|truncatechars:80 }}"</div>
+            {% else %}
+              <div class="empty-cell">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                No remarks
+              </div>
+            {% endif %}
+          </td>
+
+          <!-- ── COL 6: CHECKED AT ── -->
+          <td>
+            <div class="fc-time">{{ fc.checked_at|date:"d M Y" }}</div>
+            <div class="fc-timesince">{{ fc.checked_at|timesince }} ago</div>
+          </td>
+
+          <!-- ── COL 7: ACTIONS ── -->
+          <td>
+            <div class="fc-actions">
+              <a href="/admin/newsapp/factcheck/{{ fc.id }}/change/" class="fc-btn fc-btn--edit">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </a>
+              <a href="/admin/newsapp/article/{{ fc.article.id }}/change/" class="fc-btn fc-btn--view">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Article
+              </a>
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="fc-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div>No fact checks found</div>
+            <a href="/admin/newsapp/factcheck/add/">Add first fact check</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function fcTab(btn, filter) {
+  document.querySelectorAll('.fc-tab').forEach(t => t.classList.remove('fc-tab--active'));
+  btn.classList.add('fc-tab--active');
+  document.querySelectorAll('#fcTable tbody tr.fc-row').forEach(row => {
+    if (filter === 'all') row.style.display = '';
+    else if (filter === 'legal') row.style.display = row.dataset.legal === 'true' ? '' : 'none';
+    else row.style.display = row.dataset.status === filter ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

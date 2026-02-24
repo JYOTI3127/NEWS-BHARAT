@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'newsapp',
     'django_crontab',
+    'django_elasticsearch_dsl', 
 
 ]
 
@@ -139,4 +140,20 @@ TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
 CRONJOBS = [
     ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
 ]
+
+
+# ── Elasticsearch Connection ─────────────────────────────────────────
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'http://localhost:9200',   # default ES port
+
+        # Agar ES 8.x use kar rahe ho aur security enabled hai:
+        # 'http_auth': ('elastic', 'your_password'),
+        # 'use_ssl': True,
+        # 'verify_certs': False,
+    },
+}
+
+# Auto update index jab model save ho
+ELASTICSEARCH_DSL_AUTO_REFRESH = True
 

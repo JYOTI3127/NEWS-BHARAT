@@ -1,6 +1,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from .models import *
 from .serializers import CategorySerializer, ArticleSerializer
 from .utils import has_permission
@@ -12,7 +14,6 @@ from django.db.models.functions import TruncMonth
 from django.db.models import F
 import json
 from datetime import timedelta
-
 import requests
 from django.conf import settings
 
@@ -314,4 +315,226 @@ def market_indices(request):
         "sensex": sensex
     })
     
+
+# ═══════════════════════════════════════════════════════
+# 1. DATE & TIME API
+#    GET /api/datetime/
+# ═══════════════════════════════════════════════════════
+
+@require_GET
+def datetime_api(request):
+    """
+    Returns current date, time, and day info.
+    Frontend can call this every minute to keep it live.
+    
+    Response:
+    {
+        "date": "Tuesday, 24 February 2026",
+        "time": "16:30",
+        "day": "Tuesday",
+        "month": "February",
+        "year": 2026,
+        "timestamp": "2026-02-24T16:30:00+05:30"
+    }
+    """
+    now = timezone.localtime(timezone.now())
+
+    return JsonResponse({
+        "date":      now.strftime("%A, %d %B %Y"),       # Tuesday, 24 February 2026
+        "date_short": now.strftime("%d %b %Y"),           # 24 Feb 2026
+        "time":      now.strftime("%I:%M %p"),            # 04:30 PM
+        "time_24":   now.strftime("%H:%M"),               # 16:30
+        "day":       now.strftime("%A"),                  # Tuesday
+        "day_short": now.strftime("%a"),                  # Tue
+        "month":     now.strftime("%B"),                  # February
+        "year":      now.year,
+        "timestamp": now.isoformat(),                     # ISO 8601
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# 2. SEARCH API  (Elasticsearch + Django ORM fallback)
+#    GET /api/search/?q=<query>&type=<all|article|category>&limit=<n>
+# ═══════════════════════════════════════════════════════
+
+def _format_article(article, highlight=None):
+    content_text = article.content or ''
+    excerpt = content_text[:120] + '...' if len(content_text) > 120 else content_text
+    return {
+        "id":           article.id,
+        "title":        article.title,
+        "slug":         getattr(article, 'slug', str(article.id)),
+        "category":     article.category.name if article.category else None,
+        "category_id":  article.category.id   if article.category else None,
+        "author":       article.author.username if article.author else None,
+        "status":       article.status,
+        "published_at": article.published_at.isoformat() if article.published_at else None,
+        "created_at":   article.created_at.isoformat()   if article.created_at   else None,
+        "image":        str(article.image) if article.image else None,
+        "excerpt":      highlight or excerpt,
+        "is_paid":      getattr(article, 'is_paid', False),
+    }
+
+
+def _search_elasticsearch(query, status, limit):
+    """Elasticsearch — typo tolerance + Hindi support."""
+    from .documents import ArticleDocument
+    from elasticsearch_dsl import Q as ESQ
+
+    es_query = ArticleDocument.search()
+
+    if status != 'all':
+        es_query = es_query.filter('term', status=status)
+
+    es_query = es_query.query(
+        ESQ('bool',
+            should=[
+                # Exact/near-exact match
+                ESQ('multi_match',
+                    query=query,
+                    fields=[
+                        'title^5',
+                        'title.autocomplete^3',
+                        'category.name^3',
+                        'author.username^2',
+                        'content',
+                    ],
+                    type='best_fields',
+                    operator='or',
+                ),
+                # Typo tolerance — "politcs" → "politics"
+                ESQ('multi_match',
+                    query=query,
+                    fields=['title.fuzzy^3', 'content.fuzzy'],
+                    fuzziness='AUTO',
+                    prefix_length=1,
+                ),
+                # Partial match — "pol" → "politics"
+                ESQ('match', **{'title.autocomplete': {'query': query, 'boost': 2}}),
+            ],
+            minimum_should_match=1,
+        )
+    )
+
+    # Highlight matched text
+    es_query = es_query.highlight(
+        'title', 'content',
+        fragment_size=120,
+        pre_tags=['<mark>'],
+        post_tags=['</mark>'],
+    )
+
+    es_query = es_query[:limit]
+    response = es_query.execute()
+
+    from .models import Article
+    articles_data = []
+    for hit in response:
+        try:
+            article = Article.objects.select_related('author', 'category').get(id=hit.meta.id)
+            highlight_text = None
+            if hasattr(hit.meta, 'highlight'):
+                if hasattr(hit.meta.highlight, 'content'):
+                    highlight_text = ' ... '.join(hit.meta.highlight.content)
+                elif hasattr(hit.meta.highlight, 'title'):
+                    highlight_text = hit.meta.highlight.title[0]
+            articles_data.append(_format_article(article, highlight_text))
+        except Exception:
+            continue
+
+    return articles_data
+
+
+def _search_django_orm(query, status, limit):
+    """Fallback ORM search jab Elasticsearch available na ho."""
+    from .models import Article
+    qs = Article.objects.filter(
+        Q(title__icontains=query)   |
+        Q(content__icontains=query) |
+        Q(author__username__icontains=query) |
+        Q(category__name__icontains=query)
+    ).select_related('author', 'category')
+
+    if status != 'all':
+        qs = qs.filter(status=status)
+
+    return [_format_article(a) for a in qs.order_by('-published_at', '-created_at')[:limit]]
+
+
+@require_GET
+def search_api(request):
+    query  = request.GET.get('q', '').strip()
+    type_  = request.GET.get('type', 'all')
+    limit  = min(int(request.GET.get('limit', 8)), 20)
+    status = request.GET.get('status', 'published')
+
+    if len(query) < 2:
+        return JsonResponse({
+            "query": query, "total": 0,
+            "articles": [], "categories": [],
+            "error": "Query must be at least 2 characters"
+        }, status=400)
+
+    articles_data   = []
+    categories_data = []
+    search_engine   = "orm"
+
+    # ── ARTICLE SEARCH ──────────────────────────────────
+    if type_ in ('all', 'article'):
+        try:
+            articles_data = _search_elasticsearch(query, status, limit)
+            search_engine = "elasticsearch"
+        except Exception:
+            # ES down ya not configured → ORM fallback
+            articles_data = _search_django_orm(query, status, limit)
+            search_engine = "orm_fallback"
+
+    # ── CATEGORY SEARCH ─────────────────────────────────
+    if type_ in ('all', 'category'):
+        from .models import Category
+        for cat in Category.objects.filter(
+            Q(name__icontains=query)
+        ).annotate(
+            article_count=Count('article', filter=Q(article__status='published'))
+        ).order_by('-article_count')[:limit]:
+            categories_data.append({
+                "id":            cat.id,
+                "name":          cat.name,
+                "slug":          getattr(cat, 'slug', str(cat.id)),
+                "article_count": cat.article_count,
+            })
+
+    return JsonResponse({
+        "query":         query,
+        "total":         len(articles_data) + len(categories_data),
+        "articles":      articles_data,
+        "categories":    categories_data,
+        "search_engine": search_engine,
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

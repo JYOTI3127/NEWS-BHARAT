@@ -1,0 +1,296 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+  <!-- <link rel="stylesheet" href="{% static 'admin/css/reporter_table.css' %}"> -->
+{% endblock %}
+
+{% block content %}
+
+<div class="rt-header">
+  <div class="rt-header__left">
+    <div class="rt-header__icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <div>
+      <div class="rt-header__title">Reporters Overview</div>
+      <div class="rt-header__sub">Assigned stories, drafts, comments &amp; plagiarism</div>
+    </div>
+  </div>
+  <div class="rt-header__stats">
+    <div class="rt-hstat">
+      <div class="rt-hstat__val">{{ total_reporters|default:"—" }}</div>
+      <div class="rt-hstat__label">Total Reporters</div>
+    </div>
+    <div class="rt-hstat rt-hstat--red">
+      <div class="rt-hstat__val">{{ overdue_count|default:"—" }}</div>
+      <div class="rt-hstat__label">Overdue</div>
+    </div>
+    <div class="rt-hstat rt-hstat--green">
+      <div class="rt-hstat__val">{{ active_count|default:"—" }}</div>
+      <div class="rt-hstat__label">Active</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── MAIN REPORTER TABLE ───────────────────────────── -->
+{% if reporter_rows %}
+<div class="rt-wrap">
+
+  <!-- Section tabs -->
+  <div class="rt-tabs">
+    <button class="rt-tab rt-tab--active" onclick="switchTab(this, 'all')">All</button>
+    <button class="rt-tab" onclick="switchTab(this, 'overdue')">Overdue</button>
+    <button class="rt-tab" onclick="switchTab(this, 'draft')">In Draft</button>
+    <button class="rt-tab" onclick="switchTab(this, 'flagged')">Flagged Plagiarism</button>
+  </div>
+
+  <div class="rt-scroll">
+    <table class="rt-table" id="reporterTable">
+      <thead>
+        <tr>
+          <!-- Col 1: Reporter -->
+          <th class="th-reporter">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Reporter
+          </th>
+
+          <!-- Col 2: Assigned Stories & Deadlines -->
+          <th class="th-stories">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Assigned Stories &amp; Deadlines
+          </th>
+
+          <!-- Col 3: Draft Editor -->
+          <th class="th-draft">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Draft / Editor
+          </th>
+
+          <!-- Col 4: Comments & Revision History -->
+          <th class="th-comments">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Comments &amp; Revisions
+          </th>
+
+          <!-- Col 5: Plagiarism -->
+          <th class="th-plagiarism">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Plagiarism Score
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in reporter_rows %}
+        <tr class="rt-row"
+            data-overdue="{% if row.has_overdue %}true{% else %}false{% endif %}"
+            data-draft="{% if row.has_draft %}true{% else %}false{% endif %}"
+            data-flagged="{% if row.plagiarism_flagged %}true{% else %}false{% endif %}">
+
+          <!-- ── COL 1: REPORTER INFO ── -->
+          <td class="td-reporter">
+            <div class="rep-cell">
+              <div class="rep-avatar" style="background: {{ row.avatar_color }}">
+                {{ row.reporter.user.username|first|upper }}
+              </div>
+              <div class="rep-meta">
+                <div class="rep-name">{{ row.reporter.user.username }}</div>
+                <div class="rep-designation">{{ row.reporter.designation }}</div>
+                <span class="rep-type rep-type--{{ row.reporter.employment_type }}">
+                  {{ row.reporter.get_employment_type_display }}
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <!-- ── COL 2: ASSIGNED STORIES & DEADLINES ── -->
+          <td class="td-stories">
+            {% if row.assigned_articles %}
+              <div class="story-list">
+                {% for article in row.assigned_articles %}
+                <div class="story-item {% if article.is_overdue %}story-item--overdue{% endif %}">
+                  <div class="story-item__top">
+                    <span class="story-title">{{ article.title|truncatechars:40 }}</span>
+                    <span class="story-status status--{{ article.status }}">{{ article.status }}</span>
+                  </div>
+                  <div class="story-item__bottom">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {% if article.deadline %}
+                      <span class="{% if article.is_overdue %}deadline--overdue{% else %}deadline--ok{% endif %}">
+                        {{ article.deadline|date:"d M, H:i" }}
+                      </span>
+                      {% if article.is_overdue %}
+                        <span class="overdue-tag">OVERDUE</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="deadline--none">No deadline set</span>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="story-summary">
+                <span>{{ row.assigned_articles|length }} article{% if row.assigned_articles|length != 1 %}s{% endif %}</span>
+                {% if row.overdue_count > 0 %}
+                  <span class="overdue-pill">{{ row.overdue_count }} overdue</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="empty-cell">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+                No assignments
+              </div>
+            {% endif %}
+          </td>
+
+          <!-- ── COL 3: DRAFT EDITOR ── -->
+          <td class="td-draft">
+            {% if row.draft_articles %}
+              {% for draft in row.draft_articles %}
+              <div class="draft-card">
+                <div class="draft-card__title">{{ draft.title|truncatechars:35 }}</div>
+                <div class="draft-card__meta">
+                  <div class="draft-meta-row">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    {{ draft.content|wordcount }} words
+                  </div>
+                  {% if draft.image %}
+                  <div class="draft-meta-row draft-meta-row--green">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Image attached
+                  </div>
+                  {% else %}
+                  <div class="draft-meta-row draft-meta-row--warn">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    No image
+                  </div>
+                  {% endif %}
+                </div>
+                <a href="/admin/newsapp/article/{{ draft.id }}/change/" class="draft-edit-btn">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Open Editor
+                </a>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-cell">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                No drafts
+              </div>
+            {% endif %}
+          </td>
+
+          <!-- ── COL 4: COMMENTS & REVISION HISTORY ── -->
+          <td class="td-comments">
+            {% if row.recent_logs %}
+              <div class="rev-list">
+                {% for log in row.recent_logs %}
+                <div class="rev-item">
+                  <div class="rev-dot rev-dot--{{ log.new_status }}"></div>
+                  <div class="rev-body">
+                    <div class="rev-title">{{ log.article.title|truncatechars:28 }}</div>
+                    <div class="rev-transition">
+                      <span class="rev-status rev-status--old">{{ log.old_status }}</span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      <span class="rev-status rev-status--new">{{ log.new_status }}</span>
+                    </div>
+                    {% if log.remarks %}
+                    <div class="rev-remark">"{{ log.remarks|truncatechars:50 }}"</div>
+                    {% endif %}
+                    <div class="rev-time">{{ log.changed_at|timesince }} ago</div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="rev-count">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                {{ row.total_revisions }} total revision{% if row.total_revisions != 1 %}s{% endif %}
+              </div>
+            {% else %}
+              <div class="empty-cell">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                No revisions yet
+              </div>
+            {% endif %}
+          </td>
+
+          <!-- ── COL 5: PLAGIARISM SCORE ── -->
+          <td class="td-plagiarism">
+            {% if row.plagiarism_score is not None %}
+              <div class="plag-wrap">
+                <div class="plag-score
+                  {% if row.plagiarism_score > 20 %}plag--high
+                  {% elif row.plagiarism_score > 10 %}plag--medium
+                  {% else %}plag--low{% endif %}">
+                  {{ row.plagiarism_score }}%
+                </div>
+                <div class="plag-bar-track">
+                  <div class="plag-bar-fill
+                    {% if row.plagiarism_score > 20 %}plag-fill--high
+                    {% elif row.plagiarism_score > 10 %}plag-fill--medium
+                    {% else %}plag-fill--low{% endif %}"
+                    style="width: {{ row.plagiarism_score }}%">
+                  </div>
+                </div>
+                <div class="plag-label
+                  {% if row.plagiarism_score > 20 %}plag-label--high
+                  {% elif row.plagiarism_score > 10 %}plag-label--medium
+                  {% else %}plag-label--low{% endif %}">
+                  {% if row.plagiarism_score > 20 %}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    High Risk
+                  {% elif row.plagiarism_score > 10 %}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Review Needed
+                  {% else %}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Clean
+                  {% endif %}
+                </div>
+                <div class="plag-articles">Avg of {{ row.checked_articles }} article{% if row.checked_articles != 1 %}s{% endif %}</div>
+              </div>
+            {% else %}
+              <div class="empty-cell">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Not checked
+              </div>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function switchTab(btn, filter) {
+  document.querySelectorAll('.rt-tab').forEach(t => t.classList.remove('rt-tab--active'));
+  btn.classList.add('rt-tab--active');
+
+  const rows = document.querySelectorAll('#reporterTable tbody tr');
+  rows.forEach(row => {
+    if (filter === 'all') {
+      row.style.display = '';
+    } else if (filter === 'overdue') {
+      row.style.display = row.dataset.overdue === 'true' ? '' : 'none';
+    } else if (filter === 'draft') {
+      row.style.display = row.dataset.draft === 'true' ? '' : 'none';
+    } else if (filter === 'flagged') {
+      row.style.display = row.dataset.flagged === 'true' ? '' : 'none';
+    }
+  });
+}
+</script>
+
+{% endblock %}

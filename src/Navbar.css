@@ -113,7 +113,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding-left: 8%;
 }
 
 .ticker-datetime {
@@ -805,133 +804,11 @@
    RESPONSIVE BREAKPOINTS
    ============================================= */
 
-/* --- Tablet 768–1024px --- */
-@media (max-width: 1024px) {
-  .nav-link {
-    padding: 15px 8px;
-    font-size: 12px;
-  }
-
-  .search-box {
-    max-width: 380px;
-  }
-
-  .ticker-bar {
-    padding: 5px 12px;
-  }
-}
-
 /* --- Mobile <= 768px --- */
+
 @media (max-width: 768px) {
-  .ticker-bar {
-    font-size: 10.5px;
-    padding: 4px 10px;
+
+  .commodity-bar,.ticker-left,.ticker-right {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-
-  .ticker-right {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .ticker-datetime {
-    display: none;
-  }
-
-  .commodity-bar {
-    padding: 3px 10px;
-    justify-content: flex-start;
-    font-size: 11px;
-  }
-
-  .search-row {
-    padding: 5px 10px;
-  }
-
-  .search-box {
-    max-width: 100%;
-  }
-
-  .main-nav {
-    padding: 0 4px;
-    min-height: 46px;
-  }
-
-  .nav-link {
-    padding: 13px 7px;
-    font-size: 11.5px;
-  }
-
-  .logo-scroll-n,
-  .logo-scroll-b {
-    font-size: 22px;
-  }
-
-  .breaking-bar {
-    padding: 6px 10px;
-  }
-
-  .breaking-text {
-    font-size: 13px;
-  }
-}
-
-/* --- Small Mobile <= 480px --- */
-@media (max-width: 480px) {
-  .ticker-bar {
-    font-size: 9.5px;
-    padding: 3px 8px;
-  }
-
-  .ticker-left {
-    gap: 4px;
-  }
-
-  .btn-live,
-  .btn-epaper,
-  .btn-flag {
-    font-size: 9.5px;
-    padding: 2px 6px;
-  }
-
-  .commodity-bar {
-    font-size: 10px;
-    padding: 3px 8px;
-  }
-
-  .main-nav {
-    min-height: 42px;
-    padding: 0 3px;
-  }
-
-  .hamburger {
-    padding: 4px;
-  }
-
-  .logo-full svg {
-    width: 44px;
-    height: 44px;
-  }
-
-  .logo-scroll-n,
-  .logo-scroll-b {
-    font-size: 20px;
-  }
-
-  .nav-link {
-    padding: 12px 6px;
-    font-size: 11px;
-  }
-
-  .breaking-label {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-
-  .breaking-text {
-    font-size: 12px;
   }
 }

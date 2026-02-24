@@ -309,7 +309,6 @@ admin_site.register(Category)
 admin_site.register(ArticleAssignment)
 admin_site.register(ArticleVersion)
 admin_site.register(ArticleWorkflowLog)
-admin_site.register(FactCheck)
 admin_site.register(UserProfile)
 admin_site.register(Role)
 admin_site.register(Article)
@@ -333,6 +332,102 @@ class ReporterAdmin(admin.ModelAdmin):
         return ", ".join([c.name for c in obj.assigned_categories.all()]) or "—"
     get_categories.short_description = "Categories"
 
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        now = timezone.now()
+
+        # Avatar colors list — cycles through reporters
+        AVATAR_COLORS = ["#D80100", "#b45309", "#1d4ed8", "#15803d", "#7c3aed", "#0369a1"]
+
+        reporter_rows = []
+        overdue_count = 0
+        active_count = 0
+
+        reporters = Reporter.objects.filter(is_active=True).select_related('user')
+
+        for i, reporter in enumerate(reporters):
+            active_count += 1
+
+            # ── Assigned articles (not published/archived)
+            assigned_articles_qs = Article.objects.filter(
+                assigned_to=reporter.user,
+                status__in=['draft', 'review', 'fact_check', 'legal', 'approved', 'scheduled']
+            ).select_related('category').order_by('deadline')
+
+            assigned_articles = []
+            reporter_overdue = 0
+            has_overdue = False
+            has_draft = False
+
+            for article in assigned_articles_qs:
+                is_overdue = article.deadline and article.deadline < now
+                if is_overdue:
+                    reporter_overdue += 1
+                    has_overdue = True
+                    overdue_count += 1
+                if article.status == 'draft':
+                    has_draft = True
+                assigned_articles.append({
+                    'id': article.id,
+                    'title': article.title,
+                    'status': article.status,
+                    'deadline': article.deadline,
+                    'is_overdue': is_overdue,
+                    'image': article.image,
+                    'content': article.content,
+                })
+
+            # ── Draft articles for editor column
+            draft_articles = [a for a in assigned_articles if a['status'] == 'draft']
+
+            # ── Recent workflow logs for this reporter
+            from newsapp.models import ArticleWorkflowLog
+            recent_logs = (
+                ArticleWorkflowLog.objects
+                .filter(changed_by=reporter.user)
+                .select_related('article')
+                .order_by('-changed_at')[:3]
+            )
+
+            total_revisions = ArticleWorkflowLog.objects.filter(
+                changed_by=reporter.user
+            ).count()
+
+            # ── Plagiarism score (avg from ReporterMonthlyPerformance)
+            perf = ReporterMonthlyPerformance.objects.filter(
+                reporter=reporter.user
+            ).order_by('-year', '-month').first()
+
+            plagiarism_score = perf.plagiarism_avg_score if perf else None
+            checked_articles = perf.articles_published if perf else 0
+            plagiarism_flagged = plagiarism_score is not None and plagiarism_score > 20
+
+            reporter_rows.append({
+                'reporter': reporter,
+                'avatar_color': AVATAR_COLORS[i % len(AVATAR_COLORS)],
+                'assigned_articles': assigned_articles,
+                'draft_articles': draft_articles,
+                'recent_logs': recent_logs,
+                'total_revisions': total_revisions,
+                'overdue_count': reporter_overdue,
+                'has_overdue': has_overdue,
+                'has_draft': has_draft,
+                'plagiarism_score': plagiarism_score,
+                'checked_articles': checked_articles,
+                'plagiarism_flagged': plagiarism_flagged,
+            })
+
+        extra_context.update({
+            'reporter_rows': reporter_rows,
+            'total_reporters': reporters.count(),
+            'overdue_count': overdue_count,
+            'active_count': active_count,
+        })
+
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+# Register karo (purani line replace karo)
 admin_site.register(Reporter, ReporterAdmin)
 
 class ReporterMonthlyPerformanceAdmin(admin.ModelAdmin):
@@ -396,6 +491,97 @@ class ReporterMonthlyPerformanceAdmin(admin.ModelAdmin):
 
         return super().changelist_view(request, extra_context=extra_context)
 
-
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
+
+class FCRow:
+    def __init__(self, id, article, checked_by, status, remarks, checked_at, is_legal_risk):
+        self.id = id
+        self.article = article
+        self.checked_by = checked_by
+        self.status = status
+        self.remarks = remarks
+        self.checked_at = checked_at
+        self.is_legal_risk = is_legal_risk
+
+
+class FactCheckAdmin(admin.ModelAdmin):
+    list_display  = ("article", "checked_by", "status", "checked_at")
+    list_filter   = ("status",)
+    search_fields = ("article__title", "checked_by__username")
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        from types import SimpleNamespace
+
+        pending_count  = FactCheck.objects.filter(status='pending').count()
+        verified_count = FactCheck.objects.filter(status='verified').count()
+        issues_count   = FactCheck.objects.filter(status='issues_found').count()
+
+        RISK_KEYWORDS = ['defam', 'lawsuit', 'legal', 'sensitive', 'controversial', 'risk', 'court']
+
+        factcheck_rows = []
+        legal_risk_count = 0
+
+        fcs = (
+            FactCheck.objects
+            .select_related(
+                'article',
+                'article__author',
+                'article__category',
+                'checked_by'
+            )
+            .order_by('-checked_at')
+        )
+
+        for fc in fcs:
+            is_legal_risk = (
+                fc.article.status == 'legal' or
+                any(kw in (fc.remarks or '').lower() for kw in RISK_KEYWORDS)
+            )
+            if is_legal_risk:
+                legal_risk_count += 1
+
+            row = FCRow(
+                id=fc.id,
+                article=fc.article,
+                checked_by=fc.checked_by,
+                status=fc.status,
+                remarks=fc.remarks,
+                checked_at=fc.checked_at,
+                is_legal_risk=is_legal_risk,
+            )
+            factcheck_rows.append(row)
+
+        extra_context.update({
+            'factcheck_rows'  : factcheck_rows,
+            'pending_count'   : pending_count,
+            'verified_count'  : verified_count,
+            'issues_count'    : issues_count,
+            'legal_risk_count': legal_risk_count,
+        })
+
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+admin_site.register(FactCheck, FactCheckAdmin)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

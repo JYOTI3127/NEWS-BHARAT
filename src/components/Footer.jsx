@@ -1,5 +1,7 @@
 import logo from "../assets/NEWS4BHARAT LOGO 5 (1).png";
+import "../Footer.css";
 
+// ── Icons ──────────────────────────────────────────────────────
 const PlayStoreIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
     <path d="M3.18 23.76c.3.17.64.24.99.2l13.2-12-3.15-3.15L3.18 23.76z" />
@@ -43,381 +45,90 @@ const WhatsappIcon = () => (
   </svg>
 );
 
+// ── Data ───────────────────────────────────────────────────────
 const footerLinks = {
-  "News": ["India", "World", "Politics", "Crime", "Business", "Science"],
+  "News":          ["India", "World", "Politics", "Crime", "Business", "Science"],
   "Entertainment": ["Bollywood", "Hollywood", "OTT", "Music", "Fashion", "Awards"],
-  "Sports": ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
-  "More": ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
+  "Sports":        ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
+  "More":          ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
 };
 
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Hind:wght@400;500;600;700&display=swap');
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    background: #0a0a0f;
-    font-family: 'Hind', sans-serif;
-  }
-
-  .ft-root {
-    background: #07070e;
-    border-top: 3px solid #D80100;
-    font-family: 'Hind', sans-serif;
-    color: #e8e8f0;
-    width: 100%;
-  }
-
-  .ft-top {
-    max-width: 1262px;
-    margin: 0 auto;
-    padding: 44px 20px 36px;
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 60px;
-  }
-
-  .ft-brand {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .ft-logo-img {
-    width: 223px;
-    object-fit: contain;
-    object-position: left;
-  }
-
-  .ft-brand-desc {
-    font-size: 13.5px;
-    line-height: 1.8;
-    color: rgba(255,255,255,0.38);
-  }
-
-  .ft-social-title {
-    font-size: 11px;
-    letter-spacing: 2.5px;
-    color: rgba(255,255,255,0.25);
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-
-  .ft-social-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .ft-social-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.22s ease;
-  }
-
-  .ft-social-icon:hover {
-    transform: translateY(-3px);
-  }
-
-  .ft-social-icon.fb:hover { background: #1877f2; border-color: #1877f2; color: #fff; }
-  .ft-social-icon.tw:hover { background: #111; border-color: #333; color: #fff; }
-  .ft-social-icon.yt:hover { background: #ff0000; border-color: #ff0000; color: #fff; }
-  .ft-social-icon.ig:hover { background: linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366); border-color: transparent; color: #fff; }
-  .ft-social-icon.wa:hover { background: #25d366; border-color: #25d366; color: #fff; }
-
-  .ft-playstore {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #000;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 10px;
-    padding: 10px 16px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.22s ease;
-    width: fit-content;
-  }
-
-  .ft-playstore:hover {
-    border-color: rgba(216,1,0,0.5);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(216,1,0,0.12);
-  }
-
-  .ft-playstore-icon {
-    color: #fff;
-    display: flex;
-    align-items: center;
-  }
-
-  .ft-playstore-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.2;
-  }
-
-  .ft-playstore-small {
-    font-size: 9px;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  .ft-playstore-big {
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-  }
-
-  .ft-links-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
-  }
-
-  .ft-col {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .ft-col-heading {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 19px;
-    letter-spacing: 2px;
-    color: #fff;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    position: relative;
-  }
-
-  .ft-col-heading::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 30px;
-    height: 2px;
-    background: #D80100;
-    border-radius: 2px;
-  }
-
-  .ft-col-list {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-  }
-
-  .ft-col-link {
-    font-size: 13.5px;
-    color: rgba(255,255,255,0.42);
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.18s;
-    display: flex;
-    align-items: center;
-    gap: 0;
-  }
-
-  .ft-col-link:hover {
-    color: #fff;
-    padding-left: 6px;
-    border-left: 2px solid #D80100;
-  }
-
-  .ft-mid-divider {
-    max-width: 1262px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-
-  .ft-mid-divider-line {
-    height: 1px;
-    background: rgba(255,255,255,0.06);
-  }
-
-  .ft-bottom {
-    max-width: 1262px;
-    margin: 0 auto;
-    padding: 20px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-
-  .ft-copyright {
-    font-size: 12.5px;
-    color: rgba(255,255,255,0.28);
-    line-height: 1.6;
-  }
-
-  .ft-copyright strong {
-    color: #D80100;
-    font-weight: 700;
-  }
-
-  .ft-policy-links {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-
-  .ft-policy-link {
-    font-size: 12px;
-    color: rgba(255,255,255,0.28);
-    text-decoration: none;
-    cursor: pointer;
-    transition: color 0.18s;
-    padding: 0 4px;
-  }
-
-  .ft-policy-link:hover {
-    color: #fff;
-  }
-
-  .ft-policy-dot {
-    width: 3px;
-    height: 3px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 1024px) {
-    .ft-top {
-      grid-template-columns: 260px 1fr;
-      gap: 40px;
-    }
-    .ft-links-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 768px) {
-    .ft-top {
-      grid-template-columns: 1fr;
-      gap: 32px;
-      padding: 36px 16px 28px;
-    }
-    .ft-links-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-    }
-    .ft-bottom {
-      flex-direction: column;
-      align-items: flex-start;
-      padding: 18px 16px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .ft-links-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-  }
-`;
-
+// ── Component ──────────────────────────────────────────────────
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <>
-      <style>{styles}</style>
-      <footer className="ft-root">
+    <footer className="ft-root">
 
-        {/* TOP SECTION */}
-        <div className="ft-top">
+      {/* TOP SECTION */}
+      <div className="ft-top">
 
-          {/* LEFT BRAND */}
-          <div className="ft-brand">
+        {/* LEFT: Brand */}
+        <div className="ft-brand">
+          <img className="ft-logo-img" src={logo} alt="News4Bharat" />
 
-            <img
-              className="ft-logo-img"
-              src={logo}
-              alt="News4Bharat"
-            />
+          <p className="ft-brand-desc">
+            News4Bharat — Latest news from India and the world, breaking news
+            and unbiased journalism. Every moment, every story.
+          </p>
 
-            <p className="ft-brand-desc">
-              News4Bharat — Latest news from India and the world, breaking news and unbiased journalism. Every moment, every story.
-            </p>
+          <div>
+            <div className="ft-social-title">Follow Us</div>
+            <div className="ft-social-row">
+              <a className="ft-social-icon fb" href="#" title="Facebook"><FacebookIcon /></a>
+              <a className="ft-social-icon tw" href="#" title="Twitter/X"><TwitterIcon /></a>
+              <a className="ft-social-icon yt" href="#" title="YouTube"><YoutubeIcon /></a>
+              <a className="ft-social-icon ig" href="#" title="Instagram"><InstagramIcon /></a>
+              <a className="ft-social-icon wa" href="#" title="WhatsApp"><WhatsappIcon /></a>
+            </div>
+          </div>
 
-            <div>
-              <div className="ft-social-title" style={{ marginBottom: '10px' }}>Follow Us</div>
-              <div className="ft-social-row">
-                <a className="ft-social-icon fb" href="#" title="Facebook"><FacebookIcon /></a>
-                <a className="ft-social-icon tw" href="#" title="Twitter/X"><TwitterIcon /></a>
-                <a className="ft-social-icon yt" href="#" title="YouTube"><YoutubeIcon /></a>
-                <a className="ft-social-icon ig" href="#" title="Instagram"><InstagramIcon /></a>
-                <a className="ft-social-icon wa" href="#" title="WhatsApp"><WhatsappIcon /></a>
+          <a className="ft-playstore" href="#" target="_blank" rel="noreferrer">
+            <span className="ft-playstore-icon"><PlayStoreIcon /></span>
+            <div className="ft-playstore-text">
+              <span className="ft-playstore-small">Get it on</span>
+              <span className="ft-playstore-big">Google Play</span>
+            </div>
+          </a>
+        </div>
+
+        {/* RIGHT: Links Grid */}
+        <div className="ft-links-grid">
+          {Object.entries(footerLinks).map(([heading, links]) => (
+            <div className="ft-col" key={heading}>
+              <div className="ft-col-heading">{heading}</div>
+              <div className="ft-col-list">
+                {links.map(link => (
+                  <a className="ft-col-link" key={link} href="#">{link}</a>
+                ))}
               </div>
             </div>
-
-            <a className="ft-playstore" href="#" target="_blank" rel="noreferrer">
-              <span className="ft-playstore-icon"><PlayStoreIcon /></span>
-              <div className="ft-playstore-text">
-                <span className="ft-playstore-small">Get it on</span>
-                <span className="ft-playstore-big">Google Play</span>
-              </div>
-            </a>
-
-          </div>
-
-          {/* RIGHT LINKS */}
-          <div className="ft-links-grid">
-            {Object.entries(footerLinks).map(([heading, links]) => (
-              <div className="ft-col" key={heading}>
-                <div className="ft-col-heading">{heading}</div>
-                <div className="ft-col-list">
-                  {links.map(link => (
-                    <a className="ft-col-link" key={link} href="#">{link}</a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
+          ))}
         </div>
 
-        {/* DIVIDER */}
-        <div className="ft-mid-divider">
-          <div className="ft-mid-divider-line" />
-        </div>
+      </div>
 
-        {/* BOTTOM BAR */}
-        <div className="ft-bottom">
-          <p className="ft-copyright">
-            © {year} <strong>News4Bharat</strong>. All rights reserved. All news and content are protected under copyright.
-          </p>
-          <div className="ft-policy-links">
-            <a className="ft-policy-link" href="#">Privacy Policy</a>
-            <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">Terms & Conditions</a>
-            <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">Advertise</a>
-            <div className="ft-policy-dot" />
-            <a className="ft-policy-link" href="#">Contact Us</a>
-          </div>
-        </div>
+      {/* DIVIDER */}
+      <div className="ft-mid-divider">
+        <div className="ft-mid-divider-line" />
+      </div>
 
-      </footer>
-    </>
+      {/* BOTTOM BAR */}
+      <div className="ft-bottom">
+        <p className="ft-copyright">
+          © {year} <strong>News4Bharat</strong>. All rights reserved. All news and content are protected under copyright.
+        </p>
+        <div className="ft-policy-links">
+          <a className="ft-policy-link" href="#">Privacy Policy</a>
+          <div className="ft-policy-dot" />
+          <a className="ft-policy-link" href="#">Terms &amp; Conditions</a>
+          <div className="ft-policy-dot" />
+          <a className="ft-policy-link" href="#">Advertise</a>
+          <div className="ft-policy-dot" />
+          <a className="ft-policy-link" href="#">Contact Us</a>
+        </div>
+      </div>
+
+    </footer>
   );
 }

@@ -177,7 +177,7 @@ export default function PrivacyPage() {
           <div className="priv-hero-divider" />
 
           <p className="priv-hero-desc">
-            News 4 Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information when you use our platform.
+News 4 Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information.
           </p>
 
           <div className="priv-hero-meta">
@@ -305,15 +305,15 @@ export default function PrivacyPage() {
                 </div>
               </div>
 
-              <p className="priv-body">We use collected data to deliver a better experience for our readers and to operate our platform effectively:</p>
+              <p className="priv-body">We use collected data to:</p>
 
               <ul className="priv-list">
                 {[
-                  "Improve website performance and user experience",
-                  "Respond to inquiries and reader feedback",
-                  "Send newsletters (only if subscribed)",
-                  "Analyze readership trends and editorial reach",
-                  "Prevent fraudulent activity and protect platform integrity",
+                  "Improve website performance",
+                  "Respond to inquiries",
+                  "Send newsletters (if subscribed)",
+                  "Analyze readership trends",
+                  "Prevent fraudulent activity",
                 ].map((item, i) => (
                   <li key={i} className="priv-list-item">
                     <span className="priv-list-icon">{icons.check}</span>
@@ -323,7 +323,7 @@ export default function PrivacyPage() {
               </ul>
 
               <div className="priv-highlight">
-                <p className="priv-highlight-text">We do not sell personal data to third parties — ever.</p>
+                <p className="priv-highlight-text">We do not sell personal data to third parties.</p>
               </div>
             </section>
           </FadeIn>
@@ -339,13 +339,13 @@ export default function PrivacyPage() {
                 </div>
               </div>
 
-              <p className="priv-body">We use cookies to enhance your experience on our platform. Here's how we use them:</p>
+              <p className="priv-body">We use cookies to:</p>
 
               <ul className="priv-list">
                 {[
-                  "Enhance user experience and site functionality",
-                  "Track analytics to understand readership patterns",
-                  "Store user preferences across sessions",
+                  "Enhance user experience",
+                  "Track analytics",
+                  "Store user preferences",
                 ].map((item, i) => (
                   <li key={i} className="priv-list-item">
                     <span className="priv-list-icon">{icons.check}</span>
@@ -357,7 +357,7 @@ export default function PrivacyPage() {
               <div className="priv-note">
                 <span className="priv-note-icon">{icons.alert}</span>
                 <p className="priv-note-text">
-                  Users may disable cookies through their browser settings. Note that disabling cookies may affect some website functionality.
+Users may disable cookies in browser settings.
                 </p>
               </div>
             </section>
@@ -375,15 +375,8 @@ export default function PrivacyPage() {
               </div>
 
               <p className="priv-body">
-                We implement appropriate security measures to safeguard your information. Our platform follows industry-standard practices to ensure data integrity and confidentiality.
+We implement appropriate security measures to safeguard user information. However, no digital transmission can be guaranteed 100% secure.
               </p>
-
-              <div className="priv-note">
-                <span className="priv-note-icon">{icons.alert}</span>
-                <p className="priv-note-text">
-                  However, no digital transmission can be guaranteed 100% secure. We encourage users to take precautions when sharing sensitive information online.
-                </p>
-              </div>
             </section>
           </FadeIn>
 
@@ -399,14 +392,8 @@ export default function PrivacyPage() {
               </div>
 
               <p className="priv-body">
-                Our website may contain links to external websites for reference and informational purposes.
+Our website may contain links to external websites. We are not responsible for their privacy practices.
               </p>
-
-              <div className="priv-highlight">
-                <p className="priv-highlight-text">
-                  News 4 Bharat is not responsible for the privacy practices of any third-party websites. We recommend reviewing their privacy policies before engaging.
-                </p>
-              </div>
             </section>
           </FadeIn>
 
@@ -422,14 +409,8 @@ export default function PrivacyPage() {
               </div>
 
               <p className="priv-body">
-                We may update this Privacy Policy periodically to reflect changes in our practices, legal requirements, or platform updates.
+We may update this Privacy Policy periodically. Continued use of the website implies acceptance of changes.
               </p>
-
-              <div className="priv-highlight">
-                <p className="priv-highlight-text">
-                  Continued use of the website after any changes implies acceptance of the updated policy. We encourage users to review this page regularly.
-                </p>
-              </div>
 
               {/* Contact block */}
               <div className="priv-contact-block" style={{ marginTop: "2rem" }}>

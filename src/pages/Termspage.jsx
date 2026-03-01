@@ -114,9 +114,9 @@ const ethicsItems = [
 
 /* ── DISCLAIMER CARDS DATA ── */
 const disclaimerCards = [
-  { icon: icons.alert, text: "We strive for accuracy but do not guarantee completeness or timeliness of information." },
-  { icon: icons.book,  text: "Views expressed in opinion articles belong solely to the respective authors." },
-  { icon: icons.globe, text: "News 4 Bharat is not liable for any losses resulting from reliance on published content." },
+  { icon: icons.alert, text: "We strive for accuracy but do not guarantee completeness or timeliness." },
+  { icon: icons.book,  text: "Views expressed in opinion articles belong to the authors." },
+  { icon: icons.globe, text: "News 4 Bharat is not liable for losses resulting from reliance on published content." },
   { icon: icons.tag,   text: "Financial, legal, or health information should not be treated as professional advice." },
 ];
 
@@ -173,11 +173,11 @@ export default function TermsPage() {
           <span className="terms-hero-title-sub"> Conditions</span>
 
           <p className="terms-hero-desc">
-            By accessing News 4 Bharat, you agree to the following terms. Please read them carefully before using our platform.
+By accessing News 4 Bharat, you agree to the following:
           </p>
 
           <div className="terms-hero-pills">
-            {["Effective: March 2026", "Governed by Indian Law", "News 4 Bharat"].map((t, i) => (
+            {["Effective: March 2026"].map((t, i) => (
               <div key={i} className="terms-hero-pill">
                 <div className="terms-hero-pill-dot" />
                 {t}
@@ -247,7 +247,7 @@ export default function TermsPage() {
               <div className="terms-block">
                 <div className="terms-block-title">
                   <span className="terms-block-title-icon">{icons.x}</span>
-                  User Conduct — Not Allowed
+                  User Conduct — Users must not:
                 </div>
                 <ul className="terms-block-list">
                   {[
@@ -311,7 +311,7 @@ export default function TermsPage() {
                   Governing Law
                 </div>
                 <p className="terms-block-full-text">
-                  These terms are governed by the laws of <strong>India</strong>. Any disputes arising from the use of this platform shall be subject to the jurisdiction of Indian courts.
+                  These terms are governed by the laws of India.
                 </p>
               </div>
             </FadeIn>
@@ -329,6 +329,12 @@ export default function TermsPage() {
                 <h2 className="terms-chapter-title">Code of Ethics</h2>
               </div>
             </div>
+          </FadeIn>
+
+                    <FadeIn delay={0.05}>
+            <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.8, marginBottom: "1.5rem" }}>
+News 4 Bharat adheres to the following principles:
+            </p>
           </FadeIn>
 
           <FadeIn delay={0.05}>
@@ -379,7 +385,8 @@ export default function TermsPage() {
             <div className="disclaimer-trademark">
               <div className="disclaimer-trademark-icon">{icons.tag}</div>
               <p className="disclaimer-trademark-text">
-                All trademarks and logos belong to their respective owners and are used for identification purposes only.
+All trademarks and logos belong to their respective owners.
+
               </p>
             </div>
           </FadeIn>

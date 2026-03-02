@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 /* ── RESET ── */
 *,
@@ -11,7 +11,7 @@
 
 /* ── BASE ── */
 .about-page {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Poppins', sans-serif;
   background: #ffffff;
   color: #1a1a1a;
   overflow-x: hidden;
@@ -67,33 +67,29 @@
 ════════════════════ */
 .hero {
   position: relative;
-  height: 88vh;
-  min-height: 580px;
+  height: 75vh;
+  min-height: 537px;
   overflow: hidden;
   background: #001d52;
 }
 
+/* ✅ FIX: overflow hidden ensures SVG never bleeds outside hero */
 .hero-bg {
-  position: absolute;
-  inset: 0;
-}
-
-.hero-watermark {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  display: block;
+  overflow: hidden;
 }
 
-.hero-fade-bottom {
+/* ✅ FIX: SVG fills hero fully — no cutoff on any side */
+.hero-watermark {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
-  right: 0;
-  height: 130px;
-  background: linear-gradient(transparent, #ffffff);
-  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .hero-content {
@@ -137,8 +133,8 @@
 }
 
 .hero-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 5rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 4rem;
   font-weight: 900;
   color: #fff;
   line-height: 1.0;
@@ -148,7 +144,6 @@
 
 .hero-title-accent {
   color: #D80100;
-  font-style: italic;
 }
 
 .hero-subtitle {
@@ -187,7 +182,7 @@
   display: block;
   color: #D80100;
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 15px;
   letter-spacing: 4px;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -215,15 +210,6 @@
 
 .section-header.center .section-title {
   margin: 0 auto;
-}
-
-.section-title-lg {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.6rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  line-height: 1.15;
-  letter-spacing: -0.5px;
 }
 
 .section-subtitle {
@@ -314,7 +300,7 @@
   position: absolute;
   top: 16px;
   right: 20px;
-  color: rgba(216, 1, 0, 0.08);
+  color: rgba(216, 0, 0, 0.288);
   display: flex;
 }
 
@@ -327,12 +313,13 @@
 }
 
 .who-card-title {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 1.12rem;
   font-weight: 700;
   color: #1a1a1a;
   line-height: 1.55;
   margin-bottom: 26px;
+  margin-top: 15%;
 }
 
 .who-card-quote {
@@ -349,7 +336,7 @@
 }
 
 .who-text-title {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 2.6rem;
   font-weight: 800;
   color: #1a1a1a;
@@ -394,6 +381,7 @@
 .philosophy-section {
   padding: 6rem 0;
   background: #f9f9f9;
+  padding-top: 0px;
 }
 
 .philosophy-grid {
@@ -415,18 +403,19 @@
 }
 
 .philosophy-card:hover {
-  box-shadow: 0 8px 28px rgba(216, 1, 0, 0.07);
-  transform: translateY(-2px);
+  color: #D80100;
+  box-shadow: 0 8px 28px rgba(216, 1, 0, 0.07) !important;
+  transform: translateY(-2px) !important;
 }
 
 .philo-num {
   font-size: 2.4rem;
   font-weight: 800;
-  color: rgba(216, 1, 0, 0.1);
+  color: rgba(216, 0, 0, 0.288);
   flex-shrink: 0;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .philosophy-text {
@@ -443,6 +432,7 @@
 .mission-section {
   padding: 6rem 0;
   background: #fff;
+  padding-top: 20px;
 }
 
 .mission-grid {
@@ -504,6 +494,7 @@
 .vision-section {
   padding: 6rem 0;
   background: #f9f9f9;
+  padding-top: 0px;
 }
 
 .vision-grid {
@@ -560,6 +551,7 @@
 .pillars-section {
   padding: 6rem 0;
   background: #fff;
+  padding-top: 0px;
 }
 
 .pillars-grid {
@@ -622,10 +614,11 @@
 }
 
 .diff-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
   margin-top: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 900px;
 }
 
 .diff-card {
@@ -637,6 +630,7 @@
   border-radius: 10px;
   border: 1px solid #ebebeb;
   border-left: 3px solid #D80100;
+  width: 100%;
   transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
   cursor: default;
 }
@@ -648,17 +642,17 @@
 }
 
 .diff-num {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 2rem;
   font-weight: 800;
-  color: rgba(216, 1, 0, 0.13);
+  color: rgba(216, 0, 0, 0.288);
   min-width: 52px;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .diff-card:hover .diff-num {
-  color: rgba(216, 1, 0, 0.45);
+  color: #D80100;
 }
 
 .diff-icon {
@@ -695,9 +689,9 @@
 }
 
 .responsibility-heading {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.65;
   margin-top: 10px;
@@ -722,7 +716,7 @@
 }
 
 .resp-num {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 2.6rem;
   font-weight: 800;
   color: #D80100;
@@ -745,14 +739,14 @@
 .ephilosophy-section {
   padding: 6rem 0;
   background: #fff;
+  padding-top: 20px;
 }
 
 .ephilosophy-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 2rem;
   max-width: 900px;
-  margin: 0 auto;
 }
 
 .ephilosophy-item {
@@ -774,7 +768,7 @@
 }
 
 .ephilosophy-num {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 1.5rem;
   font-weight: 800;
   color: rgba(216, 1, 0, 0.15);

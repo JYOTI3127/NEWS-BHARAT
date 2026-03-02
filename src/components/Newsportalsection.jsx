@@ -207,7 +207,7 @@ function VisualStoriesRow() {
 function EntertainmentSection() {
   return (
     <div className="nps-entertainment">
-      <SectionHeader title="ENTERTAINMENT" />
+      <SectionHeader title="HEALTH" />
       <div className="nps-ent-layout">
 
         {/* Left + Middle */}
@@ -255,7 +255,7 @@ function EntertainmentSection() {
         {/* Health Sidebar */}
         <div className="nps-health-sidebar">
           <div className="nps-health-header">
-            <span className="nps-health-header-text">HEALTH</span>
+            <span className="nps-health-header-text">ENTERTAINMENT</span>
           </div>
           <div className="nps-health-scroll">
             {healthNews.map((item) => (

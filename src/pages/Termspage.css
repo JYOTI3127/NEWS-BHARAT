@@ -118,11 +118,8 @@
 .terms-hero-grid {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg,
-            rgba(0, 0, 0, 0.95) 0%,
-            rgba(0, 27, 71, 0.9) 40%,
-            rgba(0, 39, 101, 0.9) 70%,
-            rgba(0, 0, 0, 0.95) 100%);
+background: 
+  linear-gradient(rgba(0, 29, 82, 0.35), rgba(0, 29, 82, 0.45))
 }
 
 /* spinning ring */
@@ -190,27 +187,29 @@
 .terms-hero-eyebrow-text {
     font-size: 11px;
     font-weight: 600;
-    color: rgba(216, 1, 0, 0.9);
+    color: white;
     letter-spacing: 3px;
     text-transform: uppercase;
 }
 
 .terms-hero-title {
-    font-size: 4rem;
-    font-weight: 800;
+    font-size: 3rem;
+    font-weight: 500;
     color: #fff;
     line-height: 1.05;
     letter-spacing: -1.5px;
     margin-bottom: 6px;
+    display: inline;
 }
 
 .terms-hero-title-sub {
-    font-size: 4rem;
-    font-weight: 800;
+    font-size: 3rem;
+    font-weight: 500;
     color: var(--red);
     line-height: 1.05;
     letter-spacing: -1.5px;
     margin-bottom: 24px;
+    display: inline;
 }
 
 .terms-hero-desc {
@@ -220,6 +219,7 @@
     font-weight: 300;
     max-width: 520px;
     margin-bottom: 36px;
+    margin-top: 10px;
 }
 
 .terms-hero-pills {

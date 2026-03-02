@@ -114,7 +114,21 @@ export default function AboutPage() {
       {/* ══════════ HERO ══════════ */}
       <section className="hero">
         <div className="hero-bg">
-          <svg className="hero-watermark" viewBox="0 0 1400 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          {/*
+            ✅ HERO SVG FIXES:
+            1. preserveAspectRatio="none"   → fills 100% width & height, zero cutoff
+            2. BHARAT fontSize 290 → 210, letterSpacing 44 → 20  → stays inside viewBox
+            3. Ashoka Chakra cx 1160 → 1050 → no right-edge cutoff
+            4. Corner brackets inset to safe positions (20px from edges)
+            5. rightGlow panel widened from x=900 to x=750
+          */}
+          <svg
+            className="hero-watermark"
+            viewBox="0 0 1400 560"
+            preserveAspectRatio="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'block' }}
+          >
             <defs>
               <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%"   stopColor="#001d52"/>
@@ -134,63 +148,55 @@ export default function AboutPage() {
                 <stop offset="75%"  stopColor="#D80100" stopOpacity="0.7"/>
                 <stop offset="100%" stopColor="#D80100" stopOpacity="0"/>
               </linearGradient>
-              <linearGradient id="rightGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#D80100" stopOpacity="0"/>
-                <stop offset="100%" stopColor="#D80100" stopOpacity="0.12"/>
-              </linearGradient>
+
             </defs>
 
             {/* Base */}
             <rect width="1400" height="560" fill="url(#bgGrad)"/>
 
-            {/* Right-side red glow panel */}
-            <rect x="900" y="0" width="500" height="560" fill="url(#rightGlow)"/>
+            {/* Right-side red glow — widened */}
+            <rect x="750" y="0" width="650" height="560" fill="url(#rightGlow)"/>
 
-            {/* Subtle horizontal newspaper lines — left half */}
-            {[...Array(18)].map((_,i) => (
-              <line key={`nl${i}`} x1="60" y1={40 + i*27} x2="560" y2={40 + i*27}
-                stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-            ))}
 
-            {/* Vertical column separator — newspaper style */}
-            <line x1="580" y1="60" x2="580" y2="500" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
 
-            {/* Ashoka Chakra — right side decorative */}
+            {/* Ashoka Chakra — cx moved from 1160 → 1050, fully visible */}
             {[...Array(24)].map((_,i) => {
               const angle = (i * 15) * Math.PI / 180;
-              const x1 = 1160 + Math.cos(angle) * 18;
+              const x1 = 1050 + Math.cos(angle) * 18;
               const y1 = 280 + Math.sin(angle) * 18;
-              const x2 = 1160 + Math.cos(angle) * 110;
+              const x2 = 1050 + Math.cos(angle) * 110;
               const y2 = 280 + Math.sin(angle) * 110;
               return <line key={`sp${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
                 stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>;
             })}
-            <circle cx="1160" cy="280" r="110" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
-            <circle cx="1160" cy="280" r="75"  fill="none" stroke="rgba(216,1,0,0.12)"     strokeWidth="1"/>
-            <circle cx="1160" cy="280" r="18"  fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
+            <circle cx="1050" cy="280" r="110" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
+            <circle cx="1050" cy="280" r="75"  fill="none" stroke="rgba(216,1,0,0.12)"     strokeWidth="1"/>
+            <circle cx="1050" cy="280" r="18"  fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
 
-            {/* Dot grid — right area */}
+            {/* Dot grid */}
             {[...Array(10)].map((_,r) => [...Array(10)].map((_,c) => (
               <circle key={`dt${r}-${c}`} cx={650+c*56} cy={60+r*50} r="1.1"
                 fill="rgba(255,255,255,0.045)"/>
             )))}
 
-            {/* Big BHARAT watermark */}
-            <text x="700" y="390"
+            {/* BHARAT watermark — fontSize 290→210, letterSpacing 44→20 */}
+            <text x="700" y="370"
               textAnchor="middle"
               fontFamily="'Poppins',sans-serif"
               fontWeight="900"
-              fontSize="290"
-              letterSpacing="44"
+              fontSize="210"
+              letterSpacing="20"
+
               fill="url(#bharatFade)">BHARAT</text>
 
             {/* Red outline on BHARAT */}
-            <text x="700" y="390"
+            <text x="700" y="370"
               textAnchor="middle"
               fontFamily="'Poppins',sans-serif"
               fontWeight="900"
-              fontSize="290"
-              letterSpacing="44"
+              fontSize="210"
+              letterSpacing="20"
+               paddingleft="5%"
               fill="none"
               stroke="rgba(216,1,0,0.11)"
               strokeWidth="1">BHARAT</text>
@@ -198,18 +204,8 @@ export default function AboutPage() {
             {/* Horizontal red accent lines */}
             <line x1="0"   y1="430" x2="1400" y2="430" stroke="url(#hLine)" strokeWidth="1.5"/>
             <line x1="100" y1="437" x2="1300" y2="437" stroke="url(#hLine)" strokeWidth="0.5"/>
-
-            {/* Top red bar */}
-            <rect x="0" y="0" width="1400" height="5" fill="#D80100" opacity="0.7"/>
-
-            {/* Corner brackets */}
-            <path d="M55 44 L55 88 M55 44 L110 44" stroke="#D80100" strokeWidth="2" strokeOpacity="0.65" fill="none" strokeLinecap="round"/>
-            <path d="M1345 44 L1345 88 M1345 44 L1290 44" stroke="#D80100" strokeWidth="2" strokeOpacity="0.65" fill="none" strokeLinecap="round"/>
-            <path d="M55 516 L55 472 M55 516 L110 516" stroke="#D80100" strokeWidth="2" strokeOpacity="0.65" fill="none" strokeLinecap="round"/>
-            <path d="M1345 516 L1345 472 M1345 516 L1290 516" stroke="#D80100" strokeWidth="2" strokeOpacity="0.65" fill="none" strokeLinecap="round"/>
-
-            {/* Small "N4B" monogram — top right */}
-            <text x="1320" y="36" textAnchor="middle"
+            {/* NEWS 4 BHARAT top right */}
+            <text x="1280" y="36" textAnchor="middle"
               fontFamily="'Poppins',sans-serif" fontWeight="800"
               fontSize="13" letterSpacing="3"
               fill="rgba(255,255,255,0.25)">NEWS 4 BHARAT</text>
@@ -228,7 +224,7 @@ export default function AboutPage() {
           </FadeIn>
           <FadeIn direction="up" delay={0.3}>
             <p className="hero-subtitle">
-              News 4 Bharat An independent digital news platform committed to delivering factual, balanced, and public-interest journalism across India.
+              News 4 Bharat — An independent digital news platform committed to delivering factual, balanced, and public-interest journalism across India.
             </p>
           </FadeIn>
           <FadeIn direction="up" delay={0.4}>
@@ -242,7 +238,6 @@ export default function AboutPage() {
             </div>
           </FadeIn>
         </div>
-        <div className="hero-fade-bottom"/>
       </section>
 
       {/* ══════════ WHO WE ARE ══════════ */}
@@ -253,7 +248,6 @@ export default function AboutPage() {
               <div className="who-card-wrapper">
                 <div className="who-card">
                   <div className="who-card-bg-icon">{icons.newspaper}</div>
-                  <div className="who-card-divider"/>
                   <h2 className="who-card-title">
                     We believe journalism is not merely about breaking stories — it is about building understanding.
                   </h2>
@@ -385,35 +379,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ══════════ WHAT MAKES US DIFFERENT ══════════ */}
-      <section className="different-section">
-        <div className="container">
-          <FadeIn>
-            <div className="section-header left">
-              <span className="section-label">What Makes Us Different</span>
-              <h2 className="section-title-lg">What Makes Us Different</h2>
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <div className="diff-grid">
-              {differentiators.map((d, i) => (
-                <div key={i} className="diff-card">
-                  <div className="diff-num">{String(i+1).padStart(2,"0")}</div>
-                  <div className="diff-icon">{icons.check}</div>
-                  <span className="diff-text">{d}</span>
-                </div>
-              ))}
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.2}>
-            <div className="tagline-bar">
-              <span className="tagline-bar-icon">{icons.star}</span>
-              <p className="tagline-bar-text">We do not chase sensationalism. We pursue substance.</p>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
       {/* ══════════ OUR RESPONSIBILITY ══════════ */}
       <section className="responsibility-section">
         <div className="container">
@@ -436,6 +401,34 @@ export default function AboutPage() {
                   <p className="resp-text">We seek to be one of the most reliable.</p>
                 </div>
               </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ══════════ WHAT MAKES US DIFFERENT ══════════ */}
+      <section className="different-section">
+        <div className="container">
+          <FadeIn>
+            <div className="section-header left">
+              <span className="section-label">What Makes Us Different</span>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <div className="diff-grid">
+              {differentiators.map((d, i) => (
+                <div key={i} className="diff-card">
+                  <div className="diff-num">{String(i+1).padStart(2,"0")}</div>
+                  <div className="diff-icon">{icons.check}</div>
+                  <span className="diff-text">{d}</span>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.2}>
+            <div className="tagline-bar">
+              <span className="tagline-bar-icon">{icons.star}</span>
+              <p className="tagline-bar-text">We do not chase sensationalism. We pursue substance.</p>
             </div>
           </FadeIn>
         </div>

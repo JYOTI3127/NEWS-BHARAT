@@ -158,9 +158,8 @@ export default function TermsPage() {
         />
         <div className="terms-hero-overlay" />
         <div className="terms-hero-grid" />
-        <div className="terms-hero-ring" />
-        <div className="terms-hero-ring-sm" />
-        <div className="terms-hero-float-icon">{icons.bigScroll}</div>
+
+
         <div className="terms-hero-bottom-fade" />
 
         <div className="terms-hero-content">

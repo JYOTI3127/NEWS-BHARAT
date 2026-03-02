@@ -32,21 +32,28 @@ const NAV_SECTIONS = [
 
 const LogoFull = () => (
   <div className="logo-full">
-    <img src={logoBig} alt="News4Bharat Logo" />
+    <Link to="/">
+      <img src={logoBig} alt="News4Bharat Logo" />
+    </Link>
   </div>
 );
 
 const LogoScroll = () => (
   <div className="logo-scroll">
-    <img src={logoSmall} alt="News4Bharat Logo Small" />
+    <Link to="/">
+      <img src={logoSmall} alt="News4Bharat Logo Small" />
+    </Link>
   </div>
 );
+ 
 
 const navLinks = [
   { label: "Home", path: "/" },
   { label: "About Us", path: "/about" },
    { label: "Privacy Policy", path: "/privacy-policy" },
    { label: "Terms of Service", path: "/terms-of-service" },
+    { label: "Founder note", path: "/founders-note" },
+      { label: "Editorial Policy", path: "/editorial-policy" },
 
   { label: "Breaking Now", path: "/category/breaking-now" },
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },

@@ -150,7 +150,7 @@ export default function PrivacyPage() {
         <img
           className="priv-hero-img"
           src="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=1800&q=85&fit=crop"
-          alt="Privacy Policy — News 4 Bharat"
+          alt="Privacy Policy — News4Bharat"
         />
 
         {/* Dark overlay */}
@@ -177,7 +177,7 @@ export default function PrivacyPage() {
           <div className="priv-hero-divider" />
 
           <p className="priv-hero-desc">
-News 4 Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information.
+News4Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information.
           </p>
 
           <div className="priv-hero-meta">
@@ -185,7 +185,7 @@ News 4 Bharat values your privacy. This Privacy Policy outlines how we collect, 
               <span className="priv-hero-date-icon">{icons.calendar}</span>
               <span>Effective Date: March 2026</span>
             </div>
-            <div className="priv-hero-badge">News 4 Bharat</div>
+            <div className="priv-hero-badge">News4Bharat</div>
           </div>
         </div>
 
@@ -201,7 +201,7 @@ News 4 Bharat values your privacy. This Privacy Policy outlines how we collect, 
           <div className="priv-sidebar-card">
             <div className="priv-sidebar-card-title">About This Policy</div>
             <p className="priv-sidebar-card-body">
-              This document governs how News 4 Bharat collects and handles your data. We are committed to full transparency.
+              This document governs how News4Bharat collects and handles your data. We are committed to full transparency.
             </p>
             <div className="priv-sidebar-card-date">
               <span className="priv-sidebar-card-date-icon">{icons.calendar}</span>

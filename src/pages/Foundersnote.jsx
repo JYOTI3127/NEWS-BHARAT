@@ -82,7 +82,7 @@ export default function FoundersNote() {
 
             <FadeIn direction="left" delay={0.38}>
               <p className="fn-hero-desc">
-                Why News 4 Bharat was built — and what we stand for, every single day.
+                Why News4Bharat was built — and what we stand for, every single day.
               </p>
             </FadeIn>
 
@@ -124,7 +124,7 @@ export default function FoundersNote() {
                     <FiFeather size={22} strokeWidth={1.5} />
                   </div>
                   <p className="fn-founder-name">Founder</p>
-                  <p className="fn-founder-role">News 4 Bharat</p>
+                  <p className="fn-founder-role">News4Bharat</p>
                   <div className="fn-founder-tag">
                     <span className="fn-founder-dot" />
                     <span className="fn-founder-tag-text">Independent Media</span>
@@ -144,7 +144,7 @@ export default function FoundersNote() {
 
               <FadeIn direction="right" delay={0.1}>
                 <p className="fn-opening">
-                  When I started News 4 Bharat, the goal was simple — restore audiences faith in news.
+                  When I started News4Bharat, the goal was simple — restore audiences faith in news.
                 </p>
               </FadeIn>
 
@@ -156,7 +156,7 @@ export default function FoundersNote() {
 
               <FadeIn direction="up" delay={0.24}>
                 <p className="fn-body">
-                News 4 Bharat was born from a belief that journalism must serve the public — not power, not propaganda, not profit alone.
+                News4Bharat was born from a belief that journalism must serve the public — not power, not propaganda, not profit alone.
                 </p>
               </FadeIn>
 
@@ -186,7 +186,7 @@ India is evolving rapidly — economically, technologically, socially. This tran
                 <p className="fn-thankyou">Thank you for being part of this journey.</p>
                 <div className="fn-signature">
                   <span className="fn-sig-icon"><FiMinus size={16} /></span>
-                  <span className="fn-sig-text">Founder, News 4 Bharat</span>
+                  <span className="fn-sig-text">Founder, News4Bharat</span>
                 </div>
               </FadeIn>
 

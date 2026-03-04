@@ -53,7 +53,9 @@ const navLinks = [
    { label: "Privacy Policy", path: "/privacy-policy" },
    { label: "Terms of Service", path: "/terms-of-service" },
     { label: "Founder note", path: "/founders-note" },
-      { label: "Editorial Policy", path: "/editorial-policy" },
+    { label: "Editorial Policy", path: "/editorial-policy" },
+    { label: "Careers", path: "/careers" },
+    { label: "Contact Us", path: "/contact" },
 
   { label: "Breaking Now", path: "/category/breaking-now" },
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },

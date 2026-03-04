@@ -126,7 +126,7 @@ export default function EditorialPolicy() {
                         <FadeIn direction="none" delay={0.1}>
                             <div className="ep-hero-badge">
                                 <span className="ep-hero-badge-dot" />
-                                <span className="ep-hero-badge-text">News 4 Bharat</span>
+                                <span className="ep-hero-badge-text">News4Bharat</span>
                             </div>
                         </FadeIn>
 
@@ -206,7 +206,7 @@ export default function EditorialPolicy() {
                                     Corrections Policy
                                 </h2>
                                 <p className="ep-corrections-sub">
-                                    At News 4 Bharat, we are committed to transparency and accountability.
+                                    At News4Bharat, we are committed to transparency and accountability.
                                 </p>
                                 <div className="ep-corrections-tagline">
                                     <FiEye size={16} />
@@ -240,7 +240,7 @@ export default function EditorialPolicy() {
                         <div className="ep-section-header ep-section-header-center">
                             <h2 className="ep-section-titlee">Fact-Checking Standards</h2>
                             <p className="ep-section-subtitle">
-                                Misinformation undermines public trust. News 4 Bharat follows a rigorous fact-verification process.
+                                Misinformation undermines public trust. News4Bharat follows a rigorous fact-verification process.
                             </p>
                             <div className="ep-section-divider ep-divider-center" />
                         </div>

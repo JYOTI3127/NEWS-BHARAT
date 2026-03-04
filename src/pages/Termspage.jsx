@@ -116,7 +116,7 @@ const ethicsItems = [
 const disclaimerCards = [
   { icon: icons.alert, text: "We strive for accuracy but do not guarantee completeness or timeliness." },
   { icon: icons.book,  text: "Views expressed in opinion articles belong to the authors." },
-  { icon: icons.globe, text: "News 4 Bharat is not liable for losses resulting from reliance on published content." },
+  { icon: icons.globe, text: "News4Bharat is not liable for losses resulting from reliance on published content." },
   { icon: icons.tag,   text: "Financial, legal, or health information should not be treated as professional advice." },
 ];
 
@@ -154,7 +154,7 @@ export default function TermsPage() {
         <img
           className="terms-hero-img"
           src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1800&q=85&fit=crop"
-          alt="Terms and Conditions — News 4 Bharat"
+          alt="Terms and Conditions — News4Bharat"
         />
         <div className="terms-hero-overlay" />
         <div className="terms-hero-grid" />
@@ -172,7 +172,7 @@ export default function TermsPage() {
           <span className="terms-hero-title-sub"> Conditions</span>
 
           <p className="terms-hero-desc">
-By accessing News 4 Bharat, you agree to the following:
+By accessing News4Bharat, you agree to the following:
           </p>
 
           <div className="terms-hero-pills">
@@ -274,7 +274,7 @@ By accessing News 4 Bharat, you agree to the following:
                 <ul className="terms-block-list">
                   <li className="terms-block-list-item">
                     <span className="terms-block-list-icon">{icons.check}</span>
-                    All content, design, logo, and branding are the property of News 4 Bharat unless otherwise stated.
+                    All content, design, logo, and branding are the property of News4Bharat unless otherwise stated.
                   </li>
                 </ul>
               </div>
@@ -332,7 +332,7 @@ By accessing News 4 Bharat, you agree to the following:
 
                     <FadeIn delay={0.05}>
             <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.8, marginBottom: "1.5rem" }}>
-News 4 Bharat adheres to the following principles:
+News4Bharat adheres to the following principles:
             </p>
           </FadeIn>
 
@@ -365,7 +365,7 @@ News 4 Bharat adheres to the following principles:
 
           <FadeIn delay={0.05}>
             <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.8, marginBottom: "1.5rem" }}>
-              The information provided on News 4 Bharat is for general informational purposes only.
+              The information provided on News4Bharat is for general informational purposes only.
             </p>
           </FadeIn>
 

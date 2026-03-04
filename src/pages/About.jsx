@@ -53,7 +53,7 @@ const pillars = [
 const missions = [
   { icon: icons.target, title: "Deliver Accurate & Verified Journalism",    desc: "Every story undergoes multi-source verification. We prioritize fact-checking over virality and context over sensationalism." },
   { icon: icons.shield, title: "Strengthen Democratic Discourse",           desc: "By presenting balanced perspectives and policy-driven analysis, we aim to elevate public debate and promote informed citizenship." },
-  { icon: icons.zap,    title: "Combat Misinformation",                     desc: "In the digital age, misinformation spreads rapidly. News 4 Bharat is committed to identifying false narratives, clarifying misleading claims, and promoting media literacy." },
+  { icon: icons.zap,    title: "Combat Misinformation",                     desc: "In the digital age, misinformation spreads rapidly. News4Bharat is committed to identifying false narratives, clarifying misleading claims, and promoting media literacy." },
   { icon: icons.globe,  title: "Represent All of Bharat",                   desc: "India's diversity is its strength. We strive to amplify voices from urban centers, rural regions, and underrepresented communities alike." },
   { icon: icons.award,  title: "Promote Ethical Reporting Standards",       desc: "We adhere to principles of fairness, transparency, accountability, and public responsibility in every aspect of reporting." },
   { icon: icons.book,   title: "Provide Context, & Not Just Headlines",     desc: "We go beyond breaking news to offer analysis, explainers, background insights, and impact-driven reporting." },
@@ -63,7 +63,7 @@ const visions = [
   { icon: icons.star,   title: "A Credible Digital News Brand",       desc: "A platform known for reliability and fact-based reporting, where readers return not for noise — but for clarity." },
   { icon: icons.shield, title: "A Responsible Media Institution",     desc: "An organization that sets standards in ethical journalism and transparent digital publishing." },
   { icon: icons.globe,  title: "A National Platform with Regional Depth", desc: "While rooted in Bharat's national identity, we aim to provide strong state and grassroots coverage to reflect the true pulse of the country." },
-  { icon: icons.mic,    title: "A Global Voice of Modern Bharat",     desc: "As India's global influence grows, News 4 Bharat aims to present credible narratives to international audiences about the country's progress, challenges, and transformation." },
+  { icon: icons.mic,    title: "A Global Voice of Modern Bharat",     desc: "As India's global influence grows, News4Bharat aims to present credible narratives to international audiences about the country's progress, challenges, and transformation." },
   { icon: icons.zap,    title: "A Future-Ready Newsroom",             desc: "By embracing technology, data journalism, multimedia storytelling, and fact-checking systems, we aim to evolve with changing media landscapes without compromising core values." },
 ];
 
@@ -204,11 +204,11 @@ export default function AboutPage() {
             {/* Horizontal red accent lines */}
             <line x1="0"   y1="430" x2="1400" y2="430" stroke="url(#hLine)" strokeWidth="1.5"/>
             <line x1="100" y1="437" x2="1300" y2="437" stroke="url(#hLine)" strokeWidth="0.5"/>
-            {/* NEWS 4 BHARAT top right */}
+            {/* News4Bharat top right */}
             <text x="1280" y="36" textAnchor="middle"
               fontFamily="'Poppins',sans-serif" fontWeight="800"
               fontSize="13" letterSpacing="3"
-              fill="rgba(255,255,255,0.25)">NEWS 4 BHARAT</text>
+              fill="rgba(255,255,255,0.25)">News4Bharat</text>
           </svg>
         </div>
 
@@ -216,7 +216,7 @@ export default function AboutPage() {
           <FadeIn direction="none" delay={0.1}>
             <div className="hero-badge">
               <span className="hero-badge-dot"/>
-              <span className="hero-badge-text">About News 4 Bharat</span>
+              <span className="hero-badge-text">About News4Bharat</span>
             </div>
           </FadeIn>
           <FadeIn direction="up" delay={0.2}>
@@ -224,7 +224,7 @@ export default function AboutPage() {
           </FadeIn>
           <FadeIn direction="up" delay={0.3}>
             <p className="hero-subtitle">
-              News 4 Bharat — An independent digital news platform committed to delivering factual, balanced, and public-interest journalism across India.
+              News4Bharat — An independent digital news platform committed to delivering factual, balanced, and public-interest journalism across India.
             </p>
           </FadeIn>
           <FadeIn direction="up" delay={0.4}>
@@ -244,24 +244,36 @@ export default function AboutPage() {
       <section className="who-section">
         <div className="container">
           <div className="who-grid">
-            <FadeIn direction="left">
-              <div className="who-card-wrapper">
-                <div className="who-card">
-                  <div className="who-card-bg-icon">{icons.newspaper}</div>
-                  <h2 className="who-card-title">
-                    We believe journalism is not merely about breaking stories — it is about building understanding.
-                  </h2>
-                  <div className="who-card-quote">
-                    <p className="who-card-quote-text">We cover a wide spectrum of issues that shape modern Bharat, including:</p>
-                  </div>
-                </div>
-              </div>
-            </FadeIn>
+    <FadeIn direction="left">
+  <div className="who-card-wrapper">
+    <div className="who-card">
+
+      {/* Image Top */}
+      <div className="who-card-image">
+        <img 
+  src="https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80" 
+  alt="Newspaper concept" 
+/>
+      </div>
+
+      {/* Text Bottom */}
+      <div className="who-card-text">
+        <div className="who-card-bg-icon">{icons.newspaper}</div>
+
+        <h2 className="who-card-title">
+          We believe journalism is not merely about breaking stories —
+          it is about building understanding.
+        </h2> 
+      </div>
+
+    </div>
+  </div>
+</FadeIn>
             <FadeIn direction="right">
               <div>
                 <span className="section-label">Who We Are</span>
-                <h2 className="who-text-title">News 4 Bharat</h2>
-                <p className="who-text-body">In an era where information moves faster than verification, and opinions often overshadow facts, News 4 Bharat was founded with a clear purpose: to restore clarity, credibility, and responsibility in news reporting.</p>
+                <h2 className="who-text-title">News4Bharat</h2>
+                <p className="who-text-body">In an era where information moves faster than verification, and opinions often overshadow facts, News4Bharat was founded with a clear purpose: to restore clarity, credibility, and responsibility in news reporting.</p>
                 <p className="who-text-body">We cover a wide spectrum of issues that shape modern Bharat, including:</p>
                 <div className="topics-grid">
                   {topics.map((topic, i) => (
@@ -356,7 +368,7 @@ export default function AboutPage() {
           <FadeIn>
             <div className="section-header center">
               <span className="section-label">Our Editorial Commitments</span>
-              <h2 className="section-title">At News 4 Bharat, we commit to:</h2>
+              <h2 className="section-title">At News4Bharat, we commit to:</h2>
               <div className="section-divider"/>
             </div>
           </FadeIn>
@@ -440,7 +452,7 @@ export default function AboutPage() {
           <FadeIn>
             <div className="section-header center">
               <span className="section-label">Our Editorial Philosophy</span>
-              <h2 className="section-title">At News 4 Bharat, we follow:</h2>
+              <h2 className="section-title">At News4Bharat, we follow:</h2>
               <div className="section-divider"/>
             </div>
           </FadeIn>

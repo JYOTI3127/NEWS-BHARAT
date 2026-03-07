@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FiCheck, FiMinus, FiFeather, FiEdit3 } from "react-icons/fi";
-import "./FoundersNote.css";
+import "../style.css";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.15) => {

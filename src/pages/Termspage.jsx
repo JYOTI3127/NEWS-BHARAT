@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import "./TermsPage.css";
+import "../style.css";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.1) => {

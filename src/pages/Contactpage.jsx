@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
+import "react-phone-input-2/lib/style.css";
+import PhoneInput from "react-phone-input-2";
 import {
   Mail, MapPin, Send, CheckCircle,
   Linkedin, Twitter, Instagram, Facebook,
   Monitor, FileText, Star, BookOpen, Users, Zap,
   CheckCircle2,
 } from "lucide-react";
-import "./ContactPage.css";
+import "../style.css";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.12) => {
@@ -68,7 +70,7 @@ const whyPartner = [
 
 /* ── CONTACT FORM ── */
 function ContactForm() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: "", phone: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -114,10 +116,25 @@ function ContactForm() {
           {errors.email && <span className="ct-error-msg">{errors.email}</span>}
         </div>
       </div>
+      <div className="ct-form-row">
       <div className="ct-form-group">
         <label className="ct-form-label">Subject *</label>
         <input className={`ct-form-input${errors.subject ? " ct-err" : ""}`} placeholder="How can we help?" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
         {errors.subject && <span className="ct-error-msg">{errors.subject}</span>}
+      </div>
+<div className="ct-form-group">
+  <label className="ct-form-label">Number *</label>
+
+  <PhoneInput
+    country={"in"}
+    value={form.phone}
+    onChange={(phone) => setForm({ ...form, phone })}
+    inputClass="ct-form-input"
+    containerClass="ct-phone-container"
+  />
+
+  {errors.phone && <span className="ct-error-msg">{errors.phone}</span>}
+</div>
       </div>
       <div className="ct-form-group">
         <label className="ct-form-label">Message * <span className="ct-char-count">({form.message.length}/600)</span></label>

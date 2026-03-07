@@ -11,129 +11,159 @@ import {
 } from "lucide-react";
 import "../Navbar.css";
 
+// ─────────────────────────────────────────────
+//  NAV_SECTIONS  — 
+// ─────────────────────────────────────────────
 const NAV_SECTIONS = [
-  { label: "TOP STORIES", Icon: Flame, links: ["Breaking News", "Latest Updates", "Most Read", "Editor's Pick", "Trending Now"] },
-  { label: "INDIA", Icon: Newspaper, links: ["National", "Politics", "Economy", "Law & Order", "States", "Delhi", "Mumbai"] },
-  { label: "WORLD", Icon: Globe, links: ["South Asia", "Middle East", "USA & Canada", "Europe", "China", "UK", "Africa"] },
-  { label: "BUSINESS", Icon: TrendingUp, links: ["Markets", "Stocks & Sensex", "Real Estate", "Banking", "Startups", "Budget", "Trade"] },
-  { label: "SPORTS", Icon: Trophy, links: ["Cricket", "Football", "Hockey", "Tennis", "IPL", "Olympics", "Athletics"] },
-  { label: "TECHNOLOGY", Icon: Cpu, links: ["AI & Machine Learning", "Mobile & Gadgets", "Cybersecurity", "Social Media", "Space Tech"] },
-  { label: "ENTERTAINMENT", Icon: Film, links: ["Bollywood", "Hollywood", "OTT", "Music", "TV Shows", "Celebrity News", "Reviews"] },
-  { label: "HEALTH", Icon: Heart, links: ["COVID Updates", "Mental Health", "Nutrition", "Fitness", "Medical Research"] },
-  { label: "OPINION", Icon: PenLine, links: ["Editorials", "Columns", "Analysis", "Letters", "Fact Check"] },
-  { label: "LIFESTYLE", Icon: Zap, links: ["Fashion", "Food & Recipes", "Travel", "Parenting", "Home & Decor"] },
-  { label: "EDUCATION", Icon: GraduationCap, links: ["Higher Education", "School News", "Results & Exams", "Scholarships", "Study Abroad"] },
-  { label: "ENVIRONMENT", Icon: Leaf, links: ["Climate Change", "Natural Disasters", "Conservation", "Pollution", "Water Crisis"] },
-  { label: "VIDEOS", Icon: Video, links: ["Live TV", "News Clips", "Documentaries", "Interviews", "Press Conferences"] },
-  { label: "PHOTOS", Icon: Camera, links: ["Photo Stories", "In Focus", "Galleries", "Infographics"] },
-  { label: "GOLD & SILVER", Icon: TrendingUp, links: ["Gold Rates", "Silver Rates", "Commodities", "MCX", "Bullion News"] },
-  { label: "MORE", Icon: MoreHorizontal, links: ["Weather", "Horoscope", "Science", "Archives", "About Us", "Contact", "Advertise", "Newsletter"] },
+
+  {
+    label: "Bharat Economy & Business",
+    Icon: TrendingUp,
+    links: ["Macro Economy", "Government Policy", "Industry & Sectors", "Corporate & Companies", "MSME & Entrepreneurship"],
+    subcategories: [
+      {
+        label: "Macro Economy",
+        topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"],
+      },
+      {
+        label: "Government Policy",
+        topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"],
+      },
+      {
+        label: "Industry & Sectors",
+        topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"],
+      },
+      {
+        label: "Corporate & Companies",
+        topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"],
+      },
+      {
+        label: "MSME & Entrepreneurship",
+        topics: ["MSME Policies", "Small Business Stories"],
+      },
+    ],
+  },
+  {
+    label: "Bharat's BFSI",
+    Icon: BarChart2,
+    links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"],
+  },
+  {
+    label: "Bharat Opinions",
+    Icon: PenLine,
+    links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"],
+  },
+  {
+    label: "Technology",
+    Icon: Cpu,
+  },
+  {
+    label: "Artificial Intelligence",
+    Icon: Cpu,
+  },
+
+    {
+    label: "Bharat By 2047",
+    Icon: Flame,
+  },
 ];
 
+// ─────────────────────────────────────────────
+//  navLinks (desktop top nav — unchanged)
+// ─────────────────────────────────────────────
+const navLinks = [
+  { label: "Breaking News",   path: "/" },
+  { label: "States of Bharat",       path: "" },
+  { label: "Bharat Explainers",     path: "" },
+  { label: "Bharat in Numbers",     path: "" },
+  { label: "Bharat's Startups",       path: "" },
+  { label: "60-Second Read",           path: "" },
+  { label: "Sports",                path: "" },
+  { label: "World News",            path: "" },
+  { label: "Entertainment",         path: "" },
+  { label: "Founter's note",       path: "/founders-note" },
+  { label: "Editorial Policy",           path: "/editorial-policy" },
+  { label: "Career",                path: "/careers" },
+  { label: "Contact Us",            path: "/contact" },
+    { label: "Comming Soon",            path: "/CommingSoon" },
+];
+
+// ─────────────────────────────────────────────
+//  Logo components — unchanged
+// ─────────────────────────────────────────────
 const LogoFull = () => (
   <div className="logo-full">
-    <Link to="/">
-      <img src={logoBig} alt="News4Bharat Logo" />
-    </Link>
+    <Link to="/"><img src={logoBig} alt="News4Bharat Logo" /></Link>
   </div>
 );
 
 const LogoScroll = () => (
   <div className="logo-scroll">
-    <Link to="/">
-      <img src={logoSmall} alt="News4Bharat Logo Small" />
-    </Link>
+    <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" /></Link>
   </div>
 );
- 
 
-const navLinks = [
-  { label: "Home", path: "/" },
-  { label: "About Us", path: "/about" },
-   { label: "Privacy Policy", path: "/privacy-policy" },
-   { label: "Terms of Service", path: "/terms-of-service" },
-    { label: "Founder note", path: "/founders-note" },
-    { label: "Editorial Policy", path: "/editorial-policy" },
-    { label: "Careers", path: "/careers" },
-    { label: "Contact Us", path: "/contact" },
-
-  { label: "Breaking Now", path: "/category/breaking-now" },
-  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
-  { label: "National Affairs", path: "/category/national-affairs" },
-  { label: "States of Bharat", path: "/category/states-of-bharat" },
-  { label: "Opinion", path: "/category/opinion" },
-  { label: "Economy & Business", path: "/category/economy-business" },
-  { label: "World News", path: "/category/world-news" },
-  { label: "Bharat Explores", path: "/category/bharat-explores" },
-  { label: "Fact Check", path: "/category/fact-check" },
-  { label: "Bharat in Numbers", path: "/category/bharat-in-numbers" },
-  { label: "Bharat Startups", path: "/category/bharat-startups" },
-  { label: "Bharat Leaders", path: "/category/bharat-leaders" },
-  { label: "Bharat 2047", path: "/category/bharat-2047" },
-];
-
+// ─────────────────────────────────────────────
+//  Header component
+// ─────────────────────────────────────────────
 const Header = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled]         = useState(false);
+  const [isOpen, setIsOpen]                 = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
-  const [weather, setWeather] = useState(null);
-  const [metals, setMetals] = useState(null);
-  const [markets, setMarkets] = useState(null);
+  // NEW — tracks which subcategory is expanded inside a section
+  const [expandedSubcat, setExpandedSubcat] = useState(null);
 
+  const [weather, setWeather]   = useState(null);
+  const [metals, setMetals]     = useState(null);
+  const [markets, setMarkets]   = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [dateTime, setDateTime] = useState({ date: "", time: "" });
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery]     = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const searchRef = useRef(null);
+  const [isSearching, setIsSearching]     = useState(false);
+  const [showResults, setShowResults]     = useState(false);
+  const searchRef       = useRef(null);
   const searchDebounceRef = useRef(null);
 
+  // ── resize ──
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // ── date / time ──
   useEffect(() => {
-    const getLocalDateTime = () => {
-      const now = new Date();
-      return {
-        date: now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
-        time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      };
-    };
-    const fetchDateOnce = async () => {
+    const getLocal = () => ({
+      date: new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    });
+    const fetchDate = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/datetime/");
+        const res  = await fetch("http://localhost:8000/api/datetime/");
         const data = await res.json();
-        setDateTime({ date: data.date || data.formatted_date || getLocalDateTime().date, time: getLocalDateTime().time });
-      } catch (err) {
-        setDateTime(getLocalDateTime());
-      }
+        setDateTime({ date: data.date || data.formatted_date || getLocal().date, time: getLocal().time });
+      } catch { setDateTime(getLocal()); }
     };
-    fetchDateOnce();
-    const interval = setInterval(() => {
-      const now = new Date();
-      setDateTime((prev) => ({ ...prev, time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }));
+    fetchDate();
+    const iv = setInterval(() => {
+      setDateTime(prev => ({ ...prev, time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }));
     }, 1000);
-    return () => clearInterval(interval);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── search ──
   const fetchSearchResults = async (query) => {
     if (!query.trim()) { setSearchResults([]); setShowResults(false); return; }
     setIsSearching(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/search/?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
+      const res     = await fetch(`http://localhost:8000/api/search/?q=${encodeURIComponent(query)}`);
+      const data    = await res.json();
       const results = Array.isArray(data) ? data : (data.results || data.articles || []);
       setSearchResults(results);
       setShowResults(true);
-    } catch (err) {
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
+    } catch { setSearchResults([]); }
+    finally { setIsSearching(false); }
   };
 
   const handleSearchChange = (e) => {
@@ -145,109 +175,107 @@ const Header = () => {
   };
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); fetchSearchResults(searchQuery); }
+    if (e.key === "Enter")  { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); fetchSearchResults(searchQuery); }
     if (e.key === "Escape") setShowResults(false);
   };
 
   useEffect(() => {
-    const handleClickOutside = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false); };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const handler = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // ── weather ──
   useEffect(() => {
-    const fetchWeather = async () => {
-      try { const res = await fetch("http://127.0.0.1:8000/api/weather/?city=Delhi"); const data = await res.json(); setWeather(data); } catch (err) { }
+    const fetch_ = async () => {
+      try { const r = await fetch("http://127.0.0.1:8000/api/weather/?city=Delhi"); setWeather(await r.json()); } catch {}
     };
-    fetchWeather();
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
-    return () => clearInterval(interval);
+    fetch_();
+    const iv = setInterval(fetch_, 10 * 60 * 1000);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── metals ──
   useEffect(() => {
-    const fetchMetals = async () => {
-      try { const res = await fetch("http://127.0.0.1:8000/api/metal-ticker/"); const data = await res.json(); setMetals(data); } catch (err) { }
+    const fetch_ = async () => {
+      try { const r = await fetch("http://127.0.0.1:8000/api/metal-ticker/"); setMetals(await r.json()); } catch {}
     };
-    fetchMetals();
-    const interval = setInterval(fetchMetals, 15 * 60 * 1000);
-    return () => clearInterval(interval);
+    fetch_();
+    const iv = setInterval(fetch_, 15 * 60 * 1000);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── markets ──
   useEffect(() => {
-    const fetchMarkets = async () => {
-      try { const res = await fetch("http://127.0.0.1:8000/api/market-indices/"); const data = await res.json(); setMarkets(data); } catch (err) { }
+    const fetch_ = async () => {
+      try { const r = await fetch("http://127.0.0.1:8000/api/market-indices/"); setMarkets(await r.json()); } catch {}
     };
-    fetchMarkets();
-    const interval = setInterval(fetchMarkets, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    fetch_();
+    const iv = setInterval(fetch_, 5 * 60 * 1000);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── scroll ──
   useEffect(() => {
-    if (window.innerWidth <= 768) {
-      setIsScrolled(false);
-      return;
-    }
-
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []); useEffect(() => {
-    if (window.innerWidth <= 768) {
-      setIsScrolled(false);
-      return;
-    }
-
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    if (window.innerWidth <= 768) { setIsScrolled(false); return; }
+    const handler = () => setIsScrolled(window.scrollY > 0);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
   }, []);
 
+  // ── body overflow when drawer open ──
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  const toggleSection = (label) => setExpandedSection((prev) => (prev === label ? null : label));
+  // ── drawer toggle helpers ──
+  const toggleSection = (label) => {
+    setExpandedSection(prev => prev === label ? null : label);
+    setExpandedSubcat(null); // reset subcat when section changes
+  };
 
-  const goldPrice = metals?.gold?.price ?? null;
-  const silverPrice = metals?.silver?.price ?? null;
-  const goldChange = metals?.gold?.change ?? null;
-  const silverChange = metals?.silver?.change ?? null;
+  const toggleSubcat = (e, label) => {
+    e.stopPropagation(); // don't close the section
+    setExpandedSubcat(prev => prev === label ? null : label);
+  };
+
+  // ── market data shortcuts ──
   const sensexPrice = markets?.sensex?.price ?? null;
   const sensexChange = markets?.sensex?.change ?? null;
-  const sensexTrend = markets?.sensex?.trend ?? "up";
-  const niftyPrice = markets?.nifty?.price ?? null;
-  const niftyChange = markets?.nifty?.change ?? null;
-  const niftyTrend = markets?.nifty?.trend ?? "up";
+  const sensexTrend  = markets?.sensex?.trend  ?? "up";
+  const niftyPrice   = markets?.nifty?.price   ?? null;
+  const niftyChange  = markets?.nifty?.change  ?? null;
+  const niftyTrend   = markets?.nifty?.trend   ?? "up";
+  const goldPrice    = metals?.gold?.price     ?? null;
+  const goldChange   = metals?.gold?.change    ?? null;
+  const silverPrice  = metals?.silver?.price   ?? null;
+  const silverChange = metals?.silver?.change  ?? null;
 
+  // ── style helpers ──
   const tickerStyle = isMobile
     ? { display: "flex", padding: "5px 10px", borderBottom: "1px solid #ebebeb" }
     : {
-      maxHeight: isScrolled ? "0px" : "200px",
-      opacity: isScrolled ? 0 : 1,
-      overflow: "hidden",
-      padding: isScrolled ? "0 18px" : "5px 15px",
-      borderBottom: isScrolled ? "none" : "1px solid #ebebeb",
-      transition: "max-height 0.3s ease, opacity 0.3s ease",
-    };
+        maxHeight:    isScrolled ? "0px"   : "200px",
+        opacity:      isScrolled ? 0       : 1,
+        overflow:     "hidden",
+        padding:      isScrolled ? "0 18px": "5px 15px",
+        borderBottom: isScrolled ? "none"  : "1px solid #ebebeb",
+        transition:   "max-height 0.3s ease, opacity 0.3s ease",
+      };
 
   const topBarStyle = isMobile
     ? { display: "none" }
     : {
-      maxHeight: isScrolled ? "0px" : "200px",
-      opacity: isScrolled ? 0 : 1,
-      overflow: "hidden",
-      padding: isScrolled ? "0 18px" : "6px 18px",
-      borderBottom: isScrolled ? "none" : "1px solid #ebebeb",
-      transition: "max-height 0.3s ease, opacity 0.3s ease",
-    };
+        maxHeight:    isScrolled ? "0px"   : "200px",
+        opacity:      isScrolled ? 0       : 1,
+        overflow:     "hidden",
+        padding:      isScrolled ? "0 18px": "6px 18px",
+        borderBottom: isScrolled ? "none"  : "1px solid #ebebeb",
+        transition:   "max-height 0.3s ease, opacity 0.3s ease",
+      };
 
+  // ── ticker content ──
   const TickerContent = () => (
     <>
       <span className="ticker-item">
@@ -302,57 +330,164 @@ const Header = () => {
     </>
   );
 
+  // ─────────────────────────────────────────────
   return (
     <>
       <div className={`drawer-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)} />
 
+      {/* ══ DRAWER ══ */}
       <aside className={`nav-drawer${isOpen ? " open" : ""}`}>
         <div className="drawer-head">
           <button className="drawer-close" onClick={() => setIsOpen(false)} aria-label="Close menu">
-            X <X size={16} color="white" />
+            <X size={16} color="white" />
           </button>
         </div>
+
         <div className="drawer-ticker">
           <span className="drawer-live-badge">LIVE</span>
-          Breaking: Sensex surges 600 pts — RBI holds repo rate steady
+          Breaking: Sensex surges 600 pts —
         </div>
+
         <div className="drawer-search-wrap">
-          <div className="drawer-search-box" style={{ position: "relative" }}>
+          <div className="drawer-search-box">
             <Search size={14} color="#aa9988" />
-            <input type="text" placeholder="Search news, topics..." value={searchQuery} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown} />
+            <input
+              type="text"
+              placeholder="Search news, topics..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+            />
           </div>
         </div>
+
         <div className="drawer-scroll">
-          {NAV_SECTIONS.map(({ label, Icon, links }) => {
-            const expanded = expandedSection === label;
+          {NAV_SECTIONS.map(({ label, Icon, links, subcategories }) => {
+            const sectionOpen = expandedSection === label;
+            const hasSubcats  = subcategories && subcategories.length > 0;
+            const hasLinks    = links && links.length > 0;
+
             return (
               <div className="drawer-section" key={label}>
+
+                {/* ── Section header ── */}
                 <div className="drawer-section-head" onClick={() => toggleSection(label)}>
                   <span className="drawer-section-label">
                     <Icon size={15} color="#D80100" strokeWidth={2} />
                     {label}
                   </span>
-                  <ChevronDown size={14} color="#aa9977" style={{ transition: "transform 0.24s ease", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+                  {(hasSubcats || hasLinks) && (
+                    <ChevronDown
+                      size={14}
+                      color="#aa9977"
+                      style={{
+                        transition: "transform 0.24s ease",
+                        transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  )}
                 </div>
-                <div className={`drawer-sub-links${expanded ? " open" : ""}`}>
-                  {links.map((link) => (
-                    <a key={link} href="#" className="drawer-sub-link" onClick={(e) => e.preventDefault()}>{link}</a>
-                  ))}
+
+                {/* ── Section body: subcategories OR plain links ── */}
+                <div className={`drawer-sub-links${sectionOpen ? " open" : ""}`}>
+                  {hasSubcats ? (
+                    /* ── 2-level: subcategory → topics ── */
+                    subcategories.map((sub) => {
+                      const subcatOpen = expandedSubcat === `${label}__${sub.label}`;
+                      return (
+                        <div key={sub.label} className="drawer-subcat-group">
+
+                          {/* subcategory row */}
+                          <div
+                            className="drawer-subcat-head"
+                            onClick={(e) => toggleSubcat(e, `${label}__${sub.label}`)}
+                            style={{
+                              display:        "flex",
+                              alignItems:     "center",
+                              justifyContent: "space-between",
+                              padding:        "8px 16px 8px 28px",
+                              cursor:         "pointer",
+                              fontSize:       13,
+                              fontWeight:     500,
+                              fontFamily:     "Poppins, sans-serif",
+                              color:          subcatOpen ? "#D80100" : "#333",
+                              borderBottom:   "1px solid #f0ece8",
+                              background:     subcatOpen ? "#fff4f3" : "transparent",
+                              transition:     "background 0.15s",
+                            }}
+                          >
+                            <span>{sub.label}</span>
+                            <ChevronDown
+                              size={12}
+                              color={subcatOpen ? "#D80100" : "#bbb"}
+                              style={{
+                                transition: "transform 0.2s",
+                                transform:  subcatOpen ? "rotate(180deg)" : "rotate(0deg)",
+                              }}
+                            />
+                          </div>
+
+                          {/* topics list */}
+                          {subcatOpen && (
+                            <div className="drawer-topics-list">
+                              {sub.topics.map((topic) => (
+                                <a
+                                  key={topic}
+                                  href="#"
+                                  className="drawer-topic-link"
+                                  onClick={(e) => e.preventDefault()}
+                                  style={{
+                                    display:      "block",
+                                    padding:      "6px 16px 6px 44px",
+                                    fontSize:     12.5,
+                                    color:        "#555",
+                                    textDecoration:"none",
+                                    borderBottom: "1px solid #f8f4f0",
+                                    transition:   "color 0.15s, background 0.15s",
+                                    fontFamily:   "Poppins, sans-serif",
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = "#D80100"; e.currentTarget.style.background = "#fff8f7"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = "#555";    e.currentTarget.style.background = "transparent"; }}
+                                >
+                                  › {topic}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : hasLinks ? (
+                    /* ── 1-level: plain links (fallback) ── */
+                    links.map((link) => (
+                      <a
+                        key={link}
+                        href="#"
+                        className="drawer-sub-link"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        {link}
+                      </a>
+                    ))
+                  ) : null}
                 </div>
+
               </div>
             );
           })}
         </div>
+
         <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
-            {["E-Paper", "Live TV", "Newsletter", "Podcast", "App", "RSS"].map((t) => (
+            {["E-Paper", "Live TV", "Newsletter", "Podcast", "60 Second","Bharat Opinion"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
         </div>
       </aside>
 
+      {/* ══ HEADER ══ */}
       <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
         {/* TOP TICKER BAR */}
@@ -382,12 +517,20 @@ const Header = () => {
           </div>
         </div>
 
-        {/* TOP BAR - Search */}
+        {/* SEARCH BAR */}
         <div className="top-bar" style={topBarStyle}>
           <div className="search-row">
             <div className="search-box" ref={searchRef} style={{ position: "relative" }}>
               <Search size={14} className="search-icon" />
-              <input type="text" className="search-input" placeholder="Search news..." value={searchQuery} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown} onFocus={() => searchResults.length > 0 && setShowResults(true)} />
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search news..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                onFocus={() => searchResults.length > 0 && setShowResults(true)}
+              />
               <Mic size={14} className="mic-icon" />
               {showResults && (
                 <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderTop: "none", borderRadius: "0 0 8px 8px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, maxHeight: "360px", overflowY: "auto" }}>
@@ -397,10 +540,14 @@ const Header = () => {
                     <div style={{ padding: "14px 16px", color: "#888", fontSize: 13 }}>No results found for "{searchQuery}"</div>
                   ) : (
                     searchResults.map((item, idx) => (
-                      <a key={idx} href={item.url || item.link || "#"} style={{ display: "flex", flexDirection: "column", padding: "10px 16px", borderBottom: idx < searchResults.length - 1 ? "1px solid #f0f0f0" : "none", textDecoration: "none", color: "#222", transition: "background 0.15s" }}
+                      <a
+                        key={idx}
+                        href={item.url || item.link || "#"}
+                        style={{ display: "flex", flexDirection: "column", padding: "10px 16px", borderBottom: idx < searchResults.length - 1 ? "1px solid #f0f0f0" : "none", textDecoration: "none", color: "#222", transition: "background 0.15s" }}
                         onMouseEnter={(e) => e.currentTarget.style.background = "#fef4f4"}
                         onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                        onClick={() => setShowResults(false)}>
+                        onClick={() => setShowResults(false)}
+                      >
                         {(item.category || item.tag || item.type) && (
                           <span style={{ fontSize: 10, fontWeight: 700, color: "#D80100", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>
                             {item.category || item.tag || item.type}
@@ -430,7 +577,6 @@ const Header = () => {
             </div>
           </div>
 
-          {/* ✅ Desktop pe nav links, mobile pe hide */}
           <ul className="nav-links">
             {navLinks.map((link) => (
               <Link key={link.path} to={link.path} className="nav-link">
@@ -439,7 +585,6 @@ const Header = () => {
             ))}
           </ul>
 
-          {/* ✅ Mobile pe sirf ye buttons dikhenge (Hindi, Live TV, E-Paper, Sign In) */}
           <div className="mobile-nav-actions">
             <button className="btn-flag">
               <svg width="14" height="10" viewBox="0 0 16 11">

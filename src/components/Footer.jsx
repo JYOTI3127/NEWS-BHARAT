@@ -1,132 +1,190 @@
-import logo from "../assets/NEWS4BHARAT LOGO 5 (1).png";
+import logo from "../assets/NEWS4BHARAT LOGO 01.png";
 import "../Footer.css";
+import { Link } from "react-router-dom";
+import { Facebook, Instagram, Youtube, Linkedin, X, MessageCircle } from "lucide-react";
 
-// ── Icons ──────────────────────────────────────────────────────
-const PlayStoreIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M3.18 23.76c.3.17.64.24.99.2l13.2-12-3.15-3.15L3.18 23.76z" />
-    <path d="M22.1 10.55L19.2 8.9l-3.5 3.1 3.5 3.1 2.94-1.67a1.67 1.67 0 0 0 0-2.88z" />
-    <path d="M2.1.44a1.67 1.67 0 0 0-.1.58v22a1.67 1.67 0 0 0 .1.58l.1.1 12.3-12.3v-.3L2.2.34l-.1.1z" />
-    <path d="M14.17 13.26l-3.15 3.15 3.15 3.15 5.03-2.87-5.03-3.43z" opacity=".8" />
+const WhatsAppIcon = ({ size = 17 }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="currentColor">
+    <path d="M16 1C7.716 1 1 7.716 1 16c0 2.628.672 5.1 1.845 7.255L1 31l7.959-1.81A14.93 14.93 0 0 0 16 31c8.284 0 15-6.716 15-15S24.284 1 16 1zm0 27.273a12.226 12.226 0 0 1-6.243-1.712l-.447-.265-4.628 1.053 1.087-4.508-.292-.462A12.197 12.197 0 0 1 3.727 16C3.727 9.22 9.22 3.727 16 3.727S28.273 9.22 28.273 16 22.78 28.273 16 28.273z" />
+    <path d="M22.805 19.239c-.332-.166-1.963-.968-2.267-1.079-.304-.11-.525-.166-.747.166-.221.332-.856 1.079-1.049 1.3-.193.222-.387.249-.719.083-.332-.166-1.402-.517-2.669-1.647-.986-.88-1.652-1.966-1.845-2.298-.193-.332-.021-.511.145-.677.149-.149.332-.387.498-.581.166-.193.221-.332.332-.553.11-.222.055-.415-.028-.581-.083-.166-.747-1.8-1.022-2.464-.27-.645-.543-.557-.747-.568-.193-.009-.414-.011-.636-.011-.221 0-.581.083-.885.415-.304.332-1.161 1.134-1.161 2.765s1.189 3.208 1.355 3.43c.166.221 2.34 3.572 5.67 5.008.792.342 1.41.546 1.891.699.795.253 1.519.218 2.091.132.638-.095 1.963-.803 2.239-1.578.277-.775.277-1.439.193-1.578-.083-.138-.304-.221-.636-.387z" />
   </svg>
 );
 
-const FacebookIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-  </svg>
-);
-
-const TwitterIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-);
-
-const YoutubeIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
-    <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#07070e" />
-  </svg>
-);
-
-const InstagramIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-  </svg>
-);
-
-const WhatsappIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-    <path d="M12.05 2C6.495 2 2 6.493 2 12.05c0 1.923.507 3.726 1.392 5.282L2 22l4.783-1.37C8.27 21.508 10.122 22 12.05 22 17.606 22 22 17.507 22 11.95 22 6.493 17.606 2 12.05 2zm0 18.125c-1.737 0-3.363-.476-4.759-1.303l-.342-.202-3.547 1.016 1.016-3.459-.222-.356C3.176 14.608 2.75 13.37 2.75 12.05c0-5.138 4.162-9.3 9.3-9.3s9.3 4.162 9.3 9.3-4.162 9.075-9.3 9.075z" />
-  </svg>
-);
-
-// ── Data ───────────────────────────────────────────────────────
 const footerLinks = {
-  "News":          ["India", "World", "Politics", "Crime", "Business", "Science"],
-  "Entertainment": ["Bollywood", "Hollywood", "OTT", "Music", "Fashion", "Awards"],
-  "Sports":        ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
-  "More":          ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
+  NEWS: ["India", "World", "Politics", "Crime", "Business", "Science"],
+  ENTERTAINMENT: ["Bollywood", "Hollywood", "OTT", "Music", "Fashion", "Awards"],
+  SPORTS: ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
+  MORE: ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
 };
 
-// ── Component ──────────────────────────────────────────────────
+// ── Har pill ka apna path ──
+const policyLinks = [
+  { label: "About Us", path: "/about" },
+  { label: "Founter's note", path: "/founders-note" },
+  { label: "Editorial Policy", path: "/editorial-policy" },
+  { label: "Career", path: "/careers" },
+  { label: "Contact Us", path: "/contact" },
+  { label: "Privacy Policy", path: "/privacy-policy" },
+  { label: "Terms & Conditions", path: "/terms-of-service" },
+];
+
+const AppleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+  </svg>
+);
+
+const PlayStoreIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 512 512">
+    <linearGradient id="ps-a" x1="91.34" y1="256" x2="420.66" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stopColor="#32a071" />
+      <stop offset=".07" stopColor="#2da771" />
+      <stop offset=".48" stopColor="#15cf74" />
+      <stop offset=".8" stopColor="#06e775" />
+      <stop offset="1" stopColor="#00f076" />
+    </linearGradient>
+    <linearGradient id="ps-b" x1="246.84" y1="282.6" x2="461.24" y2="67.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stopColor="#ffda00" />
+      <stop offset="1" stopColor="#ffbb00" />
+    </linearGradient>
+    <linearGradient id="ps-c" x1="166.26" y1="318.61" x2="-47.49" y2="105.87" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stopColor="#ff3a44" />
+      <stop offset="1" stopColor="#c31162" />
+    </linearGradient>
+    <linearGradient id="ps-d" x1="67.6" y1="450.31" x2="164.38" y2="353.53" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stopColor="#32a071" />
+      <stop offset=".07" stopColor="#2da771" />
+      <stop offset=".48" stopColor="#15cf74" />
+      <stop offset=".8" stopColor="#06e775" />
+      <stop offset="1" stopColor="#00f076" />
+    </linearGradient>
+    <path d="M91.34 56.2a27.4 27.4 0 0 0-6.35 19.5v360.6a27.4 27.4 0 0 0 6.35 19.5l1 1 201.9-201.9v-4.8L92.34 49.2z" fill="url(#ps-a)" />
+    <path d="M360.54 325.4l-67.3-67.4v-4.8l67.3-67.4 1.5.9 79.7 45.3c22.8 12.9 22.8 34.1 0 47l-79.7 45.3z" fill="url(#ps-b)" />
+    <path d="M362.04 324.5l-68.8-68.9-201.9 201.9c7.5 7.9 19.9 8.9 33.8.9z" fill="url(#ps-c)" />
+    <path d="M362.04 187.5l-236.9-134.4c-13.9-8-26.3-7-33.8.9l201.9 201.9z" fill="url(#ps-d)" />
+  </svg>
+);
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
     <footer className="ft-root">
 
-      {/* TOP SECTION */}
-      <div className="ft-top">
+      {/* 3-color top strip */}
+      <div className="ft-top-strip">
+        <div className="ft-strip-r" />
+        <div className="ft-strip-b" />
+        <div className="ft-strip-y" />
+      </div>
+
+      {/* MAIN ROW */}
+      <div className="ft-main">
 
         {/* LEFT: Brand */}
         <div className="ft-brand">
-          <img className="ft-logo-img" src={logo} alt="News4Bharat" />
 
-          <p className="ft-brand-desc">
-            News4Bharat — Latest news from India and the world, breaking news
-            and unbiased journalism. Every moment, every story.
+          <img src={logo} alt="News4Bharat" className="ft-logo" />
+
+          <p className="ft-desc">
+            In An Era Where Information Moves Faster Than Verification,
+            And Opinions Often Overshadow Facts, News4bharat Was Founded
+            With A Clear Purpose: To Restore Clarity, Credibility, And
+            Responsibility In News Reporting.
           </p>
 
-          <div>
-            <div className="ft-social-title">Follow Us</div>
-            <div className="ft-social-row">
-              <a className="ft-social-icon fb" href="#" title="Facebook"><FacebookIcon /></a>
-              <a className="ft-social-icon tw" href="#" title="Twitter/X"><TwitterIcon /></a>
-              <a className="ft-social-icon yt" href="#" title="YouTube"><YoutubeIcon /></a>
-              <a className="ft-social-icon ig" href="#" title="Instagram"><InstagramIcon /></a>
-              <a className="ft-social-icon wa" href="#" title="WhatsApp"><WhatsappIcon /></a>
-            </div>
+          <div className="ft-follow-label">FOLLOW US</div>
+
+          <div className="ft-social-row">
+            <a href="https://www.facebook.com/news4bharat" className="ft-soc"><Facebook size={18} /></a>
+            <a href="https://www.instagram.com/news4bharat" className="ft-soc"><Instagram size={18} /></a>
+            <a href="https://x.com/news4bharat" target="_blank" rel="noreferrer" className="ft-soc" title="X">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
+                <path d="M18.244 2H21l-6.56 7.5L22 22h-6.828l-5.35-7.002L3.5 22H1l7.02-8.02L2 2h6.9l4.86 6.41L18.244 2zm-2.39 18h1.885L8.15 4H6.2l9.654 16z" />
+              </svg>
+            </a>
+<a href="https://www.youtube.com/@news4bharat" className="ft-soc">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
+    <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.7 31.7 0 000 12a31.7 31.7 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.7 31.7 0 0024 12a31.7 31.7 0 00-.5-5.8zM9.6 15.5v-7l6.2 3.5-6.2 3.5z"/>
+  </svg>
+</a>
+            <a href="https://whatsapp.com/channel/news4bharat" className="ft-soc">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
+                <path d="M20.52 3.48A11.91 11.91 0 0012.06 0C5.48 0 .16 5.32.16 11.9c0 2.1.55 4.16 1.6 5.98L0 24l6.27-1.64a11.9 11.9 0 005.8 1.48h.01c6.58 0 11.9-5.32 11.9-11.9 0-3.18-1.24-6.16-3.46-8.46zM12.07 21.4a9.5 9.5 0 01-4.84-1.32l-.35-.21-3.72.98.99-3.63-.23-.37a9.48 9.48 0 01-1.45-5.04c0-5.24 4.26-9.5 9.5-9.5a9.43 9.43 0 016.73 2.8 9.43 9.43 0 012.78 6.7c0 5.24-4.26 9.49-9.41 9.49zm5.2-7.12c-.28-.14-1.66-.82-1.92-.91-.26-.1-.45-.14-.64.14-.19.28-.73.91-.9 1.1-.17.19-.33.21-.61.07-.28-.14-1.19-.44-2.27-1.4-.84-.75-1.41-1.67-1.58-1.95-.17-.28-.02-.43.13-.57.13-.13.28-.33.42-.49.14-.17.19-.28.28-.47.09-.19.05-.35-.02-.49-.07-.14-.64-1.54-.88-2.11-.23-.55-.47-.47-.64-.48l-.55-.01c-.19 0-.49.07-.75.35-.26.28-1 1-1 2.43s1.03 2.81 1.17 3.01c.14.19 2.02 3.08 4.89 4.31.68.29 1.21.46 1.63.59.68.22 1.3.19 1.79.12.55-.08 1.66-.68 1.9-1.34.23-.66.23-1.22.16-1.34-.07-.12-.26-.19-.54-.33z" />
+              </svg>
+            </a>
+            <a href="https://www.linkedin.com/company/news4bharat" className="ft-soc"><Linkedin size={18} /></a>
           </div>
 
-          <a className="ft-playstore" href="#" target="_blank" rel="noreferrer">
-            <span className="ft-playstore-icon"><PlayStoreIcon /></span>
-            <div className="ft-playstore-text">
-              <span className="ft-playstore-small">Get it on</span>
-              <span className="ft-playstore-big">Google Play</span>
-            </div>
-          </a>
-        </div>
-
-        {/* RIGHT: Links Grid */}
-        <div className="ft-links-grid">
-          {Object.entries(footerLinks).map(([heading, links]) => (
-            <div className="ft-col" key={heading}>
-              <div className="ft-col-heading">{heading}</div>
-              <div className="ft-col-list">
-                {links.map(link => (
-                  <a className="ft-col-link" key={link} href="#">{link}</a>
-                ))}
+          {/* App buttons — side by side */}
+          <div className="ft-app-row">
+            <a href="#" className="ft-app-btn">
+              <AppleIcon />
+              <div className="ft-app-text">
+                <span className="ft-app-small">DOWNLOAD ON THE</span>
+                <span className="ft-app-big">App Store</span>
               </div>
-            </div>
-          ))}
+            </a>
+            <a href="#" className="ft-app-btn">
+              <PlayStoreIcon />
+              <div className="ft-app-text">
+                <span className="ft-app-small">GET IT ON</span>
+                <span className="ft-app-big">Google Play</span>
+              </div>
+            </a>
+          </div>
+
         </div>
 
+        {/* VERTICAL DIVIDER */}
+        <div className="ft-vdivider" />
+
+        {/* RIGHT: columns + line + policy pills */}
+        <div className="ft-right">
+
+          {/* 4 link columns */}
+          <div className="ft-links-grid">
+            {Object.entries(footerLinks).map(([heading, links]) => (
+              <div className="ft-col" key={heading}>
+                <div className="ft-col-head">
+                  <span className="ft-col-title">{heading}</span>
+                  <div className="ft-col-underline">
+                    <span className="u-r" />
+                    <span className="u-b" />
+                    <span className="u-y" />
+                  </div>
+                </div>
+                <ul className="ft-col-list">
+                  {links.map(link => (
+                    <li key={link}>
+                      <a href="#" className="ft-col-link">{link}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          {/* Horizontal line above policy pills */}
+          <div className="ft-policy-divider" />
+
+          {/* Policy pills — Link se page navigate hoga */}
+          <div className="ft-policy-row">
+            {policyLinks.map(({ label, path }) => (
+              <Link key={label} to={path} className="ft-pill">
+                {label}
+              </Link>
+            ))}
+          </div>
+
+        </div>
       </div>
 
-      {/* DIVIDER */}
-      <div className="ft-mid-divider">
-        <div className="ft-mid-divider-line" />
-      </div>
-
-      {/* BOTTOM BAR */}
+      {/* COPYRIGHT */}
       <div className="ft-bottom">
-        <p className="ft-copyright">
-          © {year} <strong>News4Bharat</strong>. All rights reserved. All news and content are protected under copyright.
+        <p className="ft-copy">
+          © Copyright {year} <strong>News 4 Bharat</strong> - All Rights Reserved.
         </p>
-        <div className="ft-policy-links">
-          <a className="ft-policy-link" href="#">Privacy Policy</a>
-          <div className="ft-policy-dot" />
-          <a className="ft-policy-link" href="#">Terms &amp; Conditions</a>
-          <div className="ft-policy-dot" />
-          <a className="ft-policy-link" href="#">Advertise</a>
-          <div className="ft-policy-dot" />
-          <a className="ft-policy-link" href="#">Contact Us</a>
-        </div>
       </div>
 
     </footer>

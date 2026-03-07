@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { BiFontFamily } from "react-icons/bi";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const HomeIcon = ({ active }) => (
@@ -65,13 +64,9 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const [showBreaking, setShowBreaking] = useState(true);
 
-  const ua = navigator.userAgent;
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-  if (!isMobile) return null;
-
   return (
     <>
-      <div style={styles.wrapper}>
+      <div style={styles.wrapper} className="bottom-nav-wrapper">
 
         {/* Breaking News Banner */}
         {showBreaking && (
@@ -120,7 +115,7 @@ export default function BottomNav() {
 
       </div>
 
-      <div style={{ height: showBreaking ? 175 : 65 }} />
+      <div className="bottom-nav-spacer" style={{ height: showBreaking ? 175 : 65 }} />
     </>
   );
 }
@@ -178,11 +173,10 @@ const styles = {
     color: "#fff",
     fontSize: 15,
     lineHeight: "1.9",
-    fontWeight: 500,
+    fontWeight: "bold",
     display: "flex",
     alignItems: "flex-start",
     gap: 6,
-    fontWeight: "bold"
   },
   bullet: {
     color: "#fff",

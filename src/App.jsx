@@ -1,25 +1,29 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import "../src/style.css";
 import BottomNav from "./components/BottomNav";
+import ScrollToTop from "./components/ScrollToTop";
 import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import TermsPage from "./pages/Termspage";
 import FoundersNote from "./pages/Foundersnote";
 import EditorialPolicy from "./pages/Editorialpolicy";
-import ScrollToTop from "./components/ScrollToTop";
 import CareersPage from "./pages/Careerspage";
 import ContactPage from "./pages/Contactpage";
+import CommingSoon from "./pages/ComingSoon";
+import "../src/style.css";
 
+function Layout() {
 
-function App() {
+  const location = useLocation();
+
+  const hideLayout = location.pathname === "/CommingSoon";
+
   return (
-    <BrowserRouter>
-      <Navbar />   
-      <ScrollToTop />
+    <>
+      {!hideLayout && <Navbar />}
 
       <Routes>
         <Route path="/" element={<Home />} />
@@ -30,11 +34,20 @@ function App() {
         <Route path="/editorial-policy" element={<EditorialPolicy />} />
         <Route path="/careers" element={<CareersPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/navbar" element={<Navbar />} />
-        <Route path="/footer" element={<Footer />} />
+        <Route path="/CommingSoon" element={<CommingSoon />} />
       </Routes>
-      <Footer />
-      <BottomNav /> 
+
+      {!hideLayout && <Footer />}
+      {!hideLayout && <BottomNav />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ScrollToTop />
+      <Layout />
     </BrowserRouter>
   );
 }

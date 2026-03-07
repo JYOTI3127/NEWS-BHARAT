@@ -3,7 +3,7 @@ import {
     FiCheck, FiShield, FiEye, FiUsers, FiAlertCircle,
     FiHeart, FiRefreshCw, FiSearch, FiFileText, FiMail
 } from "react-icons/fi";
-import "./EditorialPolicy.css";
+import "../style.css";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.12) => {
@@ -116,10 +116,6 @@ export default function EditorialPolicy() {
             {/* ══════════ HERO ══════════ */}
             <section className="ep-hero">
                 <div className="ep-hero-overlay" />
-
-
-
-
                 <div className="ep-hero-container">
                     <div className="ep-hero-content">
 

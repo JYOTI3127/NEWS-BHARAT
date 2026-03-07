@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import "./PrivacyPage.css";
+import "../style.css";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.1) => {
@@ -418,7 +418,7 @@ We may update this Privacy Policy periodically. Continued use of the website imp
                 <p className="priv-contact-desc">
                   If you have any questions or concerns about how we handle your data, feel free to reach out to our team.
                 </p>
-                <a href="careers@news4bharat.com" className="priv-contact-link">
+                <a href="/" className="priv-contact-link">
                   {icons.mail}
                   Contact Us
                 </a>

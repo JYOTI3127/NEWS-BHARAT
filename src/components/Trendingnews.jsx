@@ -12,6 +12,10 @@ const latestNews = [
   { id: 2, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
   { id: 3, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
   { id: 4, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 1, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 2, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 3, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 4, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
 ];
 
 const featureCards = [
@@ -135,14 +139,13 @@ if (typeof document !== "undefined" && !document.getElementById("poppins-font"))
 // ── Trending Bar ──────────────────────────────────────────────
 function TrendingBar() {
   const [off, setOff] = useState(0);
-  const vis = 8;
+  const vis = 7;
   const max = trendingTopics.length - vis;
 
   return (
     <div className="tn-trending-bar">
       <div className="tn-trending-label">
-        <div className="tn-trending-label-line">TRENDING</div>
-        <div className="tn-trending-label-line">NEWS :</div>
+        <div className="tn-trending-label-line">TRENDING NEWS :</div>
       </div>
 
       <ArrowBtn
@@ -181,12 +184,15 @@ function LatestNews() {
   return (
     <div className="tn-latest-news">
       <SecHeader title="LATEST NEWS" />
-      {latestNews.map((n) => (
-        <div key={n.id} className="tn-latest-item">
-          <div className="tn-latest-item-title">{n.title}</div>
-          <div className="tn-latest-item-desc">{n.desc}</div>
-        </div>
-      ))}
+      <div className="tn-latest-scroll">
+        {latestNews.map((n) => (
+          <div key={n.id} className="tn-latest-item">
+            <div className="tn-latest-item-title">{n.title}</div>
+            <div className="tn-latest-item-desc">{n.desc}</div>
+          </div>
+        ))}
+      </div>
+
     </div>
   );
 }

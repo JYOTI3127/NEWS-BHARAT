@@ -4,17 +4,17 @@ import TrendingNews from '../components/Trendingnews'
 import VideoSection from '../components/Video'
 import NewsPortalSection from '../components/Newsportalsection'
 import StateNews from '../components/Statenews'
+import Newsletter from "../components/Newsletter";
 
 const Home = () => {
   return (
-    
     <>
-       <NewsBanner />
-       <TrendingNews/>
-        <VideoSection />
-        <NewsPortalSection />
-         <StateNews />
-    
+      <NewsBanner />
+      <TrendingNews/>
+      {/* <VideoSection /> */}
+      <NewsPortalSection />
+      <Newsletter />
+      <StateNews />
     </>
   )
 }

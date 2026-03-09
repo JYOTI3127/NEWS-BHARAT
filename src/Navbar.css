@@ -223,7 +223,6 @@
   border-bottom: 1px solid #ebebeb;
   position: relative;
   z-index: 1;
-  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
 }
 
 .search-row {

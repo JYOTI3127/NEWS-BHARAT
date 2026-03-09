@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import MenuDrawer from "./MenuDrawer";
 
 const HomeIcon = ({ active }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -46,14 +47,6 @@ const MenuIcon = ({ active }) => (
   </svg>
 );
 
-const navItems = [
-  { label: "Home",    path: "/",       icon: HomeIcon   },
-  { label: "Videos",  path: "/videos", icon: VideosIcon },
-  { label: "Search",  path: "/search", icon: SearchIcon },
-  { label: "Live TV", path: "/live",   icon: LiveTVIcon },
-  { label: "Menu",    path: "/menu",   icon: MenuIcon   },
-];
-
 const breakingNewsItems = [
   "PM Modi ne 'Seva Teerth' Bhawan ke Namkaran ka Anawaran Kiya",
   "PM Modi ne 'Seva Teerth' Bhawan ke Namkaran ka Anawaran Kiya",
@@ -63,23 +56,37 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showBreaking, setShowBreaking] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { label: "Home",    path: "/",       icon: HomeIcon   },
+    { label: "Videos",  path: "/videos", icon: VideosIcon },
+    { label: "Search",  path: "/search", icon: SearchIcon },
+    { label: "Live TV", path: "/live",   icon: LiveTVIcon },
+  ];
 
   return (
     <>
+      {/* Menu Drawer */}
+      <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+
       <div style={styles.wrapper} className="bottom-nav-wrapper">
 
         {/* Breaking News Banner */}
         {showBreaking && (
           <div style={styles.breakingBox}>
-            {/* Header */}
             <div style={styles.breakingHeader}>
               <div style={styles.breakingLabelBox}>
                 <span style={styles.breakingLabel}>BREAKING NEWS</span>
               </div>
-              <button onClick={() => setShowBreaking(false)} style={styles.closeBtn}>✕</button>
+              <button onClick={() => setShowBreaking(false)} style={styles.closeBtn}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
 
-            {/* News Items */}
             <ul style={styles.newsList}>
               {breakingNewsItems.map((item, i) => (
                 <li key={i} style={styles.newsItem}>
@@ -92,16 +99,15 @@ export default function BottomNav() {
 
         {/* Bottom Nav */}
         <nav style={styles.nav}>
+
+          {/* Regular nav items */}
           {navItems.map(({ label, path, icon: Icon }) => {
             const active = location.pathname === path;
             return (
               <button
                 key={label}
                 onClick={() => navigate(path)}
-                style={{
-                  ...styles.item,
-                  color: active ? "#D80100" : "#000000",
-                }}
+                style={{ ...styles.item, color: active ? "#D80100" : "#000000" }}
               >
                 <Icon active={active} />
                 <span style={{ ...styles.label, color: active ? "#D80100" : "#000000" }}>
@@ -111,8 +117,20 @@ export default function BottomNav() {
               </button>
             );
           })}
-        </nav>
 
+          {/* Menu Button — opens drawer */}
+          <button
+            onClick={() => setMenuOpen(true)}
+            style={{ ...styles.item, color: menuOpen ? "#D80100" : "#000000" }}
+          >
+            <MenuIcon active={menuOpen} />
+            <span style={{ ...styles.label, color: menuOpen ? "#D80100" : "#000000" }}>
+              Menu
+            </span>
+            {menuOpen && <span style={styles.activeLine} />}
+          </button>
+
+        </nav>
       </div>
 
       <div className="bottom-nav-spacer" style={{ height: showBreaking ? 175 : 65 }} />
@@ -158,11 +176,11 @@ const styles = {
   closeBtn: {
     background: "none",
     border: "none",
-    color: "#fff",
-    fontSize: 18,
     cursor: "pointer",
-    fontWeight: "bold",
-    lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 4,
   },
   newsList: {
     listStyle: "none",

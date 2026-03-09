@@ -1956,7 +1956,7 @@ img { display: block; max-width: 100%; }
   .sn-di-title        { font-size: 14px; }
   /* Health grid */
   .nps-ent-layout,
-  .nps-ent-left-mid   { flex-direction: column; grid-template-columns: 340px 1fr; }
+  .nps-ent-left-mid   { flex-direction: column; grid-template-columns: 399px 1fr; }
   .nps-ent-mid        { padding-left: 0; }
   .nps-ent-featured-img-wrap { width: 100%; }
   .hs-mid-col         { grid-column: 1; grid-row: auto; border-left: none; padding-left: 0; border-top: 1px solid #ebebeb; }
@@ -1976,7 +1976,7 @@ img { display: block; max-width: 100%; }
   .sn-sc-title        { padding: 10px; width: 100%; }
   .sn-mid-img         { width: 100%; min-width: auto; height: 200px; }
   .sn-mid-title       { padding: 5px; }
-  .sn-defence         { margin-top: 169%; }
+  .sn-defence         { margin-top: 144%; }
   .ft-col:nth-child(2) { border-right: none !important;}
   /* Trending */
   .tn-inner     { padding: 0; }
@@ -2100,7 +2100,7 @@ img { display: block; max-width: 100%; }
   .nb-pill  { padding: 6px 9px; }
   .nb-headline { font-size: 15px; }
   /* NL stacked */
-  .nl-form  { flex-direction: column; gap: 8px; }
+  .nl-form  {gap: 8px; }
   .nl-input { border-right: 1px solid #ccc; border-radius: 6px; }
   .nl-btn   { border-radius: 6px; width: 100%; }
   /* EP */

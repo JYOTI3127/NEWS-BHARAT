@@ -216,12 +216,28 @@ const Header = () => {
   }, []);
 
   // ── scroll ──
-  useEffect(() => {
-    if (window.innerWidth <= 768) { setIsScrolled(false); return; }
-    const handler = () => setIsScrolled(window.scrollY > 0);
-    window.addEventListener("scroll", handler);
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+useEffect(() => {
+  if (window.innerWidth <= 768) {
+    setIsScrolled(false);
+    return;
+  }
+
+  let ticking = false;
+
+  const handleScroll = () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 10);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
 
   // ── body overflow when drawer open ──
   useEffect(() => {

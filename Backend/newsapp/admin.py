@@ -818,6 +818,23 @@ class RoleAdmin(admin.ModelAdmin):
     filter_horizontal = ('permissions',)
 
 
+class PermissionAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'description')
+    search_fields = ('code', 'description')
+
+    # Yeh function template ko extra context deta hai (group_count, user_count)
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+
+        # Agar tumne Permission ko Groups ya Users se link kiya hai toh:
+        # extra_context['group_count'] = Group.objects.filter(permissions=...).count()
+        # Abhi ke liye 0 rahega — baad mein update karna
+        extra_context['group_count'] = 0
+        extra_context['user_count']  = 0
+
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 # ══════════════════════════════════════════════════════════════
 #  REGISTER ALL MODELS
 # ══════════════════════════════════════════════════════════════

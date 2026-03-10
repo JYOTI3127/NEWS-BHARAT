@@ -480,3 +480,162 @@ class LoginAttemptLog(models.Model):
         ordering            = ['-timestamp']
         verbose_name        = "Login Attempt Log"
         verbose_name_plural = "Login Attempt Logs"
+
+class Conversation(models.Model):
+
+    TYPE_CHOICES = (
+        ("private", "Private"),
+        ("group", "Group"),
+    )
+
+    conv_type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES
+    )
+
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    members = models.ManyToManyField(
+        User,
+        through="ConversationMember",
+        related_name="conversations"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return self.name or f"Conversation {self.id}"
+    
+class ConversationMember(models.Model):
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    last_read = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+
+    joined_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+class Message(models.Model):
+
+    MESSAGE_TYPES = (
+        ("text","Text"),
+        ("image","Image"),
+        ("file","File"),
+    )
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    message_type = models.CharField(
+        max_length=10,
+        choices=MESSAGE_TYPES,
+        default="text"
+    )
+
+    text = models.TextField(blank=True)
+
+    file = models.FileField(
+        upload_to="chat/files/",
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to="chat/images/",
+        blank=True,
+        null=True
+    )
+
+    receiver = models.ForeignKey(
+    User,
+    on_delete=models.CASCADE,
+    related_name="received_messages",
+    null=True,
+    blank=True
+)
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    is_read = models.BooleanField(default=False)
+
+# models/notifications.py
+
+class Notification(models.Model):
+
+    NOTIF_TYPES = (
+        ("article","Article"),
+        ("assign","Assignment"),
+        ("role","Role"),
+        ("message","Message"),
+        ("social","Social"),
+        ("category","Category"),
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    notif_type = models.CharField(
+        max_length=20,
+        choices=NOTIF_TYPES
+    )
+
+    title = models.CharField(max_length=255)
+
+    message = models.TextField()
+
+    icon = models.CharField(
+        max_length=10,
+        default="🔔"
+    )
+
+    is_read = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    action_url = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return self.title

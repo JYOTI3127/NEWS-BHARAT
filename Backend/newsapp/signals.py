@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save,pre_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from .models import UserProfile, generate_password
@@ -66,3 +66,37 @@ def generate_staff_id_after_roles(sender, instance, action, **kwargs):
             next_num = str(max_num + 1).zfill(3)
             instance.staff_id = f"N4B-{role_prefix}-{next_num}"
             instance.save(update_fields=["staff_id"])
+
+from .models import Article
+from .models import Notification
+
+# Pehle old value store karo
+@receiver(pre_save, sender=Article)
+def store_old_assigned(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._old_assigned_to = Article.objects.get(pk=instance.pk).assigned_to
+        except Article.DoesNotExist:
+            instance._old_assigned_to = None
+    else:
+        instance._old_assigned_to = None
+
+
+# Phir compare karo
+@receiver(post_save, sender=Article)
+def article_assigned(sender, instance, created, **kwargs):
+    if not instance.assigned_to:
+        return
+
+    old_assigned = getattr(instance, '_old_assigned_to', None)
+
+    # Sirf tab notification jab assignment nai ho ya badli ho
+    if created or (old_assigned != instance.assigned_to):
+        Notification.objects.create(
+            user=instance.assigned_to,
+            notif_type="assign",
+            title="New Assignment",
+            message=f'You were assigned "{instance.title}"',
+            icon="👤",
+            action_url=f"/admin/newsapp/article/{instance.id}/change/"
+        )

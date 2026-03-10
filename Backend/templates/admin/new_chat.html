@@ -1,0 +1,399 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}New Chat — News4Bharat Admin{% endblock %}
+{% block content_title %}New Chat{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+  <style>
+    /* ── Page tokens ── */
+    :root {
+      --white:    #ffffff;
+      --bg:       #f5f6fa;
+      --surface:  #ffffff;
+      --border:   #e4e7ef;
+      --border2:  #d0d5e8;
+      --text:     #111827;
+      --text2:    #4b5563;
+      --text3:    #9ca3af;
+      --accent:   #1950DF;
+      --accent-lt:rgba(25,80,223,.08);
+      --red:      #FA2E1A;
+      --green:    #0FBC87;
+      --shadow:   0 2px 12px rgba(0,0,0,.06);
+      --shadow-md:0 4px 20px rgba(0,0,0,.10);
+      --radius:   12px;
+      --radius-sm:8px;
+    }
+
+    /* ── Layout ── */
+    .nc-wrap {
+      padding: 24px;
+      max-width: 820px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ── Breadcrumb + Header ── */
+    .nc-breadcrumb {
+      font-size: 11.5px;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+    .nc-breadcrumb a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .nc-breadcrumb a:hover { text-decoration: underline; }
+    .nc-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.3px;
+      margin-bottom: 4px;
+    }
+    .nc-sub {
+      font-size: 13px;
+      color: var(--text3);
+      margin-bottom: 24px;
+    }
+
+    /* ── Search ── */
+    .nc-search-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .nc-search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text3);
+      pointer-events: none;
+    }
+    .nc-search {
+      width: 100%;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 14px 11px 40px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      box-shadow: var(--shadow);
+    }
+    .nc-search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(25,80,223,.1);
+    }
+    .nc-search::placeholder { color: var(--text3); }
+
+    /* ── Section label ── */
+    .nc-section-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .7px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    /* ── User grid ── */
+    .nc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    /* ── User card ── */
+    .nc-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color .18s, box-shadow .18s, transform .15s;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+    }
+    .nc-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(25,80,223,.08), var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    .nc-card:active { transform: translateY(0); }
+
+    /* Avatar */
+    .nc-av {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 800;
+      flex-shrink: 0;
+      position: relative;
+      color: #fff;
+    }
+    .nc-av-online {
+      position: absolute;
+      bottom: 1px; right: 1px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--white);
+    }
+
+    /* Info */
+    .nc-info { flex: 1; min-width: 0; }
+    .nc-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nc-role {
+      font-size: 11.5px;
+      color: var(--text3);
+      margin-top: 1px;
+    }
+    .nc-email {
+      font-size: 11px;
+      color: var(--text3);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    /* Arrow icon */
+    .nc-arrow {
+      color: var(--text3);
+      flex-shrink: 0;
+      transition: color .15s, transform .15s;
+    }
+    .nc-card:hover .nc-arrow {
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    /* Online badge */
+    .nc-online-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--green);
+      background: rgba(15,188,135,.1);
+      border-radius: 4px;
+      padding: 1px 6px;
+      display: inline-block;
+      margin-top: 3px;
+    }
+    .nc-offline-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text3);
+      background: var(--bg);
+      border-radius: 4px;
+      padding: 1px 6px;
+      display: inline-block;
+      margin-top: 3px;
+    }
+
+    /* Hidden form */
+    .nc-form { display: none; }
+
+    /* Empty state */
+    .nc-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text3);
+      text-align: center;
+      gap: 10px;
+    }
+    .nc-empty p { font-size: 14px; }
+
+    /* ── Avatar color palette ── */
+    .av-blue   { background: #1950DF; }
+    .av-green  { background: #0FBC87; }
+    .av-red    { background: #FA2E1A; }
+    .av-yellow { background: #b45309; }
+    .av-indigo { background: #6366f1; }
+    .av-pink   { background: #ec4899; }
+    .av-teal   { background: #0d9488; }
+    .av-orange { background: #ea580c; }
+
+    /* ── Back btn ── */
+    .nc-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text2);
+      text-decoration: none;
+      margin-bottom: 16px;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      transition: all .15s;
+    }
+    .nc-back:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="nc-wrap">
+
+  <!-- Back -->
+  <a href="{% url 'admin_inbox' %}" class="nc-back">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Inbox
+  </a>
+
+  <!-- Header -->
+  <div class="nc-breadcrumb">
+    Dashboard / <a href="{% url 'admin_inbox' %}">Inbox</a> / <span style="color:var(--text2)">New Chat</span>
+  </div>
+  <div class="nc-title">Start a New Chat</div>
+  <div class="nc-sub">Select a team member to open a private conversation</div>
+
+  <!-- Search -->
+  <div class="nc-search-wrap">
+    <svg class="nc-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input
+      class="nc-search"
+      type="text"
+      id="ncSearch"
+      placeholder="Search by name, role, email…"
+      oninput="filterUsers(this.value)"
+      autocomplete="off"
+    >
+  </div>
+
+  <!-- Section label -->
+  <div class="nc-section-label" id="ncLabel">
+    All Team Members
+    <span style="font-weight:400;color:var(--text3);margin-left:6px;" id="ncCount">({{ all_users.count }})</span>
+  </div>
+
+  <!-- User grid -->
+  <div class="nc-grid" id="ncGrid">
+    {% for u in all_users %}
+    {% with idx=forloop.counter0 %}
+    {% with colors="av-blue av-green av-red av-yellow av-indigo av-pink av-teal av-orange" %}
+    {% with color_list=colors.split %}
+
+    <div class="nc-card"
+         data-name="{{ u.get_full_name|default:u.username|lower }}"
+         data-role="{% if u.is_superuser %}superuser{% else %}staff{% endif %}"
+         data-email="{{ u.email|lower }}"
+         onclick="startChat({{ u.pk }})">
+
+      <div class="nc-av {{ color_list|slice:idx|last }}">
+        {{ u.get_full_name|default:u.username|slice:":1"|upper }}
+        {% if u.is_active %}
+        <div class="nc-av-online"></div>
+        {% endif %}
+      </div>
+
+      <div class="nc-info">
+        <div class="nc-name">{{ u.get_full_name|default:u.username }}</div>
+        <div class="nc-role">{% if u.is_superuser %}Superuser{% else %}Staff{% endif %}</div>
+        {% if u.email %}
+        <div class="nc-email">{{ u.email }}</div>
+        {% endif %}
+        {% if u.is_active %}
+        <span class="nc-online-tag">● Active</span>
+        {% else %}
+        <span class="nc-offline-tag">Inactive</span>
+        {% endif %}
+      </div>
+
+      <svg class="nc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+
+    </div>
+
+    {% endwith %}{% endwith %}{% endwith %}
+    {% empty %}
+    <div class="nc-empty" style="grid-column:1/-1">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <p>Koi staff member nahi mila.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Empty search state (hidden by default) -->
+  <div class="nc-empty" id="ncEmpty" style="display:none">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <p id="ncEmptyMsg">Koi user nahi mila.</p>
+  </div>
+
+</div>
+
+<!-- Hidden POST form to create/open conversation -->
+<form class="nc-form" id="ncForm" method="POST" action="{% url 'new_chat' %}">
+  {% csrf_token %}
+  <input type="hidden" name="target_user_id" id="ncTargetUser">
+</form>
+
+<script>
+  var ALL_CARDS = Array.from(document.querySelectorAll('.nc-card'));
+
+  function filterUsers(val) {
+    var q = val.toLowerCase().trim();
+    var visible = 0;
+
+    ALL_CARDS.forEach(function(card) {
+      var name  = card.getAttribute('data-name')  || '';
+      var role  = card.getAttribute('data-role')  || '';
+      var email = card.getAttribute('data-email') || '';
+      var match = !q || name.includes(q) || role.includes(q) || email.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    // Update count label
+    document.getElementById('ncCount').textContent = '(' + visible + ')';
+    document.getElementById('ncLabel').firstChild.textContent = q ? 'Search Results ' : 'All Team Members ';
+
+    // Empty state
+    var empty = document.getElementById('ncEmpty');
+    var grid  = document.getElementById('ncGrid');
+    if (visible === 0) {
+      empty.style.display = 'flex';
+      document.getElementById('ncEmptyMsg').textContent = '"' + val + '" se koi match nahi mila.';
+    } else {
+      empty.style.display = 'none';
+    }
+  }
+
+  function startChat(userId) {
+    window.location.href = '/admin/inbox/start/' + userId + '/';
+}
+
+  // Auto-focus search
+  document.getElementById('ncSearch').focus();
+</script>
+{% endblock %}

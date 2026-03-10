@@ -180,3 +180,7 @@ EMAIL_HOST_PASSWORD = 'podu mgos mznz ljhs'
 AUTHENTICATION_BACKENDS = [
     'newsapp.backends.StaffIDBackend',
 ]
+
+TEMPLATES[0]['OPTIONS']['context_processors'] += [
+    'newsapp.context_processors.admin_badges',
+]

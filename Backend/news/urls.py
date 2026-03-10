@@ -18,11 +18,17 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import path, include
 from newsapp.admin import admin_site
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('', lambda request: HttpResponse("Backend Running ✅")),
     path('admin/', admin_site.urls),
     path('api/', include('newsapp.urls')),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

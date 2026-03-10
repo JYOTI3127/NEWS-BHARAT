@@ -22,50 +22,33 @@ class Permission(models.Model):
     def __str__(self):
         return self.code
 
+from django.utils.text import slugify
+
+
 class Category(models.Model):
-    name = models.CharField(max_length=100)
+    name           = models.CharField(max_length=100)
+    slug           = models.SlugField(max_length=100, unique=True, blank=True)
+    description    = models.TextField(blank=True)
+    status         = models.CharField(max_length=10, default='active')   # ← ADD
+    sub_categories = models.JSONField(default=dict, blank=True)          # ← ADD
+
+    class Meta:
+        verbose_name_plural = "categories"
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
+    def get_articles(self):
+        return self.articles.filter(status='published')
 
-class UserProfile(models.Model):
-
-    GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female'),
-        ('other', 'Other'),
-    ]
-
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    roles = models.ManyToManyField(Role, blank=True)
-
-    phone = models.CharField(max_length=15, blank=True)
-    bio = models.TextField(blank=True)
-
-    gender = models.CharField(
-        max_length=10,
-        choices=GENDER_CHOICES,
-        blank=True,
-        null=True
-    )
-
-    assigned_categories = models.ManyToManyField(Category, blank=True)
-
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('active', 'Active'),
-            ('inactive', 'Inactive'),
-            ('suspended', 'Suspended')
-        ],
-        default='active'
-    )
-
-    joined_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.user.username
+    def get_article_count(self):
+        return self.articles.filter(status='published').count()
 
 class Article(models.Model):
     STATUS_CHOICES = [
@@ -83,9 +66,22 @@ class Article(models.Model):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255, blank=True)
     content = models.TextField()
-    image = models.URLField(blank=True)
+    # file upload
+    image = models.ImageField(upload_to="articles/", blank=True, null=True)
 
-    category = models.ForeignKey('Category', on_delete=models.CASCADE)
+    # url image
+    image_url = models.URLField(blank=True, null=True)
+
+    def get_image(self):
+        if self.image:
+            return self.image.url
+        return self.image_url
+
+    category = models.ForeignKey(
+    'Category',
+    on_delete=models.CASCADE,
+    related_name='articles'
+    )
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
@@ -106,10 +102,12 @@ class Article(models.Model):
     deadline = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
-        if self.assigned_to:
-            profile = self.assigned_to.userprofile
-            if self.category not in profile.assigned_categories.all():
-                raise ValidationError("Reporter not allowed for this category")
+        if self.assigned_to and self.category_id:
+            profile = self.assigned_to.profile
+
+            if not profile.assigned_categories.filter(id=self.category_id).exists():
+                # raise ValidationError("Reporter not allowed for this category")
+                pass
 
 
     def save(self, *args, **kwargs):
@@ -137,12 +135,7 @@ class Article(models.Model):
                 )
 
             if old_article.status != self.status:
-                allowed = ALLOWED_TRANSITIONS.get(old_article.status, [])
-                if self.status not in allowed:
-                    raise ValidationError(f"You can't directly move from {old_article.status} to {self.status}")
-
-            # 🔹 Workflow Log Logic (Status Change)
-            if old_article.status != self.status:
+                # Workflow Log Logic (Status Change)
                 ArticleWorkflowLog.objects.create(
                     article=self,
                     old_status=old_article.status,
@@ -155,8 +148,8 @@ class Article(models.Model):
                 if self.status == "published":
                     self.published_at = timezone.now()
 
-            if self.assigned_to:
-                if self.assigned_to.userprofile.status == "suspended":
+            if self.assigned_to and self.status != 'draft':
+                if self.assigned_to.profile.status == "suspended":
                     raise ValidationError("This reporter is suspended.")
 
         self.full_clean()  
@@ -338,4 +331,152 @@ class ReporterMonthlyPerformance(models.Model):
     def __str__(self):
         return f"{self.reporter.username} - {self.month}/{self.year}"
 
+# ============================================================
+#  models.py  —  Full Security System
+#  Features:
+#   - Auto User ID + Password generation
+#   - Failed login attempt tracking
+#   - Account lockout after 3 attempts
+#   - New ID+Pass generation after 6 total attempts
+#   - 2FA token storage
+#   - Session timeout tracking
+#   - Login rate limiting support
+# ============================================================
 
+import random
+import string
+import pyotp                          # pip install pyotp
+from django.db import models
+from django.contrib.auth.models import User
+
+from django.utils import timezone
+from datetime import timedelta
+
+
+# ── Helpers ──────────────────────────────────────────────────
+
+def generate_user_id():
+    while True:
+        uid = "N4B-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if not UserProfile.objects.filter(user_id=uid).exists():
+            return uid
+
+
+def generate_password(length=12):
+    chars = [
+        random.choice(string.ascii_uppercase),
+        random.choice(string.ascii_lowercase),
+        random.choice(string.digits),
+        random.choice("!@#$%^&*"),
+    ]
+    chars += random.choices(string.ascii_letters + string.digits + "!@#$%^&*", k=length - 4)
+    random.shuffle(chars)
+    return ''.join(chars)
+
+
+# ── UserProfile ───────────────────────────────────────────────
+
+class UserProfile(models.Model):
+
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+
+    # ───────── Credentials ─────────
+    staff_id = models.CharField(
+    max_length=20,
+    unique=True,
+    blank=True,
+    null=True
+    )
+    plain_password = models.CharField(max_length=50, blank=True)
+
+    # ───────── 2FA ─────────
+    totp_secret = models.CharField(max_length=64, blank=True)
+    is_2fa_enabled = models.BooleanField(default=False)
+
+    # ───────── Lockout ─────────
+    failed_attempts = models.PositiveIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    total_failed_ever = models.PositiveIntegerField(default=0)
+    last_failed_at = models.DateTimeField(null=True, blank=True)
+
+    # ───────── Session ─────────
+    remember_me = models.BooleanField(default=False)
+    session_timeout_min = models.PositiveIntegerField(default=30)
+
+    # ───────── Rate limiting ─────────
+    login_attempts_ip = models.JSONField(default=dict, blank=True)
+
+    # ───────── Profile Info ─────────
+    roles = models.ManyToManyField('Role', blank=True)
+    phone = models.CharField(max_length=15, blank=True)
+    bio = models.TextField(blank=True)
+
+    gender = models.CharField(
+        max_length=10,
+        choices=GENDER_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    extra_permissions = models.ManyToManyField(
+        'Permission', 
+        blank=True, 
+        related_name='user_extra_permissions'
+    )
+
+    assigned_categories = models.ManyToManyField('Category', blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('inactive', 'Inactive'),
+            ('suspended', 'Suspended')
+        ],
+        default='active'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} | {self.staff_id or 'No Staff ID'}"
+
+# ── LoginAttemptLog ───────────────────────────────────────────
+
+class LoginAttemptLog(models.Model):
+    """Audit log — every login attempt recorded."""
+    STATUS_CHOICES = [
+        ('success',     'Success'),
+        ('wrong_pass',  'Wrong Password'),
+        ('locked',      'Account Locked'),
+        ('regenerated', 'Credentials Regenerated'),
+        ('2fa_fail',    '2FA Failed'),
+        ('rate_limit',  'Rate Limited'),
+    ]
+
+    user        = models.ForeignKey(User, on_delete=models.SET_NULL,
+                    null=True, blank=True, related_name='login_logs')
+    username_tried = models.CharField(max_length=150, blank=True)
+    ip_address  = models.GenericIPAddressField(null=True, blank=True)
+    user_agent  = models.TextField(blank=True)
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    timestamp   = models.DateTimeField(auto_now_add=True)
+    note        = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.username_tried} → {self.status}"
+
+    class Meta:
+        ordering            = ['-timestamp']
+        verbose_name        = "Login Attempt Log"
+        verbose_name_plural = "Login Attempt Logs"

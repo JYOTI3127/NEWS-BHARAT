@@ -4,7 +4,6 @@ from rest_framework.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from .models import *
-from .serializers import CategorySerializer, ArticleSerializer
 from .utils import has_permission
 import json
 from django.shortcuts import render,redirect
@@ -17,7 +16,32 @@ from datetime import timedelta
 import requests
 from django.conf import settings
 
+from django.shortcuts import render, get_object_or_404
+from django.core.paginator import Paginator
+from .models import Category
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from .models import Category, Article
+from .serializers import CategorySerializer, ArticleSerializer, ArticleMinSerializer
 
+
+# All categories
+def category_list_page(request):       # ← naam badla
+    categories = Category.objects.all()
+    return render(request, 'articles/category_list.html', {'categories': categories})
+
+def category_detail_page(request, slug):   # ← naam badla
+    category = get_object_or_404(Category, slug=slug)
+    articles = category.get_articles()
+    paginator = Paginator(articles, 6)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'articles/category_detail.html', {
+        'category': category,
+        'page_obj': page_obj,
+    })
+
+
+# ✅ Tumhara existing view — bas isme kuch nahi badla
 @api_view(['GET'])
 def category_list(request):
     categories = Category.objects.all()
@@ -25,32 +49,94 @@ def category_list(request):
     return Response(serializer.data)
 
 
+# ✅ CREATE
+@api_view(['POST'])
+def category_create(request):
+    serializer = CategorySerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ UPDATE
+@api_view(['PUT'])
+def category_update(request, cat_id):
+    cat = get_object_or_404(Category, id=cat_id)
+    serializer = CategorySerializer(cat, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ ARCHIVE
+@api_view(['POST'])
+def category_archive(request, cat_id):
+    cat = get_object_or_404(Category, id=cat_id)
+    cat.status = 'archived'
+    cat.save(update_fields=['status'])
+    return Response({'status': 'archived'})
+
+
+# ✅ RESTORE
+@api_view(['POST'])
+def category_restore(request, cat_id):
+    cat = get_object_or_404(Category, id=cat_id)
+    cat.status = 'active'
+    cat.save(update_fields=['status'])
+    return Response({'status': 'active'})
+
+
+# ✅ POSTS (category ke articles)
 @api_view(['GET'])
+def category_posts(request, cat_id):
+    cat = get_object_or_404(Category, id=cat_id)
+    articles = Article.objects.filter(
+        category=cat, status='published'
+    ).order_by('-created_at')[:10]
+    serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
+    return Response({
+        'posts': serializer.data,
+        'total': cat.get_article_count()
+    })
+
+@api_view(['GET', 'POST'])
 def article_list(request):
-    user = request.user
 
-    if not user.is_authenticated:
-        return Response({"error": "Authentication required"}, status=401)
+    if request.method == 'GET':
+        user = request.user
 
-    if user.is_superuser:
-        articles = Article.objects.all()
+        if not user.is_authenticated:
+            return Response({"error": "Authentication required"}, status=401)
 
-    else:
-        profile = user.userprofile
-
-        # Reporter → sirf assigned articles
-        if profile.roles.filter(name="Reporter").exists():
-            articles = Article.objects.filter(assigned_to=user)
-
-        # Editor → sab articles
-        elif profile.roles.filter(name="Editor").exists():
+        if user.is_superuser:
             articles = Article.objects.all()
 
         else:
-            articles = Article.objects.none()
+            profile = user.profile
 
-    serializer = ArticleSerializer(articles, many=True)
-    return Response(serializer.data)
+            if profile.roles.filter(name="Reporter").exists():
+                articles = Article.objects.filter(assigned_to=user)
+
+            elif profile.roles.filter(name="Editor").exists():
+                articles = Article.objects.all()
+
+            else:
+                articles = Article.objects.none()
+
+        serializer = ArticleSerializer(articles, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
+    if request.method == 'POST':
+        serializer = ArticleSerializer(data=request.data, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=201)
+
+        return Response(serializer.errors, status=400)
 
 
 def update_article_status(request, article):
@@ -98,7 +184,7 @@ def dashboard_view(request):
     # ───────────── AUTHORS & CATEGORIES ─────────────
 
     User = get_user_model()
-    total_authors = User.objects.filter(article__isnull=False).distinct().count()
+    total_authors = User.objects.filter(article_set__isnull=False).distinct().count()
     total_categories = Category.objects.count()
 
     # ───────────── RECENT ARTICLES ─────────────
@@ -235,6 +321,28 @@ def dashboard_view(request):
     }
 
     return render(request, "admin/index.html", context)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+def article_detail(request, pk):
+    try:
+        article = Article.objects.get(pk=pk)
+    except Article.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+
+    if request.method == "GET":
+        serializer = ArticleSerializer(article, context={'request': request})
+        return Response(serializer.data)
+
+    elif request.method == "PUT":
+        serializer = ArticleSerializer(article, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    elif request.method == "DELETE":
+        article.delete()
+        return Response(status=204)
 
 @api_view(['GET'])
 def weather_api(request):
@@ -495,7 +603,7 @@ def search_api(request):
         for cat in Category.objects.filter(
             Q(name__icontains=query)
         ).annotate(
-            article_count=Count('article', filter=Q(article__status='published'))
+            article_count=Count('articles', filter=Q(articles__status='published'))
         ).order_by('-article_count')[:limit]:
             categories_data.append({
                 "id":            cat.id,
@@ -512,12 +620,440 @@ def search_api(request):
         "search_engine": search_engine,
     })
 
+# ============================================================
+#  views.py  —  Secure Login View
+#  Handles:
+#   - Password strength validation
+#   - Rate limiting per IP
+#   - Failed attempt tracking
+#   - Account lockout (30 min after 3 wrong attempts)
+#   - Credential regeneration (after 6 total attempts)
+#   - 2FA check (if enabled)
+#   - Remember Me (7-day session vs 30-min timeout)
+#   - Screen message + Email notification on lockout/regen
+#   - Full audit logging
+# ============================================================
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib import messages
+
+from .models import UserProfile, LoginAttemptLog
+from datetime import timedelta
+import json
 
 
+# ── Rate Limit Config ─────────────────────────────────────────
+MAX_ATTEMPTS_PER_IP  = 10          # max login tries from one IP in the window
+RATE_LIMIT_WINDOW    = 10          # minutes to look back
 
 
+def get_client_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
 
 
+def is_rate_limited(profile, ip):
+    """
+    Check if this IP has exceeded MAX_ATTEMPTS_PER_IP
+    in the last RATE_LIMIT_WINDOW minutes.
+    """
+    now      = timezone.now()
+    cutoff   = (now - timedelta(minutes=RATE_LIMIT_WINDOW)).isoformat()
+    log      = profile.login_attempts_ip  # dict: { ip: [iso_timestamps] }
+
+    timestamps = [t for t in log.get(ip, []) if t > cutoff]
+    log[ip]    = timestamps                   # prune old entries
+    profile.login_attempts_ip = log
+    profile.save(update_fields=['login_attempts_ip'])
+
+    return len(timestamps) >= MAX_ATTEMPTS_PER_IP
+
+
+def record_ip_attempt(profile, ip):
+    now  = timezone.now().isoformat()
+    log  = profile.login_attempts_ip
+    log.setdefault(ip, []).append(now)
+    profile.login_attempts_ip = log
+    profile.save(update_fields=['login_attempts_ip'])
+
+
+# ── Email Notifications ───────────────────────────────────────
+
+def send_lockout_email(user, lock_minutes=30):
+    """Tell the user their account is locked."""
+    if not user.email:
+        return
+    send_mail(
+        subject="⚠️ News4Bharat — Account Locked",
+        message=(
+            f"Hello {user.get_full_name() or user.username},\n\n"
+            f"Your account has been locked for {lock_minutes} minutes due to "
+            f"multiple failed login attempts.\n\n"
+            f"If this was not you, please contact the administrator immediately.\n\n"
+            f"Your account will automatically unlock after {lock_minutes} minutes.\n\n"
+            f"— News4Bharat Security Team"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+
+
+def send_regeneration_email(user, new_uid, new_pass):
+    """Send the brand-new credentials to the user after regeneration."""
+    if not user.email:
+        return
+    send_mail(
+        subject="🔐 News4Bharat — Your New Login Credentials",
+        message=(
+            f"Hello {user.get_full_name() or user.username},\n\n"
+            f"Due to too many failed login attempts, your old credentials have been "
+            f"permanently deleted and new ones have been generated.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"  New User ID  : {new_uid}\n"
+            f"  New Password : {new_pass}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"Please log in with these new credentials immediately and keep them safe.\n"
+            f"Do NOT share these with anyone.\n\n"
+            f"If you did not request this, contact your administrator.\n\n"
+            f"— News4Bharat Security Team"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+
+
+# ── Login View ────────────────────────────────────────────────
+
+def secure_login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method != 'POST':
+        return render(request, 'newsapp/login.html')
+
+    username    = request.POST.get('username', '').strip()
+    password    = request.POST.get('password', '').strip()
+    remember_me = request.POST.get('remember_me') == 'on'
+    totp_token  = request.POST.get('totp_token', '').strip()
+    ip          = get_client_ip(request)
+    ua          = request.META.get('HTTP_USER_AGENT', '')
+
+    # ── Step 1: Does user exist? ──────────────────────────────
+    try:
+        user_obj = User.objects.get(username=username)
+        profile  = user_obj.profile
+    except (User.DoesNotExist, UserProfile.DoesNotExist):
+        LoginAttemptLog.objects.create(
+            username_tried=username, ip_address=ip,
+            user_agent=ua, status='wrong_pass',
+            note='Username not found'
+        )
+        messages.error(request, "Invalid username or password.")
+        return render(request, 'newsapp/login.html')
+
+    # ── Step 2: Rate limiting (per IP) ───────────────────────
+    if is_rate_limited(profile, ip):
+        LoginAttemptLog.objects.create(
+            user=user_obj, username_tried=username,
+            ip_address=ip, user_agent=ua,
+            status='rate_limit',
+            note=f'IP {ip} exceeded {MAX_ATTEMPTS_PER_IP} attempts'
+        )
+        messages.error(
+            request,
+            f"Too many attempts from your network. Please wait {RATE_LIMIT_WINDOW} minutes."
+        )
+        return render(request, 'newsapp/login.html')
+
+    # ── Step 3: Is account locked? ────────────────────────────
+    if profile.is_locked:
+        LoginAttemptLog.objects.create(
+            user=user_obj, username_tried=username,
+            ip_address=ip, user_agent=ua,
+            status='locked',
+            note=f'Account locked until {profile.locked_until}'
+        )
+        messages.error(
+            request,
+            f"🔒 Account locked. Try again in {profile.lock_remaining_minutes} minute(s)."
+        )
+        return render(request, 'newsapp/login.html')
+
+    # ── Step 4: Authenticate password ────────────────────────
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        # Wrong password — record it
+        record_ip_attempt(profile, ip)
+        result = profile.record_failed_attempt()
+
+        if result == 'regenerated':
+            # New credentials generated — email them
+            new_uid  = profile.user_id
+            new_pass = profile.plain_password
+            send_regeneration_email(user_obj, new_uid, new_pass)
+            LoginAttemptLog.objects.create(
+                user=user_obj, username_tried=username,
+                ip_address=ip, user_agent=ua,
+                status='regenerated',
+                note='6 total failed attempts — credentials regenerated'
+            )
+            messages.error(
+                request,
+                "🚨 Too many failed attempts. Your old credentials are DELETED. "
+                "New credentials have been sent to your registered email."
+            )
+
+        elif result == 'locked':
+            send_lockout_email(user_obj)
+            LoginAttemptLog.objects.create(
+                user=user_obj, username_tried=username,
+                ip_address=ip, user_agent=ua,
+                status='locked',
+                note='3 failed attempts — account locked 30 min'
+            )
+            messages.error(
+                request,
+                f"🔒 Account locked for 30 minutes due to {profile.failed_attempts} "
+                f"failed attempts. A notification has been sent to your email."
+            )
+
+        else:
+            remaining = 3 - profile.failed_attempts
+            LoginAttemptLog.objects.create(
+                user=user_obj, username_tried=username,
+                ip_address=ip, user_agent=ua,
+                status='wrong_pass',
+                note=f'Attempt {profile.failed_attempts}/3'
+            )
+            messages.error(
+                request,
+                f"❌ Wrong password. {remaining} attempt(s) remaining before lockout."
+            )
+
+        return render(request, 'newsapp/login.html')
+
+    # ── Step 5: 2FA check (if enabled) ───────────────────────
+    if profile.is_2fa_enabled:
+        if not totp_token:
+            # Ask for 2FA token — render form with 2FA field visible
+            return render(request, 'newsapp/login.html', {
+                'show_2fa': True,
+                'username': username,
+                'password': password,
+            })
+        if not profile.verify_totp(totp_token):
+            LoginAttemptLog.objects.create(
+                user=user_obj, username_tried=username,
+                ip_address=ip, user_agent=ua,
+                status='2fa_fail',
+                note='Wrong TOTP token'
+            )
+            messages.error(request, "❌ Invalid 2FA code. Please try again.")
+            return render(request, 'newsapp/login.html', {
+                'show_2fa': True,
+                'username': username,
+                'password': password,
+            })
+
+    # ── Step 6: All checks passed — log in ───────────────────
+    profile.reset_failed_attempts()
+
+    # Session timeout — Remember Me = 7 days, else = 30 min
+    if remember_me:
+        request.session.set_expiry(60 * 60 * 24 * 7)   # 7 days
+        profile.remember_me = True
+    else:
+        request.session.set_expiry(60 * profile.session_timeout_min)  # 30 min default
+        profile.remember_me = False
+    profile.save(update_fields=['remember_me'])
+
+    login(request, user)
+    record_ip_attempt(profile, ip)   # record successful attempt too (for analytics)
+
+    LoginAttemptLog.objects.create(
+        user=user_obj, username_tried=username,
+        ip_address=ip, user_agent=ua,
+        status='success'
+    )
+
+    return redirect('dashboard')
+
+
+# ── Logout ────────────────────────────────────────────────────
+
+@login_required
+def secure_logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect('login')
+
+
+# ── My Credentials (user sees their own only) ─────────────────
+
+@login_required
+def my_credentials(request):
+    try:
+        profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        profile = None
+    return render(request, 'newsapp/my_credentials.html', {'profile': profile})
+
+import os
+import json
+import anthropic
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.admin.views.decorators import staff_member_required
+
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+@staff_member_required
+@require_POST
+def ai_spell_check(request):
+    """
+    POST /api/ai/spell-check/
+    Body: { "content": "article text..." }
+    Returns: { "corrected": "fixed text..." }
+    """
+    try:
+        data = json.loads(request.body)
+        content = data.get("content", "").strip()
+        if not content:
+            return JsonResponse({"error": "No content provided"}, status=400)
+
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are a professional news editor. Fix ALL spelling and grammar mistakes in the following article text.
+
+RULES:
+- Fix spelling errors, grammar mistakes, punctuation issues
+- Do NOT change the meaning, tone, or structure
+- Do NOT add or remove sentences
+- Return ONLY the corrected text, nothing else — no explanations, no preamble
+
+Article text:
+{content}"""
+                }
+            ]
+        )
+
+        corrected = message.content[0].text.strip()
+        return JsonResponse({"corrected": corrected})
+
+    except anthropic.APIError as e:
+        return JsonResponse({"error": f"AI error: {str(e)}"}, status=503)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@staff_member_required
+@require_POST
+def ai_seo_keywords(request):
+    """
+    POST /api/ai/seo-keywords/
+    Body: { "title": "...", "content": "..." }
+    Returns: { "keywords": ["keyword1", "keyword2", ...] }
+    """
+    try:
+        data = json.loads(request.body)
+        title = data.get("title", "").strip()
+        content = data.get("content", "").strip()
+
+        if not title and not content:
+            return JsonResponse({"error": "No title or content provided"}, status=400)
+
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are an SEO expert for a news website (Indian news context).
+
+Analyze this article and suggest the 10 best SEO keywords/phrases.
+
+Article Title: {title}
+Article Content: {content[:1000]}
+
+RULES:
+- Return ONLY a JSON array of strings, nothing else
+- Mix short keywords (1-2 words) and long-tail phrases (3-4 words)
+- Focus on what Indian readers would search for
+- Include both English and relevant Hinglish terms if appropriate
+- Example format: ["keyword one", "keyword two", "long tail phrase here"]
+
+Return the JSON array now:"""
+                }
+            ]
+        )
+
+        raw = message.content[0].text.strip()
+        # Clean markdown if present
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        keywords = json.loads(raw)
+
+        if not isinstance(keywords, list):
+            keywords = []
+
+        return JsonResponse({"keywords": keywords[:12]})
+
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"keywords": [], "error": "Could not parse AI response"}, status=200)
+    except anthropic.APIError as e:
+        return JsonResponse({"error": f"AI error: {str(e)}"}, status=503)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@staff_member_required
+def media_photos_api(request):
+    """
+    Saare articles ki images return karta hai.
+    Sirf wahi articles jinka image field khali nahi hai.
+    """
+    articles = (
+        Article.objects
+        .exclude(image__isnull=True)
+        .exclude(image__exact='')
+        .order_by('-id')          # latest pehle
+    )
+
+    items = []
+    for article in articles:
+        try:
+            items.append({
+                'url':        request.build_absolute_uri(article.image.url),
+                'name':       article.title,
+                'article_id': article.id,
+            })
+        except Exception:
+            pass   # broken image skip karo
+
+    return JsonResponse({'items': items})
+
+
+@staff_member_required
+def media_videos_api(request):
+    """
+    Abhi video model nahi hai — empty list return karta hai.
+    Future mein video field add karo to yahan update karna.
+    """
+    return JsonResponse({'items': []})
 
 
 

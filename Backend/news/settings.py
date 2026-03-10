@@ -41,8 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'newsapp',
-    'django_crontab',
-    'django_elasticsearch_dsl', 
+    'django_crontab', 
 
 ]
 
@@ -84,8 +83,12 @@ WSGI_APPLICATION = 'news.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'newsbharatdb',
+        'USER': 'postgres',
+        'PASSWORD': 'n4b@admin', 
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -130,6 +133,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -157,3 +162,21 @@ ELASTICSEARCH_DSL = {
 # Auto update index jab model save ho
 ELASTICSEARCH_DSL_AUTO_REFRESH = True
 
+
+LOGOUT_REDIRECT_URL = '/admin/login/'
+LOGIN_URL = '/admin/login/'
+
+# Development mein — console pe dikhega
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Production mein — real email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sheeintern@gmail.com'
+EMAIL_HOST_PASSWORD = 'podu mgos mznz ljhs'
+
+AUTHENTICATION_BACKENDS = [
+    'newsapp.backends.StaffIDBackend',
+]

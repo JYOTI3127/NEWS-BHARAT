@@ -1,22 +1,27 @@
 from django.urls import path
-from .views import (
-    category_list,
-    article_list,
-    search_api,
-    weather_api,
-    metal_ticker,
-    update_metal_rates,
-    market_indices,
-    datetime_api,
-)
+from .views import *
+from . import views
 
 urlpatterns = [
     path('categories/', category_list),
     path('articles/', article_list),
+    path('articles/<int:pk>/', views.article_detail),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),
     path('update-metal/', update_metal_rates),
     path('market-indices/', market_indices),
     path('datetime/', datetime_api, name='api-datetime'),
     path('search/', search_api, name='api-search'),
+    path('login/',          views.secure_login_view,  name='login'),
+    path('logout/',         views.secure_logout_view, name='logout'),
+    path('my-credentials/', views.my_credentials,     name='my_credentials'),
+    path('ai/spell-check/', ai_spell_check),
+    path('ai/seo-keywords/',ai_seo_keywords),
+    path('categories/create/',                 category_create,  name='api_category_create'),
+    path('categories/<int:cat_id>/update/',    category_update,  name='api_category_update'),
+    path('categories/<int:cat_id>/archive/',   category_archive, name='api_category_archive'),
+    path('categories/<int:cat_id>/restore/',   category_restore, name='api_category_restore'),
+    path('categories/<int:cat_id>/posts/',     category_posts,   name='api_category_posts'),
+    path('media/photos/', media_photos_api, name='media_photos_api'),
+    path('media/videos/', media_videos_api, name='media_videos_api'),
 ]

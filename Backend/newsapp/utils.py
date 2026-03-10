@@ -2,7 +2,7 @@ def has_permission(user, perm_code):
     if not hasattr(user, 'userprofile'):
         return False
 
-    roles = user.userprofile.roles.all()
+    roles = user.profile.roles.all()
 
     for role in roles:
         if role.permissions.filter(code=perm_code).exists():
@@ -99,3 +99,23 @@ def fetch_index_data(symbol):
         "percent_change": round(percent, 2),
         "trend": trend
     }
+
+import random
+import string
+
+def generate_password(length=12):
+
+    chars = [
+        random.choice(string.ascii_uppercase),
+        random.choice(string.ascii_lowercase),
+        random.choice(string.digits),
+        random.choice("!@#$%^&*"),
+    ]
+
+    chars += random.choices(
+        string.ascii_letters + string.digits + "!@#$%^&*",
+        k=length - 4
+    )
+
+    random.shuffle(chars)
+    return ''.join(chars)

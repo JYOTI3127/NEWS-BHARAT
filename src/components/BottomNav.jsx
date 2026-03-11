@@ -62,7 +62,7 @@ export default function BottomNav() {
     { label: "Home",    path: "/",       icon: HomeIcon   },
     { label: "Videos",  path: "/videos", icon: VideosIcon },
     { label: "Search",  path: "/search", icon: SearchIcon },
-    { label: "Live TV", path: "/live",   icon: LiveTVIcon },
+    { label: "60 Second", path: "/live",   icon: LiveTVIcon },
   ];
 
   return (

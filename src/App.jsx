@@ -1,3 +1,4 @@
+
 import React from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
@@ -13,7 +14,10 @@ import EditorialPolicy from "./pages/Editorialpolicy";
 import CareersPage from "./pages/Careerspage";
 import ContactPage from "./pages/Contactpage";
 import CommingSoon from "./pages/ComingSoon";
+import ArticleDetails from "./pages/ArticleDetails";
+
 import "../src/style.css";
+import CategoryPage from "./pages/Categorypage";
 
 function Layout() {
 
@@ -35,6 +39,9 @@ function Layout() {
         <Route path="/careers" element={<CareersPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/CommingSoon" element={<CommingSoon />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/article/:slug" element={<ArticleDetails />} />
+     
       </Routes>
 
       {!hideLayout && <Footer />}

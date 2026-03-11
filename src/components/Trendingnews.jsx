@@ -12,10 +12,10 @@ const latestNews = [
   { id: 2, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
   { id: 3, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
   { id: 4, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 1, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 2, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 3, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 4, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 5, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 6, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 7, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
+  { id: 8, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
 ];
 
 const featureCards = [

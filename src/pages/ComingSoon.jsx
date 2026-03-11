@@ -5,7 +5,7 @@ import { FaXTwitter } from "react-icons/fa6";
 import { MdOutlineMailOutline } from "react-icons/md";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsyO3DPAG2G-3dvQ01zh6J_oWMpCILOs5ICV-pf6_FQhXebgFpn17JMa2spQFTXxEYGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSpSaJe57t9c-rjeiQXTigiJ_Z9JeF1w12Sm4fX_Mb-C5oIebysakUFIHz6aTJG6y3dA/exec";
 
 export default function ComingSoon() {
   const [email, setEmail] = useState("");
@@ -151,7 +151,7 @@ export default function ComingSoon() {
         .headline span { color: #D80100;
     font-style: italic;
     padding: 2px;
-    font-size: 22px;}
+    font-size: 35px;}
 
         /* ── CENTER LOGO ── */
         .center-logo {
@@ -320,6 +320,7 @@ export default function ComingSoon() {
           .ticker      { height: 30px; }
           .ticker-badge { font-size: 8px; padding: 0 10px; }
           .ticker-text  { font-size: 10px; }
+          .headline span {font-size: 20px; }
         }
 
         /* Large phones — 481px to 767px */
@@ -361,7 +362,7 @@ export default function ComingSoon() {
           .description     { font-size: 16px; max-width: 650px; }
           .logo-img        { height: 60px; }
           .center-logo-img { height: 64px; }
-          .headline        { font-size: 46px; }
+          .headline        { font-size: 38px; }
         .headline span {
   font-size: 40px !important;
 }
@@ -372,7 +373,7 @@ export default function ComingSoon() {
         @media (min-width: 2560px) {
           .page-inner      { max-width: 1000px; }
           .description     { font-size: 22px; max-width: 900px; }
-          .headline        { font-size: 60px; }
+          .headline        { font-size: 37px; }
           .logo-img        { height: 80px; }
           .center-logo-img { height: 80px; }
           .ticker-text     { font-size: 16px; }
@@ -451,17 +452,12 @@ export default function ComingSoon() {
           <div className="ticker-track">
             <div className="ticker-inner">
               <span className="ticker-text">
-                Follow us for updates and be among the first to experience News4Bharat — News That Connects India.
-                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-                News4Bharat is about to launch — India's fastest and most trusted news platform. Stay tuned!
-                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+               Follow us for updates and be among the first to experience News4Bharat – News That Connects India.
+               &nbsp;&nbsp;| &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;
+               Follow us for updates and be among the first to experience News4Bharat – News That Connects India.
+        
               </span>
-              <span className="ticker-text">
-                Follow us for updates and be among the first to experience News4Bharat — News That Connects India.
-                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-                News4Bharat is about to launch — India's fastest and most trusted news platform. Stay tuned!
-                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-              </span>
+
             </div>
           </div>
         </div>

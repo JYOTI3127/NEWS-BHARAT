@@ -881,7 +881,7 @@
   }
 
   .nb-inner {
-    margin-top: 75%;
+    margin-top: 55%;
   }
   .nb-news-card:nth-child(n+3) {
     display: none;
@@ -906,11 +906,12 @@
     padding: 0 14px;
   }
   .nb-bottom {
-    display: grid!important;
-    grid-template-columns: repeat(2, 1fr)!important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px;
+    width: 100%;
   }
-  .nb-news-card{
-    padding: 10px!important;
+  .nb-news-card {
+    padding: 10px !important;
   }
 }

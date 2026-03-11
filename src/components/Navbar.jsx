@@ -11,86 +11,86 @@ import {
 } from "lucide-react";
 import "../Navbar.css";
 
-// ─────────────────────────────────────────────
-//  NAV_SECTIONS  — 
-// ─────────────────────────────────────────────
-const NAV_SECTIONS = [
+const getIconForCategory = (name) => {
+  const map = {
+    "Breaking News":             Flame,
+    "States of Bharat":          Globe,
+    "Bharat Economy & Business": TrendingUp,
+    "Bharat's BFSI":             BarChart2,
+    "Bharat Explainers":         FileText,
+    "Bharat in Numbers":         BarChart2,
+    "Bharat Opinions":           PenLine,
+    "Bharat's Startups":         Zap,
+    "Bharat 2047":               Flame,
+    "Bharat By 2047":            Flame,
+    "Technology":                Cpu,
+    "Artificial Intelligence":   Cpu,
+    "Sports":                    Trophy,
+    "World News":                Globe,
+    "Entertainment":             Film,
+    "Trending":                  TrendingUp,
+    "60-Second Read":            Zap,
+  };
+  return map[name] || Newspaper;
+};
 
+// Slug empty ho toh label se banao
+const makeSlug = (slug, label) => {
+  if (slug && slug.trim() !== "") return slug;
+  // Label se slug banao
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+};
+
+// Backend slugs jo label se match nahi karte
+const SLUG_OVERRIDES = {
+  "bharat-in-numbers": "bharat-numbers",
+  "states-of-bharat":  "state-of-bharat",
+  "bharats-startups":  "bharat-startups",
+  "breaking-news":     "breaking-now",
+};
+
+const getFinalSlug = (slug, label) => {
+  const s = makeSlug(slug, label);
+  return SLUG_OVERRIDES[s] || s;
+};
+
+const NAV_SECTIONS = [
   {
     label: "Bharat Economy & Business",
     Icon: TrendingUp,
-    links: ["Macro Economy", "Government Policy", "Industry & Sectors", "Corporate & Companies", "MSME & Entrepreneurship"],
+    slug: "bharat-economy",
     subcategories: [
-      {
-        label: "Macro Economy",
-        topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"],
-      },
-      {
-        label: "Government Policy",
-        topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"],
-      },
-      {
-        label: "Industry & Sectors",
-        topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"],
-      },
-      {
-        label: "Corporate & Companies",
-        topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"],
-      },
-      {
-        label: "MSME & Entrepreneurship",
-        topics: ["MSME Policies", "Small Business Stories"],
-      },
+      { label: "Macro Economy",           topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"] },
+      { label: "Government Policy",       topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"] },
+      { label: "Industry & Sectors",      topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"] },
+      { label: "Corporate & Companies",   topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"] },
+      { label: "MSME & Entrepreneurship", topics: ["MSME Policies", "Small Business Stories"] },
     ],
   },
-  {
-    label: "Bharat's BFSI",
-    Icon: BarChart2,
-    links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"],
-  },
-  {
-    label: "Bharat Opinions",
-    Icon: PenLine,
-    links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"],
-  },
-  {
-    label: "Technology",
-    Icon: Cpu,
-  },
-  {
-    label: "Artificial Intelligence",
-    Icon: Cpu,
-  },
-
-    {
-    label: "Bharat By 2047",
-    Icon: Flame,
-  },
+  { label: "Bharat's BFSI",         slug: "bfsi",            Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
+  { label: "Bharat Opinions",        slug: "bharat-opinions", Icon: PenLine,   links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Technology",             slug: "technology",      Icon: Cpu },
+  { label: "Artificial Intelligence",slug: "ai",              Icon: Cpu },
+  { label: "Bharat By 2047",         slug: "bharat-2047",     Icon: Flame },
 ];
 
-// ─────────────────────────────────────────────
-//  navLinks (desktop top nav — unchanged)
-// ─────────────────────────────────────────────
 const navLinks = [
-  { label: "Breaking News",   path: "/" },
-  { label: "States of Bharat",       path: "" },
-  { label: "Bharat Explainers",     path: "" },
-  { label: "Bharat in Numbers",     path: "" },
-  { label: "Bharat's Startups",       path: "" },
-  { label: "60-Second Read",           path: "" },
-  { label: "Sports",                path: "" },
-  { label: "World News",            path: "" },
-  { label: "Entertainment",         path: "" },
-  { label: "Founter's note",       path: "/founders-note" },
-  { label: "Editorial Policy",           path: "/editorial-policy" },
-  { label: "Career",                path: "/careers" },
-  { label: "Contact Us",            path: "/contact" },
-    { label: "Comming Soon",            path: "/CommingSoon" },
+  { label: "Breaking News",     path: "/category/breaking-now" },
+  { label: "States of Bharat",  path: "/category/state-of-bharat" },
+  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
+  { label: "Bharat in Numbers", path: "/category/bharat-numbers" },
+  { label: "Bharat's Startups", path: "/category/bharat-startups" },
+  { label: "60-Second Read",    path: "/category/60-second-read" },
+  { label: "Sports",            path: "/category/sports" },
+  { label: "World News",        path: "/category/world-news" },
+  { label: "Trending",          path: "/category/trending" },
+  { label: "Founter's note",    path: "/founders-note" },
+  { label: "Editorial Policy",  path: "/editorial-policy" },
+  { label: "Career",            path: "/careers" },
+  { label: "Contact Us",        path: "/contact" },
+  { label: "Comming Soon",      path: "/CommingSoon" },
 ];
 
-// ─────────────────────────────────────────────
-//  Logo components — unchanged
-// ─────────────────────────────────────────────
 const LogoFull = () => (
   <div className="logo-full">
     <Link to="/"><img src={logoBig} alt="News4Bharat Logo" /></Link>
@@ -103,15 +103,12 @@ const LogoScroll = () => (
   </div>
 );
 
-// ─────────────────────────────────────────────
-//  Header component
-// ─────────────────────────────────────────────
 const Header = () => {
-  const [isScrolled, setIsScrolled]         = useState(false);
-  const [isOpen, setIsOpen]                 = useState(false);
+  const [isScrolled, setIsScrolled]           = useState(false);
+  const [isOpen, setIsOpen]                   = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
-  // NEW — tracks which subcategory is expanded inside a section
-  const [expandedSubcat, setExpandedSubcat] = useState(null);
+  const [expandedSubcat, setExpandedSubcat]   = useState(null);
+  const [navSections, setNavSections]         = useState(NAV_SECTIONS);
 
   const [weather, setWeather]   = useState(null);
   const [metals, setMetals]     = useState(null);
@@ -122,17 +119,15 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [showResults, setShowResults]     = useState(false);
-  const searchRef       = useRef(null);
+  const searchRef         = useRef(null);
   const searchDebounceRef = useRef(null);
 
-  // ── resize ──
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── date / time ──
   useEffect(() => {
     const getLocal = () => ({
       date: new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
@@ -143,7 +138,9 @@ const Header = () => {
         const res  = await fetch("http://localhost:8000/api/datetime/");
         const data = await res.json();
         setDateTime({ date: data.date || data.formatted_date || getLocal().date, time: getLocal().time });
-      } catch { setDateTime(getLocal()); }
+      } catch {
+        setDateTime(getLocal());
+      }
     };
     fetchDate();
     const iv = setInterval(() => {
@@ -152,7 +149,42 @@ const Header = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // ── search ──
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res    = await fetch("http://127.0.0.1:8000/api/categories/");
+        const data   = await res.json();
+        const active = data.filter(cat => cat.status === "active");
+
+        const sections = active.map(cat => {
+          const subKeys     = Object.keys(cat.sub_categories);
+          let subcategories = null;
+          let links         = null;
+
+          if (subKeys.length > 1) {
+            subcategories = subKeys.map(key => ({ label: key, topics: cat.sub_categories[key] }));
+          } else if (subKeys.length === 1 && cat.sub_categories[subKeys[0]].length > 0) {
+            links = cat.sub_categories[subKeys[0]];
+          }
+
+          return {
+            label: cat.name,
+            slug:  cat.slug,
+            Icon:  getIconForCategory(cat.name),
+            ...(subcategories && { subcategories }),
+            ...(links         && { links }),
+          };
+        });
+
+        setNavSections(sections);
+      } catch (err) {
+        console.error("❌ [Categories API] Fail hui:", err.message);
+        setNavSections(NAV_SECTIONS);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const fetchSearchResults = async (query) => {
     if (!query.trim()) { setSearchResults([]); setShowResults(false); return; }
     setIsSearching(true);
@@ -162,8 +194,11 @@ const Header = () => {
       const results = Array.isArray(data) ? data : (data.results || data.articles || []);
       setSearchResults(results);
       setShowResults(true);
-    } catch { setSearchResults([]); }
-    finally { setIsSearching(false); }
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleSearchChange = (e) => {
@@ -185,79 +220,74 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── weather ──
   useEffect(() => {
-    const fetch_ = async () => {
-      try { const r = await fetch("http://127.0.0.1:8000/api/weather/?city=Delhi"); setWeather(await r.json()); } catch {}
+    const fetchWeather = async () => {
+      try {
+        const r    = await fetch("http://127.0.0.1:8000/api/weather/?city=Delhi");
+        const data = await r.json();
+        setWeather(data);
+      } catch {}
     };
-    fetch_();
-    const iv = setInterval(fetch_, 10 * 60 * 1000);
+    fetchWeather();
+    const iv = setInterval(fetchWeather, 10 * 60 * 1000);
     return () => clearInterval(iv);
   }, []);
 
-  // ── metals ──
   useEffect(() => {
-    const fetch_ = async () => {
-      try { const r = await fetch("http://127.0.0.1:8000/api/metal-ticker/"); setMetals(await r.json()); } catch {}
+    const fetchMetals = async () => {
+      try {
+        const r    = await fetch("http://127.0.0.1:8000/api/metal-ticker/");
+        const data = await r.json();
+        setMetals(data);
+      } catch {}
     };
-    fetch_();
-    const iv = setInterval(fetch_, 15 * 60 * 1000);
+    fetchMetals();
+    const iv = setInterval(fetchMetals, 15 * 60 * 1000);
     return () => clearInterval(iv);
   }, []);
 
-  // ── markets ──
   useEffect(() => {
-    const fetch_ = async () => {
-      try { const r = await fetch("http://127.0.0.1:8000/api/market-indices/"); setMarkets(await r.json()); } catch {}
+    const fetchMarkets = async () => {
+      try {
+        const r    = await fetch("http://127.0.0.1:8000/api/market-indices/");
+        const data = await r.json();
+        setMarkets(data);
+      } catch {}
     };
-    fetch_();
-    const iv = setInterval(fetch_, 5 * 60 * 1000);
+    fetchMarkets();
+    const iv = setInterval(fetchMarkets, 5 * 60 * 1000);
     return () => clearInterval(iv);
   }, []);
 
-  // ── scroll ──
-useEffect(() => {
-  if (window.innerWidth <= 768) {
-    setIsScrolled(false);
-    return;
-  }
+  useEffect(() => {
+    if (window.innerWidth <= 768) { setIsScrolled(false); return; }
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => { setIsScrolled(window.scrollY > 10); ticking = false; });
+        ticking = true;
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-  let ticking = false;
-
-  const handleScroll = () => {
-    if (!ticking) {
-      window.requestAnimationFrame(() => {
-        setIsScrolled(window.scrollY > 10);
-        ticking = false;
-      });
-      ticking = true;
-    }
-  };
-
-  window.addEventListener("scroll", handleScroll);
-
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
-
-  // ── body overflow when drawer open ──
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  // ── drawer toggle helpers ──
   const toggleSection = (label) => {
     setExpandedSection(prev => prev === label ? null : label);
-    setExpandedSubcat(null); // reset subcat when section changes
+    setExpandedSubcat(null);
   };
 
   const toggleSubcat = (e, label) => {
-    e.stopPropagation(); // don't close the section
+    e.stopPropagation();
     setExpandedSubcat(prev => prev === label ? null : label);
   };
 
-  // ── market data shortcuts ──
-  const sensexPrice = markets?.sensex?.price ?? null;
+  const sensexPrice  = markets?.sensex?.price  ?? null;
   const sensexChange = markets?.sensex?.change ?? null;
   const sensexTrend  = markets?.sensex?.trend  ?? "up";
   const niftyPrice   = markets?.nifty?.price   ?? null;
@@ -268,30 +298,28 @@ useEffect(() => {
   const silverPrice  = metals?.silver?.price   ?? null;
   const silverChange = metals?.silver?.change  ?? null;
 
-  // ── style helpers ──
   const tickerStyle = isMobile
     ? { display: "flex", padding: "5px 10px", borderBottom: "1px solid #ebebeb" }
     : {
-        maxHeight:    isScrolled ? "0px"   : "200px",
-        opacity:      isScrolled ? 0       : 1,
+        maxHeight:    isScrolled ? "0px"    : "200px",
+        opacity:      isScrolled ? 0        : 1,
         overflow:     "hidden",
-        padding:      isScrolled ? "0 18px": "5px 15px",
-        borderBottom: isScrolled ? "none"  : "1px solid #ebebeb",
+        padding:      isScrolled ? "0 18px" : "5px 15px",
+        borderBottom: isScrolled ? "none"   : "1px solid #ebebeb",
         transition:   "max-height 0.3s ease, opacity 0.3s ease",
       };
 
   const topBarStyle = isMobile
     ? { display: "none" }
     : {
-        maxHeight:    isScrolled ? "0px"   : "200px",
-        opacity:      isScrolled ? 0       : 1,
+        maxHeight:    isScrolled ? "0px"    : "200px",
+        opacity:      isScrolled ? 0        : 1,
         overflow:     "hidden",
-        padding:      isScrolled ? "0 18px": "6px 18px",
-        borderBottom: isScrolled ? "none"  : "1px solid #ebebeb",
+        padding:      isScrolled ? "0 18px" : "6px 18px",
+        borderBottom: isScrolled ? "none"   : "1px solid #ebebeb",
         transition:   "max-height 0.3s ease, opacity 0.3s ease",
       };
 
-  // ── ticker content ──
   const TickerContent = () => (
     <>
       <span className="ticker-item">
@@ -346,7 +374,6 @@ useEffect(() => {
     </>
   );
 
-  // ─────────────────────────────────────────────
   return (
     <>
       <div className={`drawer-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)} />
@@ -378,72 +405,60 @@ useEffect(() => {
         </div>
 
         <div className="drawer-scroll">
-          {NAV_SECTIONS.map(({ label, Icon, links, subcategories }) => {
+          {navSections.map(({ label, slug, Icon, links, subcategories }) => {
             const sectionOpen = expandedSection === label;
             const hasSubcats  = subcategories && subcategories.length > 0;
             const hasLinks    = links && links.length > 0;
+            // ✅ Slug empty ho toh label se banao
+            const finalSlug   = getFinalSlug(slug, label);
 
             return (
               <div className="drawer-section" key={label}>
-
-                {/* ── Section header ── */}
                 <div className="drawer-section-head" onClick={() => toggleSection(label)}>
                   <span className="drawer-section-label">
-                    <Icon size={15} color="#D80100" strokeWidth={2} />
-                    {label}
+                    {Icon && <Icon size={15} color="#D80100" strokeWidth={2} />}
+                    <Link
+                      to={`/category/${finalSlug}`}
+                      style={{ textDecoration: "none", color: "inherit" }}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {label}
+                    </Link>
                   </span>
                   {(hasSubcats || hasLinks) && (
                     <ChevronDown
                       size={14}
                       color="#aa9977"
-                      style={{
-                        transition: "transform 0.24s ease",
-                        transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      }}
+                      style={{ transition: "transform 0.24s ease", transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                     />
                   )}
                 </div>
 
-                {/* ── Section body: subcategories OR plain links ── */}
                 <div className={`drawer-sub-links${sectionOpen ? " open" : ""}`}>
                   {hasSubcats ? (
-                    /* ── 2-level: subcategory → topics ── */
                     subcategories.map((sub) => {
                       const subcatOpen = expandedSubcat === `${label}__${sub.label}`;
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
-
-                          {/* subcategory row */}
                           <div
                             className="drawer-subcat-head"
                             onClick={(e) => toggleSubcat(e, `${label}__${sub.label}`)}
                             style={{
-                              display:        "flex",
-                              alignItems:     "center",
-                              justifyContent: "space-between",
-                              padding:        "8px 16px 8px 28px",
-                              cursor:         "pointer",
-                              fontSize:       13,
-                              fontWeight:     500,
-                              fontFamily:     "Poppins, sans-serif",
-                              color:          subcatOpen ? "#D80100" : "#333",
-                              borderBottom:   "1px solid #f0ece8",
-                              background:     subcatOpen ? "#fff4f3" : "transparent",
-                              transition:     "background 0.15s",
+                              display: "flex", alignItems: "center", justifyContent: "space-between",
+                              padding: "8px 16px 8px 28px", cursor: "pointer", fontSize: 13, fontWeight: 500,
+                              fontFamily: "Poppins, sans-serif", color: subcatOpen ? "#D80100" : "#333",
+                              borderBottom: "1px solid #f0ece8", background: subcatOpen ? "#fff4f3" : "transparent",
+                              transition: "background 0.15s",
                             }}
                           >
                             <span>{sub.label}</span>
                             <ChevronDown
                               size={12}
                               color={subcatOpen ? "#D80100" : "#bbb"}
-                              style={{
-                                transition: "transform 0.2s",
-                                transform:  subcatOpen ? "rotate(180deg)" : "rotate(0deg)",
-                              }}
+                              style={{ transition: "transform 0.2s", transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                             />
                           </div>
 
-                          {/* topics list */}
                           {subcatOpen && (
                             <div className="drawer-topics-list">
                               {sub.topics.map((topic) => (
@@ -453,17 +468,12 @@ useEffect(() => {
                                   className="drawer-topic-link"
                                   onClick={(e) => e.preventDefault()}
                                   style={{
-                                    display:      "block",
-                                    padding:      "6px 16px 6px 44px",
-                                    fontSize:     12.5,
-                                    color:        "#555",
-                                    textDecoration:"none",
-                                    borderBottom: "1px solid #f8f4f0",
-                                    transition:   "color 0.15s, background 0.15s",
-                                    fontFamily:   "Poppins, sans-serif",
+                                    display: "block", padding: "6px 16px 6px 44px", fontSize: 12.5,
+                                    color: "#555", textDecoration: "none", borderBottom: "1px solid #f8f4f0",
+                                    transition: "color 0.15s, background 0.15s", fontFamily: "Poppins, sans-serif",
                                   }}
                                   onMouseEnter={(e) => { e.currentTarget.style.color = "#D80100"; e.currentTarget.style.background = "#fff8f7"; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = "#555";    e.currentTarget.style.background = "transparent"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = "#555"; e.currentTarget.style.background = "transparent"; }}
                                 >
                                   › {topic}
                                 </a>
@@ -474,20 +484,13 @@ useEffect(() => {
                       );
                     })
                   ) : hasLinks ? (
-                    /* ── 1-level: plain links (fallback) ── */
                     links.map((link) => (
-                      <a
-                        key={link}
-                        href="#"
-                        className="drawer-sub-link"
-                        onClick={(e) => e.preventDefault()}
-                      >
+                      <a key={link} href="#" className="drawer-sub-link" onClick={(e) => e.preventDefault()}>
                         {link}
                       </a>
                     ))
                   ) : null}
                 </div>
-
               </div>
             );
           })}
@@ -496,7 +499,7 @@ useEffect(() => {
         <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
-            {["E-Paper", "Live TV", "Newsletter", "Podcast", "60 Second","Bharat Opinion"].map((t) => (
+            {["E-Paper", "Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
@@ -506,7 +509,6 @@ useEffect(() => {
       {/* ══ HEADER ══ */}
       <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
-        {/* TOP TICKER BAR */}
         <div className="ticker-bar" style={tickerStyle}>
           <div className="ticker-left">
             <BarChart2 size={14} className="ticker-icon" />
@@ -533,7 +535,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* SEARCH BAR */}
         <div className="top-bar" style={topBarStyle}>
           <div className="search-row">
             <div className="search-box" ref={searchRef} style={{ position: "relative" }}>
@@ -582,7 +583,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* MAIN NAVBAR */}
         <nav className="main-nav">
           <div className="nav-left">
             <button className="hamburger" aria-label="Menu" onClick={() => setIsOpen(true)}>
@@ -594,8 +594,8 @@ useEffect(() => {
           </div>
 
           <ul className="nav-links">
-            {navLinks.map((link) => (
-              <Link key={link.path} to={link.path} className="nav-link">
+            {navLinks.map((link, idx) => (
+              <Link key={`${link.path}-${idx}`} to={link.path} className="nav-link">
                 {link.label}
               </Link>
             ))}

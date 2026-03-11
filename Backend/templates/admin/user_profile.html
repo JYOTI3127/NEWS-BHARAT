@@ -575,9 +575,9 @@
         </div>
       </div>
 
-    </div>{# /up-right #}
-  </div>{# /up-grid #}
-</div>{# /up-page #}
+    </div>
+  </div>
+</div>
 
 <script>
 function switchProfileTab(name, btn) {
@@ -596,11 +596,11 @@ function togglePass(pwd) {
   if (passVisible) {
     el.textContent  = pwd || '(not set)';
     el.style.letterSpacing = 'normal';
-    btn.textContent = '🙈 Hide';
+    btn.textContent = ' Hide';
   } else {
     el.textContent  = '••••••••••••';
     el.style.letterSpacing = '2px';
-    btn.textContent = '👁 Show';
+    btn.textContent = ' Show';
   }
 }
 </script>

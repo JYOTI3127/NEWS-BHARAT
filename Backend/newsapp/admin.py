@@ -368,14 +368,13 @@ class UserAdmin(BaseUserAdmin):
                 # Send email
                 role_names = ", ".join([r.name for r in roles])
                 send_mail(
-                    subject='Your News4Bharat Account Credentials',
+                    subject='CMS Access Credentials & Joining Letter – News4Bharat',
                     message=f"""
 Dear {full_name},
 
-Welcome to News4Bharat! 🎉
+Welcome to News4Bharat. We are delighted to have you join the team.
 
-We are pleased to inform you that your official CMS account has been successfully created. 
-Below are your login credentials for accessing the News4Bharat Content Management System:
+Your account for the News4Bharat Content Management System (CMS) has been successfully created. Please find your login credentials below:
 
 ──────────────────────────────
 Staff ID : {profile.staff_id}
@@ -384,17 +383,13 @@ Assigned Role(s) : {role_names}
 Login URL : http://127.0.0.1:8000/admin/
 ──────────────────────────────
 
-Please log in using the above credentials and change your password after your first login for security purposes.
+You may use the above credentials to access the CMS. For security reasons, please ensure that you update your password immediately after your first login.
 
-📎 Joining Letter:
-Your official joining letter has been attached below for your reference. 
-Kindly review the document carefully and keep a copy for your records.
+If you encounter any issues while accessing your account or require assistance, please feel free to contact the administrator.
 
-If you face any difficulty accessing your account, please contact the administrator immediately.
+We look forward to your valuable contribution and wish you great success with the News4Bharat team.
 
-We look forward to your valuable contribution to the News4Bharat team.
-
-Best Regards,  
+Warm Regards,  
 Admin Team  
 News4Bharat
 """,

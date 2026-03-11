@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 from .models import UserProfile, generate_password
 from .models import generate_user_id
+from newsapp.models import *
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -81,8 +82,6 @@ def store_old_assigned(sender, instance, **kwargs):
     else:
         instance._old_assigned_to = None
 
-
-# Phir compare karo
 @receiver(post_save, sender=Article)
 def article_assigned(sender, instance, created, **kwargs):
     if not instance.assigned_to:
@@ -90,13 +89,68 @@ def article_assigned(sender, instance, created, **kwargs):
 
     old_assigned = getattr(instance, '_old_assigned_to', None)
 
-    # Sirf tab notification jab assignment nai ho ya badli ho
     if created or (old_assigned != instance.assigned_to):
         Notification.objects.create(
             user=instance.assigned_to,
             notif_type="assign",
             title="New Assignment",
             message=f'You were assigned "{instance.title}"',
-            icon="👤",
+            icon="",
             action_url=f"/admin/newsapp/article/{instance.id}/change/"
+        )
+
+
+# ───────── Article Status Change ─────────
+@receiver(post_save, sender=Article)
+def article_status_notification(sender, instance, **kwargs):
+    if instance.status == "published":
+        Notification.objects.create(
+            user=instance.author,
+            notif_type="article",
+            title="Article Published",
+            message=f"Your article '{instance.title}' is now published!",
+            icon=""  
+        )
+
+# ───────── Role Assigned / Updated ─────────
+@receiver(m2m_changed, sender=UserProfile.roles.through)
+def role_change_notification(sender, instance, action, pk_set, **kwargs):
+    if action in ["post_add", "post_remove"]:
+        for role_id in pk_set:
+            role = Role.objects.get(pk=role_id)
+            Notification.objects.create(
+                user=instance.user,
+                notif_type="role",
+                title="Role Updated",
+                message=f"Your role has been updated: {role.name}",
+                icon="",  
+                action_url=f"/admin/newsapp/role/{instance.id}/change/"
+            )
+
+# ───────── Category Assigned ─────────
+@receiver(m2m_changed, sender=UserProfile.assigned_categories.through)
+def category_assignment_notification(sender, instance, action, pk_set, **kwargs):
+    if action == "post_add":
+        for cat_id in pk_set:
+            category = Category.objects.get(pk=cat_id)
+            Notification.objects.create(
+                user=instance.user,
+                notif_type="category",
+                title="New Category Assigned",
+                message=f"You have been assigned to category '{category.name}'.",
+                icon="", 
+                action_url=f"/admin/newsapp/category/{instance.id}/change/"
+            )
+
+# ───────── New User Created ─────────
+@receiver(post_save, sender=User)
+def new_user_notification(sender, instance, created, **kwargs):
+    if created:
+        Notification.objects.create(
+            user=instance,
+            notif_type="message",
+            title="Welcome!",
+            message=f"Welcome {instance.username}! Your account has been created.",
+            icon="",
+            action_url=f"/admin/newsapp/userprofile/{instance.user.id}/change/"
         )

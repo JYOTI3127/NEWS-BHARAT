@@ -627,6 +627,8 @@ class Notification(models.Model):
         default=False
     )
 
+    is_archived = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )

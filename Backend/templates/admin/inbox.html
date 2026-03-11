@@ -356,7 +356,7 @@ function renderInfoPanel(conv){
 function startDM(uid){
     var existing = CONVS.find(function(c){ return c.type==='private' && c.userId===uid; });
     if(existing){ openConv(existing.id); return; }
-    window.location.href = '/inbox/start/' + uid + '/';
+    window.location.href = '/admin/inbox/start/' + uid + '/';
 }
 
 // ── Send Message ─────────────────────────────────────────────
@@ -381,17 +381,39 @@ function sendMessage(){
     fd.append('text', txt);
     fd.append('csrfmiddlewaretoken', getCsrf());
 
-    fetch('/inbox/send/', { method:'POST', body:fd })
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-            if(data.time){
-                // Update time from server
-                var lastMsg = conv.messages[conv.messages.length-1];
-                lastMsg.time = data.time;
-                renderMessages(conv);
+    function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-        })
-        .catch(function(e){ console.error('Send failed:', e); });
+        }
+    }
+    return cookieValue;
+    }
+
+    var csrftoken = getCookie('csrftoken');
+
+    fetch("{% url 'send_message' %}", {
+        method:'POST',
+        headers:{
+            'X-CSRFToken': csrftoken
+        },
+        body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        if(data.time){
+            var lastMsg = conv.messages[conv.messages.length-1];
+            lastMsg.time = data.time;
+            renderMessages(conv);
+        }
+    })
+    .catch(function(e){ console.error('Send failed:', e); });
 }
 
 function handleKey(e){
@@ -489,7 +511,7 @@ function createGroup(){
     fd.append('csrfmiddlewaretoken', getCsrf());
     memberIds.forEach(function(id){ fd.append('member_ids', id); });
 
-    fetch('/inbox/create-group/', { method:'POST', body:fd })
+    fetch("{% url 'create_group' %}", { method:'POST', body:fd })
         .then(function(r){ return r.json(); })
         .then(function(data){
             var convId = data.conv_id || Date.now();

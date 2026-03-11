@@ -27,6 +27,7 @@ from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
 import os
 import anthropic
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -111,39 +112,53 @@ def category_posts(request, cat_id):
 
 @api_view(['GET', 'POST'])
 def article_list(request):
-    if request.method == 'GET':
-        user = request.user
-        if not user.is_authenticated:
-            return Response({"error": "Authentication required"}, status=401)
-        if user.is_superuser:
-            articles = Article.objects.all()
-        else:
-            profile = user.profile
-            if profile.roles.filter(name="Reporter").exists():
-                articles = Article.objects.filter(assigned_to=user)
-            elif profile.roles.filter(name="Editor").exists():
-                articles = Article.objects.all()
-            else:
-                articles = Article.objects.none()
-        serializer = ArticleSerializer(articles, many=True, context={'request': request})
+    if request.method == "GET":
+        articles = Article.objects.filter(status="published")
+        serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data)
-
-    if request.method == 'POST':
+    elif request.method == "POST":
         serializer = ArticleSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(author=request.user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def dashboard_articles(request):
+    user = request.user
+
+    if not user.is_authenticated:
+        return Response({"error": "Login required"}, status=401)
+
+    if user.is_superuser:
+        articles = Article.objects.all()
+
+    else:
+        profile = user.profile
+
+        if profile.roles.filter(name="Reporter").exists():
+            articles = Article.objects.filter(assigned_to=user)
+
+        elif profile.roles.filter(name="Editor").exists():
+            articles = Article.objects.all()
+
+        else:
+            articles = Article.objects.none()
+
+    serializer = ArticleSerializer(articles, many=True)
+    return Response(serializer.data)
 
 
 def update_article_status(request, article):
     if not has_permission(request.user, "publish_article"):
         raise PermissionDenied("You don't have permission to publish.")
+    from django.utils import timezone
     article.status = "published"
+    article.published_at = timezone.now()
     article.save()
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
 def article_detail(request, pk):
     try:
         article = Article.objects.get(pk=pk)
@@ -153,6 +168,16 @@ def article_detail(request, pk):
     if request.method == "GET":
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data)
+    elif request.method == "POST":
+        # Handle publish action
+        try:
+            update_article_status(request, article)
+            serializer = ArticleSerializer(article, context={'request': request})
+            return Response({"message": "Article published successfully", "data": serializer.data})
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=403)
+        except Exception as e:
+            return Response({"error": f"Failed to publish: {str(e)}"}, status=400)
     elif request.method == "PUT":
         serializer = ArticleSerializer(article, data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -836,12 +861,13 @@ def start_conversation(request, user_id):
     ConversationMember.objects.create(conversation=conv, user=request.user)
     ConversationMember.objects.create(conversation=conv, user=other_user)
 
-    return redirect(f'/inbox/?conv={conv.id}')
+    return redirect(f"{reverse('admin_inbox')}?conv={conv.id}")
 
 
 @staff_member_required
 @require_POST
 def send_message(request):
+    print("SEND MESSAGE VIEW HIT")
     conv_id = request.POST.get("conversation_id")
     text    = request.POST.get("text", "").strip()
 
@@ -857,10 +883,12 @@ def send_message(request):
     if not ConversationMember.objects.filter(conversation=conv, user=request.user).exists():
         return JsonResponse({"error": "Not a member"}, status=403)
 
-    # Message save karo
+    receiver = None
+
     msg = Message.objects.create(
         conversation=conv,
         sender=request.user,
+        receiver=receiver,
         text=text,
         message_type='text',
     )
@@ -876,7 +904,7 @@ def send_message(request):
             title="New Message",
             message=f"{request.user.get_full_name() or request.user.username} sent a message",
             icon="💬",
-            action_url="/admin/inbox/",   # ← bas yeh
+            action_url="/admin/inbox/", 
         )
 
     return JsonResponse({
@@ -891,6 +919,8 @@ def send_message(request):
 def create_group(request):
     name       = request.POST.get('name', '').strip()
     member_ids = request.POST.getlist('member_ids')
+    print("CREATE GROUP HIT")
+    print(request.POST)
 
     if not name or len(member_ids) < 2:
         return JsonResponse({'error': 'Group name aur kam se kam 2 members chahiye'}, status=400)
@@ -910,8 +940,8 @@ def create_group(request):
             pass
 
     return JsonResponse({
-    'conv_id': conv.id,
-    'redirect': f'/inbox/?conv={conv.id}'
+    'ok': True,
+    'redirect': f"{reverse('admin_inbox')}?conv={conv.id}"
 })
 
 
@@ -921,8 +951,15 @@ def create_group(request):
 
 @staff_member_required
 def notifications_view(request):
+
     notifications = Notification.objects.filter(
-        user=request.user
+        user=request.user,
+        is_archived=False
+    ).order_by('-created_at')
+
+    archived_notifications = Notification.objects.filter(
+        user=request.user,
+        is_archived=True
     ).order_by('-created_at')
 
     unread_notifications = notifications.filter(is_read=False).count()
@@ -931,9 +968,39 @@ def notifications_view(request):
         conversation__conversationmember__user=request.user
     ).exclude(sender=request.user).filter(is_read=False).count()
 
+    notifications_today = Notification.objects.filter(
+    user=request.user,
+    created_at__date=timezone.now().date()
+    ).count()
+
     return render(request, 'admin/notifications.html', {
         'title': 'Notifications',
         'notifications': notifications,
+        'archived_notifications': archived_notifications,
         'unread_notifications': unread_notifications,
         'unread_messages': unread_messages,
+        'notifications_today': notifications_today
     })
+
+@login_required
+def archive_notification(request, id):
+    if request.method == "POST":
+        try:
+            notif = Notification.objects.get(id=id, user=request.user)
+            notif.is_archived = True
+            notif.is_read = True
+            notif.save()
+            return JsonResponse({"status": "archived"})
+        except Notification.DoesNotExist:
+            return JsonResponse({"error": "not found"}, status=404)
+        
+@login_required
+def unarchive_notification(request, id):
+    if request.method == "POST":
+        try:
+            notif = Notification.objects.get(id=id, user=request.user)
+            notif.is_archived = False
+            notif.save()
+            return JsonResponse({"status": "restored"})
+        except Notification.DoesNotExist:
+            return JsonResponse({"error": "not found"}, status=404)

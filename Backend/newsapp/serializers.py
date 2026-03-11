@@ -48,6 +48,12 @@ class ArticleSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return obj.image_url
 
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and request.user:
+            validated_data['author'] = request.user
+        return super().create(validated_data)
+
 class ArticleMinSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.username', read_only=True)
     date = serializers.SerializerMethodField()

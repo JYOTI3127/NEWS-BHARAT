@@ -347,18 +347,20 @@
     </header>
 
     {% if messages %}
-    <div class="admin-messages">
-      {% for message in messages %}
-      <div class="admin-message admin-message--{{ message.tags }}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/>
-          <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <span>{{ message }}</span>
-        <button class="msg-close" onclick="this.parentElement.remove()">&#x00D7;</button>
+      <div class="admin-messages">
+        {% for message in messages %}
+          {% if message.message %}
+          <div class="admin-message admin-message--{{ message.tags }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/>
+                <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>{{ message.message }}</span>
+              <button class="msg-close" onclick="this.parentElement.remove()">&#x00D7;</button>
+          </div>
+          {% endif %}
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
     {% endif %}
 
     <div class="admin-content">

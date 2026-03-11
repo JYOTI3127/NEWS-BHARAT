@@ -24,10 +24,4 @@ urlpatterns = [
     path('categories/<int:cat_id>/posts/',     category_posts,   name='api_category_posts'),
     path('media/photos/', media_photos_api, name='media_photos_api'),
     path('media/videos/', media_videos_api, name='media_videos_api'),
-    path('inbox/',                              views.inbox_view,         name='admin_inbox'),
-    path('inbox/new/',                          views.new_chat,           name='new_chat'),
-    path('inbox/start/<int:user_id>/',          views.start_conversation, name='start_conversation'),
-    path('inbox/send/',                         views.send_message,       name='send_message'), 
-    path('inbox/create-group/',                 views.create_group,       name='create_group'),
-    path('notifications/',                      views.notifications_view, name='admin_notifications'),
 ]

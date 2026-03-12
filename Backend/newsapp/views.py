@@ -114,7 +114,7 @@ def category_posts(request, cat_id):
 def article_list(request):
     if request.method == "GET":
         articles = Article.objects.filter(status="published")
-        serializer = ArticleSerializer(articles, many=True)
+        serializer = ArticleSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
     elif request.method == "POST":
         serializer = ArticleSerializer(data=request.data, context={'request': request})
@@ -406,6 +406,16 @@ def datetime_api(request):
 def _format_article(article, highlight=None):
     content_text = article.content or ''
     excerpt = content_text[:120] + '...' if len(content_text) > 120 else content_text
+    # build image url with modification timestamp to bust frontend cache
+    img_url = None
+    if article.image:
+        try:
+            base = request.build_absolute_uri(article.image.url) if request else article.image.url
+            mtime = article.image.storage.get_modified_time(article.image.name)
+            img_url = f"{base}?v={int(mtime.timestamp())}"
+        except Exception:
+            img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
+
     return {
         "id":           article.id,
         "title":        article.title,
@@ -416,7 +426,7 @@ def _format_article(article, highlight=None):
         "status":       article.status,
         "published_at": article.published_at.isoformat() if article.published_at else None,
         "created_at":   article.created_at.isoformat()   if article.created_at   else None,
-        "image":        str(article.image) if article.image else None,
+        "image":        img_url,
         "excerpt":      highlight or excerpt,
         "is_paid":      getattr(article, 'is_paid', False),
     }

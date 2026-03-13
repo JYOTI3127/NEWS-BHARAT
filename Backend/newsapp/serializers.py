@@ -22,12 +22,15 @@ class UserSerializer(serializers.ModelSerializer):
  
  
 class CategorySerializer(serializers.ModelSerializer):
-    article_count  = serializers.ReadOnlyField()
+    article_count  = serializers.SerializerMethodField()
     sub_categories = serializers.ReadOnlyField()
  
     class Meta:
         model  = Category
         fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count']
+    
+    def get_article_count(self, obj):
+        return obj.articles.filter(status='published').count()
  
  
 class ArticleSerializer(serializers.ModelSerializer):

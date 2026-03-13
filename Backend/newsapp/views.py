@@ -1002,6 +1002,18 @@ def notifications_view(request):
 
 
 @login_required
+def mark_notification_read(request, id):
+    if request.method == "POST":
+        try:
+            notif = Notification.objects.get(id=id, user=request.user)
+            notif.is_read = True
+            notif.save()
+            return JsonResponse({"status": "read"})
+        except Notification.DoesNotExist:
+            return JsonResponse({"error": "not found"}, status=404)
+
+
+@login_required
 def archive_notification(request, id):
     if request.method == "POST":
         try:

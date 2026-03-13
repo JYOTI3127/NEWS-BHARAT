@@ -81,15 +81,10 @@ WSGI_APPLICATION = 'news.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'newsbharatdb',
-        'USER': 'postgres',
-        'PASSWORD': 'n4b@admin', 
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.parse('postgresql://neondb_owner:npg_c9Oyqazo7jCK@ep-odd-star-a14jar0m-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
 }
 
 

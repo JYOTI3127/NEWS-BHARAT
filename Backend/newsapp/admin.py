@@ -34,15 +34,18 @@ admin.site.index_title = "Welcome to News Bharat Dashboard"
 # ══════════════════════════════════════════════════════════════
 
 class ArticleVersionInline(admin.TabularInline):
-    model = ArticleVersion
-    extra = 0
-    readonly_fields = ('version_number', 'edited_by', 'edited_at')
+    model          = ArticleVersion
+    extra          = 0
+    readonly_fields = ['version_number', 'title', 'subtitle', 'edited_by', 'created_at']
+ 
+    can_delete     = False
 
 
 class WorkflowLogInline(admin.TabularInline):
-    model = ArticleWorkflowLog
-    extra = 0
-    readonly_fields = ('old_status', 'new_status', 'changed_by', 'changed_at')
+    model           = ArticleWorkflowLog
+    extra           = 0
+    readonly_fields = ['old_status', 'new_status', 'changed_by', 'changed_at', 'remarks']
+    can_delete      = False
 
 
 # ══════════════════════════════════════════════════════════════
@@ -525,7 +528,7 @@ class NewsAdminSite(AdminSite):
             paid_articles  = Article.objects.filter(is_paid=True).count()
             free_articles  = Article.objects.filter(is_paid=False).count()
 
-            total_authors   = User.objects.filter(article__isnull=False).distinct().count()
+            total_authors   = User.objects.filter(articles_authored__isnull=False).distinct().count()
             active_profiles = UserProfile.objects.filter(status='active').count()
             suspended_users = UserProfile.objects.filter(status='suspended').count()
 
@@ -544,7 +547,7 @@ class NewsAdminSite(AdminSite):
             verified_fact_checks = FactCheck.objects.filter(status='verified').count()
             issues_fact_checks   = FactCheck.objects.filter(status='issues_found').count()
 
-            recent_articles = Article.objects.select_related('author', 'category', 'assigned_to').order_by('-created_at')[:8]
+            recent_articles = Article.objects.select_related('author', 'assigned_to').order_by('-created_at')[:8]
             recent_logs     = ArticleWorkflowLog.objects.select_related('article', 'changed_by').order_by('-changed_at')[:5]
             top_reporters   = ReporterMonthlyPerformance.objects.filter(
                 month=now.month, year=now.year
@@ -623,7 +626,7 @@ class ReporterAdmin(admin.ModelAdmin):
             assigned_articles_qs = Article.objects.filter(
                 assigned_to=reporter.user,
                 status__in=['draft', 'review', 'fact_check', 'legal', 'approved', 'scheduled']
-            ).select_related('category').order_by('deadline')
+            ).select_related('author', 'assigned_to').order_by('deadline')
 
             assigned_articles = []
             reporter_overdue = 0
@@ -772,39 +775,87 @@ class FactCheckAdmin(admin.ModelAdmin):
 
 class ArticleAdmin(admin.ModelAdmin):
     inlines = [ArticleVersionInline, WorkflowLogInline]
-
+ 
+    # List view
+    list_display   = ['title', 'status', 'author', 'author_display_name', 'priority', 'created_at']
+    list_filter    = ['status', 'categories', 'is_paid', 'priority']
+    search_fields  = ['title', 'author__username', 'author_display_name']
+ 
+    # Detail / edit page sections
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('title', 'subtitle', 'content', 'image', 'image_url', 'categories')
+        }),
+        ('Publish Settings', {
+            'fields': ('status', 'priority', 'is_paid', 'assigned_to', 'deadline')
+        }),
+        ('SEO', {
+            'fields': (
+                'slug', 'canonical_url', 'meta_description',
+                'focus_keyword', 'noindex', 'nofollow', 'in_sitemap'
+            )
+        }),
+        ('Display Author — Frontend pe dikhega', {
+            'fields': (
+                'author_display_name', 'author_display_position',
+                'author_display_bio', 'author_display_photo',
+                'author_display_twitter', 'author_display_linkedin',
+                'author_display_instagram', 'author_display_facebook',
+                'author_display_articles_count',
+            )
+        }),
+        ('Audit Info — Read Only', {
+            'fields': ('author', 'published_at', 'created_at'),
+            'classes': ('collapse',),
+        }),
+    )
+ 
+    readonly_fields = ['author', 'published_at', 'created_at']
+ 
     def save_model(self, request, obj, form, change):
+        if not change:
+            # Naya article — logged-in user ko author set karo
+            obj.author = request.user
         if change:
             old_status = form.initial.get('status')
             if old_status and obj.status != old_status:
                 if not request.user.is_superuser:
                     allowed = ALLOWED_TRANSITIONS.get(old_status, [])
                     if obj.status not in allowed:
-                        raise ValidationError(f"You can't directly move from {old_status} to {obj.status}")
+                        raise ValidationError(
+                            f"You can't directly move from {old_status} to {obj.status}"
+                        )
         try:
             super().save_model(request, obj, form, change)
         except ValidationError as e:
             self.message_user(request, e.message, level=messages.ERROR)
-
+ 
     class Media:
         js = ('newsapp/custom_admin.js',)
-
+ 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
-
-        articles = Article.objects.select_related('author', 'category', 'assigned_to').order_by('-created_at')
+ 
+        articles = Article.objects.prefetch_related('categories').select_related(
+            'author', 'assigned_to'
+        ).order_by('-created_at')
+ 
         articles_with_images = (
             Article.objects.filter(image__isnull=False).exclude(image='')
-            .select_related('author', 'category').order_by('-created_at')[:12]
+            .select_related('author').prefetch_related('categories')
+            .order_by('-created_at')[:12]
         )
-        recent_activity = ArticleWorkflowLog.objects.select_related('article', 'changed_by').order_by('-changed_at')[:15]
-
+        recent_activity = ArticleWorkflowLog.objects.select_related(
+            'article', 'changed_by'
+        ).order_by('-changed_at')[:15]
+ 
         extra_context.update({
-            'articles': articles, 'articles_with_images': articles_with_images,
-            'recent_activity': recent_activity,
-            'total_articles': articles.count(),
-            'published_articles': articles.filter(status='published').count(),
-            'draft_articles': articles.filter(status='draft').count(),
+            'articles':             articles,
+            'articles_with_images': articles_with_images,
+            'recent_activity':      recent_activity,
+            'total_articles':       articles.count(),
+            'published_articles':   articles.filter(status='published').count(),
+            'draft_articles':       articles.filter(status='draft').count(),
         })
         return super().changelist_view(request, extra_context=extra_context)
 

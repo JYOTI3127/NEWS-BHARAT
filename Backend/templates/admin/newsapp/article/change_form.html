@@ -77,7 +77,7 @@
         <button onclick="fmt('removeFormat')" title="Clear Formatting">&#x2715;</button>
         <div class="sep"></div>
         <button class="ai-spell-btn" onclick="runSpellCheck()"><div class="ai-dot"></div>&#10022; AI Spell Fix</button>
-        <button class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plaig Check</button>
+        <button class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
       </div>
       <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article...">{{ original.content|default:''|safe }}</div>
       <div class="ai-status" id="ai_status"></div>
@@ -154,16 +154,13 @@
       <button class="draft-btn" onclick="submitArticle('draft')">Save as Draft</button>
     </div>
 
-    <!-- ═══════════════════════════════════
-         IMAGE CARD — FIX 1, 3 applied here
-    ════════════════════════════════════ -->
+    <!-- IMAGE CARD -->
     <div class="nb-card">
       <div class="nb-card-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Featured Image
       </div>
 
-      {# DROP ZONE: new article = always visible initially; edit = hidden if image exists #}
       <div class="image-drop" id="image_drop_zone"
            style="{% if original.image %}display:none{% endif %}"
            onclick="document.getElementById('ui_image_file').click()">
@@ -172,15 +169,12 @@
         <p>Drop image here or <strong>click to browse</strong></p>
       </div>
 
-      {# IMAGE PREVIEW — shown when image exists (edit) or after selection (new) #}
       <img id="img_preview"
            class="image-preview"
            src="{% if original.image %}{{ original.image.url }}{% endif %}"
            alt=""
            style="{% if original.image %}display:block{% else %}display:none{% endif %}">
 
-      {# FIX 1 — "Change Image" button: new article me bhi dikhega (JS se control hoga) #}
-      {# id="change_img_btn" always in DOM; hidden by default for new articles, visible for edit #}
       <button type="button" class="change-img-btn" id="change_img_btn"
               onclick="showDropZone()"
               style="{% if original.image %}display:flex{% else %}display:none{% endif %}">
@@ -204,7 +198,6 @@
           Image Specifications
         </div>
         <div class="img-spec-rows">
-          {# FIX 3 — Updated specs: 1200×675px, 16:9 #}
           <div class="img-spec-row"><span class="img-spec-icon">⊞</span><div><span class="img-spec-key">Maximum Size: </span><span class="img-spec-val">1200 x 675 px</span></div></div>
           <div class="img-spec-row"><span class="img-spec-icon">▭</span><div><span class="img-spec-key">Aspect Ratio: </span><span class="img-spec-val">16:9 (landscape, preferred)</span></div></div>
           <div class="img-spec-row"><span class="img-spec-icon">💾</span><div><span class="img-spec-key">Max File Size: </span><span class="img-spec-val">1 MB</span></div></div>
@@ -221,10 +214,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════
-         CATEGORY CARD — FIX 2: Multi-select
-         FIX 2b: Archived categories hidden
-    ════════════════════════════════════════ -->
+    <!-- CATEGORY CARD — Multi-select -->
     <div class="nb-card">
       <div class="nb-card-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
@@ -232,10 +222,9 @@
         <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)">Select one or more</span>
       </div>
       <div class="cat-list" id="cat_list">
-        {% for cat in adminform.form.fields.category.queryset %}
-          {# FIX 2b: Skip archived categories — adjust field name if needed (is_archived / status) #}
+        {% for cat in adminform.form.fields.categories.queryset %}
           {% if not cat.is_archived %}
-          <div class="cat-item {% if original.category_id == cat.pk %}selected{% endif %}"
+          <div class="cat-item {% if original and cat in original.categories.all %}selected{% endif %}"
                onclick="toggleCat(this, {{ cat.pk }})" data-id="{{ cat.pk }}">
             <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
             <span class="cat-name">{{ cat.name }}</span>
@@ -245,8 +234,7 @@
         <div style="font-size:12px;color:var(--muted)">No categories found.</div>
         {% endfor %}
       </div>
-      {# FIX 2: Hidden input now stores comma-separated list of selected IDs #}
-      <input type="hidden" id="ui_category" value="{{ original.category_id|default:'' }}">
+      <input type="hidden" id="ui_category" value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
       <div id="cat_count_label" style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px;">
         <span id="cat_selected_count">0</span> category selected
       </div>
@@ -338,7 +326,7 @@
           <div class="schema-type-row"><span class="schema-type-chip">Article</span><span class="schema-type-chip">NewsArticle</span></div>
           <div class="schema-kv"><span class="schema-k">datePublished</span><span class="schema-v" id="schema_pub">{{ original.published_at|date:'Y-m-d'|default:'— set on publish' }}</span></div>
           <div class="schema-kv"><span class="schema-k">dateModified</span><span class="schema-v" id="schema_mod">{% now "Y-m-d" %}</span></div>
-          <div class="schema-kv"><span class="schema-k">author</span><span class="schema-v">{{ original.assigned_to.get_full_name|default:'— from Assigned Reporter' }}</span></div>
+          <div class="schema-kv"><span class="schema-k">author</span><span class="schema-v">{{ original.author_display_name|default:'— from Editor panel' }}</span></div>
           <div class="schema-kv"><span class="schema-k">headline</span><span class="schema-v schema-v--live" id="schema_headline">{{ original.title|default:'— from Headline' }}</span></div>
           <div class="schema-kv"><span class="schema-k">image</span><span class="schema-v schema-v--live" id="schema_image">{% if original.image %}{{ original.image.url }}{% else %}— from Featured Image{% endif %}</span></div>
           <div class="schema-note">Injected as JSON-LD in <code>&lt;head&gt;</code> on every page load.</div>
@@ -424,13 +412,29 @@
         <div class="ed-list" id="ed_list"></div>
         <input type="hidden" id="ui_editor_id" name="editor_id" value="{{ original.editor_id|default:'' }}">
       </div>
-      {# FIX 4 — All fields now have oninput="updateEditorPreview()" so preview reacts to manual edits #}
-      <div class="ed-field"><div class="ed-label">Display Name</div><input type="text" class="ed-inp" id="ed_name" placeholder="e.g. Priya Sharma" value="{{ original.editor_name|default:'' }}" oninput="updateEditorPreview()"></div>
-      <div class="ed-field"><div class="ed-label">Position / Designation</div><input type="text" class="ed-inp" id="ed_position" placeholder="e.g. Senior Political Editor" value="{{ original.editor_position|default:'' }}" oninput="updateEditorPreview()"></div>
+
+      <!-- ✅ FIX: value reads from author_display_* fields, not editor_* -->
+      <div class="ed-field">
+        <div class="ed-label">Display Name</div>
+        <input type="text" class="ed-inp" id="ed_name" placeholder="e.g. Priya Sharma"
+          value="{{ original.author_display_name|default:'' }}"
+          oninput="updateEditorPreview()">
+      </div>
+
+      <div class="ed-field">
+        <div class="ed-label">Position / Designation</div>
+        <input type="text" class="ed-inp" id="ed_position" placeholder="e.g. Senior Political Editor"
+          value="{{ original.author_display_position|default:'' }}"
+          oninput="updateEditorPreview()">
+      </div>
+
       <div class="ed-field">
         <div class="ed-label">Short Bio <span class="ed-char-badge" id="ed_bio_count">0/200</span></div>
-        <textarea class="ed-inp ed-textarea" id="ed_bio" rows="3" maxlength="200" placeholder="Brief 1–2 line description shown under the article…" oninput="updateBioCount();updateEditorPreview();">{{ original.editor_bio|default:'' }}</textarea>
+        <textarea class="ed-inp ed-textarea" id="ed_bio" rows="3" maxlength="200"
+          placeholder="Brief 1–2 line description shown under the article…"
+          oninput="updateBioCount();updateEditorPreview();">{{ original.author_display_bio|default:'' }}</textarea>
       </div>
+
       <div class="ed-field">
         <div class="ed-label">Profile Photo URL</div>
         <div class="ed-photo-row">
@@ -438,22 +442,65 @@
             <img id="ed_avatar_img" src="" alt="" style="display:none">
             <svg id="ed_avatar_placeholder" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
-          <input type="url" class="ed-inp" id="ed_photo" placeholder="https://… or leave blank for initials avatar" value="{{ original.editor_photo|default:'' }}" oninput="updateEditorPreview()">
+          <input type="url" class="ed-inp" id="ed_photo" placeholder="https://… or leave blank for initials avatar"
+            value="{{ original.author_display_photo|default:'' }}"
+            oninput="updateEditorPreview()">
         </div>
         <div class="ed-hint">Recommended: 200×200px square JPG/PNG. Displayed as circle.</div>
       </div>
+
+      <!-- Row 1: Twitter + LinkedIn -->
       <div class="ed-social-row">
         <div class="ed-field" style="flex:1">
-          <div class="ed-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X / Twitter</div>
-          <input type="text" class="ed-inp" id="ed_twitter" placeholder="@handle" value="{{ original.editor_twitter|default:'' }}" oninput="updateEditorPreview()">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X / Twitter
+          </div>
+          <input type="text" class="ed-inp" id="ed_twitter" placeholder="@handle or full URL"
+            value="{{ original.author_display_twitter|default:'' }}"
+            oninput="updateEditorPreview()">
         </div>
         <div class="ed-field" style="flex:1">
-          <div class="ed-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</div>
-          <input type="text" class="ed-inp" id="ed_linkedin" placeholder="linkedin.com/in/…" value="{{ original.editor_linkedin|default:'' }}" oninput="updateEditorPreview()">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+            LinkedIn
+          </div>
+          <input type="text" class="ed-inp" id="ed_linkedin" placeholder="linkedin.com/in/…"
+            value="{{ original.author_display_linkedin|default:'' }}"
+            oninput="updateEditorPreview()">
         </div>
       </div>
-      <div class="ed-field"><div class="ed-label">Articles Published</div><input type="number" class="ed-inp" id="ed_articles" placeholder="e.g. 142" min="0" value="{{ original.editor_articles|default:'' }}" oninput="updateEditorPreview()"></div>
+
+      <!-- Row 2: Instagram + Facebook (NEW) -->
+      <div class="ed-social-row">
+        <div class="ed-field" style="flex:1">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            Instagram
+          </div>
+          <input type="text" class="ed-inp" id="ed_instagram" placeholder="instagram.com/…"
+            value="{{ original.author_display_instagram|default:'' }}"
+            oninput="updateEditorPreview()">
+        </div>
+        <div class="ed-field" style="flex:1">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            Facebook
+          </div>
+          <input type="text" class="ed-inp" id="ed_facebook" placeholder="facebook.com/…"
+            value="{{ original.author_display_facebook|default:'' }}"
+            oninput="updateEditorPreview()">
+        </div>
+      </div>
+
+      <div class="ed-field">
+        <div class="ed-label">Articles Published</div>
+        <input type="number" class="ed-inp" id="ed_articles" placeholder="e.g. 142" min="0"
+          value="{{ original.author_display_articles_count|default:'' }}"
+          oninput="updateEditorPreview()">
+      </div>
     </div>
+
     <div class="editor-preview-col">
       <div class="ed-preview-header">
         <div class="ed-preview-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Article Preview — As seen on website</div>
@@ -510,32 +557,33 @@
   </div>
 </div>
 
-{# Styles moved to: static/admin/css/article_editor_fixes.css #}
-
 <script>
 /* ══════════════════════════════════════════════
-   FIX 1 — showDropZone: works for both new & edit
-   After selecting an image in a NEW article,
-   "Change Image" button appears so user can swap.
+   showDropZone
 ══════════════════════════════════════════════ */
 function showDropZone() {
   var dz  = document.getElementById('image_drop_zone');
   var btn = document.getElementById('change_img_btn');
   var prev = document.getElementById('img_preview');
-  if (dz)   dz.style.display   = '';          // show drop zone
-  if (btn)  btn.style.display  = 'none';      // hide change btn
-  if (prev) prev.style.display = 'none';      // hide current preview
+  if (dz)   dz.style.display   = '';
+  if (btn)  btn.style.display  = 'none';
+  if (prev) prev.style.display = 'none';
 }
 
 /* ══════════════════════════════════════════════
-   FIX 2 — Multi-select category logic
-   selectedCats = Set of selected category IDs
+   MULTI-CATEGORY — initialise from hidden input
+   which is already pre-filled by Django template
 ══════════════════════════════════════════════ */
-// Initialise: if editing, pre-select existing category
 var selectedCats = new Set();
 (function initCats(){
-  var existing = '{{ original.category_id|default:"" }}';
-  if(existing) selectedCats.add(String(existing));
+  var existing = document.getElementById('ui_category').value;
+  if(existing){
+    existing.split(',').filter(Boolean).forEach(function(id){ selectedCats.add(id.trim()); });
+  }
+  // Mark already-selected items
+  document.querySelectorAll('.cat-item').forEach(function(el){
+    if(selectedCats.has(String(el.dataset.id))) el.classList.add('selected');
+  });
   syncCatInput();
 })();
 
@@ -555,17 +603,19 @@ function toggleCat(el, id) {
 function syncCatInput(){
   var arr = Array.from(selectedCats);
   document.getElementById('ui_category').value = arr.join(',');
-  var countEl = document.getElementById('cat_selected_count');
-  var labelEl = document.getElementById('cat_count_label');
   var n = arr.length;
-  if(countEl) countEl.textContent = n;
+  var labelEl = document.getElementById('cat_count_label');
   if(labelEl){
     labelEl.textContent = n + (n === 1 ? ' category selected' : ' categories selected');
     labelEl.className   = n > 0 ? 'has-selection' : '';
   }
+  var countEl = document.getElementById('cat_selected_count');
+  if(countEl) countEl.textContent = n;
 }
 
-/* EDITOR */
+/* ══════════════════════════════════════════════
+   EDITOR / UNDO-REDO
+══════════════════════════════════════════════ */
 const nbEditor = document.getElementById('ui_content');
 const nbHistory = []; let nbHistIdx = -1; let nbIsUndoRedo = false;
 function nbSaveHistory() { if(nbIsUndoRedo)return; const c=nbEditor.innerHTML; if(nbHistory[nbHistIdx]===c)return; nbHistory.splice(nbHistIdx+1); nbHistory.push(c); nbHistIdx=nbHistory.length-1; if(nbHistory.length>100){nbHistory.shift();nbHistIdx--;} }
@@ -585,20 +635,16 @@ function nbInsertLink(){const url=prompt('URL darj karein (e.g. https://example.
 function insertTag(tag){nbInsertTag(tag);}
 
 /* ══════════════════════════════════════════════
-   IMAGE — FIX 1 + FIX 3
-   After preview, show "Change Image" button.
-   Dimension check updated to 1200×675.
+   IMAGE
 ══════════════════════════════════════════════ */
 function previewImage(inp) {
   const file=inp.files[0]; if(!file)return;
   const url=URL.createObjectURL(file);
   const prev=document.getElementById('img_preview');
   prev.src=url; prev.style.display='block';
-  // hide drop zone, show "Change Image" button (FIX 1)
   var dz=document.getElementById('image_drop_zone');   if(dz)  dz.style.display='none';
-  var btn=document.getElementById('change_img_btn');   if(btn) btn.style.display='flex';   // ← FIX 1
+  var btn=document.getElementById('change_img_btn');   if(btn) btn.style.display='flex';
   document.getElementById('schema_image').textContent=file.name;
-  // also sync url field so SEO score & preview see it
   document.getElementById('ui_image').value=url;
   updateSeoScore(); updateEditorPreview();
   const infoBox=document.getElementById('img_file_info'); if(!infoBox)return;
@@ -612,7 +658,6 @@ function previewImage(inp) {
     document.getElementById('img_fi_dims').textContent=imgEl.naturalWidth+' × '+imgEl.naturalHeight+' px';
     URL.revokeObjectURL(imgEl.src);
     const status=document.getElementById('img_fi_status');
-    // Max dimensions 1200x675 — usse chhhoti image bhi chalegi
     const okSize  = file.size <= 1*1024*1024;
     const okW     = imgEl.naturalWidth  <= 1200;
     const okH     = imgEl.naturalHeight <= 675;
@@ -642,7 +687,6 @@ function previewUrl(url) {
   updateSeoScore(); updateEditorPreview();
 }
 
-/* Page load — existing image: update schema + SEO + preview */
 (function(){
   var imgUrl="{% if original.image %}{{ original.image.url }}{% endif %}";
   if(!imgUrl) return;
@@ -686,8 +730,23 @@ function generateSlug(){const title=document.getElementById('ui_title').value;if
 document.getElementById('ui_title').addEventListener('blur',function(){const slugInp=document.getElementById('ui_slug');if(!slugInp.readOnly&&!slugInp.value.trim())generateSlug();});
 document.getElementById('ui_title').addEventListener('input',function(){const el=document.getElementById('schema_headline');if(el)el.textContent=this.value||'— from Headline';updateSeoScore();updateEditorPreview();});
 
-/* META */
-document.getElementById('ui_meta_desc').addEventListener('input',function(){const len=this.value.length;const badge=document.getElementById('meta_count_badge');const bar=document.getElementById('meta_meter_bar');const hint=document.getElementById('meta_desc_hint');if(badge)badge.textContent=len+'/160';if(bar){bar.style.width=Math.min((len/160)*100,100)+'%';bar.style.background=len===0?'#e2e8f0':len<80?'#f59e0b':'#10b981';}if(hint)hint.textContent=len===0?'Aim for 120–160 chars.':len<80?'Too short — expand to at least 120 characters.':len<=120?'Getting there — aim for 120–160 characters.':'✓ Good length for search snippets.';updateSeoScore();});
+/* META CHAR COUNT */
+(function initMeta(){
+  const ta=document.getElementById('ui_meta_desc');
+  if(!ta)return;
+  function update(){
+    const len=ta.value.length;
+    const badge=document.getElementById('meta_count_badge');
+    const bar=document.getElementById('meta_meter_bar');
+    const hint=document.getElementById('meta_desc_hint');
+    if(badge)badge.textContent=len+'/160';
+    if(bar){bar.style.width=Math.min((len/160)*100,100)+'%';bar.style.background=len===0?'#e2e8f0':len<80?'#f59e0b':'#10b981';}
+    if(hint)hint.textContent=len===0?'Aim for 120–160 chars.':len<80?'Too short — expand to at least 120 characters.':len<=120?'Getting there — aim for 120–160 characters.':'✓ Good length for search snippets.';
+    updateSeoScore();
+  }
+  ta.addEventListener('input',update);
+  update(); // run on load to show existing count
+})();
 
 /* ROBOTS */
 function updateRobots(){const ni=document.getElementById('ui_noindex').checked;const nf=document.getElementById('ui_nofollow').checked;document.getElementById('robots_code').textContent=(ni?'noindex':'index')+', '+(nf?'nofollow':'follow');}
@@ -715,81 +774,110 @@ async function runSpellCheck(){const content=nbEditor.innerText.trim();if(!conte
 async function suggestKeywords(){const title=document.getElementById('ui_title').value;const content=nbEditor.innerText;if(!title&&!content){alert('Add some content first!');return;}const btn=document.getElementById('seo_ai_btn');btn.innerHTML='<div class="ai-loading"></div> Analysing…';try{const res=await fetch('/api/ai/seo-keywords/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({title,content:content.substring(0,1000)})});const data=await res.json();const kwList=document.getElementById('seo_kw_list');if(data.keywords&&data.keywords.length)kwList.innerHTML=data.keywords.map(kw=>`<span class="seo-kw" onclick="selectKw(this,'${kw}')">${kw}</span>`).join('');}catch(e){document.getElementById('seo_kw_list').innerHTML='<span class="seo-kw-placeholder" style="color:#ef4444">AI unavailable.</span>';}btn.innerHTML='<div class="ai-dot"></div> ✦ Suggest with AI';}
 function selectKw(el,kw){el.classList.toggle('active');const fkEl=document.getElementById('ui_focus_kw');if(el.classList.contains('active')&&!fkEl.value.trim()){fkEl.value=kw;updateSeoScore();}}
 
-/* SUBMIT — FIX 2: sends comma-separated categories as 'categories' key */
+/* ══════════════════════════════════════════════
+   SUBMIT — sends all fields including Instagram/Facebook
+   categories sent as array (ManyToMany)
+══════════════════════════════════════════════ */
 function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').value;}
+
 async function submitArticle(forceStatus){
-  const title=document.getElementById('ui_title').value.trim();
-  const content=nbEditor.innerHTML.trim();
-  const categoryVal=document.getElementById('ui_category').value;
-  if(!title){alert('Please enter a headline.');return;}
-  if(!content){alert('Content cannot be empty.');return;}
-  if(!categoryVal){alert('Please select at least one category.');return;}
-  const payload={
+  const title   = document.getElementById('ui_title').value.trim();
+  const content = nbEditor.innerHTML.trim();
+  const categoryVal = document.getElementById('ui_category').value;
+
+  if(!title)       { alert('Please enter a headline.'); return; }
+  if(!content)     { alert('Content cannot be empty.'); return; }
+  if(!categoryVal) { alert('Please select at least one category.'); return; }
+
+  const payload = {
     title,
-    subtitle:document.getElementById('ui_subtitle').value,
+    subtitle:         document.getElementById('ui_subtitle').value,
     content,
-    image_url:document.getElementById('ui_image').value,
-    // FIX 2: send all selected category IDs as an array
-    categories:categoryVal.split(',').filter(Boolean).map(Number),
-    // keep 'category' for backward compat with single-cat APIs
-    category:parseInt(categoryVal.split(',')[0])||null,
-    status:forceStatus||document.getElementById('ui_status').value,
-    priority:document.getElementById('ui_priority').value,
-    is_paid:document.getElementById('ui_is_paid').checked,
-    assigned_to:document.getElementById('ui_assigned').value?parseInt(document.getElementById('ui_assigned').value):null,
-    deadline:document.getElementById('ui_deadline').value||null,
-    slug:document.getElementById('ui_slug').value,
-    canonical_url:document.getElementById('ui_canonical').value,
-    meta_description:document.getElementById('ui_meta_desc').value,
-    focus_keyword:document.getElementById('ui_focus_kw').value,
-    noindex:document.getElementById('ui_noindex').checked,
-    nofollow:document.getElementById('ui_nofollow').checked,
-    in_sitemap:document.getElementById('ui_in_sitemap').checked,
-    editor_id:parseInt(document.getElementById('ui_editor_id').value)||null,
-    editor_name:document.getElementById('ed_name').value,
-    editor_position:document.getElementById('ed_position').value,
-    editor_bio:document.getElementById('ed_bio').value,
-    editor_photo:document.getElementById('ed_photo').value,
-    editor_twitter:document.getElementById('ed_twitter').value,
-    editor_linkedin:document.getElementById('ed_linkedin').value,
-    editor_articles:document.getElementById('ed_articles').value
+    image_url:        document.getElementById('ui_image').value,
+    // categories — ManyToMany — array of IDs
+    categories:       categoryVal.split(',').filter(Boolean).map(Number),
+    status:           forceStatus || document.getElementById('ui_status').value,
+    priority:         document.getElementById('ui_priority').value,
+    is_paid:          document.getElementById('ui_is_paid').checked,
+    assigned_to:      document.getElementById('ui_assigned').value ? parseInt(document.getElementById('ui_assigned').value) : null,
+    deadline:         document.getElementById('ui_deadline').value || null,
+    // SEO
+    slug:             document.getElementById('ui_slug').value,
+    canonical_url:    document.getElementById('ui_canonical').value,
+    meta_description: document.getElementById('ui_meta_desc').value,
+    focus_keyword:    document.getElementById('ui_focus_kw').value,
+    noindex:          document.getElementById('ui_noindex').checked,
+    nofollow:         document.getElementById('ui_nofollow').checked,
+    in_sitemap:       document.getElementById('ui_in_sitemap').checked,
+    // Author display fields
+    editor_id:        parseInt(document.getElementById('ui_editor_id').value) || null,
+    editor_name:      document.getElementById('ed_name').value,
+    editor_position:  document.getElementById('ed_position').value,
+    editor_bio:       document.getElementById('ed_bio').value,
+    editor_photo:     document.getElementById('ed_photo').value,
+    editor_twitter:   document.getElementById('ed_twitter').value,
+    editor_linkedin:  document.getElementById('ed_linkedin').value,
+    editor_instagram: document.getElementById('ed_instagram').value,   // NEW
+    editor_facebook:  document.getElementById('ed_facebook').value,    // NEW
+    editor_articles:  document.getElementById('ed_articles').value
   };
-  const articleId='{{ original.pk|default:"" }}';
-  const url=articleId?`/api/articles/${articleId}/`:'/api/articles/';
-  const method=articleId?'PUT':'POST';
-  try{
-    const formData=new FormData();
-    Object.keys(payload).forEach(key=>{
-      if(payload[key]===null||payload[key]===undefined) return;
+
+  const articleId = '{{ original.pk|default:"" }}';
+  const url    = articleId ? `/api/articles/${articleId}/` : '/api/articles/';
+  const method = articleId ? 'PUT' : 'POST';
+
+  try {
+    const formData = new FormData();
+    Object.keys(payload).forEach(key => {
+      if(payload[key] === null || payload[key] === undefined) return;
       if(Array.isArray(payload[key])){
-        payload[key].forEach(v=>formData.append(key,v));
+        payload[key].forEach(v => formData.append(key, v));
       } else {
-        formData.append(key,payload[key]);
+        formData.append(key, payload[key]);
       }
     });
-    const fileInput=document.getElementById('ui_image_file');
-    if(fileInput&&fileInput.files.length>0) formData.append("image",fileInput.files[0]);
-    const res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});
-    if(res.ok){window.location.href='/admin/newsapp/article/';}
-    else{const err=await res.json();alert('Error: '+JSON.stringify(err));}
-  }catch(e){alert('Server error. Please try again.');}
+    const fileInput = document.getElementById('ui_image_file');
+    if(fileInput && fileInput.files.length > 0) formData.append("image", fileInput.files[0]);
+
+    const res = await fetch(url, { method, headers: {'X-CSRFToken': getCsrf()}, body: formData });
+    if(res.ok){
+      window.location.href = '/admin/newsapp/article/';
+    } else {
+      const err = await res.json();
+      alert('Error: ' + JSON.stringify(err));
+    }
+  } catch(e) {
+    alert('Server error. Please try again.');
+  }
 }
 
 /* ══════════════════════════════════════════════
-   EDITOR DATA
+   EDITOR DATA — reads from DB via template
 ══════════════════════════════════════════════ */
-const editorData=[
+const editorData = [
   {% for u in adminform.form.fields.assigned_to.queryset %}
-  {id:{{ u.pk }},name:"{{ u.get_full_name|default:u.username }}",position:"{{ u.profile.position|default:'Reporter' }}",bio:"{{ u.profile.bio|default:'' }}",photo:"{{ u.profile.photo|default:'' }}",twitter:"{{ u.profile.twitter|default:'' }}",linkedin:"{{ u.profile.linkedin|default:'' }}",articles:{{ u.article_set.count|default:0 }}},
+  {
+    id: {{ u.pk }},
+    name:      "{{ u.get_full_name|default:u.username }}",
+    position:  "{{ u.profile.position|default:'Reporter' }}",
+    bio:       "{{ u.profile.bio|default:'' }}",
+    photo:     "{{ u.profile.photo|default:'' }}",
+    twitter:   "{{ u.profile.twitter|default:'' }}",
+    linkedin:  "{{ u.profile.linkedin|default:'' }}",
+    instagram: "{{ u.profile.instagram|default:'' }}",
+    facebook:  "{{ u.profile.facebook|default:'' }}",
+    articles: {{ u.articles_authored.count|default:0 }}
+  },
   {% empty %}
-  {id:1,name:'Priya Sharma',position:'Senior Political Editor',bio:'Covering national politics and governance for 8+ years.',photo:'',twitter:'@priyasharma',linkedin:'',articles:214},
-  {id:2,name:'Rohit Mehta',position:'Business Correspondent',bio:'Tracking markets, policy, and corporate India.',photo:'',twitter:'@rohitmehta',linkedin:'',articles:187},
-  {id:3,name:'Anjali Kapoor',position:'Tech & Science Reporter',bio:'Decoding technology trends and scientific developments.',photo:'',twitter:'',linkedin:'linkedin.com/in/anjali',articles:98},
-  {id:4,name:'Vikram Singh',position:'Chief of Bureau — Delhi',bio:'Veteran journalist with 15 years of field reporting.',photo:'',twitter:'@vikramsingh',linkedin:'',articles:532},
+  {id:1,name:'Priya Sharma',position:'Senior Political Editor',bio:'Covering national politics and governance for 8+ years.',photo:'',twitter:'@priyasharma',linkedin:'',instagram:'',facebook:'',articles:214},
+  {id:2,name:'Rohit Mehta',position:'Business Correspondent',bio:'Tracking markets, policy, and corporate India.',photo:'',twitter:'@rohitmehta',linkedin:'',instagram:'',facebook:'',articles:187},
   {% endfor %}
 ];
-let selectedEditorId='{{ original.editor_id|default:"" }}';
+
+let selectedEditorId = '{{ original.editor_id|default:"" }}';
+
 function getInitials(name){if(!name)return'?';return name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();}
+
 function renderEditorList(filter){
   const list=document.getElementById('ed_list');if(!list)return;
   const q=(filter||'').toLowerCase();
@@ -797,23 +885,27 @@ function renderEditorList(filter){
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:#94a3b8;padding:8px">No editors found.</div>';return;}
   list.innerHTML=filtered.map(e=>`<div class="ed-card ${String(e.id)===String(selectedEditorId)?'selected':''}" onclick="selectEditor(${e.id})" data-id="${e.id}"><div class="ed-card-av">${e.photo?`<img src="${e.photo}" alt="" onerror="this.style.display='none'">`:''}  <span style="${e.photo?'display:none':''}">${getInitials(e.name)}</span></div><div class="ed-card-info"><div class="ed-card-name">${e.name}</div><div class="ed-card-pos">${e.position}</div></div><div class="ed-card-check">${String(e.id)===String(selectedEditorId)?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div></div>`).join('');
 }
+
 function selectEditor(id){
-  selectedEditorId=String(id);
-  document.getElementById('ui_editor_id').value=id;
-  const ed=editorData.find(e=>String(e.id)===String(id));
-  if(!ed)return;
-  document.getElementById('ed_name').value=ed.name;
-  document.getElementById('ed_position').value=ed.position;
-  document.getElementById('ed_bio').value=ed.bio;
-  document.getElementById('ed_photo').value=ed.photo||'';
-  document.getElementById('ed_twitter').value=ed.twitter||'';
-  document.getElementById('ed_linkedin').value=ed.linkedin||'';
-  document.getElementById('ed_articles').value=ed.articles||'';
+  selectedEditorId = String(id);
+  document.getElementById('ui_editor_id').value = id;
+  const ed = editorData.find(e => String(e.id) === String(id));
+  if(!ed) return;
+  document.getElementById('ed_name').value      = ed.name;
+  document.getElementById('ed_position').value  = ed.position;
+  document.getElementById('ed_bio').value       = ed.bio;
+  document.getElementById('ed_photo').value     = ed.photo || '';
+  document.getElementById('ed_twitter').value   = ed.twitter || '';
+  document.getElementById('ed_linkedin').value  = ed.linkedin || '';
+  document.getElementById('ed_instagram').value = ed.instagram || '';  // NEW
+  document.getElementById('ed_facebook').value  = ed.facebook || '';   // NEW
+  document.getElementById('ed_articles').value  = ed.articles || '';
   renderEditorList();
   updateEditorPreview();
   updateBioCount();
 }
-function filterEditors(val){renderEditorList(val);}
+
+function filterEditors(val){ renderEditorList(val); }
 function updateBioCount(){const bio=document.getElementById('ed_bio'),badge=document.getElementById('ed_bio_count');if(bio&&badge)badge.textContent=bio.value.length+'/200';}
 
 function updateSmallAvatar(url){
@@ -822,92 +914,82 @@ function updateSmallAvatar(url){
   else{img.style.display='none';if(ph)ph.style.display='';}
 }
 
-/* ══════════════════════════════════════════════
-   FIX 4 — updateEditorPreview:
-   Preview reads from ed_name / ed_position / ed_photo
-   fields directly (NOT editorData), so any manual
-   edit in those fields instantly reflects in preview.
-   Also fixed: image now reads from img_preview src
-   when ui_image url field might be a blob URL.
-══════════════════════════════════════════════ */
 function updateEditorPreview(){
-  // FIX 4 — read directly from input fields, not editorData
   const name    = document.getElementById('ed_name').value.trim();
   const pos     = document.getElementById('ed_position').value.trim();
   const photo   = document.getElementById('ed_photo').value.trim();
-
   const title   = document.getElementById('ui_title').value.trim();
   const subtitle= document.getElementById('ui_subtitle').value.trim();
 
-  // FIX 4 image — prefer img_preview.src (handles both blob & url)
   const imgPreviewEl = document.getElementById('img_preview');
   const image = (imgPreviewEl && imgPreviewEl.style.display !== 'none' && imgPreviewEl.src)
                   ? imgPreviewEl.src
                   : document.getElementById('ui_image').value.trim();
 
-  const content =(document.getElementById('ui_content').innerText||'').trim();
+  const content = (document.getElementById('ui_content').innerText || '').trim();
   const slug    = document.getElementById('ui_slug').value.trim();
 
-  // First selected category name
   const firstSelectedCat = document.querySelector('.cat-item.selected .cat-name');
   const catName = firstSelectedCat ? firstSelectedCat.textContent : 'Category';
 
   const initials = getInitials(name);
-  const now = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const now = new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
 
   updateSmallAvatar(photo);
 
-  function setAv(imgId,initId){
-    const imgEl=document.getElementById(imgId),initEl=document.getElementById(initId);
+  function setAv(imgId, initId){
+    const imgEl=document.getElementById(imgId), initEl=document.getElementById(initId);
     if(!imgEl||!initEl)return;
     if(photo){imgEl.src=photo;imgEl.style.display='block';initEl.style.display='none';}
     else{imgEl.style.display='none';initEl.textContent=initials||'?';initEl.style.display='';}
   }
 
-  const words=content.split(/\s+/).filter(Boolean);
-  const summary=words.slice(0,25).join(' ')+(words.length>25?'…':'');
+  const words   = content.split(/\s+/).filter(Boolean);
+  const summary = words.slice(0,25).join(' ') + (words.length > 25 ? '…' : '');
 
-  // Desktop preview
-  const slugEl=document.getElementById('prev_card_slug');         if(slugEl)slugEl.textContent=slug||'article-slug';
-  const cardCat=document.getElementById('prev_card_cat');         if(cardCat)cardCat.textContent=catName;
-  const cardHl=document.getElementById('prev_card_headline');     if(cardHl)cardHl.textContent=title||'Article headline will appear here as you type…';
-  const cardSum=document.getElementById('prev_card_summary');     if(cardSum)cardSum.textContent=summary||subtitle||'Article summary will be taken from your content.';
-  const cardImg=document.getElementById('prev_card_img');
-  const cardImgPh=document.getElementById('prev_card_img_ph');
+  // Desktop
+  const slugEl    = document.getElementById('prev_card_slug');     if(slugEl)   slugEl.textContent    = slug || 'article-slug';
+  const cardCat   = document.getElementById('prev_card_cat');      if(cardCat)  cardCat.textContent   = catName;
+  const cardHl    = document.getElementById('prev_card_headline'); if(cardHl)   cardHl.textContent    = title || 'Article headline will appear here as you type…';
+  const cardSum   = document.getElementById('prev_card_summary');  if(cardSum)  cardSum.textContent   = summary || subtitle || 'Article summary will be taken from your content.';
+  const cardImg   = document.getElementById('prev_card_img');
+  const cardImgPh = document.getElementById('prev_card_img_ph');
   if(image){if(cardImg){cardImg.src=image;cardImg.style.display='block';}if(cardImgPh)cardImgPh.style.display='none';}
   else{if(cardImg)cardImg.style.display='none';if(cardImgPh)cardImgPh.style.display='flex';}
   setAv('prev_card_avatar_img','prev_card_initials');
-  const cardAname=document.getElementById('prev_card_author_name'); if(cardAname)cardAname.textContent=name||'Editor Name';
-  const cardApos=document.getElementById('prev_card_author_pos');   if(cardApos)cardApos.textContent=pos||'Position';
-  const cardTime=document.getElementById('prev_card_time');         if(cardTime)cardTime.textContent=now;
+  const cardAname = document.getElementById('prev_card_author_name'); if(cardAname) cardAname.textContent = name || 'Editor Name';
+  const cardApos  = document.getElementById('prev_card_author_pos');  if(cardApos)  cardApos.textContent  = pos  || 'Position';
+  const cardTime  = document.getElementById('prev_card_time');         if(cardTime)  cardTime.textContent  = now;
 
-  // Mobile preview
-  const mobCat=document.getElementById('prev_mob_cat_tag');       if(mobCat)mobCat.textContent=catName;
-  const mobHl=document.getElementById('prev_mob_hl');             if(mobHl)mobHl.textContent=title||'Article headline here…';
-  const mobSum=document.getElementById('prev_mob_sum');           if(mobSum)mobSum.textContent=summary||'Summary preview…';
-  const mobThumbImg=document.getElementById('prev_mob_thumb_img');
-  const mobThumbPh=document.getElementById('prev_mob_thumb_ph');
+  // Mobile
+  const mobCat      = document.getElementById('prev_mob_cat_tag');    if(mobCat)     mobCat.textContent     = catName;
+  const mobHl       = document.getElementById('prev_mob_hl');          if(mobHl)      mobHl.textContent      = title || 'Article headline here…';
+  const mobSum      = document.getElementById('prev_mob_sum');         if(mobSum)     mobSum.textContent     = summary || 'Summary preview…';
+  const mobThumbImg = document.getElementById('prev_mob_thumb_img');
+  const mobThumbPh  = document.getElementById('prev_mob_thumb_ph');
   if(image){if(mobThumbImg){mobThumbImg.src=image;mobThumbImg.style.display='block';}if(mobThumbPh)mobThumbPh.style.display='none';}
   else{if(mobThumbImg)mobThumbImg.style.display='none';if(mobThumbPh)mobThumbPh.style.display='flex';}
   setAv('prev_mob_av_img','prev_mob_av_init');
-  const mobAname=document.getElementById('prev_mob_aname'); if(mobAname)mobAname.textContent=name||'Editor';
-  const mobTime=document.getElementById('prev_mob_time');   if(mobTime)mobTime.textContent=now;
+  const mobAname = document.getElementById('prev_mob_aname'); if(mobAname) mobAname.textContent = name || 'Editor';
+  const mobTime  = document.getElementById('prev_mob_time');  if(mobTime)  mobTime.textContent  = now;
 }
 
 function switchPreviewTab(btn,tab){
   document.querySelectorAll('.ed-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('preview_desktop').style.display=tab==='desktop'?'':'none';
-  document.getElementById('preview_mobile').style.display=tab==='mobile'?'':'none';
+  document.getElementById('preview_desktop').style.display = tab==='desktop' ? '' : 'none';
+  document.getElementById('preview_mobile').style.display  = tab==='mobile'  ? '' : 'none';
 }
 
 ['ui_title','ui_subtitle','ui_image','ui_slug'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateEditorPreview);});
-document.getElementById('ui_content').addEventListener('input',updateEditorPreview);
+document.getElementById('ui_content').addEventListener('input', updateEditorPreview);
 document.querySelectorAll('.cat-item').forEach(el=>el.addEventListener('click',()=>setTimeout(updateEditorPreview,50)));
 
+// INIT
 renderEditorList();
 updateEditorPreview();
 updateBioCount();
-if(selectedEditorId) selectEditor(selectedEditorId);
+// On load, init bio count
+(function(){ const bio=document.getElementById('ed_bio'); if(bio){ const e=new Event('input'); bio.dispatchEvent(e); } })();
 </script>
 {% endblock %}

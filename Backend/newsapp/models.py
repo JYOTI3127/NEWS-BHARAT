@@ -52,88 +52,110 @@ class Category(models.Model):
 
 class Article(models.Model):
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('review', 'In Review'),
+        ('draft',      'Draft'),
+        ('review',     'In Review'),
         ('fact_check', 'Fact Check'),
-        ('legal', 'Legal Review'),
-        ('approved', 'Approved'),
-        ('scheduled', 'Scheduled'),
-        ('published', 'Published'),
-        ('archived', 'Archived'),
-        ('rejected', 'Rejected'),
+        ('legal',      'Legal Review'),
+        ('approved',   'Approved'),
+        ('scheduled',  'Scheduled'),
+        ('published',  'Published'),
+        ('archived',   'Archived'),
+        ('rejected',   'Rejected'),
     ]
-
-    title = models.CharField(max_length=255)
+ 
+    title    = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255, blank=True)
-    content = models.TextField()
-    # file upload
-    image = models.ImageField(upload_to="articles/", blank=True, null=True)
-
-    # url image
+    content  = models.TextField()
+    image    = models.ImageField(upload_to="articles/", blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
-
+ 
     def get_image(self):
         if self.image:
             return self.image.url
         return self.image_url
-
-    category = models.ForeignKey(
-    'Category',
-    on_delete=models.CASCADE,
-    related_name='articles'
+ 
+    # ── Multi-category (ManyToMany) ──
+    categories = models.ManyToManyField(
+        'Category',
+        related_name='articles',
+        blank=True
     )
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+ 
+    # ── Audit: kisne actually post kiya (backend only) ──
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='articles_authored'
+    )
+ 
+    # ── Display: frontend pe article ke neeche jo dikhega ──
+    author_display_name      = models.CharField(max_length=150, blank=True)
+    author_display_position  = models.CharField(max_length=150, blank=True)
+    author_display_bio       = models.TextField(blank=True)
+    author_display_photo     = models.URLField(blank=True)
+    author_display_twitter   = models.CharField(max_length=200, blank=True)
+    author_display_linkedin  = models.CharField(max_length=200, blank=True)
+    author_display_instagram = models.CharField(max_length=200, blank=True)
+    author_display_facebook  = models.CharField(max_length=200, blank=True)
+    author_display_articles_count = models.PositiveIntegerField(default=0)
+ 
+    # ── SEO fields ──
+    slug             = models.SlugField(max_length=100, unique=True, blank=True)
+    canonical_url    = models.URLField(blank=True)
+    meta_description = models.TextField(blank=True)
+    focus_keyword    = models.CharField(max_length=100, blank=True)
+    noindex          = models.BooleanField(default=False)
+    nofollow         = models.BooleanField(default=False)
+    in_sitemap       = models.BooleanField(default=True)
+ 
+    status   = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     priority = models.IntegerField(default=5)
-    is_paid = models.BooleanField(default=False)
-
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_paid  = models.BooleanField(default=False)
+ 
+    created_at   = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
-
+ 
     assigned_to = models.ForeignKey(
-    User,
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='articles_assigned_to'
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='articles_assigned_to'
     )
-
     deadline = models.DateTimeField(null=True, blank=True)
-
+ 
     def clean(self):
-        if self.assigned_to and self.category_id:
+        if self.assigned_to and self.pk:
             profile = self.assigned_to.profile
-
-            if not profile.assigned_categories.filter(id=self.category_id).exists():
-                # raise ValidationError("Reporter not allowed for this category")
-                pass
-
-
+            # Category check — assigned reporter allowed hai kya
+            for cat in self.categories.all():
+                if not profile.assigned_categories.filter(id=cat.id).exists():
+                    pass  # raise ValidationError if needed
+ 
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
-
+ 
         if is_update:
             old_article = Article.objects.get(pk=self.pk)
-
-            # 🔹 Versioning Logic (Content Change)
+ 
+            # Versioning Logic (Content Change)
             if (
-                old_article.title != self.title or
+                old_article.title    != self.title or
                 old_article.subtitle != self.subtitle or
-                old_article.content != self.content
+                old_article.content  != self.content
             ):
                 last_version = self.versions.order_by('-version_number').first()
                 next_version_number = 1 if not last_version else last_version.version_number + 1
-
+ 
                 ArticleVersion.objects.create(
                     article=self,
                     title=old_article.title,
                     subtitle=old_article.subtitle,
                     content=old_article.content,
-                    edited_by=self.author, 
+                    edited_by=self.author,
                     version_number=next_version_number
                 )
-
+ 
             if old_article.status != self.status:
                 # Workflow Log Logic (Status Change)
                 ArticleWorkflowLog.objects.create(
@@ -143,41 +165,45 @@ class Article(models.Model):
                     changed_by=self.author,
                     remarks=""
                 )
-
+ 
                 # Auto set published_at
                 if self.status == "published":
                     self.published_at = timezone.now()
-
+ 
             if self.assigned_to and self.status != 'draft':
                 if self.assigned_to.profile.status == "suspended":
                     raise ValidationError("This reporter is suspended.")
-
-        self.full_clean()  
+ 
+        self.full_clean()
         super().save(*args, **kwargs)
-
+ 
     def __str__(self):
         return self.title
 
-class ArticleVersion(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='versions')
-    title = models.CharField(max_length=255)
-    subtitle = models.CharField(max_length=255, blank=True)
-    content = models.TextField()
-    edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    edited_at = models.DateTimeField(auto_now_add=True)
-    version_number = models.IntegerField()
 
+class ArticleVersion(models.Model):
+    article        = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='versions')
+    version_number = models.PositiveIntegerField()
+    title          = models.CharField(max_length=255)
+    subtitle       = models.CharField(max_length=255, blank=True)
+    content        = models.TextField()
+    edited_by      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-version_number']
+ 
     def __str__(self):
-        return f"{self.article.title} - v{self.version_number}"
+        return f"{self.article.title} — v{self.version_number}"
     
 class ArticleWorkflowLog(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='workflow_logs')
+    article    = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='workflow_logs')
     old_status = models.CharField(max_length=20)
     new_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     changed_at = models.DateTimeField(auto_now_add=True)
-    remarks = models.TextField(blank=True)
-
+    remarks    = models.TextField(blank=True)
+ 
     def __str__(self):
         return f"{self.article.title}: {self.old_status} → {self.new_status}"
 

@@ -42,7 +42,7 @@ def category_list_page(request):
 
 def category_detail_page(request, slug):
     category = get_object_or_404(Category, slug=slug)
-    articles = category.get_articles()
+    articles = category.articles.filter(status='published').order_by('-created_at')
     paginator = Paginator(articles, 6)
     page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'articles/category_detail.html', {
@@ -96,13 +96,14 @@ def category_restore(request, cat_id):
 @api_view(['GET'])
 def category_posts(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
+    # FIX: category ForeignKey → categories ManyToMany
     articles = Article.objects.filter(
-        category=cat, status='published'
+        categories=cat, status='published'
     ).order_by('-created_at')[:10]
     serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
     return Response({
         'posts': serializer.data,
-        'total': cat.get_article_count()
+        'total': articles.count()
     })
 
 
@@ -116,32 +117,31 @@ def article_list(request):
         articles = Article.objects.filter(status="published")
         serializer = ArticleSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
+
     elif request.method == "POST":
+        if not request.user.is_authenticated:
+            return Response({"error": "Login required"}, status=401)
         serializer = ArticleSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET'])
 def dashboard_articles(request):
     user = request.user
-
     if not user.is_authenticated:
         return Response({"error": "Login required"}, status=401)
 
     if user.is_superuser:
         articles = Article.objects.all()
-
     else:
         profile = user.profile
-
         if profile.roles.filter(name="Reporter").exists():
             articles = Article.objects.filter(assigned_to=user)
-
         elif profile.roles.filter(name="Editor").exists():
             articles = Article.objects.all()
-
         else:
             articles = Article.objects.none()
 
@@ -152,7 +152,6 @@ def dashboard_articles(request):
 def update_article_status(request, article):
     if not has_permission(request.user, "publish_article"):
         raise PermissionDenied("You don't have permission to publish.")
-    from django.utils import timezone
     article.status = "published"
     article.published_at = timezone.now()
     article.save()
@@ -168,8 +167,8 @@ def article_detail(request, pk):
     if request.method == "GET":
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data)
+
     elif request.method == "POST":
-        # Handle publish action
         try:
             update_article_status(request, article)
             serializer = ArticleSerializer(article, context={'request': request})
@@ -178,12 +177,16 @@ def article_detail(request, pk):
             return Response({"error": str(e)}, status=403)
         except Exception as e:
             return Response({"error": f"Failed to publish: {str(e)}"}, status=400)
+
     elif request.method == "PUT":
+        if not request.user.is_authenticated:
+            return Response({"error": "Login required"}, status=401)
         serializer = ArticleSerializer(article, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
+
     elif request.method == "DELETE":
         article.delete()
         return Response(status=204)
@@ -197,19 +200,19 @@ def dashboard_view(request):
     if not request.user.is_staff:
         return redirect("admin:login")
 
-    now = timezone.now()
-    start_of_month = now.replace(day=1)
-    week_ago = now - timedelta(days=7)
+    now             = timezone.now()
+    start_of_month  = now.replace(day=1)
+    week_ago        = now - timedelta(days=7)
 
-    total_articles       = Article.objects.count()
-    published_articles   = Article.objects.filter(status='published').count()
-    review_articles      = Article.objects.filter(status='review').count()
-    fact_check_articles  = Article.objects.filter(status='fact_check').count()
-    draft_articles       = Article.objects.filter(status='draft').count()
-    scheduled_articles   = Article.objects.filter(status='scheduled').count()
-    archived_articles    = Article.objects.filter(status='archived').count()
-    rejected_articles    = Article.objects.filter(status='rejected').count()
-    paid_articles        = Article.objects.filter(is_paid=True).count()
+    total_articles      = Article.objects.count()
+    published_articles  = Article.objects.filter(status='published').count()
+    review_articles     = Article.objects.filter(status='review').count()
+    fact_check_articles = Article.objects.filter(status='fact_check').count()
+    draft_articles      = Article.objects.filter(status='draft').count()
+    scheduled_articles  = Article.objects.filter(status='scheduled').count()
+    archived_articles   = Article.objects.filter(status='archived').count()
+    rejected_articles   = Article.objects.filter(status='rejected').count()
+    paid_articles       = Article.objects.filter(is_paid=True).count()
 
     overdue_articles = Article.objects.filter(
         deadline__lt=now
@@ -223,23 +226,26 @@ def dashboard_view(request):
         status='published', published_at__gte=start_of_month
     ).count()
 
-    total_authors    = User.objects.filter(article_set__isnull=False).distinct().count()
+    # FIX: article_set → articles_authored (related_name)
+    total_authors    = User.objects.filter(articles_authored__isnull=False).distinct().count()
     total_categories = Category.objects.count()
 
-    recent_articles = Article.objects.select_related(
-        'category', 'author', 'assigned_to'
+    recent_articles = Article.objects.prefetch_related('categories').select_related(
+        'author', 'assigned_to'
     ).order_by('-created_at')[:8]
 
+    # FIX: category__name → categories__name (ManyToMany)
     category_data = (
         Article.objects
-        .values('category__name')
+        .values('categories__name')
         .annotate(article_count=Count('id'))
+        .exclude(categories__name__isnull=True)
         .order_by('-article_count')
     )
     max_count = max((c['article_count'] for c in category_data), default=1)
     category_stats = [
         {
-            'name': c['category__name'],
+            'name': c['categories__name'],
             'article_count': c['article_count'],
             'pct': round((c['article_count'] / max_count) * 100, 1)
         }
@@ -272,47 +278,56 @@ def dashboard_view(request):
         archived_articles, rejected_articles, fact_check_articles,
     ]
 
-    pending_fact_checks  = FactCheck.objects.filter(status='pending').count()
-    verified_fact_checks = FactCheck.objects.filter(status='verified').count()
-    issues_fact_checks   = FactCheck.objects.filter(status='issues_found').count()
+    try:
+        pending_fact_checks  = FactCheck.objects.filter(status='pending').count()
+        verified_fact_checks = FactCheck.objects.filter(status='verified').count()
+        issues_fact_checks   = FactCheck.objects.filter(status='issues_found').count()
+    except Exception:
+        pending_fact_checks = verified_fact_checks = issues_fact_checks = 0
 
     recent_logs = ArticleWorkflowLog.objects.select_related(
         'article', 'changed_by'
     ).order_by('-changed_at')[:6]
 
-    top_reporters = ReporterPerformance.objects.select_related(
-        'reporter'
-    ).order_by('-published_articles')[:5]
+    try:
+        top_reporters = ReporterPerformance.objects.select_related(
+            'reporter'
+        ).order_by('-published_articles')[:5]
+    except Exception:
+        top_reporters = []
 
-    homepage_slots = HomepageSlot.objects.filter(is_active=True)
+    try:
+        homepage_slots = HomepageSlot.objects.filter(is_active=True)
+    except Exception:
+        homepage_slots = []
 
     context = {
-        "total_articles": total_articles,
-        "published_articles": published_articles,
-        "review_articles": review_articles,
-        "fact_check_articles": fact_check_articles,
-        "draft_articles": draft_articles,
-        "scheduled_articles": scheduled_articles,
-        "archived_articles": archived_articles,
-        "rejected_articles": rejected_articles,
-        "paid_articles": paid_articles,
-        "overdue_articles": overdue_articles,
-        "published_this_week": published_this_week,
-        "published_this_month": published_this_month,
-        "total_authors": total_authors,
-        "total_categories": total_categories,
-        "recent_articles": recent_articles,
-        "recent_logs": recent_logs,
-        "top_reporters": top_reporters,
-        "category_stats": category_stats,
-        "monthly_labels_json": json.dumps(monthly_labels),
-        "monthly_pub_json": json.dumps(monthly_pub),
-        "monthly_draft_json": json.dumps(monthly_draft),
-        "donut_data_json": json.dumps(donut_data),
-        "pending_fact_checks": pending_fact_checks,
-        "verified_fact_checks": verified_fact_checks,
-        "issues_fact_checks": issues_fact_checks,
-        "homepage_slots": homepage_slots,
+        "total_articles":        total_articles,
+        "published_articles":    published_articles,
+        "review_articles":       review_articles,
+        "fact_check_articles":   fact_check_articles,
+        "draft_articles":        draft_articles,
+        "scheduled_articles":    scheduled_articles,
+        "archived_articles":     archived_articles,
+        "rejected_articles":     rejected_articles,
+        "paid_articles":         paid_articles,
+        "overdue_articles":      overdue_articles,
+        "published_this_week":   published_this_week,
+        "published_this_month":  published_this_month,
+        "total_authors":         total_authors,
+        "total_categories":      total_categories,
+        "recent_articles":       recent_articles,
+        "recent_logs":           recent_logs,
+        "top_reporters":         top_reporters,
+        "category_stats":        category_stats,
+        "monthly_labels_json":   json.dumps(monthly_labels),
+        "monthly_pub_json":      json.dumps(monthly_pub),
+        "monthly_draft_json":    json.dumps(monthly_draft),
+        "donut_data_json":       json.dumps(donut_data),
+        "pending_fact_checks":   pending_fact_checks,
+        "verified_fact_checks":  verified_fact_checks,
+        "issues_fact_checks":    issues_fact_checks,
+        "homepage_slots":        homepage_slots,
     }
     return render(request, "admin/index.html", context)
 
@@ -324,7 +339,7 @@ def dashboard_view(request):
 @api_view(['GET'])
 def weather_api(request):
     city = request.GET.get("city", "Delhi")
-    url = "https://api.openweathermap.org/data/2.5/weather"
+    url  = "https://api.openweathermap.org/data/2.5/weather"
     params = {"q": city, "appid": settings.OPENWEATHER_API_KEY, "units": "metric"}
     try:
         response = requests.get(url, params=params, timeout=5)
@@ -332,12 +347,12 @@ def weather_api(request):
         if response.status_code != 200:
             return Response({"error": "City not found"}, status=400)
         return Response({
-            "city": city,
+            "city":        city,
             "temperature": data["main"]["temp"],
-            "feels_like": data["main"]["feels_like"],
-            "humidity": data["main"]["humidity"],
+            "feels_like":  data["main"]["feels_like"],
+            "humidity":    data["main"]["humidity"],
             "description": data["weather"][0]["description"],
-            "icon": data["weather"][0]["icon"]
+            "icon":        data["weather"][0]["icon"]
         })
     except Exception:
         return Response({"error": "Weather service unavailable"}, status=500)
@@ -349,16 +364,16 @@ def metal_ticker(request):
     silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
     return Response({
         "gold": {
-            "price": gold.price if gold else 0,
-            "change": gold.change if gold else 0,
+            "price":          gold.price if gold else 0,
+            "change":         gold.change if gold else 0,
             "percent_change": gold.percent_change if gold else 0,
-            "trend": gold.trend if gold else "neutral"
+            "trend":          gold.trend if gold else "neutral"
         },
         "silver": {
-            "price": silver.price if silver else 0,
-            "change": silver.change if silver else 0,
+            "price":          silver.price if silver else 0,
+            "change":         silver.change if silver else 0,
             "percent_change": silver.percent_change if silver else 0,
-            "trend": silver.trend if silver else "neutral"
+            "trend":          silver.trend if silver else "neutral"
         }
     })
 
@@ -403,25 +418,29 @@ def datetime_api(request):
 # SEARCH API
 # ═══════════════════════════════════════════════════════
 
-def _format_article(article, highlight=None):
+def _format_article(article, request=None, highlight=None):
     content_text = article.content or ''
     excerpt = content_text[:120] + '...' if len(content_text) > 120 else content_text
-    # build image url with modification timestamp to bust frontend cache
+
     img_url = None
     if article.image:
         try:
-            base = request.build_absolute_uri(article.image.url) if request else article.image.url
+            base  = request.build_absolute_uri(article.image.url) if request else article.image.url
             mtime = article.image.storage.get_modified_time(article.image.name)
             img_url = f"{base}?v={int(mtime.timestamp())}"
         except Exception:
             img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
 
+    # FIX: categories is now ManyToMany — take first category for display
+    first_cat = article.categories.first()
+
     return {
         "id":           article.id,
         "title":        article.title,
         "slug":         getattr(article, 'slug', str(article.id)),
-        "category":     article.category.name if article.category else None,
-        "category_id":  article.category.id   if article.category else None,
+        "category":     first_cat.name if first_cat else None,
+        "category_id":  first_cat.id   if first_cat else None,
+        "categories":   list(article.categories.values('id', 'name')),
         "author":       article.author.username if article.author else None,
         "status":       article.status,
         "published_at": article.published_at.isoformat() if article.published_at else None,
@@ -432,7 +451,7 @@ def _format_article(article, highlight=None):
     }
 
 
-def _search_elasticsearch(query, status, limit):
+def _search_elasticsearch(query, status, limit, request=None):
     from .documents import ArticleDocument
     from elasticsearch_dsl import Q as ESQ
     es_query = ArticleDocument.search()
@@ -441,7 +460,7 @@ def _search_elasticsearch(query, status, limit):
     es_query = es_query.query(
         ESQ('bool', should=[
             ESQ('multi_match', query=query,
-                fields=['title^5', 'title.autocomplete^3', 'category.name^3', 'author.username^2', 'content'],
+                fields=['title^5', 'title.autocomplete^3', 'categories.name^3', 'author.username^2', 'content'],
                 type='best_fields', operator='or'),
             ESQ('multi_match', query=query,
                 fields=['title.fuzzy^3', 'content.fuzzy'], fuzziness='AUTO', prefix_length=1),
@@ -455,27 +474,29 @@ def _search_elasticsearch(query, status, limit):
     articles_data = []
     for hit in response:
         try:
-            article = Article.objects.select_related('author', 'category').get(id=hit.meta.id)
+            article = Article.objects.prefetch_related('categories').select_related('author').get(id=hit.meta.id)
             highlight_text = None
             if hasattr(hit.meta, 'highlight'):
                 if hasattr(hit.meta.highlight, 'content'):
                     highlight_text = ' ... '.join(hit.meta.highlight.content)
                 elif hasattr(hit.meta.highlight, 'title'):
                     highlight_text = hit.meta.highlight.title[0]
-            articles_data.append(_format_article(article, highlight_text))
+            articles_data.append(_format_article(article, request, highlight_text))
         except Exception:
             continue
     return articles_data
 
 
-def _search_django_orm(query, status, limit):
+def _search_django_orm(query, status, limit, request=None):
     qs = Article.objects.filter(
-        Q(title__icontains=query) | Q(content__icontains=query) |
-        Q(author__username__icontains=query) | Q(category__name__icontains=query)
-    ).select_related('author', 'category')
+        Q(title__icontains=query) |
+        Q(content__icontains=query) |
+        Q(author__username__icontains=query) |
+        Q(categories__name__icontains=query)   # FIX: category → categories
+    ).select_related('author').prefetch_related('categories').distinct()
     if status != 'all':
         qs = qs.filter(status=status)
-    return [_format_article(a) for a in qs.order_by('-published_at', '-created_at')[:limit]]
+    return [_format_article(a, request) for a in qs.order_by('-published_at', '-created_at')[:limit]]
 
 
 @require_GET
@@ -483,22 +504,22 @@ def search_api(request):
     query  = request.GET.get('q', '').strip()
     type_  = request.GET.get('type', 'all')
     limit  = min(int(request.GET.get('limit', 8)), 20)
-    status = request.GET.get('status', 'published')
+    s_status = request.GET.get('status', 'published')
 
     if len(query) < 2:
         return JsonResponse({"query": query, "total": 0, "articles": [], "categories": [],
                              "error": "Query must be at least 2 characters"}, status=400)
 
-    articles_data = []
+    articles_data  = []
     categories_data = []
-    search_engine = "orm"
+    search_engine  = "orm"
 
     if type_ in ('all', 'article'):
         try:
-            articles_data = _search_elasticsearch(query, status, limit)
+            articles_data = _search_elasticsearch(query, s_status, limit, request)
             search_engine = "elasticsearch"
         except Exception:
-            articles_data = _search_django_orm(query, status, limit)
+            articles_data = _search_django_orm(query, s_status, limit, request)
             search_engine = "orm_fallback"
 
     if type_ in ('all', 'category'):
@@ -506,16 +527,17 @@ def search_api(request):
             article_count=Count('articles', filter=Q(articles__status='published'))
         ).order_by('-article_count')[:limit]:
             categories_data.append({
-                "id": cat.id, "name": cat.name,
-                "slug": getattr(cat, 'slug', str(cat.id)),
+                "id":            cat.id,
+                "name":          cat.name,
+                "slug":          getattr(cat, 'slug', str(cat.id)),
                 "article_count": cat.article_count,
             })
 
     return JsonResponse({
-        "query": query,
-        "total": len(articles_data) + len(categories_data),
-        "articles": articles_data,
-        "categories": categories_data,
+        "query":         query,
+        "total":         len(articles_data) + len(categories_data),
+        "articles":      articles_data,
+        "categories":    categories_data,
         "search_engine": search_engine,
     })
 
@@ -536,11 +558,11 @@ def get_client_ip(request):
 
 
 def is_rate_limited(profile, ip):
-    now       = timezone.now()
-    cutoff    = (now - timedelta(minutes=RATE_LIMIT_WINDOW)).isoformat()
-    log       = profile.login_attempts_ip
+    now        = timezone.now()
+    cutoff     = (now - timedelta(minutes=RATE_LIMIT_WINDOW)).isoformat()
+    log        = profile.login_attempts_ip
     timestamps = [t for t in log.get(ip, []) if t > cutoff]
-    log[ip]   = timestamps
+    log[ip]    = timestamps
     profile.login_attempts_ip = log
     profile.save(update_fields=['login_attempts_ip'])
     return len(timestamps) >= MAX_ATTEMPTS_PER_IP
@@ -644,7 +666,7 @@ def secure_login_view(request):
             LoginAttemptLog.objects.create(user=user_obj, username_tried=username, ip_address=ip,
                                            user_agent=ua, status='locked',
                                            note='3 failed attempts — account locked 30 min')
-            messages.error(request, f"🔒 Account locked for 30 minutes. A notification has been sent to your email.")
+            messages.error(request, "🔒 Account locked for 30 minutes. A notification has been sent to your email.")
         else:
             remaining = 3 - profile.failed_attempts
             LoginAttemptLog.objects.create(user=user_obj, username_tried=username, ip_address=ip,
@@ -783,8 +805,8 @@ def media_photos_api(request):
     for article in articles:
         try:
             items.append({
-                'url': request.build_absolute_uri(article.image.url),
-                'name': article.title,
+                'url':        request.build_absolute_uri(article.image.url),
+                'name':       article.title,
                 'article_id': article.id,
             })
         except Exception:
@@ -798,7 +820,7 @@ def media_videos_api(request):
 
 
 # ═══════════════════════════════════════════════════════
-# INBOX VIEWS  ← FIXED
+# INBOX VIEWS
 # ═══════════════════════════════════════════════════════
 
 @staff_member_required
@@ -816,7 +838,7 @@ def inbox_view(request):
     conv_id = request.GET.get("conv")
 
     active_conversation = None
-    messages = []
+    conv_messages = []
 
     if conv_id:
         try:
@@ -824,21 +846,20 @@ def inbox_view(request):
         except Conversation.DoesNotExist:
             active_conversation = None
 
-    # ⭐ agar conv select nahi hai → latest open karo
     if not active_conversation and conversations.exists():
         active_conversation = conversations.first()
 
     if active_conversation:
-        messages = active_conversation.messages.select_related(
+        conv_messages = active_conversation.messages.select_related(
             "sender"
         ).order_by("created_at")
 
     return render(request, 'admin/inbox.html', {
-        'title': 'Inbox',
-        'staff_users': staff_users,
-        'conversations': conversations,
+        'title':               'Inbox',
+        'staff_users':         staff_users,
+        'conversations':       conversations,
         'active_conversation': active_conversation,
-        'messages': messages,
+        'messages':            conv_messages,
     })
 
 
@@ -846,7 +867,7 @@ def inbox_view(request):
 def new_chat(request):
     users = User.objects.filter(is_staff=True).exclude(id=request.user.id).order_by('first_name', 'username')
     return render(request, 'admin/new_chat.html', {
-        'title': 'New Chat',
+        'title':     'New Chat',
         'all_users': users,
     })
 
@@ -855,7 +876,6 @@ def new_chat(request):
 def start_conversation(request, user_id):
     other_user = get_object_or_404(User, id=user_id)
 
-    # Pehle check karo — existing private conv hai kya?
     existing = Conversation.objects.filter(
         conv_type='private',
         conversationmember__user=request.user
@@ -866,7 +886,6 @@ def start_conversation(request, user_id):
     if existing:
         return redirect(f'/inbox/?conv={existing.id}')
 
-    # Naya banao — ✅ through model se manually add karo
     conv = Conversation.objects.create(conv_type='private')
     ConversationMember.objects.create(conversation=conv, user=request.user)
     ConversationMember.objects.create(conversation=conv, user=other_user)
@@ -877,7 +896,6 @@ def start_conversation(request, user_id):
 @staff_member_required
 @require_POST
 def send_message(request):
-    print("SEND MESSAGE VIEW HIT")
     conv_id = request.POST.get("conversation_id")
     text    = request.POST.get("text", "").strip()
 
@@ -889,16 +907,13 @@ def send_message(request):
     except Conversation.DoesNotExist:
         return JsonResponse({"error": "Conversation not found"}, status=404)
 
-    # ✅ Member check — through model se
     if not ConversationMember.objects.filter(conversation=conv, user=request.user).exists():
         return JsonResponse({"error": "Not a member"}, status=403)
-
-    receiver = None
 
     msg = Message.objects.create(
         conversation=conv,
         sender=request.user,
-        receiver=receiver,
+        receiver=None,
         text=text,
         message_type='text',
     )
@@ -906,7 +921,6 @@ def send_message(request):
     conv.updated_at = timezone.now()
     conv.save(update_fields=["updated_at"])
 
-    # Notification baaki members ko
     for member in conv.members.exclude(id=request.user.id):
         Notification.objects.create(
             user=member,
@@ -914,7 +928,7 @@ def send_message(request):
             title="New Message",
             message=f"{request.user.get_full_name() or request.user.username} sent a message",
             icon="💬",
-            action_url="/admin/inbox/", 
+            action_url="/admin/inbox/",
         )
 
     return JsonResponse({
@@ -929,18 +943,13 @@ def send_message(request):
 def create_group(request):
     name       = request.POST.get('name', '').strip()
     member_ids = request.POST.getlist('member_ids')
-    print("CREATE GROUP HIT")
-    print(request.POST)
 
     if not name or len(member_ids) < 2:
         return JsonResponse({'error': 'Group name aur kam se kam 2 members chahiye'}, status=400)
 
     conv = Conversation.objects.create(conv_type='group', name=name)
 
-    ConversationMember.objects.create(
-    conversation=conv,
-    user=request.user
-    )
+    ConversationMember.objects.create(conversation=conv, user=request.user)
 
     for uid in member_ids:
         try:
@@ -950,9 +959,9 @@ def create_group(request):
             pass
 
     return JsonResponse({
-    'ok': True,
-    'redirect': f"{reverse('admin_inbox')}?conv={conv.id}"
-})
+        'ok':       True,
+        'redirect': f"{reverse('admin_inbox')}?conv={conv.id}"
+    })
 
 
 # ═══════════════════════════════════════════════════════
@@ -961,7 +970,6 @@ def create_group(request):
 
 @staff_member_required
 def notifications_view(request):
-
     notifications = Notification.objects.filter(
         user=request.user,
         is_archived=False
@@ -979,18 +987,19 @@ def notifications_view(request):
     ).exclude(sender=request.user).filter(is_read=False).count()
 
     notifications_today = Notification.objects.filter(
-    user=request.user,
-    created_at__date=timezone.now().date()
+        user=request.user,
+        created_at__date=timezone.now().date()
     ).count()
 
     return render(request, 'admin/notifications.html', {
-        'title': 'Notifications',
-        'notifications': notifications,
-        'archived_notifications': archived_notifications,
-        'unread_notifications': unread_notifications,
-        'unread_messages': unread_messages,
-        'notifications_today': notifications_today
+        'title':                   'Notifications',
+        'notifications':           notifications,
+        'archived_notifications':  archived_notifications,
+        'unread_notifications':    unread_notifications,
+        'unread_messages':         unread_messages,
+        'notifications_today':     notifications_today,
     })
+
 
 @login_required
 def archive_notification(request, id):
@@ -998,12 +1007,13 @@ def archive_notification(request, id):
         try:
             notif = Notification.objects.get(id=id, user=request.user)
             notif.is_archived = True
-            notif.is_read = True
+            notif.is_read     = True
             notif.save()
             return JsonResponse({"status": "archived"})
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
-        
+
+
 @login_required
 def unarchive_notification(request, id):
     if request.method == "POST":

@@ -90,7 +90,13 @@
 
           <!-- Category -->
           <td>
-            <span class="art-cat">{{ article.category.name|default:"—" }}</span>
+            <span class="art-cat">
+              {% for category in article.categories.all %}
+                {{ category.name }}{% if not forloop.last %}, {% endif %}
+              {% empty %}
+                —
+              {% endfor %}
+            </span>
           </td>
 
           <!-- Author -->

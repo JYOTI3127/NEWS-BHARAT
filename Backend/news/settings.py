@@ -21,12 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7uf(u#&rj5=7ewa&5qt@9$c1*nlg^09f$hyd7t+@0)fr&+ft5p'
+import os
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-7uf(u#&rj5=7ewa&5qt@9$c1*nlg^09f$hyd7t+@0)fr&+ft5p')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -41,19 +42,21 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'newsapp',
-    'django_crontab', 
+    # 'django_crontab', 
 
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'news.urls'
@@ -84,7 +87,7 @@ WSGI_APPLICATION = 'news.wsgi.application'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.parse('postgresql://neondb_owner:npg_c9Oyqazo7jCK@ep-odd-star-a14jar0m-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL', 'postgresql://neondb_owner:npg_c9Oyqazo7jCK@ep-odd-star-a14jar0m-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'))
 }
 
 
@@ -122,11 +125,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -137,25 +142,25 @@ OPENWEATHER_API_KEY = "bad03cf01c063dcee90194478cda4bff"
 METAL_API_KEY = "776f81dc7c1d552466ac6d57852228ea"
 TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
 
-CRONJOBS = [
-    ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
-]
+# CRONJOBS = [
+#     ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
+# ]
 
 
 # ── Elasticsearch Connection ─────────────────────────────────────────
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'http://localhost:9200',   # default ES port
+# ELASTICSEARCH_DSL = {
+#     'default': {
+#         'hosts': 'http://localhost:9200',   # default ES port
 
-        # Agar ES 8.x use kar rahe ho aur security enabled hai:
-        # 'http_auth': ('elastic', 'your_password'),
-        # 'use_ssl': True,
-        # 'verify_certs': False,
-    },
-}
+#         # Agar ES 8.x use kar rahe ho aur security enabled hai:
+#         # 'http_auth': ('elastic', 'your_password'),
+#         # 'use_ssl': True,
+#         # 'verify_certs': False,
+#     },
+# }
 
 # Auto update index jab model save ho
-ELASTICSEARCH_DSL_AUTO_REFRESH = True
+# ELASTICSEARCH_DSL_AUTO_REFRESH = True
 
 
 LOGOUT_REDIRECT_URL = '/admin/login/'

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', lambda request: HttpResponse("Backend Running ✅")),
+    path('', lambda request: redirect('admin/'), name='home'),,
 
     # ── Inbox & Notifications — admin/ se PEHLE ──────────────
     path('admin/inbox/',                          views.inbox_view,         name='admin_inbox'),

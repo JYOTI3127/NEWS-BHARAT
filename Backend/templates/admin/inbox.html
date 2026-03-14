@@ -1,153 +1,222 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
-{% block title %}Inbox — News4Bharat Admin{% endblock %}
-{% block content_title %}Inbox{% endblock %}
+{% block title %}Inbox — News4Bharat{% endblock %}
+{% block content_title %}{% endblock %}
 
 {% block extrastyle %}
-  {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
 {% endblock %}
 
 {% block content %}
 
-<!-- ── Toast stack ── -->
-<div class="toast-stack" id="toastStack"></div>
+<div id="toastStack"></div>
 
-<!-- ── New Group Modal ── -->
-<div class="modal-backdrop" id="groupModal" onclick="if(event.target===this)closeGroupModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-title">Create Group Chat</div>
-    <div class="modal-field">
-      <label class="modal-lbl">Group Name</label>
-      <input class="modal-inp" type="text" id="groupNameInput" placeholder="e.g. Editorial Team, Sports Desk…">
+<!-- ── Group Modal ── -->
+<div class="ms-movl" id="groupModal" onclick="if(event.target===this)closeGM()">
+  <div class="ms-modal" onclick="event.stopPropagation()">
+    <div class="ms-mhead">
+      <div class="ms-mtitle">New group chat</div>
+      <button class="ms-mx" onclick="closeGM()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="modal-field">
-      <label class="modal-lbl">Select Members</label>
-      <div class="cb-list" id="cbList"></div>
+    <div class="ms-mbody">
+      <div class="ms-mlbl">Group name</div>
+      <input class="ms-minp" type="text" id="groupNameInput" placeholder="e.g. Editorial Team">
+      <div class="ms-mlbl">Add people</div>
+      <div class="ms-cblist" id="cbList"></div>
     </div>
-    <div class="modal-footer">
-      <button class="modal-btn" onclick="closeGroupModal()">Cancel</button>
-      <button class="modal-btn primary" onclick="createGroup()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Create Group
+    <div class="ms-mfoot">
+      <button class="ms-bcancel" onclick="closeGM()">Cancel</button>
+      <button class="ms-bcreate" onclick="createGroup()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Create
       </button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════ PAGE LAYOUT ════════════════════ -->
-<div class="in-page-wrap">
+<!-- ════════════ SHELL ════════════ -->
+<div class="ms-root">
 
-  <!-- Page Header -->
-  <div class="in-page-header">
-    <div>
-      <div class="in-breadcrumb">Dashboard / <span>Inbox</span></div>
-      <div class="in-page-title">Inbox</div>
-      <div class="in-page-sub">Private &amp; group messages with your team</div>
+  <!-- RAIL -->
+  <nav class="ms-rail">
+    <a class="ms-rb active" title="Chat">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Chat</span>
+    </a>
+    <a class="ms-rb" title="Meet">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      <span>Meet</span>
+    </a>
+    <a class="ms-rb" title="People">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>People</span>
+    </a>
+    <div class="ms-rail-sep"></div>
+    <a class="ms-rb" title="Communities">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span>Communities</span>
+    </a>
+    <a class="ms-rb" title="Calendar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Calendar</span>
+    </a>
+    <div class="ms-rail-sep"></div>
+    <a class="ms-rb" title="Activity">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>Activity</span>
+    </a>
+    <div class="ms-rail-av" title="{{ request.user.get_full_name|default:request.user.username }}">
+      {{ request.user.get_full_name|default:request.user.username|first|upper }}
     </div>
-    <div class="in-header-actions">
-      <a href="{% url 'new_chat' %}" class="btn-outline">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        New Chat
-      </a>
-      <button class="btn-outline" onclick="openGroupModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        New Group
-      </button>
+  </nav>
+
+  <!-- SIDEBAR -->
+  <div class="ms-sidebar">
+    <div class="ms-sbhead">
+      <div class="ms-sbtitle">Chat</div>
+      <div class="ms-sbacts">
+        <button class="ms-ib" title="Filter">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+        <button class="ms-ib" title="New video call">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </button>
+        <a href="{% url 'new_chat' %}" class="ms-ib" title="New chat" style="text-decoration:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="10" y1="11" x2="14" y2="11"/></svg>
+        </a>
+        <button class="ms-ib" title="New group chat" onclick="openGM()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+      </div>
     </div>
+    <div class="ms-swrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="ms-search" type="text" placeholder="Search" oninput="filterC(this.value)">
+    </div>
+    <div class="ms-cscroll" id="convList"></div>
   </div>
 
-  <!-- Body -->
-  <div class="in-body">
+  <!-- CHAT WINDOW -->
+  <div class="ms-chat">
 
-    <!-- Sidebar -->
-    <div class="in-sidebar">
-      <div class="in-search-wrap">
-        <svg class="in-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="in-search" type="text" placeholder="Search conversations…" oninput="filterConvs(this.value)">
+    <!-- Empty state -->
+    <div class="ms-empty" id="chatEmpty">
+      <div class="ms-emptyicon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
-      <div class="conv-list" id="convList"></div>
+      <h3>Select a conversation</h3>
+      <p>Choose from the left to open a chat</p>
     </div>
 
-    <!-- Chat Window -->
-    <div class="chat-window" id="chatWindow">
+    <!-- Active chat -->
+    <div id="chatMain" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
 
-      <!-- Empty state -->
-      <div class="chat-empty" id="chatEmpty">
-        <div class="chat-empty-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </div>
-        <h3>No conversation selected</h3>
-        <p>Pick a person from the list or start a new group to begin chatting</p>
-      </div>
+      <div class="ms-ctopbar" id="chatTopbar"></div>
 
-      <!-- Active Chat -->
-      <div id="chatMain" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-        <div class="chat-topbar" id="chatTopbar"></div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-          <div class="attach-bar" id="attachBar" style="display:none"></div>
-          <div class="chat-input-row" style="position:relative">
-            <div class="emoji-picker" id="emojiPicker">
-              <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-              <span onclick="insertEmoji('❤️')">❤️</span><span onclick="insertEmoji('👍')">👍</span>
-              <span onclick="insertEmoji('🔥')">🔥</span><span onclick="insertEmoji('📰')">📰</span>
-              <span onclick="insertEmoji('✅')">✅</span><span onclick="insertEmoji('⚡')">⚡</span>
-              <span onclick="insertEmoji('🎉')">🎉</span><span onclick="insertEmoji('👀')">👀</span>
-              <span onclick="insertEmoji('🙌')">🙌</span><span onclick="insertEmoji('💡')">💡</span>
-              <span onclick="insertEmoji('📷')">📷</span><span onclick="insertEmoji('🗂️')">🗂️</span>
-              <span onclick="insertEmoji('⏰')">⏰</span><span onclick="insertEmoji('🚀')">🚀</span>
+      <div class="ms-msgs" id="chatMessages"></div>
+
+      <div class="ms-inparea">
+        <div class="ms-inpbox">
+
+          <!-- Format / tool bar -->
+          <div class="ms-toolbar">
+            <!-- Emoji -->
+            <button class="ms-tbtn" onclick="toggleE()" title="Emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </button>
+            <!-- Attach file -->
+            <button class="ms-tbtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <!-- Attach image -->
+            <button class="ms-tbtn" onclick="document.getElementById('imgInput').click()" title="Attach image">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <div class="ms-tsep"></div>
+            <!-- Bold -->
+            <button class="ms-tbtn" title="Bold" style="font-weight:800;font-size:13px">B</button>
+            <!-- Italic -->
+            <button class="ms-tbtn" title="Italic" style="font-style:italic;font-size:13px">I</button>
+            <!-- Underline -->
+            <button class="ms-tbtn" title="Underline" style="text-decoration:underline;font-size:13px">U</button>
+            <div class="ms-tsep"></div>
+            <!-- Strikethrough -->
+            <button class="ms-tbtn" title="Strikethrough" style="text-decoration:line-through;font-size:13px">S</button>
+            <!-- Bullet list -->
+            <button class="ms-tbtn" title="Bullet list">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.2" fill="currentColor"/><circle cx="4" cy="12" r="1.2" fill="currentColor"/><circle cx="4" cy="18" r="1.2" fill="currentColor"/></svg>
+            </button>
+            <!-- More options -->
+            <button class="ms-tbtn" title="More options" style="margin-left:auto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+          </div>
+
+          <!-- Attach chip bar -->
+          <div class="ms-abar" id="attachBar"></div>
+
+          <!-- Textarea + send -->
+          <div class="ms-inprow">
+            <div class="ms-epicker" id="emojiPicker">
+              <span onclick="ins('&#x1F600;')">&#x1F600;</span>
+              <span onclick="ins('&#x1F602;')">&#x1F602;</span>
+              <span onclick="ins('&#x2764;&#xFE0F;')">&#x2764;&#xFE0F;</span>
+              <span onclick="ins('&#x1F44D;')">&#x1F44D;</span>
+              <span onclick="ins('&#x1F525;')">&#x1F525;</span>
+              <span onclick="ins('&#x1F4F0;')">&#x1F4F0;</span>
+              <span onclick="ins('&#x2705;')">&#x2705;</span>
+              <span onclick="ins('&#x26A1;')">&#x26A1;</span>
+              <span onclick="ins('&#x1F389;')">&#x1F389;</span>
+              <span onclick="ins('&#x1F440;')">&#x1F440;</span>
+              <span onclick="ins('&#x1F64C;')">&#x1F64C;</span>
+              <span onclick="ins('&#x1F4A1;')">&#x1F4A1;</span>
+              <span onclick="ins('&#x1F4F7;')">&#x1F4F7;</span>
+              <span onclick="ins('&#x1F5C2;&#xFE0F;')">&#x1F5C2;&#xFE0F;</span>
+              <span onclick="ins('&#x23F0;')">&#x23F0;</span>
+              <span onclick="ins('&#x1F680;')">&#x1F680;</span>
             </div>
-            <textarea class="chat-input" id="chatInput" rows="1"
-              placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-              onkeydown="handleKey(event)"
-              oninput="autoGrow(this)"></textarea>
-            <div class="chat-input-btns">
-              <button class="inp-btn" onclick="toggleEmoji()" title="Emoji">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-              </button>
-              <button class="inp-btn" onclick="document.getElementById('imgInput').click()" title="Send Image">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              </button>
-              <button class="inp-btn" onclick="document.getElementById('fileInput').click()" title="Attach File">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-              </button>
-            </div>
-            <button class="inp-send" onclick="sendMessage()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <textarea class="ms-ta" id="chatInput" rows="1"
+              placeholder="Type a new message"
+              onkeydown="hkey(event)"
+              oninput="grow(this)"></textarea>
+            <button class="ms-sendbtn" onclick="send()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
         </div>
-        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xlsx,.csv,.txt,.zip,.png,.jpg" onchange="handleFile(event)" style="display:none">
-        <input type="file" id="imgInput" accept="image/*" onchange="handleImg(event)" style="display:none">
+        <div class="ms-inphint">Press Enter to send &nbsp;&middot;&nbsp; Shift+Enter for new line</div>
       </div>
-    </div>
 
-    <!-- Info Panel -->
-    <div class="chat-info-panel" id="infoPanel" style="display:none"></div>
+    </div><!-- /chatMain -->
+  </div><!-- /ms-chat -->
 
-  </div>
-</div>
+</div><!-- /ms-root -->
+
+<input type="file" id="fileInput" onchange="hfile(event)" style="display:none">
+<input type="file" id="imgInput" accept="image/*" onchange="himg(event)" style="display:none">
 
 <script>
-// ── Data from Django ──────────────────────────────────────────
-var CURRENT_USER = {
-    id: {{ request.user.id }},
-    name: "{{ request.user.get_full_name|default:request.user.username|escapejs }}",
-    color: "#1950DF",
-    online: true,
-    role: "{% if request.user.is_superuser %}Superuser{% else %}Staff{% endif %}"
+// ── Django Data ───────────────────────────────────────
+var CU = {
+  id:     {{ request.user.id }},
+  name:   "{{ request.user.get_full_name|default:request.user.username|escapejs }}",
+  color:  "#6264a7",
+  online: true,
+  role:   "{% if request.user.is_superuser %}Superuser{% else %}Staff{% endif %}"
 };
 
 var USERS = [
 {% for u in staff_users %}
 {
-    id: {{ u.id }},
-    name: "{{ u.get_full_name|default:u.username|escapejs }}",
-    role: "{% if u.is_superuser %}Superuser{% else %}Staff{% endif %}",
-    color: "#1950DF",
-    online: {{ u.is_active|yesno:'true,false' }}
+  id:     {{ u.id }},
+  name:   "{{ u.get_full_name|default:u.username|escapejs }}",
+  role:   "{% if u.is_superuser %}Superuser{% else %}Staff{% endif %}",
+  color:  "#6264a7",
+  online: {{ u.is_active|yesno:'true,false' }}
 }{% if not forloop.last %},{% endif %}
 {% endfor %}
 ];
@@ -155,393 +224,269 @@ var USERS = [
 var CONVS = [
 {% for conv in conversations %}
 {
-    id: {{ conv.id }},
-    type: "{{ conv.conv_type }}",
-    name: "{{ conv.name|default:''|escapejs }}",
-    userId: {% with other=conv.members.all %}{% for m in other %}{% if m.id != request.user.id %}{{ m.id }}{% endif %}{% endfor %}{% endwith %},
-    members: [{% for m in conv.members.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}],
-    unread: 0,
-    messages: [
-    {% for msg in conv.messages.all|dictsort:"created_at" %}
-    {
-        from: {{ msg.sender.id }},
-        text: "{{ msg.text|default:''|escapejs }}",
-        time: "{{ msg.created_at|time:'H:i' }}",
-        type: "text"
-    }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-]
+  id:      {{ conv.id }},
+  type:    "{{ conv.conv_type }}",
+  name:    "{{ conv.name|default:''|escapejs }}",
+  userId:  {% with other=conv.members.all %}{% for m in other %}{% if m.id != request.user.id %}{{ m.id }}{% endif %}{% endfor %}{% endwith %},
+  members: [{% for m in conv.members.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}],
+  unread:  0,
+  messages:[
+  {% for msg in conv.messages.all|dictsort:"created_at" %}
+  {
+    from: {{ msg.sender.id }},
+    text: "{{ msg.text|default:''|escapejs }}",
+    time: "{{ msg.created_at|time:'H:i' }}"
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+  ]
 }{% if not forloop.last %},{% endif %}
 {% endfor %}
 ];
 
-// ── State ────────────────────────────────────────────────────
-var currentConvId = null;
-var pendingFiles  = [];
-var convSearch    = '';
+// ── State ─────────────────────────────────────────────
+var curId = null, convSearch = '';
 
-// ── Helpers ──────────────────────────────────────────────────
-function getUser(id){
-    if(id === CURRENT_USER.id) return CURRENT_USER;
-    return USERS.find(function(u){ return u.id === id; });
-}
-function getConv(id){ return CONVS.find(function(c){ return c.id === id; }); }
-function convName(c){
-    if(c.type === 'group') return c.name;
-    var u = getUser(c.userId);
-    return u ? u.name : 'Unknown';
-}
-function convInit(c){
-    if(c.type === 'group') return c.name.substring(0,2).toUpperCase();
-    var u = getUser(c.userId);
-    return u ? u.name.charAt(0).toUpperCase() : '?';
-}
-function convColor(c){
-    if(c.type === 'group') return '#6366f1';
-    var u = getUser(c.userId);
-    return u ? (u.color || '#1950DF') : '#1950DF';
-}
-function convOnline(c){
-    if(c.type === 'group') return false;
-    var u = getUser(c.userId);
-    return u && u.online;
-}
-function lastMsg(c){
-    if(!c.messages.length) return 'No messages yet';
-    var m = c.messages[c.messages.length-1];
-    return m.text.length > 42 ? m.text.substring(0,42)+'…' : m.text;
-}
-function lastTime(c){
-    return c.messages.length ? c.messages[c.messages.length-1].time : '';
-}
-function esc(s){
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function isOwn(id){ return id === CURRENT_USER.id; }
-function nowTime(){
-    var d = new Date();
-    return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
-}
-function getCsrf(){
-    var m = document.cookie.match(/csrftoken=([^;]+)/);
-    return m ? m[1] : '';
+// ── Helpers ───────────────────────────────────────────
+function gu(id){ return id===CU.id ? CU : USERS.find(function(u){ return u.id===id; }); }
+function gc(id){ return CONVS.find(function(c){ return c.id===id; }); }
+function cn(c){ if(c.type==='group') return c.name; var u=gu(c.userId); return u?u.name:'Unknown'; }
+function ci(c){ if(c.type==='group') return c.name.substring(0,2).toUpperCase(); var u=gu(c.userId); return u?u.name.charAt(0).toUpperCase():'?'; }
+function ol(c){ if(c.type==='group') return false; var u=gu(c.userId); return u&&u.online; }
+function lm(c){ if(!c.messages.length) return 'No messages yet'; var m=c.messages[c.messages.length-1]; return (m.from===CU.id?'You: ':'')+(m.text.length>40?m.text.substring(0,40)+'...':m.text); }
+function lt(c){ return c.messages.length ? c.messages[c.messages.length-1].time : ''; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function nw(){ var d=new Date(); return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes(); }
+function csrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function toast(msg){ var t=document.createElement('div'); t.className='ms-toast'; t.textContent=msg; document.getElementById('toastStack').appendChild(t); setTimeout(function(){ t.remove(); }, 2800); }
+
+// ── Render conversation list ──────────────────────────
+function filterC(v){ convSearch=v.toLowerCase(); renderList(); }
+
+function renderList(){
+  var list = document.getElementById('convList');
+  var f = CONVS.filter(function(c){ return cn(c).toLowerCase().includes(convSearch); });
+  if(!f.length){
+    list.innerHTML = '<div style="padding:28px 16px;text-align:center;font-size:12.5px;color:#9e9e9e;line-height:1.8">No conversations found.</div>';
+    return;
+  }
+  var html = '<div class="ms-sechd">'+
+    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>'+
+    '<span>Recent</span></div>';
+  f.forEach(function(c){ html += buildCI(c); });
+  list.innerHTML = html;
+  list.querySelectorAll('.ms-ci').forEach(function(el){
+    el.addEventListener('click', function(){ openConv(parseInt(el.dataset.id)); });
+  });
 }
 
-// ── Conversation List ─────────────────────────────────────────
-function filterConvs(v){ convSearch = v.toLowerCase(); renderConvList(); }
-
-function renderConvList(){
-    var list = document.getElementById('convList');
-    var filtered = CONVS.filter(function(c){
-        return convName(c).toLowerCase().includes(convSearch);
-    });
-    if(!filtered.length){
-        list.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:12.5px;color:#9ca3af;line-height:1.7">No conversations yet.<br>Click <strong>New Chat</strong> to start.</div>';
-        return;
-    }
-    var html = '';
-    filtered.forEach(function(c){ html += buildConvItem(c); });
-    list.innerHTML = html;
-    list.querySelectorAll('.conv-item').forEach(function(el){
-        el.addEventListener('click', function(){ openConv(parseInt(el.getAttribute('data-id'))); });
-    });
+function buildCI(c){
+  var online = ol(c);
+  return '<div class="ms-ci'+(c.id===curId?' active':'')+'" data-id="'+c.id+'">'+
+    '<div class="ms-av'+(c.type==='group'?' group':'')+'">'+ci(c)+
+      '<div class="ms-st '+(online?'on':'off')+'"></div>'+
+    '</div>'+
+    '<div class="ms-cbody">'+
+      '<div class="ms-ctop"><div class="ms-cname">'+esc(cn(c))+'</div><div class="ms-ctime">'+lt(c)+'</div></div>'+
+      '<div class="ms-cprev">'+esc(lm(c))+'</div>'+
+    '</div>'+
+    (c.unread?'<div class="ms-ubadge">'+c.unread+'</div>':'')+
+    '<button class="ms-cdots" onclick="event.stopPropagation()" title="More options">'+
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>'+
+    '</button>'+
+  '</div>';
 }
 
-function buildConvItem(c){
-    var color = convColor(c);
-    var online = convOnline(c);
-    return '<div class="conv-item'+(c.id===currentConvId?' active':'')+'" data-id="'+c.id+'">'+
-        '<div class="conv-av'+(c.type==='group'?' group':'')+'" style="background:'+color+'22;color:'+color+'">'+
-            convInit(c)+(online?'<div class="conv-online"></div>':'')+
-        '</div>'+
-        '<div class="conv-info">'+
-            '<div class="conv-name">'+esc(convName(c))+'</div>'+
-            '<div class="conv-last">'+esc(lastMsg(c))+'</div>'+
-        '</div>'+
-        '<div class="conv-meta">'+
-            '<div class="conv-time">'+lastTime(c)+'</div>'+
-            (c.unread ? '<div class="conv-badge">'+c.unread+'</div>' : '')+
-        '</div>'+
-    '</div>';
-}
-
-// ── Open Conversation ─────────────────────────────────────────
+// ── Open conversation ─────────────────────────────────
 function openConv(id){
-    currentConvId = id;
-    var conv = getConv(id);
-    conv.unread = 0;
-    renderConvList();
-    document.getElementById('chatEmpty').style.display = 'none';
-    document.getElementById('chatMain').style.display = 'flex';
-    document.getElementById('infoPanel').style.display = 'flex';
-    renderTopbar(conv);
-    renderMessages(conv);
-    renderInfoPanel(conv);
-    setTimeout(function(){ var m=document.getElementById('chatMessages'); m.scrollTop=m.scrollHeight; }, 50);
+  curId = id;
+  var conv = gc(id); conv.unread = 0;
+  renderList();
+  document.getElementById('chatEmpty').style.display = 'none';
+  document.getElementById('chatMain').style.display  = 'flex';
+  renderTopbar(conv);
+  renderMsgs(conv);
+  setTimeout(function(){ document.getElementById('chatMessages').scrollTop = 99999; }, 50);
+  document.getElementById('chatInput').focus();
 }
 
 function renderTopbar(conv){
-    var color = convColor(conv);
-    var online = convOnline(conv);
-    var statusHtml = conv.type==='group'
-        ? '<div style="font-size:11.5px;color:#9ca3af">'+conv.members.length+' members</div>'
-        : '<div style="font-size:11.5px;color:'+(online?'#0FBC87':'#9ca3af')+'">'+( online?'● Online':'● Offline')+'</div>';
-    document.getElementById('chatTopbar').innerHTML =
-        '<div class="chat-topbar-av'+(conv.type==='group'?' group':'')+'" style="background:'+color+'22;color:'+color+'">'+convInit(conv)+'</div>'+
-        '<div><div class="chat-topbar-name">'+esc(convName(conv))+'</div>'+statusHtml+'</div>'+
-        '<div class="chat-topbar-actions">'+
-            '<button class="chat-icon-btn" title="Search in chat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>'+
-        '</div>';
+  document.getElementById('chatTopbar').innerHTML =
+    '<div class="ms-ctav'+(conv.type==='group'?' group':'')+'">'+ci(conv)+'</div>'+
+    '<span class="ms-ctname">'+esc(cn(conv))+'</span>'+
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2" style="margin-left:4px;cursor:pointer" title="Edit name"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
+    '<div class="ms-tabs">'+
+      '<button class="ms-tab active">Chat</button>'+
+      '<button class="ms-tab">Files</button>'+
+      '<button class="ms-tab">+1</button>'+
+    '</div>'+
+    '<div class="ms-tright">'+
+      '<button class="ms-membtn" title="View members">'+
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'+
+        conv.members.length+
+      '</button>'+
+      '<button class="ms-ib" style="width:28px;height:28px" title="Search in conversation">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'+
+      '</button>'+
+      '<button class="ms-ib" style="width:28px;height:28px" title="More options">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>'+
+      '</button>'+
+    '</div>';
 }
 
-// ── Messages ─────────────────────────────────────────────────
-function renderMessages(conv){
-    var container = document.getElementById('chatMessages');
-    container.innerHTML = '<div class="msg-date-sep">Today</div>';
-    if(!conv.messages.length){
-        container.innerHTML += '<div style="text-align:center;padding:30px;font-size:13px;color:#9ca3af">No messages yet. Say hello! 👋</div>';
-        return;
-    }
-    conv.messages.forEach(function(msg){
-        var own = isOwn(msg.from);
-        var sender = getUser(msg.from);
-        var color = (sender && sender.color) ? sender.color : '#1950DF';
-        var init = sender ? sender.name.charAt(0).toUpperCase() : '?';
-        var name = sender ? sender.name : 'Unknown';
-        var row = document.createElement('div');
-        row.className = 'msg-row' + (own?' own':'');
-        var avHtml = '<div class="msg-av-sm" style="background:'+color+'22;color:'+color+'">'+init+'</div>';
-        var senderLbl = (!own && conv.type==='group') ? '<div class="msg-sender">'+esc(name)+'</div>' : '';
-        row.innerHTML =
-            (own ? '' : avHtml)+
-            '<div class="msg-wrap">'+
-                senderLbl+
-                '<div class="msg-bubble">'+esc(msg.text)+'</div>'+
-                '<div class="msg-time">'+msg.time+'</div>'+
-            '</div>'+
-            (own ? avHtml : '');
-        container.appendChild(row);
+// ── Render messages ───────────────────────────────────
+function renderMsgs(conv){
+  var c = document.getElementById('chatMessages');
+  c.innerHTML = '';
+  if(!conv.messages.length){
+    c.innerHTML = '<div style="text-align:center;padding:40px;font-size:13px;color:#9e9e9e">No messages yet. Start the conversation!</div>';
+    return;
+  }
+  // Group consecutive messages from same sender
+  var groups = [], cur = null;
+  conv.messages.forEach(function(msg){
+    if(!cur || cur.from !== msg.from){ cur = {from:msg.from, msgs:[msg]}; groups.push(cur); }
+    else { cur.msgs.push(msg); }
+  });
+  c.innerHTML = '<div class="ms-datesep">Today</div>';
+  groups.forEach(function(g){
+    var own    = g.from === CU.id;
+    var sender = gu(g.from);
+    var name   = sender ? sender.name : 'Unknown';
+    var init   = sender ? sender.name.charAt(0).toUpperCase() : '?';
+    var grpdiv = document.createElement('div');
+    grpdiv.className = 'ms-mgroup';
+    g.msgs.forEach(function(msg, i){
+      var row = document.createElement('div');
+      row.className = 'ms-mrow' + (own ? ' own' : '');
+      var avHtml  = '<div class="ms-mav'+(i>0?' hid':'')+'">'+init+'</div>';
+      var meta    = (!own && i===0)
+        ? '<div class="ms-mmeta"><span class="ms-msender">'+esc(name)+'</span><span class="ms-mtime">'+msg.time+'</span></div>'
+        : '';
+      var timeHtml = (own || i>0)
+        ? '<div style="font-size:10.5px;color:#9e9e9e;margin-top:2px;'+(own?'text-align:right':'')+';font-family:var(--font)">'+msg.time+'</div>'
+        : '';
+      row.innerHTML =
+        (own ? '' : avHtml)+
+        '<div class="ms-mcontent">'+meta+
+          '<div class="ms-bubble '+(own?'out':'in')+'">'+esc(msg.text)+'</div>'+
+          timeHtml+
+        '</div>'+
+        (own ? avHtml : '');
+      grpdiv.appendChild(row);
     });
+    c.appendChild(grpdiv);
+  });
 }
 
-// ── Info Panel ───────────────────────────────────────────────
-function renderInfoPanel(conv){
-    var memberIds = conv.type==='group' ? conv.members : [CURRENT_USER.id, conv.userId];
-    var html = '<div class="info-sec"><div class="info-sec-title">Members ('+memberIds.length+')</div>';
-    memberIds.forEach(function(uid){
-        var u = (uid===CURRENT_USER.id) ? CURRENT_USER : getUser(uid);
-        if(!u) return;
-        var isMe = (uid===CURRENT_USER.id);
-        var color = u.color || '#1950DF';
-        html +=
-            '<div class="info-member">'+
-                '<div class="info-av" style="background:'+color+'22;color:'+color+'">'+
-                    u.name.charAt(0).toUpperCase()+
-                    '<div class="dot" style="background:'+(u.online?'#0FBC87':'#d1d5db')+'"></div>'+
-                '</div>'+
-                '<div style="flex:1;min-width:0">'+
-                    '<div class="info-name">'+esc(u.name)+(isMe?' <span style="font-size:10px;color:#9ca3af">(You)</span>':'')+'</div>'+
-                    '<div class="info-role">'+esc(u.role||'Staff')+'</div>'+
-                '</div>'+
-                (!isMe && conv.type==='group' ? '<button class="dm-btn" onclick="startDM('+uid+')">DM</button>' : '')+
-            '</div>';
-    });
-    html += '</div>';
-    if(conv.type==='group'){
-        html += '<div class="info-sec"><div class="info-sec-title">About</div><div style="font-size:12px;color:#9ca3af;line-height:1.7">Group for team coordination. All members can message and share media.</div></div>';
-    }
-    document.getElementById('infoPanel').innerHTML = html;
-}
-
-function startDM(uid){
-    var existing = CONVS.find(function(c){ return c.type==='private' && c.userId===uid; });
-    if(existing){ openConv(existing.id); return; }
-    window.location.href = '/admin/inbox/start/' + uid + '/';
-}
-
-// ── Send Message ─────────────────────────────────────────────
-function sendMessage(){
-    var conv = getConv(currentConvId);
-    if(!conv) return;
-    var input = document.getElementById('chatInput');
-    var txt = input.value.trim();
-    if(!txt) return;
-
-    // Optimistically add to UI
-    var localTime = nowTime();
-    conv.messages.push({ from: CURRENT_USER.id, text: txt, time: localTime, type: 'text' });
-    input.value = '';
-    autoGrow(input);
-    renderMessages(conv);
-    setTimeout(function(){ var m=document.getElementById('chatMessages'); m.scrollTop=m.scrollHeight; }, 30);
-
-    // Save to DB
-    var fd = new FormData();
-    fd.append('conversation_id', conv.id);
-    fd.append('text', txt);
-    fd.append('csrfmiddlewaretoken', getCsrf());
-
-    function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-    }
-
-    var csrftoken = getCookie('csrftoken');
-
-    fetch("{% url 'send_message' %}", {
-        method:'POST',
-        headers:{
-            'X-CSRFToken': csrftoken
-        },
-        body: fd
-    })
+// ── Send message ──────────────────────────────────────
+function send(){
+  var conv = gc(curId); if(!conv) return;
+  var inp  = document.getElementById('chatInput');
+  var txt  = inp.value.trim(); if(!txt) return;
+  conv.messages.push({from:CU.id, text:txt, time:nw()});
+  inp.value = ''; grow(inp);
+  renderMsgs(conv); renderList();
+  setTimeout(function(){ document.getElementById('chatMessages').scrollTop = 99999; }, 30);
+  var fd = new FormData();
+  fd.append('conversation_id', conv.id);
+  fd.append('text', txt);
+  fetch("{% url 'send_message' %}", {method:'POST', headers:{'X-CSRFToken':csrf()}, body:fd})
     .then(function(r){ return r.json(); })
-    .then(function(data){
-        if(data.time){
-            var lastMsg = conv.messages[conv.messages.length-1];
-            lastMsg.time = data.time;
-            renderMessages(conv);
-        }
-    })
-    .catch(function(e){ console.error('Send failed:', e); });
+    .then(function(d){ if(d.time){ conv.messages[conv.messages.length-1].time=d.time; renderMsgs(conv); }})
+    .catch(function(){ toast('Failed to send'); });
 }
 
-function handleKey(e){
-    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+function hkey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }
+function grow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+
+// ── File / image attach ───────────────────────────────
+function hfile(e){
+  var f = e.target.files[0]; if(!f) return;
+  addChip(f.name, 'file'); e.target.value='';
 }
-function autoGrow(el){
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120)+'px';
+function himg(e){
+  var f = e.target.files[0]; if(!f) return;
+  addChip(f.name, 'image'); e.target.value='';
+}
+function addChip(name, type){
+  var bar  = document.getElementById('attachBar'); bar.style.display='flex';
+  var chip = document.createElement('div'); chip.className='ms-achip';
+  // icon: paperclip for file, image icon for image
+  var icon = type==='image'
+    ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+    : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+  var label = name.length>28 ? name.substring(0,28)+'...' : name;
+  chip.innerHTML = icon + esc(label) +
+    '<button onclick="this.parentElement.remove();if(!document.querySelectorAll(\'.ms-achip\').length)document.getElementById(\'attachBar\').style.display=\'none\'">'+
+      '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'+
+    '</button>';
+  bar.appendChild(chip);
 }
 
-// ── Attachments ──────────────────────────────────────────────
-function handleFile(e){
-    var f = e.target.files[0]; if(!f) return;
-    var sz = f.size>1048576 ? (f.size/1048576).toFixed(1)+' MB' : (f.size/1024).toFixed(0)+' KB';
-    pendingFiles.push({ from:CURRENT_USER.id, type:'file', text:'[File: '+f.name+']', time:nowTime() });
-    addChip('📎 '+f.name); e.target.value='';
-}
-function handleImg(e){
-    var f = e.target.files[0]; if(!f) return;
-    pendingFiles.push({ from:CURRENT_USER.id, type:'image', text:'[Image: '+f.name+']', time:nowTime() });
-    addChip('🖼️ '+f.name); e.target.value='';
-}
-function addChip(label){
-    var bar = document.getElementById('attachBar'); bar.style.display='flex';
-    var chip = document.createElement('div'); chip.className='attach-chip';
-    chip.innerHTML = esc(label.length>30?label.substring(0,30)+'…':label)+
-        '<button onclick="this.parentElement.remove();pendingFiles.pop();if(!document.querySelectorAll(\'.attach-chip\').length)document.getElementById(\'attachBar\').style.display=\'none\'">×</button>';
-    bar.appendChild(chip);
-}
-
-// ── Emoji ────────────────────────────────────────────────────
-function toggleEmoji(){ document.getElementById('emojiPicker').classList.toggle('open'); }
-function insertEmoji(e){
-    var i = document.getElementById('chatInput');
-    i.value += e; autoGrow(i);
-    document.getElementById('emojiPicker').classList.remove('open');
-    i.focus();
-}
+// ── Emoji picker ──────────────────────────────────────
+function toggleE(){ document.getElementById('emojiPicker').classList.toggle('open'); }
+function ins(e){ var i=document.getElementById('chatInput'); i.value+=e; grow(i); document.getElementById('emojiPicker').classList.remove('open'); i.focus(); }
 document.addEventListener('click', function(e){
-    var p = document.getElementById('emojiPicker');
-    if(p && !p.contains(e.target) && !e.target.closest('.inp-btn')) p.classList.remove('open');
+  var p = document.getElementById('emojiPicker');
+  if(p && !p.contains(e.target) && !e.target.closest('.ms-tbtn')) p.classList.remove('open');
 });
 
-// ── Group Modal ──────────────────────────────────────────────
-function openGroupModal(){
-    var list = document.getElementById('cbList');
-    list.innerHTML = '';
-
-    if(!USERS.length){
-        list.innerHTML = '<div style="padding:12px;text-align:center;font-size:12px;color:#9ca3af">No staff members found.</div>';
-    } else {
-        USERS.forEach(function(u){
-            var div = document.createElement('div');
-            div.className = 'cb-item';
-            div.setAttribute('data-uid', u.id);
-            div.innerHTML =
-                '<div class="cb-av" style="background:'+(u.color||'#1950DF')+'22;color:'+(u.color||'#1950DF')+'">'+
-                    u.name.charAt(0).toUpperCase()+
-                '</div>'+
-                '<div style="flex:1">'+
-                    '<div class="cb-name">'+esc(u.name)+'</div>'+
-                    '<div class="cb-role">'+esc(u.role)+'</div>'+
-                '</div>'+
-                '<div class="cb-check">'+
-                    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
-                '</div>';
-            div.addEventListener('click', function(){ div.classList.toggle('checked'); });
-            list.appendChild(div);
-        });
-    }
-
-    document.getElementById('groupModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    setTimeout(function(){ document.getElementById('groupNameInput').focus(); }, 100);
+// ── Group modal ───────────────────────────────────────
+function openGM(){
+  var list = document.getElementById('cbList'); list.innerHTML = '';
+  if(!USERS.length){
+    list.innerHTML='<div style="padding:14px;text-align:center;font-size:12px;color:#9e9e9e">No staff members.</div>';
+  } else {
+    USERS.forEach(function(u){
+      var div = document.createElement('div');
+      div.className = 'ms-cbi'; div.dataset.uid = u.id;
+      div.innerHTML =
+        '<div class="ms-cbav">'+u.name.charAt(0).toUpperCase()+'</div>'+
+        '<div><div class="ms-cbname">'+esc(u.name)+'</div><div class="ms-cbrole">'+esc(u.role)+'</div></div>'+
+        '<div class="ms-cbcheck">'+
+          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+        '</div>';
+      div.addEventListener('click', function(){ div.classList.toggle('chk'); });
+      list.appendChild(div);
+    });
+  }
+  document.getElementById('groupModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(function(){ document.getElementById('groupNameInput').focus(); }, 80);
 }
-
-function closeGroupModal(){
-    document.getElementById('groupModal').style.display = 'none';
-    document.body.style.overflow = '';
-    document.getElementById('groupNameInput').value = '';
-    document.querySelectorAll('#cbList .cb-item').forEach(function(el){ el.classList.remove('checked'); });
+function closeGM(){
+  document.getElementById('groupModal').classList.remove('open');
+  document.body.style.overflow = '';
+  document.getElementById('groupNameInput').value = '';
+  document.querySelectorAll('.ms-cbi').forEach(function(el){ el.classList.remove('chk'); });
 }
-
 function createGroup(){
-    var name = document.getElementById('groupNameInput').value.trim();
-    if(!name){ alert('Group ka naam likhein!'); return; }
-    var checked = document.querySelectorAll('#cbList .cb-item.checked');
-    if(!checked.length){ alert('Kam se kam ek member select karein!'); return; }
-
-    var memberIds = [CURRENT_USER.id];
-    checked.forEach(function(el){ memberIds.push(parseInt(el.getAttribute('data-uid'))); });
-
-    var fd = new FormData();
-    fd.append('name', name);
-    fd.append('csrfmiddlewaretoken', getCsrf());
-    memberIds.forEach(function(id){ fd.append('member_ids', id); });
-
-    fetch("{% url 'create_group' %}", { method:'POST', body:fd })
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-            var convId = data.conv_id || Date.now();
-            var newConv = { id:convId, type:'group', name:name, members:memberIds, unread:0, messages:[] };
-            CONVS.unshift(newConv);
-            closeGroupModal();
-            renderConvList();
-            openConv(convId);
-        })
-        .catch(function(){
-            // Fallback: create locally if API not ready
-            var newConv = { id:Date.now(), type:'group', name:name, members:memberIds, unread:0, messages:[] };
-            CONVS.unshift(newConv);
-            closeGroupModal();
-            renderConvList();
-            openConv(newConv.id);
-        });
+  var name = document.getElementById('groupNameInput').value.trim();
+  if(!name){ toast('Enter group name'); return; }
+  var checked = document.querySelectorAll('.ms-cbi.chk');
+  if(!checked.length){ toast('Select at least one member'); return; }
+  var ids = [CU.id]; checked.forEach(function(el){ ids.push(parseInt(el.dataset.uid)); });
+  var fd = new FormData();
+  fd.append('name', name); fd.append('csrfmiddlewaretoken', csrf());
+  ids.forEach(function(id){ fd.append('member_ids', id); });
+  fetch("{% url 'create_group' %}", {method:'POST', body:fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var nc = {id:d.conv_id||Date.now(), type:'group', name:name, members:ids, unread:0, messages:[]};
+      CONVS.unshift(nc); closeGM(); renderList(); openConv(nc.id); toast('Group "'+name+'" created');
+    })
+    .catch(function(){
+      var nc = {id:Date.now(), type:'group', name:name, members:ids, unread:0, messages:[]};
+      CONVS.unshift(nc); closeGM(); renderList(); openConv(nc.id);
+    });
 }
 
-// ── Init ─────────────────────────────────────────────────────
-renderConvList();
-
+// ── Init ──────────────────────────────────────────────
+renderList();
 (function(){
-    var params = new URLSearchParams(window.location.search);
-    var convId = params.get('conv');
-    if(convId){
-        var id = parseInt(convId);
-        var exists = CONVS.find(function(c){ return c.id===id; });
-        if(exists) openConv(id);
-    }
+  var p = new URLSearchParams(window.location.search);
+  var id = p.get('conv');
+  if(id){ var c = gc(parseInt(id)); if(c) openConv(c.id); }
 })();
 </script>
 

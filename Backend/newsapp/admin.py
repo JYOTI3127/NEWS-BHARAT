@@ -383,7 +383,7 @@ Your account for the News4Bharat Content Management System (CMS) has been succes
 Staff ID : {profile.staff_id}
 Password : {plain_pass}
 Assigned Role(s) : {role_names}
-Login URL : http://127.0.0.1:8000/admin/
+Login URL : https://api.news4bharat.com/admin/
 ──────────────────────────────
 
 You may use the above credentials to access the CMS. For security reasons, please ensure that you update your password immediately after your first login.

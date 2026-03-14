@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import path, include
 from newsapp import views
 from newsapp.admin import admin_site
@@ -7,7 +8,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', lambda request: redirect('admin/'), name='home'),,
+    path('', lambda request: redirect('admin/'), name='home'),
 
     # ── Inbox & Notifications — admin/ se PEHLE ──────────────
     path('admin/inbox/',                          views.inbox_view,         name='admin_inbox'),

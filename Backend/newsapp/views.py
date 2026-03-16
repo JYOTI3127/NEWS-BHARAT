@@ -825,7 +825,12 @@ def media_videos_api(request):
 
 @staff_member_required
 def inbox_view(request):
-    staff_users = User.objects.filter(is_staff=True).exclude(pk=request.user.pk)
+    staff_users = User.objects.filter(is_staff=True).exclude(pk=request.user.pk).select_related('profile')
+    for u in staff_users:
+            try:
+                u.online_status = u.profile.is_online()
+            except Exception:
+                u.online_status = False
 
     conversations = Conversation.objects.filter(
         conversationmember__user=request.user
@@ -1012,7 +1017,6 @@ def mark_notification_read(request, id):
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
 
-
 @login_required
 def archive_notification(request, id):
     if request.method == "POST":
@@ -1025,7 +1029,6 @@ def archive_notification(request, id):
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
 
-
 @login_required
 def unarchive_notification(request, id):
     if request.method == "POST":
@@ -1036,3 +1039,50 @@ def unarchive_notification(request, id):
             return JsonResponse({"status": "restored"})
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
+
+@staff_member_required
+def online_status_view(request):
+    users = User.objects.filter(is_staff=True).select_related('profile')
+    data = []
+    for u in users:
+        try:
+            online = u.profile.is_online()
+        except Exception:
+            online = False
+        data.append({'id': u.id, 'online': online})
+    return JsonResponse(data, safe=False)
+
+from rest_framework.response import Response
+from django.conf import settings
+
+@api_view(['GET'])
+def live_cricket(request):
+
+    url = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
+
+    response = requests.get(url)
+    data = response.json()
+
+    matches = data.get("data", [])
+
+    live = []
+    upcoming = []
+    recent = []
+
+    for match in matches:
+        status = str(match.get("status", "")).lower()
+
+        if "won" in status or "beat" in status or "match over" in status:
+            recent.append(match)
+
+        elif "vs" in match.get("name", "").lower():
+            upcoming.append(match)
+
+        else:
+            live.append(match)
+
+    return Response({
+        "live": live[:1],        # 1 live match
+        "upcoming": upcoming[:3], # 3 upcoming matches
+        "recent": recent[:3]     # 3 recent matches
+    })

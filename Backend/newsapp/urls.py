@@ -27,4 +27,6 @@ urlpatterns = [
     path('notifications/<int:id>/read/',     views.mark_notification_read, name='api_notification_read'),
     path('notifications/<int:id>/archive/',  views.archive_notification,   name='api_notification_archive'),
     path('notifications/<int:id>/unarchive/',views.unarchive_notification, name='api_notification_unarchive'),
+    path('admin/online-status/', online_status_view, name='online_status'),
+    path('live-cricket/', live_cricket),
 ]

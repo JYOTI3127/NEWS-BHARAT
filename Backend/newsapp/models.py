@@ -472,6 +472,14 @@ class UserProfile(models.Model):
         default='active'
     )
 
+    last_seen = models.DateTimeField(null=True, blank=True)
+
+    def is_online(self):
+            from django.utils import timezone
+            if not self.last_seen:
+                return False
+            return (timezone.now() - self.last_seen).total_seconds() < 300
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

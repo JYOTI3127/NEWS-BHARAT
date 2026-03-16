@@ -84,11 +84,7 @@ const navLinks = [
   { label: "Sports",            path: "/category/sports" },
   { label: "World News",        path: "/category/world-news" },
   { label: "Trending",          path: "/category/trending" },
-  { label: "Founter's note",    path: "/founders-note" },
-  { label: "Editorial Policy",  path: "/editorial-policy" },
-  { label: "Career",            path: "/careers" },
-  { label: "Contact Us",        path: "/contact" },
-  { label: "Comming Soon",      path: "/CommingSoon" },
+  // { label: "Comming Soon",      path: "/CommingSoon" },
 ];
 
 const LogoFull = () => (
@@ -297,28 +293,13 @@ const Header = () => {
   const goldChange   = metals?.gold?.change    ?? null;
   const silverPrice  = metals?.silver?.price   ?? null;
   const silverChange = metals?.silver?.change  ?? null;
+const tickerBarClasses = isMobile
+  ? "flex flex-nowrap items-center px-2.5 py-1 border-b border-slate-200"
+  : `flex flex-nowrap items-center overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
 
-  const tickerStyle = isMobile
-    ? { display: "flex", padding: "5px 10px", borderBottom: "1px solid #ebebeb" }
-    : {
-        maxHeight:    isScrolled ? "0px"    : "200px",
-        opacity:      isScrolled ? 0        : 1,
-        overflow:     "hidden",
-        padding:      isScrolled ? "0 18px" : "5px 15px",
-        borderBottom: isScrolled ? "none"   : "1px solid #ebebeb",
-        transition:   "max-height 0.3s ease, opacity 0.3s ease",
-      };
-
-  const topBarStyle = isMobile
-    ? { display: "none" }
-    : {
-        maxHeight:    isScrolled ? "0px"    : "200px",
-        opacity:      isScrolled ? 0        : 1,
-        overflow:     "hidden",
-        padding:      isScrolled ? "0 18px" : "6px 18px",
-        borderBottom: isScrolled ? "none"   : "1px solid #ebebeb",
-        transition:   "max-height 0.3s ease, opacity 0.3s ease",
-      };
+  const topBarClasses = isMobile
+    ? "hidden"
+    : `overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
 
   const TickerContent = () => (
     <>
@@ -350,7 +331,7 @@ const Header = () => {
       <span className="ticker-item commodity gold">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="#c8a400"><circle cx="12" cy="12" r="10" /></svg>
         GOLD
-        {goldPrice && <strong style={{ marginLeft: 2 }}>₹{Number(goldPrice).toLocaleString("en-IN")}</strong>}
+        {goldPrice && <strong className="ml-[2px]">₹{Number(goldPrice).toLocaleString("en-IN")}</strong>}
         {goldChange !== null && (
           <span className={goldChange >= 0 ? "up" : "down"}>
             {goldChange >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -362,7 +343,7 @@ const Header = () => {
       <span className="ticker-item commodity silver">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="#aaaaaa"><circle cx="12" cy="12" r="10" /></svg>
         SILVER
-        {silverPrice && <strong style={{ marginLeft: 2 }}>₹{Number(silverPrice).toLocaleString("en-IN")}</strong>}
+        {silverPrice && <strong className="ml-[2px]">₹{Number(silverPrice).toLocaleString("en-IN")}</strong>}
         {silverChange !== null && (
           <span className={silverChange >= 0 ? "up" : "down"}>
             {silverChange >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -370,7 +351,7 @@ const Header = () => {
           </span>
         )}
       </span>
-      <span className="ticker-sep" style={{ marginRight: 0 }}>|</span>
+      <span className="ticker-sep mr-0">|</span>
     </>
   );
 
@@ -419,7 +400,7 @@ const Header = () => {
                     {Icon && <Icon size={15} color="#D80100" strokeWidth={2} />}
                     <Link
                       to={`/category/${finalSlug}`}
-                      style={{ textDecoration: "none", color: "inherit" }}
+                      className="no-underline text-inherit"
                       onClick={() => setIsOpen(false)}
                     >
                       {label}
@@ -429,7 +410,7 @@ const Header = () => {
                     <ChevronDown
                       size={14}
                       color="#aa9977"
-                      style={{ transition: "transform 0.24s ease", transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      className={`transition-transform duration-200 ease-out ${sectionOpen ? "rotate-180" : "rotate-0"}`}
                     />
                   )}
                 </div>
@@ -441,21 +422,14 @@ const Header = () => {
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
                           <div
-                            className="drawer-subcat-head"
+                            className={`drawer-subcat-head flex items-center justify-between cursor-pointer border-b border-slate-200 px-4 py-2 pl-7 text-[13px] font-medium transition-colors duration-150 ${subcatOpen ? "text-red-600 bg-red-50" : "text-slate-800 bg-transparent"}`}
                             onClick={(e) => toggleSubcat(e, `${label}__${sub.label}`)}
-                            style={{
-                              display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "8px 16px 8px 28px", cursor: "pointer", fontSize: 13, fontWeight: 500,
-                              fontFamily: "Poppins, sans-serif", color: subcatOpen ? "#D80100" : "#333",
-                              borderBottom: "1px solid #f0ece8", background: subcatOpen ? "#fff4f3" : "transparent",
-                              transition: "background 0.15s",
-                            }}
                           >
                             <span>{sub.label}</span>
                             <ChevronDown
                               size={12}
                               color={subcatOpen ? "#D80100" : "#bbb"}
-                              style={{ transition: "transform 0.2s", transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                              className={`transition-transform duration-200 ease-out ${subcatOpen ? "rotate-180" : "rotate-0"}`}
                             />
                           </div>
 
@@ -465,15 +439,8 @@ const Header = () => {
                                 <a
                                   key={topic}
                                   href="#"
-                                  className="drawer-topic-link"
+                                  className="drawer-topic-link block px-4 py-1.5 pl-11 text-[12.5px] text-slate-600 no-underline border-b border-slate-100 transition-colors duration-150 font-sans hover:text-red-600 hover:bg-red-50"
                                   onClick={(e) => e.preventDefault()}
-                                  style={{
-                                    display: "block", padding: "6px 16px 6px 44px", fontSize: 12.5,
-                                    color: "#555", textDecoration: "none", borderBottom: "1px solid #f8f4f0",
-                                    transition: "color 0.15s, background 0.15s", fontFamily: "Poppins, sans-serif",
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.color = "#D80100"; e.currentTarget.style.background = "#fff8f7"; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = "#555"; e.currentTarget.style.background = "transparent"; }}
                                 >
                                   › {topic}
                                 </a>
@@ -509,7 +476,7 @@ const Header = () => {
       {/* ══ HEADER ══ */}
       <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
-        <div className="ticker-bar" style={tickerStyle}>
+        <div className={tickerBarClasses}>
           <div className="ticker-left">
             <BarChart2 size={14} className="ticker-icon" />
             <span className="ticker-label">Markets :</span>
@@ -517,10 +484,9 @@ const Header = () => {
           <div className="ticker-scroll-track">
             <div className="ticker-scroll-inner">
               <TickerContent />
-              <TickerContent />
             </div>
           </div>
-          <div className="ticker-right">
+          <div className="flex items-center gap-2 flex-nowrap flex-shrink-0 hidden md:flex">
             <button className="btn-flag">
               <svg width="16" height="11" viewBox="0 0 16 11">
                 <rect width="16" height="3.67" fill="#FF9933" />
@@ -535,9 +501,9 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="top-bar" style={topBarStyle}>
+        <div className={topBarClasses}>
           <div className="search-row">
-            <div className="search-box" ref={searchRef} style={{ position: "relative" }}>
+            <div className="search-box relative" ref={searchRef}>
               <Search size={14} className="search-icon" />
               <input
                 type="text"
@@ -550,29 +516,27 @@ const Header = () => {
               />
               <Mic size={14} className="mic-icon" />
               {showResults && (
-                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderTop: "none", borderRadius: "0 0 8px 8px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, maxHeight: "360px", overflowY: "auto" }}>
+                <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] z-50 max-h-[360px] overflow-y-auto">
                   {isSearching ? (
-                    <div style={{ padding: "14px 16px", color: "#888", fontSize: 13 }}>Searching...</div>
+                    <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
                   ) : searchResults.length === 0 ? (
-                    <div style={{ padding: "14px 16px", color: "#888", fontSize: 13 }}>No results found for "{searchQuery}"</div>
+                    <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
                   ) : (
                     searchResults.map((item, idx) => (
                       <a
                         key={idx}
                         href={item.url || item.link || "#"}
-                        style={{ display: "flex", flexDirection: "column", padding: "10px 16px", borderBottom: idx < searchResults.length - 1 ? "1px solid #f0f0f0" : "none", textDecoration: "none", color: "#222", transition: "background 0.15s" }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "#fef4f4"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                        className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
                         onClick={() => setShowResults(false)}
                       >
                         {(item.category || item.tag || item.type) && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "#D80100", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>
+                          <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
                             {item.category || item.tag || item.type}
                           </span>
                         )}
-                        <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{item.title || item.headline || item.name || "Untitled"}</span>
+                        <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
                         {(item.description || item.summary || item.excerpt) && (
-                          <span style={{ fontSize: 11, color: "#666", marginTop: 3, lineHeight: 1.4 }}>{(item.description || item.summary || item.excerpt).slice(0, 100)}...</span>
+                          <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{(item.description || item.summary || item.excerpt).slice(0, 100)}...</span>
                         )}
                       </a>
                     ))

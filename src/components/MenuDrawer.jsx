@@ -371,18 +371,18 @@ export default function MenuDrawer({ open, onClose }) {
 
       {/* Overlay */}
       {open && (
-        <div className="md-overlay" style={{ opacity: open ? 1 : 0 }} onClick={onClose} />
+        <div className="md-overlay opacity-100" onClick={onClose} />
       )}
 
       {/* Drawer */}
-      <div className="md-drawer" style={{ transform: open ? "translateX(0)" : "translateX(-100%)" }}>
+      <div className={`md-drawer transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}>
 
         {/* Header */}
         <div className="md-header">
           <img
             src={logo}
             alt="News4Bharat"
-            style={{ height: "30px", width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            className="h-8 w-auto object-contain filter brightness-0 invert"
           />
           <button className="md-close" onClick={onClose}>
             <X size={16} />
@@ -433,18 +433,14 @@ export default function MenuDrawer({ open, onClose }) {
                     <ChevronDown
                       size={14}
                       color="#aaa"
-                      style={{
-                        transition: "transform 0.24s ease",
-                        transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      }}
+                      className={`transition-transform duration-200 ease-out ${sectionOpen ? "rotate-180" : "rotate-0"}`}
                     />
                   )}
                 </button>
 
                 {/* Section Body */}
                 <div
-                  className="md-sub-body"
-                  style={{ maxHeight: sectionOpen ? "600px" : "0px" }}
+                  className={`md-sub-body overflow-hidden transition-[max-height] duration-300 ${sectionOpen ? "max-h-[600px]" : "max-h-0"}`}
                 >
                   {hasSubcats ? (
                     subcategories.map((sub) => {
@@ -460,10 +456,7 @@ export default function MenuDrawer({ open, onClose }) {
                             <ChevronDown
                               size={12}
                               color={subcatOpen ? "#D80100" : "#bbb"}
-                              style={{
-                                transition: "transform 0.2s",
-                                transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)",
-                              }}
+                              className={`transition-transform duration-200 ease-out ${subcatOpen ? "rotate-180" : "rotate-0"}`}
                             />
                           </button>
                           {subcatOpen && sub.topics.map((topic) => (
@@ -489,7 +482,7 @@ export default function MenuDrawer({ open, onClose }) {
             );
           })}
 
-          <div style={{ height: 16 }} />
+          <div className="h-4" />
         </div>
 
         {/* Footer */}

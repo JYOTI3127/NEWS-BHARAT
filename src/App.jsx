@@ -40,7 +40,7 @@ function Layout() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/CommingSoon" element={<CommingSoon />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/article/:slug" element={<ArticleDetails />} />
+         <Route path="/article/:id" element={<ArticleDetails />} />
      
       </Routes>
 

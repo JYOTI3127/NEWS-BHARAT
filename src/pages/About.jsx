@@ -19,8 +19,9 @@ const useInView = (threshold = 0.15) => {
 const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
   const [ref, visible] = useInView();
   const dirClass = { up: "fade-up", left: "fade-left", right: "fade-right", none: "" }[direction];
+  const delayClass = `delay-[${delay}s]`;
   return (
-    <div ref={ref} className={`fade-in ${dirClass} ${visible ? "visible" : ""} ${className}`} style={{ transitionDelay: `${delay}s` }}>
+    <div ref={ref} className={`fade-in ${dirClass} ${visible ? "visible" : ""} ${delayClass} ${className}`}>
       {children}
     </div>
   );
@@ -123,11 +124,10 @@ export default function AboutPage() {
             5. rightGlow panel widened from x=900 to x=750
           */}
           <svg
-            className="hero-watermark"
+            className="hero-watermark absolute inset-0 w-full h-full block"
             viewBox="0 0 1400 560"
             preserveAspectRatio="none"
             xmlns="http://www.w3.org/2000/svg"
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'block' }}
           >
             <defs>
               <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">

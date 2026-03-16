@@ -86,8 +86,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'newsbharatdb',
         'USER': 'postgres',
-        'PASSWORD': 'n4b@admin', 
-        'HOST': 'localhost',
+        'PASSWORD': 'n4b@admin',
+        'HOST': '192.168.1.65',
         'PORT': '5432',
     }
 }

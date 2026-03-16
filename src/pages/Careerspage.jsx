@@ -23,14 +23,19 @@ const useInView = (threshold = 0.12) => {
 
 const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
   const [ref, visible] = useInView();
-  const dirMap = { up: "translateY(28px)", left: "translateX(-28px)", right: "translateX(28px)", none: "none" };
+  const dirClasses = {
+    up: "translate-y-7",
+    left: "-translate-x-7",
+    right: "translate-x-7",
+    none: "",
+  };
+  const delayClass = `delay-[${delay}s]`;
+  const visibilityClass = visible ? "opacity-100 translate-none" : `opacity-0 ${dirClasses[direction]}`;
   return (
-    <div ref={ref} className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "none" : dirMap[direction],
-        transition: `opacity 0.7s cubic-bezier(.22,.68,0,1.2) ${delay}s, transform 0.7s cubic-bezier(.22,.68,0,1.2) ${delay}s`,
-      }}>
+    <div
+      ref={ref}
+      className={`${className} ${visibilityClass} ${delayClass} transition-opacity transition-transform duration-[700ms] ease-[cubic-bezier(.22,.68,0,1.2)]`}
+    >
       {children}
     </div>
   );
@@ -129,12 +134,12 @@ function ApplyModal({ role, onClose }) {
               </div>
               <div className="cp-form-group">
                 <label className="cp-form-label">Job Type *</label>
-                <div style={{ display: "flex", gap: "20px", marginTop: "4px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer" }}>
+                <div className="flex gap-5 mt-1">
+                  <label className="flex items-center gap-[7px] text-[0.875rem] font-medium cursor-pointer">
                     <input type="radio" name="jobType" value="Full-Time" checked={form.jobType === "Full-Time"} onChange={(e) => setForm({ ...form, jobType: e.target.value })} />
                     Full-Time
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer" }}>
+                  <label className="flex items-center gap-[7px] text-[0.875rem] font-medium cursor-pointer">
                     <input type="radio" name="jobType" value="Part-Time" checked={form.jobType === "Part-Time"} onChange={(e) => setForm({ ...form, jobType: e.target.value })} />
                     Part-Time
                   </label>
@@ -149,14 +154,14 @@ function ApplyModal({ role, onClose }) {
                   type="file"
                   accept=".pdf,.doc,.docx"
                   id="resumeInput"
-                  style={{ display: "none" }}
+                  className="hidden"
                   onChange={(e) => setForm({ ...form, resume: e.target.files[0] })}
                 />
                 <label htmlFor="resumeInput" className="cp-resume-label">
                   {form.resume ? (
-                    <><CheckCircle size={15} style={{ color: "#0FBC87", marginRight: "7px" }} />{form.resume.name}</>
+                    <><CheckCircle size={15} className="text-[#0FBC87] mr-[7px]" />{form.resume.name}</>
                   ) : (
-                    <><FileText size={15} style={{ marginRight: "7px" }} />Click to upload Resume (PDF, DOC)</>
+                    <><FileText size={15} className="mr-[7px]" />Click to upload Resume (PDF, DOC)</>
                   )}
                 </label>
               </div>

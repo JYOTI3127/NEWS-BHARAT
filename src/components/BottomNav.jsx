@@ -55,31 +55,39 @@ const breakingNewsItems = [
 export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [showBreaking, setShowBreaking] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // ✅ FIX: sessionStorage se read karo — page change pe reset nahi hoga
+  const [showBreaking, setShowBreaking] = useState(() => {
+    return sessionStorage.getItem("breakingClosed") !== "true";
+  });
+
+  const handleCloseBreaking = () => {
+    sessionStorage.setItem("breakingClosed", "true");
+    setShowBreaking(false);
+  };
+
   const navItems = [
-    { label: "Home",    path: "/",       icon: HomeIcon   },
-    { label: "Videos",  path: "/videos", icon: VideosIcon },
-    { label: "Search",  path: "/search", icon: SearchIcon },
+    { label: "Home",      path: "/",       icon: HomeIcon   },
+    { label: "Videos",    path: "/videos", icon: VideosIcon },
+    { label: "Search",    path: "/search", icon: SearchIcon },
     { label: "60 Second", path: "/live",   icon: LiveTVIcon },
   ];
 
   return (
     <>
-      {/* Menu Drawer */}
       <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div style={styles.wrapper} className="bottom-nav-wrapper">
+      <div className="bottom-nav-wrapper fixed bottom-0 left-0 right-0 z-50 font-sans md:hidden">
 
-        {/* Breaking News Banner */}
         {showBreaking && (
-          <div style={styles.breakingBox}>
-            <div style={styles.breakingHeader}>
-              <div style={styles.breakingLabelBox}>
-                <span style={styles.breakingLabel}>BREAKING NEWS</span>
+          <div className="bg-red-800 px-3 py-2.5">
+            <div className="flex justify-between items-center mb-2">
+              <div className="bg-red-900 px-3.5 py-1 rounded text-yellow-300 font-black text-sm italic uppercase tracking-wide">
+                BREAKING NEWS
               </div>
-              <button onClick={() => setShowBreaking(false)} style={styles.closeBtn}>
+              {/* ✅ handleCloseBreaking — sessionStorage mein save karega */}
+              <button onClick={handleCloseBreaking} className="bg-transparent border-none cursor-pointer flex items-center justify-center p-1">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
                   <line x1="6" y1="6" x2="18" y2="18"/>
@@ -87,154 +95,48 @@ export default function BottomNav() {
               </button>
             </div>
 
-            <ul style={styles.newsList}>
+            <ul className="list-none m-0 p-0">
               {breakingNewsItems.map((item, i) => (
-                <li key={i} style={styles.newsItem}>
-                  <span style={styles.bullet}>•</span> {item}
+                <li key={i} className="text-white text-sm font-bold leading-[1.9] flex items-start gap-1.5">
+                  <span className="text-white text-lg leading-[1.6]">•</span> {item}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* Bottom Nav */}
-        <nav style={styles.nav}>
-
-          {/* Regular nav items */}
+        <nav className="h-[65px] bg-white border-t border-slate-200 flex justify-around items-center shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
           {navItems.map(({ label, path, icon: Icon }) => {
             const active = location.pathname === path;
             return (
               <button
                 key={label}
                 onClick={() => navigate(path)}
-                style={{ ...styles.item, color: active ? "#D80100" : "#000000" }}
+                className={`flex flex-col items-center justify-center gap-1 flex-1 h-full bg-transparent border-none cursor-pointer relative py-2 ${active ? "text-red-600" : "text-black"}`}
               >
                 <Icon active={active} />
-                <span style={{ ...styles.label, color: active ? "#D80100" : "#000000" }}>
+                <span className={`text-[11px] font-medium ${active ? "text-red-600" : "text-black"}`}>
                   {label}
                 </span>
-                {active && <span style={styles.activeLine} />}
+                {active && <span className="absolute bottom-0 left-[20%] right-[20%] h-1 bg-red-600 rounded-t" />}
               </button>
             );
           })}
 
-          {/* Menu Button — opens drawer */}
           <button
             onClick={() => setMenuOpen(true)}
-            style={{ ...styles.item, color: menuOpen ? "#D80100" : "#000000" }}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full bg-transparent border-none cursor-pointer relative py-2 ${menuOpen ? "text-red-600" : "text-black"}`}
           >
             <MenuIcon active={menuOpen} />
-            <span style={{ ...styles.label, color: menuOpen ? "#D80100" : "#000000" }}>
+            <span className={`text-[11px] font-medium ${menuOpen ? "text-red-600" : "text-black"}`}>
               Menu
             </span>
-            {menuOpen && <span style={styles.activeLine} />}
+            {menuOpen && <span className="absolute bottom-0 left-[20%] right-[20%] h-1 bg-red-600 rounded-t" />}
           </button>
-
         </nav>
       </div>
 
-      <div className="bottom-nav-spacer" style={{ height: showBreaking ? 175 : 65 }} />
+      <div className={showBreaking ? "bottom-nav-spacer h-[175px]" : "bottom-nav-spacer h-[65px]"} />
     </>
   );
 }
-
-const styles = {
-  wrapper: {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    fontFamily: "Poppins, sans-serif",
-  },
-  breakingBox: {
-    background: "#C0000C",
-    padding: "8px 12px 10px 12px",
-  },
-  breakingHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  breakingLabelBox: {
-    background: "#8B0000",
-    paddingLeft: 10,
-    paddingRight: 14,
-    paddingTop: 4,
-    paddingBottom: 4,
-    borderRadius: 3,
-  },
-  breakingLabel: {
-    color: "#FFD700",
-    fontWeight: 900,
-    fontSize: 14,
-    letterSpacing: 1,
-    fontStyle: "italic",
-    textTransform: "uppercase",
-  },
-  closeBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 4,
-  },
-  newsList: {
-    listStyle: "none",
-    margin: 0,
-    padding: 0,
-  },
-  newsItem: {
-    color: "#fff",
-    fontSize: 15,
-    lineHeight: "1.9",
-    fontWeight: "bold",
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 6,
-  },
-  bullet: {
-    color: "#fff",
-    fontSize: 16,
-    lineHeight: "1.6",
-  },
-  nav: {
-    height: 65,
-    background: "#fff",
-    borderTop: "1px solid #e0e0e0",
-    display: "flex",
-    justifyContent: "space-around",
-    alignItems: "center",
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.08)",
-  },
-  item: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    flex: 1,
-    height: "100%",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    position: "relative",
-    padding: "8px 0",
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: 500,
-  },
-  activeLine: {
-    position: "absolute",
-    bottom: 0,
-    left: "20%",
-    right: "20%",
-    height: 3,
-    background: "#D80100",
-    borderRadius: "3px 3px 0 0",
-  },
-};

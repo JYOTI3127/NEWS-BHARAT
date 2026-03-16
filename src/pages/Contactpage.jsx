@@ -26,14 +26,19 @@ const useInView = (threshold = 0.12) => {
 
 const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
   const [ref, visible] = useInView();
-  const dirMap = { up: "translateY(28px)", left: "translateX(-28px)", right: "translateX(28px)", none: "none" };
+  const dirClasses = {
+    up: "translate-y-7",
+    left: "-translate-x-7",
+    right: "translate-x-7",
+    none: "",
+  };
+  const delayClass = `delay-[${delay}s]`;
+  const visibilityClass = visible ? "opacity-100 translate-none" : `opacity-0 ${dirClasses[direction]}`;
   return (
-    <div ref={ref} className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "none" : dirMap[direction],
-        transition: `opacity 0.7s cubic-bezier(.22,.68,0,1.2) ${delay}s, transform 0.7s cubic-bezier(.22,.68,0,1.2) ${delay}s`,
-      }}>
+    <div
+      ref={ref}
+      className={`${className} ${visibilityClass} ${delayClass} transition-opacity transition-transform duration-[700ms] ease-[cubic-bezier(.22,.68,0,1.2)]`}
+    >
       {children}
     </div>
   );

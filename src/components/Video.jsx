@@ -22,11 +22,10 @@ function useWindowWidth() {
 
 // ── Play Button ────────────────────────────────────────────────
 function PlayBtn({ size = 44 }) {
+  const sizeClass = size === 36 ? "w-9 h-9" : size === 48 ? "w-12 h-12" : "w-11 h-11";
+
   return (
-    <div
-      className="vs-play-btn"
-      style={{ width: size, height: size }}
-    >
+    <div className={`vs-play-btn ${sizeClass}`}>
       <svg width={size * 0.38} height={size * 0.38} viewBox="0 0 12 14" fill="white">
         <path d="M1 1l10 6L1 13V1z" />
       </svg>
@@ -49,10 +48,10 @@ function SmallCard({ video, isActive, onClick }) {
         <img
           src={video.thumb}
           alt={video.title}
-          style={{ opacity: hovered ? 0.75 : 0.55 }}
+          className={`transition-opacity duration-200 ${hovered ? "opacity-[0.75]" : "opacity-[0.55]"}`}
         />
         <div className="vs-small-play-overlay">
-          <div style={{ transform: hovered ? "scale(1.12)" : "scale(1)", transition: "transform 0.2s" }}>
+          <div className={`transition-transform duration-200 ${hovered ? "scale-[1.12]" : "scale-100"}`}>
             <PlayBtn size={36} />
           </div>
         </div>
@@ -78,10 +77,10 @@ function FeaturedPlayer({ video }) {
       <img
         src={video.thumb}
         alt={video.title}
-        style={{ opacity: hovered ? 0.65 : 0.5 }}
+        className={`transition-opacity duration-200 ${hovered ? "opacity-[0.65]" : "opacity-50"}`}
       />
       <div className="vs-featured-play-overlay">
-        <div style={{ transform: hovered ? "scale(1.08)" : "scale(1)", transition: "transform 0.25s" }}>
+        <div className={`transition-transform duration-200 ${hovered ? "scale-[1.08]" : "scale-100"}`}>
           <PlayBtn size={48} />
         </div>
       </div>
@@ -131,7 +130,7 @@ export default function VideoSection() {
 
           {/* Center Featured */}
           <div className="vs-featured-col">
-            {isDesktop && <div style={{ marginBottom: "48px" }} />}
+            {isDesktop && <div className="mb-12" />}
             <FeaturedPlayer video={featured} />
           </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ── DATA ──────────────────────────────────────────────────────
 const trendingTopics = [
@@ -25,100 +25,87 @@ const featureCards = [
 ];
 
 const liveUpdates = [
-  { id: 1, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 2, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 3, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 4, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 5, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 6, time: "3:19 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 7, time: "3:20 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 8, time: "3:21 PM", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 1, title: "Markets Open", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 2, title: "Sensex Surges", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 3, title: "Oil Prices Steady", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 4, title: "Rupee Strengthens", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 5, title: "IT Sector Update", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 6, title: "Gold Retreats", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 7, title: "Bond Yields Rise", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
+  { id: 8, title: "FII Activity", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
 ];
-
 const bannerSlides = [
   {
-    leftBg: "#1e5c42", brand1: "PRATIYOGITA", brand2: "DARPAN",
+    leftBgClass: "bg-[#1e5c42]",
+    brand1: "PRATIYOGITA", brand2: "DARPAN",
     price: "PRICE ₹125.00", date: "FEBRUARY 2024",
     tagline: "WHERE EXCELLENCE GUIDES THE SUCCESS",
-    midBg: "#f5a000", midTag: "Semi Annual", midBoxBg: "#6a1fa2",
+    midBgClass: "bg-[#f5a000]", midTag: "Semi Annual", midBoxBgClass: "bg-[#6a1fa2]",
     midL1: "Current", midL2: "Affairs", midL3: "Special",
-    rightBg: "#f5e000", rl: "MOST USEFUL FOR", rb: "UNION & STATE", rs: "CIVIL SERVICES EXAM",
+    rightBgClass: "bg-[#f5e000]", rl: "MOST USEFUL FOR", rb: "UNION & STATE", rs: "CIVIL SERVICES EXAM",
   },
   {
-    leftBg: "#0d3b6e", brand1: "COMPETITION", brand2: "TIMES",
+    leftBgClass: "bg-[#0d3b6e]",
+    brand1: "COMPETITION", brand2: "TIMES",
     price: "PRICE ₹150.00", date: "MARCH 2024",
     tagline: "YOUR GATEWAY TO SUCCESS",
-    midBg: "#e53935", midTag: "Annual", midBoxBg: "#b71c1c",
+    midBgClass: "bg-[#e53935]", midTag: "Annual", midBoxBgClass: "bg-[#b71c1c]",
     midL1: "General", midL2: "Knowledge", midL3: "Special",
-    rightBg: "#b2fab4", rl: "BEST RESOURCE FOR", rb: "SSC & BANKING", rs: "EXAMINATION PREP",
+    rightBgClass: "bg-[#b2fab4]", rl: "BEST RESOURCE FOR", rb: "SSC & BANKING", rs: "EXAMINATION PREP",
   },
   {
-    leftBg: "#1a1a2e", brand1: "CAREER", brand2: "LAUNCHER",
+    leftBgClass: "bg-[#1a1a2e]",
+    brand1: "CAREER", brand2: "LAUNCHER",
     price: "PRICE ₹99.00", date: "APRIL 2024",
     tagline: "LAUNCHING CAREERS SINCE 1995",
-    midBg: "#7b1fa2", midTag: "Monthly", midBoxBg: "#4a148c",
+    midBgClass: "bg-[#7b1fa2]", midTag: "Monthly", midBoxBgClass: "bg-[#4a148c]",
     midL1: "Reasoning", midL2: "& Aptitude", midL3: "Special",
-    rightBg: "#ffe082", rl: "TOP CHOICE FOR", rb: "UPSC & STATE PSC", rs: "ASPIRANTS NATIONWIDE",
+    rightBgClass: "bg-[#ffe082]", rl: "TOP CHOICE FOR", rb: "UPSC & STATE PSC", rs: "ASPIRANTS NATIONWIDE",
   },
 ];
 
-// ── Circle Arrow Icon — FIXED 32x32, NO layout shift ever ────
-const ArrowBtn = ({ direction, disabled, onClick }) => (
-  <div
-    onClick={disabled ? undefined : onClick}
-    style={{
-      width: "32px",
-      height: "32px",
-      minWidth: "32px",
-      minHeight: "32px",
-      flexShrink: 0,
-      flexGrow: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: disabled ? "default" : "pointer",
-      userSelect: "none",
-      boxSizing: "border-box",
-    }}
-  >
-    <svg
-      width="32"
-      height="32"
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", overflow: "visible" }}
-    >
-      {/* Circle background */}
-      <circle
-        cx="16"
-        cy="16"
-        r="15"
-        fill={disabled ? "#ffffff" : "#ffffff"}
-        stroke={disabled ? "#999999" : "#999999"}
-        strokeWidth="1"
-      />
-      {/* Arrow chevron */}
-      {direction === "left" ? (
-        <path
-          d="M19 10L13 16L19 22"
-          stroke={disabled ? "#c0c0c0" : "#999999"}
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+// ── Circle Arrow Icon ─────────────────────────────────────────
+const ArrowBtn = ({ direction, disabled, onClick }) => {
+  const baseClass = "w-8 h-8 min-w-[32px] min-h-[32px] flex items-center justify-center box-border select-none";
+  const stateClass = disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer";
+
+  return (
+    <div onClick={disabled ? undefined : onClick} className={`${baseClass} ${stateClass}`}>
+      <svg
+        width="32"
+        height="32"
+        viewBox="0 0 32 32"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="block overflow-visible"
+      >
+        <circle
+          cx="16" cy="16" r="15"
+          fill="#ffffff"
+          stroke="#999999"
+          strokeWidth="1"
         />
-      ) : (
-        <path
-          d="M13 10L19 16L13 22"
-          stroke={disabled ? "#c0c0c0" : "#999999"}
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
-  </div>
-);
+        {direction === "left" ? (
+          <path
+            d="M19 10L13 16L19 22"
+            stroke={disabled ? "#c0c0c0" : "#999999"}
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : (
+          <path
+            d="M13 10L19 16L13 22"
+            stroke={disabled ? "#c0c0c0" : "#999999"}
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    </div>
+  );
+};  // ✅ Yeh closing bracket missing tha — fix ho gaya
 
 const FlameSvg = () => (
   <svg width={22} height={30} viewBox="0 0 22 30">
@@ -192,7 +179,6 @@ function LatestNews() {
           </div>
         ))}
       </div>
-
     </div>
   );
 }
@@ -223,15 +209,46 @@ function FeatureCards() {
 
 // ── Live Updates ──────────────────────────────────────────────
 function LiveUpdates() {
+  const scrollRef = useRef(null);
+  const animRef = useRef(null);
+  const autoScrollRef = useRef(true);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let frame = 0;
+
+    const step = () => {
+      if (autoScrollRef.current) {
+        frame++;
+        if (frame % 3 === 0) { // har 3rd frame pe scroll — slow
+          el.scrollTop += 1;
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
+            el.scrollTop = 0;
+          }
+        }
+      }
+      animRef.current = requestAnimationFrame(step);
+    };
+
+    animRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
+
   return (
     <div className="tn-live-updates">
-      <SecHeader title="LIVE UPDATES" />
-      <div className="tn-live-scroll">
+      <SecHeader title="60 SECONDS" />
+      <div
+        className="tn-live-scroll"
+        ref={scrollRef}
+        onMouseEnter={() => { autoScrollRef.current = false; }}
+        onMouseLeave={() => { autoScrollRef.current = true; }}
+      >
         {liveUpdates.map((item) => (
           <div key={item.id} className="tn-live-item">
             <div className="tn-live-dot" />
             <div>
-              <div className="tn-live-item-time">{item.time}</div>
+              <div className="tn-live-item-title">{item.title}</div>
               <div className="tn-live-item-text">{item.text}</div>
             </div>
           </div>
@@ -260,14 +277,9 @@ function Banner() {
   return (
     <div className="tn-banner">
       <div
-        className="tn-banner-slide"
-        style={{
-          opacity:   fading ? 0 : 1,
-          transform: fading ? "translateY(6px)" : "translateY(0)",
-          transition: "opacity 0.35s ease, transform 0.35s ease",
-        }}
+        className={`tn-banner-slide transition-all duration-300 ease-out ${fading ? "opacity-0 translate-y-[6px]" : "opacity-100 translate-y-0"}`}
       >
-        <div className="tn-banner-left" style={{ background: s.leftBg }}>
+        <div className={`tn-banner-left ${s.leftBgClass}`}>
           <div className="tn-banner-left-redbar" />
           <div className="tn-banner-left-greenbar" />
           <div className="tn-banner-left-content">
@@ -283,15 +295,15 @@ function Banner() {
             <div className="tn-banner-tagline">{s.tagline}</div>
           </div>
         </div>
-        <div className="tn-banner-mid" style={{ background: s.midBg }}>
+        <div className={`tn-banner-mid ${s.midBgClass}`}>
           <div className="tn-banner-mid-tag">{s.midTag}</div>
-          <div className="tn-banner-mid-box" style={{ background: s.midBoxBg }}>
+          <div className={`tn-banner-mid-box ${s.midBoxBgClass}`}>
             <div className="tn-banner-mid-line">{s.midL1}</div>
             <div className="tn-banner-mid-line">{s.midL2}</div>
             <div className="tn-banner-mid-line">{s.midL3}</div>
           </div>
         </div>
-        <div className="tn-banner-right" style={{ background: s.rightBg }}>
+        <div className={`tn-banner-right ${s.rightBgClass}`}>
           <div className="tn-banner-right-label">{s.rl}</div>
           <div className="tn-banner-right-main">{s.rb}</div>
           <div className="tn-banner-right-sub">{s.rs}</div>

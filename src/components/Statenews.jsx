@@ -2,10 +2,10 @@ import { useState, useRef } from "react";
 
 // ── Icons ──────────────────────────────────────────────────────
 const ChevronLeft = () => (
-  <span style={{ fontSize: "16px", color: "#fff", lineHeight: 1, fontWeight: "bold" }}>&#8249;</span>
+  <span className="text-[16px] text-white leading-none font-bold">&#8249;</span>
 );
 const ChevronRight = () => (
-  <span style={{ fontSize: "16px", color: "#fff", lineHeight: 1, fontWeight: "bold" }}>&#8250;</span>
+  <span className="text-[16px] text-white leading-none font-bold">&#8250;</span>
 );
 
 // ── Data ───────────────────────────────────────────────────────
@@ -66,16 +66,10 @@ export default function StateNews() {
       {/* State Tabs */}
       <div className="sn-tabs-container">
         <button
-          className="sn-arrow sn-arrow-left"
+          className="sn-arrow sn-arrow-left bg-transparent border-none p-0 leading-none cursor-pointer flex-shrink-0"
           onClick={() => scroll(-1)}
-          style={{ background: "none", border: "none", padding: 0, lineHeight: 0, cursor: "pointer", flexShrink: 0 }}
         >
-          <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: "28px", height: "28px", minWidth: "28px", maxWidth: "28px",
-            minHeight: "28px", maxHeight: "28px", boxSizing: "border-box",
-            borderRadius: "50%", border: "1.5px solid #fff", background: "#D80100", overflow: "hidden",
-          }}>
+          <span className="inline-flex items-center justify-center w-7 h-7 min-w-[28px] min-h-[28px] rounded-full border border-white/90 bg-red-600 overflow-hidden">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M8 2L4 6L8 10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -93,16 +87,10 @@ export default function StateNews() {
         </div>
 
         <button
-          className="sn-arrow sn-arrow-right"
+          className="sn-arrow sn-arrow-right bg-transparent border-none p-0 leading-none cursor-pointer flex-shrink-0"
           onClick={() => scroll(1)}
-          style={{ background: "none", border: "none", padding: 0, lineHeight: 0, cursor: "pointer", flexShrink: 0 }}
         >
-          <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: "28px", height: "28px", minWidth: "28px", maxWidth: "28px",
-            minHeight: "28px", maxHeight: "28px", boxSizing: "border-box",
-            borderRadius: "50%", border: "1.5px solid #fff", background: "#D80100", overflow: "hidden", marginLeft: "30%",
-          }}>
+          <span className="inline-flex items-center justify-center w-7 h-7 min-w-[28px] min-h-[28px] rounded-full border border-white/90 bg-red-600 overflow-hidden ml-[30%]">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4 2L8 6L4 10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

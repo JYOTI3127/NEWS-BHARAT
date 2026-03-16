@@ -23,9 +23,9 @@ const useInView = (threshold = 0.12) => {
 const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
     const [ref, visible] = useInView();
     const dirClass = { up: "ep-fade-up", left: "ep-fade-left", right: "ep-fade-right", none: "" }[direction];
+    const delayClass = `delay-[${delay}s]`;
     return (
-        <div ref={ref} className={`ep-fade-in ${dirClass} ${visible ? "ep-visible" : ""} ${className}`}
-            style={{ transitionDelay: `${delay}s` }}>
+        <div ref={ref} className={`ep-fade-in ${dirClass} ${visible ? "ep-visible" : ""} ${delayClass} ${className}`}>
             {children}
         </div>
     );

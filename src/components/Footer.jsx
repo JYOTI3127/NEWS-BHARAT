@@ -11,16 +11,16 @@ const WhatsAppIcon = ({ size = 17 }) => (
 );
 
 const footerLinks = {
-  NEWS: ["India", "World", "Politics", "Crime", "Business", "Science"],
-  ENTERTAINMENT: ["Bollywood", "Hollywood", "OTT", "Music", "Fashion", "Awards"],
-  SPORTS: ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
-  MORE: ["Lifestyle", "Technology", "Auto", "Travel", "Religion", "Education"],
+  NEWS: ["Breaking News", "Trending", "Sport", "World News","Artificial Intelligence","Technology"],
+  "BHARAT_NEWS": ["State of Bharat", "Bharat Explainers", "Bharat in Numbers", "Bharat's Startups", "Bharat BFSI", "Bharat 2047"],
+ "60_SECOND": ["Cricket", "Football", "Kabaddi", "Hockey", "Tennis", "IPL"],
+  MORE: ["Bharat Opinions","Entertainment"],
 };
 
 // ── Har pill ka apna path ──
 const policyLinks = [
   { label: "About Us", path: "/about" },
-  { label: "Founter's note", path: "/founders-note" },
+  { label: "Founter's Note", path: "/founders-note" },
   { label: "Editorial Policy", path: "/editorial-policy" },
   { label: "Career", path: "/careers" },
   { label: "Contact Us", path: "/contact" },
@@ -147,7 +147,7 @@ export default function Footer() {
             {Object.entries(footerLinks).map(([heading, links]) => (
               <div className="ft-col" key={heading}>
                 <div className="ft-col-head">
-                  <span className="ft-col-title">{heading}</span>
+                  <span className="ft-col-title">{heading.replaceAll("_", " ")}</span>
                   <div className="ft-col-underline">
                     <span className="u-r" />
                     <span className="u-b" />

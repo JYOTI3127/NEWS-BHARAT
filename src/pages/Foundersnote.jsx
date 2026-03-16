@@ -25,11 +25,11 @@ const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
     right: "fn-fade-right",
     none: "",
   }[direction];
+  const delayClass = `delay-[${delay}s]`;
   return (
     <div
       ref={ref}
-      className={`fn-fade-in ${dirClass} ${visible ? "fn-visible" : ""} ${className}`}
-      style={{ transitionDelay: `${delay}s` }}
+      className={`fn-fade-in ${dirClass} ${visible ? "fn-visible" : ""} ${delayClass} ${className}`}
     >
       {children}
     </div>

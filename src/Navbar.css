@@ -52,10 +52,18 @@
   font-size: 12px;
   color: #333;
   gap: 1%;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   z-index: 1;
   position: relative;
   transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
+.ticker-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .ticker-scroll-track {
@@ -68,9 +76,10 @@
 .ticker-scroll-inner {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   white-space: nowrap;
   flex-wrap: nowrap;
+  padding-left: 1%;
 }
 
 .ticker-left {
@@ -90,6 +99,7 @@
   color: var(--navy);
   font-family: 'Montserrat', sans-serif;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .ticker-item {
@@ -126,13 +136,6 @@
   gap: 2px;
   color: var(--red);
   font-weight: 600;
-}
-
-.ticker-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .t-date {
@@ -234,14 +237,13 @@
 .search-box {
   display: flex;
   align-items: center;
-  width: 864px;
+  width: 617px;
   height: 38px;
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 20px;
   padding: 0 14px;
   gap: 10px;
-  margin-left: 38%;
   transition: all 0.25s ease;
 }
 
@@ -358,7 +360,7 @@
   min-width: 120px;
   z-index: 999;
   padding-left: 9%;
-  padding-top: 4%;
+  /* padding-top: 4%; */
 }
 
 .logo-full img {
@@ -422,7 +424,7 @@
   color: #fff;
   text-decoration: none;
   font-family: 'Poppins', sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   white-space: nowrap;
   transition: color 0.2s, background 0.2s;

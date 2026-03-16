@@ -19,11 +19,11 @@ const useInView = (threshold = 0.1) => {
 const FadeIn = ({ children, delay = 0, left = false, className = "" }) => {
   const [ref, visible] = useInView();
   const base = left ? "priv-fade-left" : "priv-fade-in";
+  const delayClass = `delay-[${delay}s]`;
   return (
     <div
       ref={ref}
-      className={`${base} ${visible ? "priv-visible" : ""} ${className}`}
-      style={{ transitionDelay: `${delay}s` }}
+      className={`${base} ${visible ? "priv-visible" : ""} ${delayClass} ${className}`}
     >
       {children}
     </div>
@@ -413,7 +413,7 @@ We may update this Privacy Policy periodically. Continued use of the website imp
               </p>
 
               {/* Contact block */}
-              <div className="priv-contact-block" style={{ marginTop: "2rem" }}>
+              <div className="priv-contact-block mt-8">
                 <h3 className="priv-contact-title">Questions about this policy?</h3>
                 <p className="priv-contact-desc">
                   If you have any questions or concerns about how we handle your data, feel free to reach out to our team.

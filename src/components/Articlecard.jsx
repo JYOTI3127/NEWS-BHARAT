@@ -4,7 +4,6 @@ export default function ArticleCard({ article }) {
   const {
     id,
     title,
-    slug,
     description,
     category_details,
     author,
@@ -13,9 +12,11 @@ export default function ArticleCard({ article }) {
     image_url,
   } = article;
 
-  // Full image URL banate hain
-  const baseURL = "http://127.0.0.1:8000"; // Django server ka base URL
-  const imageUrl = image_url ? `${baseURL}${image_url}` : null;
+  const imageUrl = image_url
+    ? image_url.startsWith("http")
+      ? image_url
+      : `http://127.0.0.1:8000${image_url}`
+    : null;
 
   const date = published_at || created_at;
   const formattedDate = date
@@ -27,117 +28,44 @@ export default function ArticleCard({ article }) {
     : "";
 
   return (
-    <>
-      <Link
-        to={`/article/${slug || id}`}
-        style={{ textDecoration: "none", color: "inherit" }}
-      >
-        <div className="article-card">
-          {/* Image */}
-          <div className="article-card-img-wrap">
-            {imageUrl ? (
-              <img src={imageUrl} alt={title} className="article-card-img" />
-            ) : (
-              <div className="article-card-img-placeholder">
-                <span>News4Bharat</span>
-              </div>
-            )}
-            {category_details?.name && (
-              <span className="article-card-badge">{category_details.name}</span>
-            )}
-          </div>
+    <Link
+      to={`/article/${id}`}
+      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+    >
+      <div className="bg-white rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex flex-col h-full transition-transform duration-300 hover:-translate-y-1">
 
-          {/* Content */}
-          <div className="article-card-body">
-            <h3 className="article-card-title">{title}</h3>
-
-            {description && (
-              <p className="article-card-desc">
-                {description.slice(0, 100)}...
-              </p>
-            )}
-
-            <div className="article-card-meta">
-              {author?.username && <span>{author.username}</span>}
-              {formattedDate && <span>{formattedDate}</span>}
+        {/* Image */}
+        <div className="w-full h-full flex items-center justify-center bg-slate-100">
+        <span className="text-slate-400 text-sm font-medium">News4Bharat</span>
+          {imageUrl ? (
+            <img src={imageUrl} alt={title} className="w-full h-full object-cover block" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-slate-100">
+              <span>News4Bharat</span>
             </div>
+          )}
+          {category_details?.name && (
+            <span className="absolute top-3 left-3 bg-red-600 text-white text-xs font-semibold uppercase px-2 py-1 rounded">
+              {category_details.name}
+            </span>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="text-lg font-semibold mb-2 line-clamp-2">{title}</h3>
+          {description && (
+            <p className="text-sm text-slate-600 mb-2 line-clamp-2">
+              {description.slice(0, 100)}...
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+            {author?.username && <span>{author.username}</span>}
+            {formattedDate && <span>{formattedDate}</span>}
           </div>
         </div>
-      </Link>
 
-      {/* CSS */}
-      <style>{`
-        .article-card{
-          background:#fff;
-          border-radius:8px;
-          overflow:hidden;
-          box-shadow:0 2px 8px rgba(0,0,0,0.08);
-          display:flex;
-          flex-direction:column;
-          height:100%;
-          transition:0.3s;
-        }
-
-        .article-card:hover{
-          transform:translateY(-4px);
-        }
-
-        .article-card-img-wrap{
-          width:100%;
-          height:200px;
-          overflow:hidden;
-          position:relative;
-        }
-
-        .article-card-img{
-          width:100%;
-          height:100%;
-          object-fit:cover;
-          display:block;
-        }
-
-        .article-card-body{
-          padding:14px;
-        }
-
-        .article-card-title{
-          font-size:18px;
-          font-weight:600;
-          margin-bottom:6px;
-          display:-webkit-box;
-          -webkit-line-clamp:2;
-          -webkit-box-orient:vertical;
-          overflow:hidden;
-        }
-
-        .article-card-desc{
-          font-size:14px;
-          color:#555;
-          margin-bottom:8px;
-          display:-webkit-box;
-          -webkit-line-clamp:2;
-          -webkit-box-orient:vertical;
-          overflow:hidden;
-        }
-
-        .article-card-meta{
-          font-size:13px;
-          color:#777;
-          display:flex;
-          justify-content:space-between;
-        }
-
-        .article-card-badge{
-          position:absolute;
-          top:10px;
-          left:10px;
-          background:#e11d48;
-          color:#fff;
-          font-size:12px;
-          padding:4px 8px;
-          border-radius:4px;
-        }
-      `}</style>
-    </>
+      </div>
+    </Link>
   );
 }

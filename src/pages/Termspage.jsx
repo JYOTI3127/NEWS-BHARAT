@@ -19,8 +19,9 @@ const useInView = (threshold = 0.1) => {
 const FadeIn = ({ children, delay = 0, left = false }) => {
   const [ref, visible] = useInView();
   const cls = left ? "t-fade-left" : "t-fade";
+  const delayClass = `delay-[${delay}s]`;
   return (
-    <div ref={ref} className={`${cls} ${visible ? "t-visible" : ""}`} style={{ transitionDelay: `${delay}s` }}>
+    <div ref={ref} className={`${cls} ${visible ? "t-visible" : ""} ${delayClass}`}>
       {children}
     </div>
   );
@@ -305,7 +306,7 @@ By accessing News4Bharat, you agree to the following:
             {/* Governing Law — full width */}
             <FadeIn delay={0.2}>
               <div className="terms-block-full">
-                <div className="terms-block-title" style={{ marginBottom: 8 }}>
+                <div className="terms-block-title mb-2">
                   <span className="terms-block-title-icon">{icons.globe}</span>
                   Governing Law
                 </div>
@@ -331,7 +332,7 @@ By accessing News4Bharat, you agree to the following:
           </FadeIn>
 
                     <FadeIn delay={0.05}>
-            <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.8, marginBottom: "1.5rem" }}>
+            <p className="text-[0.95rem] text-[#555] leading-[1.8] mb-[1.5rem]">
 News4Bharat adheres to the following principles:
             </p>
           </FadeIn>
@@ -364,7 +365,7 @@ News4Bharat adheres to the following principles:
           </FadeIn>
 
           <FadeIn delay={0.05}>
-            <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.8, marginBottom: "1.5rem" }}>
+            <p className="text-[0.95rem] text-[#555] leading-[1.8] mb-[1.5rem]">
               The information provided on News4Bharat is for general informational purposes only.
             </p>
           </FadeIn>

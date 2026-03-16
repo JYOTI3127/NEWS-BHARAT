@@ -71,17 +71,11 @@ export default function NewsBanner() {
       <div className="nb-container">
 
         {/* Background image */}
-        <div
+        <img
           key={current}
-          className="nb-bg"
-          style={{
-            backgroundImage: `url(${slide.image})`,
-            opacity:   animating ? 0 : 1,
-            transform: animating
-              ? direction === "next" ? "translateX(30px) scale(1.02)" : "translateX(-30px) scale(1.02)"
-              : "translateX(0) scale(1)",
-            transition: "opacity 0.6s ease, transform 0.6s ease",
-          }}
+          src={slide.image}
+          alt={slide.title}
+          className={`nb-bg absolute inset-0 w-full h-full object-cover object-top z-0 transform transition-all duration-500 ease-linear ${animating ? "opacity-0" : "opacity-100"} ${animating ? (direction === "next" ? "translate-x-8 scale-[1.02]" : "-translate-x-8 scale-[1.02]") : "translate-x-0 scale-100"}`}
         />
 
         {/* Gradient overlay */}
@@ -89,12 +83,7 @@ export default function NewsBanner() {
 
         {/* Content */}
         <div
-          className="nb-inner"
-          style={{
-            opacity:   animating ? 0 : 1,
-            transform: animating ? "translateY(10px)" : "translateY(0)",
-            transition: "opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s",
-          }}
+          className={`nb-inner transform transition-all duration-500 delay-100 ease-linear ${animating ? "opacity-0 translate-y-[10px]" : "opacity-100 translate-y-0"}`}
         >
           {/* Hero */}
           <div className="nb-hero">

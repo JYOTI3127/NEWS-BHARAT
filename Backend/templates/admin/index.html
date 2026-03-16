@@ -253,7 +253,7 @@
   <div class="dash-card dash-card--articles">
     <div class="dash-card-header">
       <h3 class="dash-card-title">Recent Articles</h3>
-      <a href="" class="dash-card-link">View all &#x203A;</a>
+      <a href="/admin/newsapp/article/" class="dash-card-link">View all &#x203A;</a>
     </div>
 
     <table class="articles-table">
@@ -280,8 +280,8 @@
                   </svg>
                 </div>
                 <div class="article-meta">
-                  <a href="" class="article-name">
-                    {{ article.title|truncatechars:36 }}
+                  <a href="/admin/newsapp/article/{{ article.pk }}/change/" class="article-name">
+                      {{ article.title|truncatechars:36 }}
                   </a>
                   {% if article.is_paid %}
                   <span class="article-paid-tag">Paid</span>

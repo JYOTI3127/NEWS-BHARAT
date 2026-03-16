@@ -1082,7 +1082,7 @@ def live_cricket(request):
             live.append(match)
 
     return Response({
-        "live": live[:1],        # 1 live match
-        "upcoming": upcoming[:3], # 3 upcoming matches
-        "recent": recent[:3]     # 3 recent matches
+        "live": live[:1],        
+        "upcoming": upcoming[:3], 
+        "recent": recent[:3]     
     })

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}{% trans 'Django site admin' %}{% endblock %}</title>
+<title>{% block title %}News4Bharat Dashboard{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -20,73 +20,84 @@
 {% block body %}
 <div class="admin-wrapper">
 
-  <aside class="admin-sidebar">
+  <aside class="admin-sidebar" id="adminSidebar">
 
     <div class="sidebar-logo">
       <div class="logo-brand">
-        <div class="logo-icon">
+        <a href="{% url 'admin:index' %}" class="logo-icon" title="Go to Overview">
           <img src="{% static 'images/NEWS4BHARAT_LOGO.png' %}" alt="News4Bharat">
-        </div>
+        </a>
       </div>
-      <div class="logo-toggle">
+      <button class="logo-toggle" id="sidebarToggle" title="Toggle Sidebar" onclick="toggleSidebar()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
         </svg>
-      </div>
+      </button>
     </div>
 
+    <a href="{% url 'admin:index' %}" class="overview-quick-btn" id="overviewQuickBtn" data-tooltip="Overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>Overview</span>
+    </a>
+
     <div class="panel-quick">
-      <div class="quick-item">
-        <div class="quick-item-left">
+      <!-- Quick Search -->
+      <div class="quick-item quick-search-wrap" data-tooltip="Quick Search">
+        <div class="quick-item-left" id="quickSearchToggle" onclick="toggleQuickSearch()" style="cursor:pointer;width:100%">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          Quick search
+          <span>Quick search</span>
         </div>
+        <input
+          type="text"
+          id="quickSearchInput"
+          class="quick-search-input"
+          placeholder="Search menu..."
+          oninput="runQuickSearch(this.value)"
+          onkeydown="if(event.key==='Escape') closeQuickSearch()"
+          style="display:none"
+        >
       </div>
-      <a href="{% url 'admin_inbox' %}" class="quick-item">
+      <div id="quickSearchResults" class="quick-search-results" style="display:none"></div>
+      <a href="{% url 'admin_inbox' %}" class="quick-item" data-tooltip="Inbox">
         <div class="quick-item-left">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-          Inbox
+          <span>Inbox</span>
         </div>
         <span class="quick-badge" id="inboxBadge" {% if unread_notifications == 0 %}style="display:none"{% endif %}>
-          {% if unread_messages > 9 %}
-            9+
-          {% else %}
-            {{ unread_messages }}
-          {% endif %}
+          {% if unread_messages > 9 %}9+{% else %}{{ unread_messages }}{% endif %}
         </span>
       </a>
 
-      <a href="{% url 'admin_notifications' %}" class="quick-item">
+      <a href="{% url 'admin_notifications' %}" class="quick-item" data-tooltip="Notifications">
         <div class="quick-item-left">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          Notifications
+          <span>Notifications</span>
         </div>
         <span class="quick-badge" id="notifBadge" {% if unread_notifications == 0 %}style="display:none"{% endif %}>
-          {% if unread_notifications > 15 %}
-            15+
-          {% else %}
-            {{ unread_notifications }}
-          {% endif %}
+          {% if unread_notifications > 15 %}15+{% else %}{{ unread_notifications }}{% endif %}
         </span>
       </a>
     </div>
 
     <!-- Post Button -->
-    <a href="/admin/newsapp/article/" class="post-article-btn">
+    <a href="/admin/newsapp/article/" class="post-article-btn" data-tooltip="Post">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 3L10 14"/><path d="M21 3C21 3 16 20 15 21C14.5 21.5 13.5 21 13 20L10 14L4 11C3 10.5 3 9.5 4 9L21 3Z"/>
       </svg>
-      Post
+      <span>Post</span>
     </a>
 
     <!-- Media Button -->
     <div class="media-btn-wrap">
-      <button class="media-post-btn">
+      <button class="media-post-btn" data-tooltip="Media">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>
         </svg>
-        Media
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
+        <span>Media</span>
+        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
@@ -112,25 +123,17 @@
 
     <!-- Social Media Button -->
     <div class="media-btn-wrap" id="socialBtnWrap">
-      <button class="media-post-btn" style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(236,72,153,0.10));">
+      <button class="media-post-btn" style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(236,72,153,0.10));" data-tooltip="Social Media">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
         </svg>
-        Social Media
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
+        <span>Social Media</span>
+        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
       <div class="media-dropdown">
-        <!-- <a href="#" onclick="openSocialPage('all-posts'); return false;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          See All Posts
-          <span class="dropdown-count" id="dropdownSocialCount">—</span>
-        </a> -->
         <a href="#" onclick="openSocialPage('make-post'); return false;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
@@ -144,18 +147,11 @@
       <p class="nav-section-label">MENU</p>
       <ul class="nav-list">
 
-        <li class="nav-item">
-          <a href="{% url 'admin:index' %}" class="nav-link">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
-            <span class="nav-label">Overview</span>
-          </a>
-        </li>
-
         {% for app in available_apps %}{% for model in app.models %}
 
           {% if model.object_name == "Group" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Group">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
               <span class="nav-label">Group</span>
             </a>
@@ -164,7 +160,7 @@
 
           {% if model.object_name == "User" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="User">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
               <span class="nav-label">User</span>
             </a>
@@ -173,7 +169,7 @@
 
           {% if model.object_name == "Roles" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Roles">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
               <span class="nav-label">Roles</span>
             </a>
@@ -182,7 +178,7 @@
 
           {% if model.object_name == "Permission" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Permission">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
               <span class="nav-label">Permission</span>
             </a>
@@ -191,7 +187,7 @@
 
           {% if model.object_name == "Category" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Category">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <span class="nav-label">Category</span>
             </a>
@@ -200,7 +196,7 @@
 
           {% if model.object_name == "FactCheck" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Fact Check">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
               <span class="nav-label">Fact Check</span>
             </a>
@@ -209,7 +205,7 @@
 
           {% if model.object_name == "MetalRates" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Metal Rates">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
               <span class="nav-label">Metal Rates</span>
             </a>
@@ -218,7 +214,7 @@
 
           {% if model.object_name == "HomepageSlots" %}
           <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
+            <a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Homepage Slots">
               <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
               <span class="nav-label">Homepage Slots</span>
             </a>
@@ -229,7 +225,7 @@
 
         <!-- Article Dropdown -->
         <li class="nav-item has-submenu">
-          <div class="nav-link" onclick="toggleSub(this)">
+          <div class="nav-link" onclick="toggleSub(this)" data-tooltip="Article">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
             <span class="nav-label">Article</span>
             <span class="submenu-arrow">›</span>
@@ -246,7 +242,7 @@
 
         <!-- Reporter Dropdown -->
         <li class="nav-item has-submenu">
-          <div class="nav-link" onclick="toggleSub(this)">
+          <div class="nav-link" onclick="toggleSub(this)" data-tooltip="Reporter">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></span>
             <span class="nav-label">Reporter</span>
             <span class="submenu-arrow">›</span>
@@ -264,22 +260,22 @@
 
     <div class="panel-footer">
       <div class="nav-list">
-        <a href="{% url 'admin:password_change' %}" class="quick-item">
+        <a href="{% url 'admin:password_change' %}" class="quick-item" data-tooltip="Settings">
           <div class="quick-item-left">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            Settings
+            <span>Settings</span>
           </div>
         </a>
-        <a href="{% url 'admin:logout' %}" class="quick-item">
+        <a href="{% url 'admin:logout' %}" class="quick-item" data-tooltip="Logout">
           <div class="quick-item-left">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Logout
+            <span>Logout</span>
           </div>
         </a>
       </div>
     </div>
 
-    <a href="/admin/auth/user/{{ user.pk }}/profile/" class="panel-user" title="View your profile">
+    <a href="/admin/auth/user/{{ user.pk }}/profile/" class="panel-user" title="View your profile" data-tooltip="Profile">
       <div class="panel-user-avatar">
         {% if user.profile_picture %}
           <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
@@ -301,7 +297,7 @@
 
   </aside>
 
-  <main class="admin-main">
+  <main class="admin-main" id="adminMain">
     <header class="admin-topbar">
       <div class="topbar-left">
         <h1 class="topbar-title">{% block content_title %}News Admin{% endblock %}</h1>
@@ -502,11 +498,9 @@
       </div>
     </div>
 
-    <!-- ══ PAGE: MAKE A POST (NEW) ══ -->
+    <!-- ══ PAGE: MAKE A POST ══ -->
     <div id="socialPage_make" class="social-page" style="display:none">
       <div class="mp2-wrap">
-
-        <!-- Step 1: Platform -->
         <div class="mp2-step">
           <div class="mp2-step-head">
             <div class="mp2-step-num">1</div>
@@ -516,7 +510,6 @@
             </div>
           </div>
           <div class="mp2-platform-grid">
-
             <div class="mp2-plat-card" data-plat="instagram" data-w="1080" data-h="1080" data-label="Instagram · 1080×1080" onclick="mp2SelectPlatform(this)">
               <div class="mp2-plat-icon" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff" stroke="none"/></svg>
@@ -525,7 +518,6 @@
               <div class="mp2-plat-size">1080 × 1080</div>
               <div class="mp2-plat-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             </div>
-
             <div class="mp2-plat-card" data-plat="facebook" data-w="1200" data-h="630" data-label="Facebook · 1200×630" onclick="mp2SelectPlatform(this)">
               <div class="mp2-plat-icon" style="background:#1877f2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
@@ -534,7 +526,6 @@
               <div class="mp2-plat-size">1200 × 630</div>
               <div class="mp2-plat-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             </div>
-
             <div class="mp2-plat-card" data-plat="twitter" data-w="1600" data-h="900" data-label="X/Twitter · 1600×900" onclick="mp2SelectPlatform(this)">
               <div class="mp2-plat-icon" style="background:#000">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -543,7 +534,6 @@
               <div class="mp2-plat-size">1600 × 900</div>
               <div class="mp2-plat-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             </div>
-
             <div class="mp2-plat-card" data-plat="whatsapp" data-w="1080" data-h="1080" data-label="WhatsApp · 1080×1080" onclick="mp2SelectPlatform(this)">
               <div class="mp2-plat-icon" style="background:#25d366">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -552,7 +542,6 @@
               <div class="mp2-plat-size">1080 × 1080</div>
               <div class="mp2-plat-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             </div>
-
             <div class="mp2-plat-card" data-plat="linkedin" data-w="1200" data-h="627" data-label="LinkedIn · 1200×627" onclick="mp2SelectPlatform(this)">
               <div class="mp2-plat-icon" style="background:#0a66c2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
@@ -561,7 +550,6 @@
               <div class="mp2-plat-size">1200 × 627</div>
               <div class="mp2-plat-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
             </div>
-
           </div>
           <div class="mp2-plat-info" id="mp2PlatInfo">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -569,7 +557,6 @@
           </div>
         </div>
 
-        <!-- Step 2: Create Post -->
         <div class="mp2-step">
           <div class="mp2-step-head">
             <div class="mp2-step-num">2</div>
@@ -579,7 +566,6 @@
             </div>
           </div>
           <div class="mp2-controls">
-
             <div class="mp2-field-label">Background Image</div>
             <div class="mp2-upload-area" id="mp2UploadArea" onclick="document.getElementById('mp2ImageInput').click()">
               <input type="file" id="mp2ImageInput" accept="image/*" onchange="mp2HandleImage(event)" style="display:none">
@@ -587,28 +573,20 @@
               <div class="mp2-upload-text" id="mp2UploadText">Click to upload image</div>
               <div class="mp2-upload-hint">JPG, PNG recommended</div>
             </div>
-
             <div class="mp2-field">
               <label class="mp2-field-label">Headline</label>
               <input class="mp2-input" type="text" id="mp2Headline" placeholder="e.g. Parliament Session Begins" maxlength="120" oninput="mp2UpdatePreview()">
             </div>
-
             <div class="mp2-field">
               <label class="mp2-field-label">Short Description</label>
               <textarea class="mp2-input mp2-textarea" id="mp2Desc" rows="2" placeholder="Brief description..." oninput="mp2UpdatePreview()"></textarea>
             </div>
-
             <div class="mp2-field-row">
               <div class="mp2-field">
                 <label class="mp2-field-label">Category</label>
                 <select class="mp2-input mp2-select" id="mp2Category" onchange="mp2UpdatePreview()">
-                  <option>Breaking</option>
-                  <option>Politics</option>
-                  <option>Economy</option>
-                  <option>Sports</option>
-                  <option>Technology</option>
-                  <option>World</option>
-                  <option>Entertainment</option>
+                  <option>Breaking</option><option>Politics</option><option>Economy</option>
+                  <option>Sports</option><option>Technology</option><option>World</option><option>Entertainment</option>
                 </select>
               </div>
               <div class="mp2-field">
@@ -616,21 +594,17 @@
                 <input class="mp2-input" type="text" id="mp2Time" placeholder="Today · 9:30 AM IST" oninput="mp2UpdatePreview()">
               </div>
             </div>
-
             <div class="mp2-field">
               <label class="mp2-field-label">Theme</label>
               <div class="mp2-theme-row">
                 <button class="mp2-theme-btn active" id="mp2LightBtn" onclick="mp2SetTheme('light')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
-                  Light
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg> Light
                 </button>
                 <button class="mp2-theme-btn" id="mp2DarkBtn" onclick="mp2SetTheme('dark')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                  Dark
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark
                 </button>
               </div>
             </div>
-
             <div class="mp2-field">
               <label class="mp2-field-label">Accent Color</label>
               <div class="mp2-accent-row">
@@ -642,11 +616,9 @@
                 <button class="mp2-accent-dot" style="background:#6366f1 !important" onclick="mp2SetAccent('#6366f1',this)" title="Indigo"></button>
               </div>
             </div>
-
           </div>
         </div>
 
-        <!-- Step 3: Preview + Download -->
         <div class="mp2-step">
           <div class="mp2-step-head">
             <div class="mp2-step-num">3</div>
@@ -663,7 +635,6 @@
               Download JPG
             </button>
           </div>
-
           <div class="mp2-preview-outer">
             <div class="mp2-preview-placeholder" id="mp2PreviewPlaceholder">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -702,21 +673,54 @@
             <canvas id="mp2Canvas" style="display:none"></canvas>
           </div>
         </div>
+      </div>
+    </div>
 
-      </div><!-- /mp2-wrap -->
-    </div><!-- /socialPage_make -->
-
-  </div><!-- /gallery-body -->
-</div><!-- /socialMediaOverlay -->
-
+  </div>
+</div>
 {% endblock %}
 
 <script>
-// ── Sidebar ──────────────────────────────────────────────────
-function toggleSub(el) { el.closest('.nav-item').classList.toggle('open'); }
+// ── Sidebar Toggle ───────────────────────────────────────────
+function toggleSidebar() {
+  var sidebar = document.getElementById('adminSidebar');
+  sidebar.classList.toggle('collapsed');
+  localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+}
+
+// Restore sidebar state on page load
+(function() {
+  if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    var sidebar = document.getElementById('adminSidebar');
+    if (sidebar) sidebar.classList.add('collapsed');
+  }
+})();
+
+// ── Sidebar Nav ──────────────────────────────────────────────
+function toggleSub(el) {
+  var sidebar = document.getElementById('adminSidebar');
+  // If sidebar is collapsed, expand it first then open submenu
+  if (sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+    localStorage.setItem('sidebarCollapsed', 'false');
+  }
+  el.closest('.nav-item').classList.toggle('open');
+}
+
 document.querySelectorAll('.nav-link').forEach(function(l) {
   if (l.href === window.location.href) l.closest('.nav-item').classList.add('active');
 });
+
+// Highlight Overview button when on dashboard
+(function(){
+  var overviewBtn = document.getElementById('overviewQuickBtn');
+  if (overviewBtn) {
+    var adminIndexUrl = overviewBtn.getAttribute('href');
+    if (window.location.pathname === adminIndexUrl || window.location.pathname === '/admin/') {
+      overviewBtn.classList.add('active');
+    }
+  }
+})();
 
 // ── Gallery State ────────────────────────────────────────────
 var currentTab   = 'photos';
@@ -802,6 +806,72 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch('/api/media/photos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){ var el=document.getElementById('dropdownPhotoCount'); if(el) el.textContent=(d.items||[]).length; }).catch(function(){});
   fetch('/api/media/videos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){ var el=document.getElementById('dropdownVideoCount'); if(el) el.textContent=(d.items||[]).length; }).catch(function(){});
   var sc=document.getElementById('dropdownSocialCount'); if(sc) sc.textContent=SOCIAL_DEMO_POSTS.length;
+  loadDashboardStats();
+});
+
+// ── Dashboard Stats ──────────────────────────────────────────
+function loadDashboardStats() {
+  fetch('/api/dashboard/stats/', { credentials: 'same-origin' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      var map = {
+        'stat-drafts': data.drafts, 'stat-scheduled': data.scheduled,
+        'stat-archived': data.archived, 'stat-rejected': data.rejected,
+        'stat-paid': data.paid, 'stat-overdue': data.overdue,
+        'stat-authors': data.authors, 'stat-categories': data.categories,
+      };
+      Object.keys(map).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && map[id] !== undefined) el.textContent = map[id];
+      });
+      var heroMap = {
+        'hero-total': data.total_articles,
+        'hero-published': data.published,
+        'hero-pipeline': data.in_pipeline,
+      };
+      Object.keys(heroMap).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && heroMap[id] !== undefined) el.textContent = heroMap[id];
+      });
+    })
+    .catch(function(err) { console.warn('Dashboard stats API not available:', err); });
+}
+
+function goToFilteredArticles(status) {
+  var articleListUrl = '/admin/newsapp/article/';
+  window.location.href = status ? articleListUrl + '?status__exact=' + status : articleListUrl;
+}
+
+function patchRecentArticleCategories() {
+  var rows = document.querySelectorAll('.recent-articles-table tbody tr, #recentArticlesTable tbody tr');
+  if (!rows.length) return;
+  var articleIds = [];
+  rows.forEach(function(row) {
+    var id = row.getAttribute('data-article-id') || row.getAttribute('data-id');
+    if (id) articleIds.push(id);
+  });
+  if (!articleIds.length) return;
+  fetch('/api/articles/categories/?ids=' + articleIds.join(','), { credentials: 'same-origin' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      rows.forEach(function(row) {
+        var id = row.getAttribute('data-article-id') || row.getAttribute('data-id');
+        if (id && data[id]) {
+          var catCell = row.querySelector('.col-category, td[data-col="category"]');
+          if (!catCell) { var tds = row.querySelectorAll('td'); if (tds.length > 1) catCell = tds[1]; }
+          if (catCell && (catCell.textContent.trim() === '—' || catCell.textContent.trim() === '')) {
+            catCell.textContent = data[id];
+          }
+        }
+      });
+    })
+    .catch(function() {});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  patchRecentArticleCategories();
+  var pu = document.querySelector('a.panel-user');
+  if (pu) { pu.style.textDecoration='none'; pu.style.color='inherit'; }
 });
 
 // ── Social Demo Data ─────────────────────────────────────────
@@ -856,11 +926,7 @@ function socViewPost(id){var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id===
 function socEditPost(id){alert('Edit post #'+id+' — connect your API endpoint.');}
 function socArchivePost(id){var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id===id;}); if(p&&confirm('Archive this post?')){p.status='archived';renderSocialTable();}}
 
-document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySelector('a.panel-user'); if(pu){pu.style.textDecoration='none';pu.style.color='inherit';} });
-
-// ════════════════════════════════════════════════════════════
-// MAKE A POST v2 — all logic
-// ════════════════════════════════════════════════════════════
+// ── Make A Post v2 ───────────────────────────────────────────
 (function(){
   var mp2State={platform:null,canvasW:1080,canvasH:1080,theme:'light',accent:'#1950DF',imageUrl:null};
   var PLATFORM_DIMS={instagram:{w:1080,h:1080},facebook:{w:1200,h:630},twitter:{w:1600,h:900},whatsapp:{w:1080,h:1080},linkedin:{w:1200,h:627}};
@@ -878,7 +944,6 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
     document.getElementById('mp2DownloadJpgBtn').disabled=false;
     mp2ShowPreview(); mp2UpdatePreview();
   };
-
   window.mp2HandleImage=function(e){
     var file=e.target.files[0]; if(!file) return;
     mp2State.imageUrl=URL.createObjectURL(file);
@@ -886,7 +951,6 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
     document.getElementById('mp2UploadText').textContent=file.name;
     mp2UpdatePreview();
   };
-
   function mp2ShowPreview(){
     document.getElementById('mp2PreviewPlaceholder').style.display='none';
     var scaler=document.getElementById('mp2PreviewScaler'); scaler.style.display='flex';
@@ -904,7 +968,6 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
     cat.style.fontSize=Math.round(W*0.014)+'px';
     cat.style.padding=Math.round(W*0.007)+'px '+Math.round(W*0.016)+'px';
   }
-
   window.mp2UpdatePreview=function(){
     if(!mp2State.platform) return;
     mp2ShowPreview();
@@ -925,21 +988,18 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
     document.getElementById('mp2PostFooter').style.color=isDark?'#555':'#aaa';
     document.getElementById('mp2LogoBadge').style.background=isDark?'rgba(0,0,0,0.75)':'rgba(255,255,255,0.9)';
   };
-
   window.mp2SetTheme=function(t){
     mp2State.theme=t;
     document.getElementById('mp2LightBtn').classList.toggle('active',t==='light');
     document.getElementById('mp2DarkBtn').classList.toggle('active',t==='dark');
     mp2UpdatePreview();
   };
-
   window.mp2SetAccent=function(color,el){
     mp2State.accent=color;
     document.querySelectorAll('.mp2-accent-dot').forEach(function(d){d.classList.remove('active');});
     el.classList.add('active');
     mp2UpdatePreview();
   };
-
   window.mp2Download=function(fmt){
     var W=mp2State.canvasW; var H=mp2State.canvasH;
     var canvas=document.getElementById('mp2Canvas'); canvas.width=W; canvas.height=H;
@@ -952,7 +1012,6 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
       else { grd.addColorStop(0,'rgba(255,255,255,0.97)'); grd.addColorStop(0.4,'rgba(255,255,255,0.5)'); grd.addColorStop(1,'rgba(255,255,255,0)'); }
       ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
       var pad=W*0.05;
-      // logo badge
       ctx.fillStyle=mp2State.theme==='dark'?'rgba(0,0,0,0.75)':'rgba(255,255,255,0.9)';
       ctx.beginPath(); ctx.roundRect(pad,pad,W*0.22,W*0.055,8); ctx.fill();
       ctx.font='bold '+Math.round(W*0.022)+'px DM Sans,sans-serif';
@@ -961,26 +1020,20 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
       ctx.fillStyle='#FEAD17'; ctx.fillText('4',pad+W*0.035+nw,pad+W*0.037);
       var n4w=ctx.measureText('News4').width;
       ctx.fillStyle='#FA2E1A'; ctx.fillText('Bharat',pad+W*0.035+n4w,pad+W*0.037);
-      // category badge
       var catText=(document.getElementById('mp2Category').value||'Breaking').toUpperCase();
       ctx.font='bold '+Math.round(W*0.018)+'px DM Sans,sans-serif';
       var catW=ctx.measureText(catText).width+W*0.03; var catH=W*0.046; var catX=W-pad-catW;
       ctx.fillStyle=mp2State.accent; ctx.beginPath(); ctx.roundRect(catX,pad,catW,catH,4); ctx.fill();
       ctx.fillStyle=mp2State.accent==='#FEAD17'?'#000':'#fff'; ctx.textAlign='center';
       ctx.fillText(catText,catX+catW/2,pad+catH*0.7); ctx.textAlign='left';
-      // accent line
       ctx.fillStyle=mp2State.accent; ctx.beginPath(); ctx.roundRect(pad,H-H*0.38,W*0.06,4,2); ctx.fill();
-      // headline
       ctx.fillStyle=mp2State.theme==='dark'?'#fff':'#000';
       var hlSize=Math.round(W*0.042); ctx.font='bold '+hlSize+'px DM Sans,sans-serif';
       wrapText(ctx,document.getElementById('mp2Headline').value||'Your Headline Goes Here',pad,H-H*0.31,W-pad*2,hlSize*1.28);
-      // desc
       var descVal=document.getElementById('mp2Desc').value||'';
       if(descVal){ ctx.fillStyle=mp2State.theme==='dark'?'#ccc':'#444'; var ds=Math.round(W*0.024); ctx.font=ds+'px DM Sans,sans-serif'; wrapText(ctx,descVal,pad,H-H*0.13,W-pad*2,ds*1.5); }
-      // timestamp
       ctx.fillStyle=mp2State.theme==='dark'?'#555':'#aaa'; ctx.font=Math.round(W*0.018)+'px DM Sans,sans-serif';
       ctx.textAlign='right'; ctx.fillText(document.getElementById('mp2Time').value||'Today · IST',W-pad,H-pad); ctx.textAlign='left';
-      // download
       var mime=fmt==='jpeg'?'image/jpeg':'image/png'; var ext=fmt==='jpeg'?'jpg':'png';
       var link=document.createElement('a');
       link.download='n4b_'+(mp2State.platform||'post')+'_'+Date.now()+'.'+ext;
@@ -989,15 +1042,105 @@ document.addEventListener('DOMContentLoaded',function(){ var pu=document.querySe
     if(mp2State.imageUrl){ var img=new Image(); img.crossOrigin='anonymous'; img.onload=function(){drawAll(img);}; img.onerror=function(){drawAll(null);}; img.src=mp2State.imageUrl; }
     else { drawAll(null); }
   };
-
   function wrapText(ctx,text,x,y,maxW,lineH){
     var words=text.split(' '); var line=''; var currY=y;
     for(var i=0;i<words.length;i++){ var test=line+words[i]+' '; if(ctx.measureText(test).width>maxW&&i>0){ctx.fillText(line,x,currY); line=words[i]+' '; currY+=lineH;}else{line=test;} }
     ctx.fillText(line,x,currY);
   }
-
   window.addEventListener('resize',function(){ if(mp2State.platform) mp2ShowPreview(); });
 })();
 </script>
+
+<script>
+// ── Quick Search ─────────────────────────────────────────────
+function buildSearchItems() {
+  var items = [];
+
+  // Static items
+  items.push({ label: 'Overview',        url: '/admin/' });
+  items.push({ label: 'Inbox',           url: "{% url 'admin_inbox' %}" });
+  items.push({ label: 'Notifications',   url: "{% url 'admin_notifications' %}" });
+  items.push({ label: 'Post Article',    url: '/admin/newsapp/article/add/' });
+  items.push({ label: 'Photos',          url: '#', onclick: "openGallery('photos')" });
+  items.push({ label: 'Videos',          url: '#', onclick: "openGallery('videos')" });
+  items.push({ label: 'Social Media Post', url: '#', onclick: "openSocialPage('make-post')" });
+  items.push({ label: 'Settings',        url: "{% url 'admin:password_change' %}" });
+  items.push({ label: 'Logout',          url: "{% url 'admin:logout' %}" });
+
+  // Dynamic — sidebar ke saare nav links DOM se read karo
+  document.querySelectorAll('.nav-link[href], .submenu li a').forEach(function(el) {
+    var label = (el.querySelector('.nav-label') || el).textContent.trim();
+    var url = el.getAttribute('href');
+    if (label && url && url !== '#' && url !== 'javascript:void(0)') {
+      // Duplicate check
+      var exists = items.some(function(i) { return i.url === url; });
+      if (!exists) items.push({ label: label, url: url });
+    }
+  });
+
+  return items;
+}
+
+function toggleQuickSearch() {
+  var input = document.getElementById('quickSearchInput');
+  var toggle = document.getElementById('quickSearchToggle');
+  var sidebar = document.getElementById('adminSidebar');
+
+  if (sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+    localStorage.setItem('sidebarCollapsed', 'false');
+  }
+
+  if (input.style.display === 'none') {
+    toggle.style.display = 'none';
+    input.style.display = 'block';
+    input.focus();
+  } else {
+    closeQuickSearch();
+  }
+}
+
+function closeQuickSearch() {
+  document.getElementById('quickSearchInput').style.display = 'none';
+  document.getElementById('quickSearchInput').value = '';
+  document.getElementById('quickSearchToggle').style.display = 'flex';
+  document.getElementById('quickSearchResults').style.display = 'none';
+}
+
+function runQuickSearch(q) {
+  var results = document.getElementById('quickSearchResults');
+  if (!q.trim()) { results.style.display = 'none'; return; }
+
+  var items = buildSearchItems();
+  var matches = items.filter(function(item) {
+    return item.label.toLowerCase().indexOf(q.toLowerCase()) !== -1;
+  });
+
+  if (!matches.length) {
+    results.innerHTML = '<div class="qs-empty">No results found</div>';
+    results.style.display = 'block';
+    return;
+  }
+
+  results.innerHTML = matches.map(function(item) {
+    var clickAttr = item.onclick
+      ? 'onclick="' + item.onclick + '; closeQuickSearch(); return false;"'
+      : '';
+    return '<a href="' + item.url + '" class="qs-item" ' + clickAttr + '>' +
+      '<span class="qs-label">' + item.label + '</span>' +
+    '</a>';
+  }).join('');
+  results.style.display = 'block';
+}
+
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.quick-search-wrap');
+  var results = document.getElementById('quickSearchResults');
+  if (wrap && !wrap.contains(e.target) && results && !results.contains(e.target)) {
+    closeQuickSearch();
+  }
+});
+</script>
+
 </body>
 </html>

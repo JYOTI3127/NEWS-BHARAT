@@ -1,6 +1,8 @@
 {% extends "admin/change_form.html" %}
 {% load i18n admin_urls static %}
 
+{% block title %}Articles Management{% endblock %}
+
 {% block extrahead %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
@@ -214,29 +216,57 @@
       </div>
     </div>
 
-    <!-- CATEGORY CARD — Multi-select -->
+    <!-- CATEGORY CARD — Main + Sub -->
     <div class="nb-card">
       <div class="nb-card-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
         Categories
         <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)">Select one or more</span>
       </div>
+
       <div class="cat-list" id="cat_list">
         {% for cat in adminform.form.fields.categories.queryset %}
-          {% if not cat.is_archived %}
+          {% if cat.status != 'archived' %}
+
+          <!-- Main category -->
           <div class="cat-item {% if original and cat in original.categories.all %}selected{% endif %}"
-               onclick="toggleCat(this, {{ cat.pk }})" data-id="{{ cat.pk }}">
+              onclick="toggleCat(this, '{{ cat.pk }}', 'main')"
+              data-id="{{ cat.pk }}"
+              data-type="main">
             <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
             <span class="cat-name">{{ cat.name }}</span>
+            {% if cat.sub_categories %}
+              <svg class="cat-expand-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            {% endif %}
+          </div>
+
+          <!-- Subcategories from JSONField -->
+          {% if cat.sub_categories %}
+          <div class="subcat-list" id="subcat_{{ cat.pk }}"
+              style="{% if original and cat in original.categories.all %}display:block{% else %}display:none{% endif %}">
+            {% for sub in cat.sub_categories %}
+            <div class="cat-item subcat-item {% if original and sub.name in original.selected_subcategories %}selected{% endif %}"
+                onclick="toggleCat(this, '{{ cat.pk }}__{{ sub.name|slugify }}', 'sub')"
+                data-id="{{ cat.pk }}__{{ sub.name|slugify }}"
+                data-parent="{{ cat.pk }}"
+                data-subname="{{ sub.name }}"
+                data-type="sub">
+              <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
+              <span class="cat-name">{{ sub.name }}</span>
+            </div>
+            {% endfor %}
           </div>
           {% endif %}
-        {% empty %}
-        <div style="font-size:12px;color:var(--muted)">No categories found.</div>
+
+          {% endif %}
         {% endfor %}
       </div>
+
       <input type="hidden" id="ui_category" value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+      <input type="hidden" id="ui_subcategory" value="">
+
       <div id="cat_count_label" style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px;">
-        <span id="cat_selected_count">0</span> category selected
+        <span id="cat_selected_count">0</span> selected
       </div>
     </div>
 
@@ -493,6 +523,35 @@
         </div>
       </div>
 
+      <div class="ed-social-row">
+        <!-- YouTube -->
+        <div class="ed-field" style="flex:1">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23 7s-.2-1.7-.8-2.4c-.8-.9-1.7-.9-2.1-1C16.9 3 12 3 12 3s-4.9 0-8.1.6c-.4.1-1.3.1-2.1 1C1.2 5.3 1 7 1 7S1 8.7 1 10.4v1.2C1 13.3 1 15 1 15s.2 1.7.8 2.4c.8.9 1.9.9 2.4 1 1.7.2 7.8.6 7.8.6s4.9 0 8.1-.6c.4-.1 1.3-.1 2.1-1 .6-.7.8-2.4.8-2.4s0-1.7 0-3.4v-1.2C23 8.7 23 7 23 7z"/>
+              <polygon points="9.5,8 15.5,11.5 9.5,15"/>
+            </svg>
+            YouTube
+          </div>
+          <input type="text" class="ed-inp" id="ed_youtube" placeholder="youtube.com/…"
+            value="{{ original.author_display_youtube|default:'' }}"
+            oninput="updateEditorPreview()">
+        </div>
+
+        <!-- Reddit -->
+        <div class="ed-field" style="flex:1">
+          <div class="ed-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+            </svg>
+            Reddit
+          </div>
+          <input type="text" class="ed-inp" id="ed_reddit" placeholder="reddit.com/u/…"
+            value="{{ original.author_display_reddit|default:'' }}"
+            oninput="updateEditorPreview()">
+        </div>
+      </div>
+
       <div class="ed-field">
         <div class="ed-label">Articles Published</div>
         <input type="number" class="ed-inp" id="ed_articles" placeholder="e.g. 142" min="0"
@@ -505,16 +564,16 @@
       <div class="ed-preview-header">
         <div class="ed-preview-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Article Preview — As seen on website</div>
         <div class="ed-preview-tabs">
-          <button class="ed-tab active" onclick="switchPreviewTab(this,'desktop')">🖥 Desktop</button>
-          <button class="ed-tab" onclick="switchPreviewTab(this,'mobile')">📱 Mobile</button>
+          <button class="ed-tab active" onclick="switchPreviewTab(this,'desktop')"> Desktop</button>
+          <button class="ed-tab" onclick="switchPreviewTab(this,'mobile')"> Mobile</button>
         </div>
       </div>
       <div class="ed-preview-frame" id="preview_desktop">
         <div class="prev-card-outer">
           <div class="prev-card">
             <div class="prev-card-topbar">
-              <div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">newsportal.in › news › <span id="prev_card_slug">article-slug</span></span></div></div>
-              <div class="prev-card-source-badge">newsportal.in</div>
+              <div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">news4bharat.com › news › <span id="prev_card_slug">article-slug</span></span></div></div>
+              <div class="prev-card-source-badge">news4bharat.com</div>
             </div>
             <div class="prev-card-body">
               <div class="prev-card-text">
@@ -539,7 +598,7 @@
         </div>
       </div>
       <div class="ed-preview-frame ed-preview-mobile" id="preview_mobile" style="display:none">
-        <div class="prev-mobile-scene"><div class="prev-mobile-phone"><div class="prev-mobile-notch"></div><div class="prev-mobile-screen"><div class="prev-mob-card"><div class="prev-mob-topbar"><div class="prev-mob-logo">N</div><div class="prev-mob-site">NewsPortal</div><div class="prev-mob-url">newsportal.in</div></div><div class="prev-mob-body"><div class="prev-mob-text"><div class="prev-mob-cat-tag" id="prev_mob_cat_tag">Category</div><div class="prev-mob-hl" id="prev_mob_hl">Article headline here…</div><div class="prev-mob-sum" id="prev_mob_sum">Summary preview…</div></div><div class="prev-mob-thumb" id="prev_mob_thumb"><img id="prev_mob_thumb_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:5px"><svg id="prev_mob_thumb_ph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div><div class="prev-mob-footer"><div class="prev-mob-av" id="prev_mob_av"><span id="prev_mob_av_init">?</span><img id="prev_mob_av_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><span class="prev-mob-aname" id="prev_mob_aname">Editor</span><span class="prev-mob-dot">·</span><span class="prev-mob-time" id="prev_mob_time">Just now</span></div></div></div></div></div>
+        <div class="prev-mobile-scene"><div class="prev-mobile-phone"><div class="prev-mobile-notch"></div><div class="prev-mobile-screen"><div class="prev-mob-card"><div class="prev-mob-topbar"><div class="prev-mob-logo">N</div><div class="prev-mob-site">NewsPortal</div><div class="prev-mob-url">news4bharat.com</div></div><div class="prev-mob-body"><div class="prev-mob-text"><div class="prev-mob-cat-tag" id="prev_mob_cat_tag">Category</div><div class="prev-mob-hl" id="prev_mob_hl">Article headline here…</div><div class="prev-mob-sum" id="prev_mob_sum">Summary preview…</div></div><div class="prev-mob-thumb" id="prev_mob_thumb"><img id="prev_mob_thumb_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:5px"><svg id="prev_mob_thumb_ph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div><div class="prev-mob-footer"><div class="prev-mob-av" id="prev_mob_av"><span id="prev_mob_av_init">?</span><img id="prev_mob_av_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><span class="prev-mob-aname" id="prev_mob_aname">Editor</span><span class="prev-mob-dot">·</span><span class="prev-mob-time" id="prev_mob_time">Just now</span></div></div></div></div></div>
       </div>
     </div>
   </div>
@@ -575,42 +634,85 @@ function showDropZone() {
    which is already pre-filled by Django template
 ══════════════════════════════════════════════ */
 var selectedCats = new Set();
-(function initCats(){
+var selectedSubs = {};  // { "catPk": ["sub-slug-1", "sub-slug-2"] }
+
+(function initCats() {
   var existing = document.getElementById('ui_category').value;
-  if(existing){
-    existing.split(',').filter(Boolean).forEach(function(id){ selectedCats.add(id.trim()); });
+  if (existing) {
+    existing.split(',').filter(Boolean).forEach(function(id) {
+      selectedCats.add(id.trim());
+    });
   }
-  // Mark already-selected items
-  document.querySelectorAll('.cat-item').forEach(function(el){
-    if(selectedCats.has(String(el.dataset.id))) el.classList.add('selected');
+  document.querySelectorAll('.cat-item[data-type="main"]').forEach(function(el) {
+    if (selectedCats.has(String(el.dataset.id))) {
+      el.classList.add('selected');
+      var subList = document.getElementById('subcat_' + el.dataset.id);
+      if (subList) subList.style.display = 'block';
+    }
   });
   syncCatInput();
 })();
 
-function toggleCat(el, id) {
+function toggleCat(el, id, type) {
   var sid = String(id);
-  if(selectedCats.has(sid)){
-    selectedCats.delete(sid);
-    el.classList.remove('selected');
-  } else {
-    selectedCats.add(sid);
-    el.classList.add('selected');
+
+  if (type === 'main') {
+    if (selectedCats.has(sid)) {
+      // Deselect main — aur uski subs bhi clear karo
+      selectedCats.delete(sid);
+      el.classList.remove('selected');
+      delete selectedSubs[sid];
+      var subList = document.getElementById('subcat_' + sid);
+      if (subList) {
+        subList.style.display = 'none';
+        subList.querySelectorAll('.cat-item').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+      }
+    } else {
+      selectedCats.add(sid);
+      el.classList.add('selected');
+      // Subcategories dikhao
+      var subList = document.getElementById('subcat_' + sid);
+      if (subList) subList.style.display = 'block';
+    }
+
+  } else if (type === 'sub') {
+    var parentId = String(el.getAttribute('data-parent'));
+    var subName  = el.getAttribute('data-subname');
+    if (!selectedSubs[parentId]) selectedSubs[parentId] = [];
+
+    var idx = selectedSubs[parentId].indexOf(subName);
+    if (idx !== -1) {
+      selectedSubs[parentId].splice(idx, 1);
+      el.classList.remove('selected');
+    } else {
+      selectedSubs[parentId].push(subName);
+      el.classList.add('selected');
+    }
   }
+
   syncCatInput();
   setTimeout(updateEditorPreview, 50);
 }
 
-function syncCatInput(){
+function syncCatInput() {
   var arr = Array.from(selectedCats);
   document.getElementById('ui_category').value = arr.join(',');
+
+  // Subcategories ko alag hidden input mein save karo
+  var subInp = document.getElementById('ui_subcategory');
+  if (subInp) subInp.value = JSON.stringify(selectedSubs);
+
   var n = arr.length;
+  var subCount = Object.values(selectedSubs).reduce(function(acc, v) { return acc + v.length; }, 0);
+  var total = n + subCount;
+
   var labelEl = document.getElementById('cat_count_label');
-  if(labelEl){
-    labelEl.textContent = n + (n === 1 ? ' category selected' : ' categories selected');
-    labelEl.className   = n > 0 ? 'has-selection' : '';
+  if (labelEl) {
+    labelEl.innerHTML = '<span id="cat_selected_count">' + n + '</span> categor' + (n === 1 ? 'y' : 'ies') +
+      (subCount > 0 ? ' · <span style="color:#60a5fa">' + subCount + ' subcategor' + (subCount === 1 ? 'y' : 'ies') + '</span>' : '') + ' selected';
   }
-  var countEl = document.getElementById('cat_selected_count');
-  if(countEl) countEl.textContent = n;
 }
 
 /* ══════════════════════════════════════════════
@@ -730,7 +832,7 @@ function generateSlug(){const title=document.getElementById('ui_title').value;if
 document.getElementById('ui_title').addEventListener('blur',function(){const slugInp=document.getElementById('ui_slug');if(!slugInp.readOnly&&!slugInp.value.trim())generateSlug();});
 document.getElementById('ui_title').addEventListener('input',function(){const el=document.getElementById('schema_headline');if(el)el.textContent=this.value||'— from Headline';updateSeoScore();updateEditorPreview();});
 
-/* META CHAR COUNT */
+
 (function initMeta(){
   const ta=document.getElementById('ui_meta_desc');
   if(!ta)return;
@@ -745,14 +847,12 @@ document.getElementById('ui_title').addEventListener('input',function(){const el
     updateSeoScore();
   }
   ta.addEventListener('input',update);
-  update(); // run on load to show existing count
+  update();
 })();
 
-/* ROBOTS */
 function updateRobots(){const ni=document.getElementById('ui_noindex').checked;const nf=document.getElementById('ui_nofollow').checked;document.getElementById('robots_code').textContent=(ni?'noindex':'index')+', '+(nf?'nofollow':'follow');}
 function syncNoindex(){if(!document.getElementById('ui_in_sitemap').checked){document.getElementById('ui_noindex').checked=true;updateRobots();}}
 
-/* SEO SCORE */
 function updateSeoScore(){
   const title=document.getElementById('ui_title').value;const content=nbEditor.innerText||'';const meta=document.getElementById('ui_meta_desc').value;
   const focusKw=(document.getElementById('ui_focus_kw').value||'').toLowerCase().trim();const slug=document.getElementById('ui_slug').value;
@@ -767,17 +867,14 @@ function updateSeoScore(){
 ['ui_title','ui_content','ui_meta_desc','ui_focus_kw','ui_slug','ui_image'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateSeoScore);});
 updateSeoScore(); updateRobots();
 
-/* SPELL CHECK */
+
 async function runSpellCheck(){const content=nbEditor.innerText.trim();if(!content){alert('Content is empty!');return;}const status=document.getElementById('ai_status');status.innerHTML='<span class="ai-loading"></span> AI is checking spelling…';try{const res=await fetch('/api/ai/spell-check/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({text:content})});const data=await res.json();if(data.corrected){nbEditor.innerText=data.corrected;nbSaveHistory();status.innerHTML='✦ Spelling corrected successfully!';}else status.innerHTML='✓ No spelling issues found.';}catch(e){status.innerHTML='✗ AI unavailable. Check API key.';}setTimeout(()=>status.innerHTML='',4000);}
 
-/* KEYWORDS */
+
 async function suggestKeywords(){const title=document.getElementById('ui_title').value;const content=nbEditor.innerText;if(!title&&!content){alert('Add some content first!');return;}const btn=document.getElementById('seo_ai_btn');btn.innerHTML='<div class="ai-loading"></div> Analysing…';try{const res=await fetch('/api/ai/seo-keywords/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({title,content:content.substring(0,1000)})});const data=await res.json();const kwList=document.getElementById('seo_kw_list');if(data.keywords&&data.keywords.length)kwList.innerHTML=data.keywords.map(kw=>`<span class="seo-kw" onclick="selectKw(this,'${kw}')">${kw}</span>`).join('');}catch(e){document.getElementById('seo_kw_list').innerHTML='<span class="seo-kw-placeholder" style="color:#ef4444">AI unavailable.</span>';}btn.innerHTML='<div class="ai-dot"></div> ✦ Suggest with AI';}
 function selectKw(el,kw){el.classList.toggle('active');const fkEl=document.getElementById('ui_focus_kw');if(el.classList.contains('active')&&!fkEl.value.trim()){fkEl.value=kw;updateSeoScore();}}
 
-/* ══════════════════════════════════════════════
-   SUBMIT — sends all fields including Instagram/Facebook
-   categories sent as array (ManyToMany)
-══════════════════════════════════════════════ */
+
 function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').value;}
 
 async function submitArticle(forceStatus){
@@ -794,14 +891,14 @@ async function submitArticle(forceStatus){
     subtitle:         document.getElementById('ui_subtitle').value,
     content,
     image_url:        document.getElementById('ui_image').value,
-    // categories — ManyToMany — array of IDs
+
     categories:       categoryVal.split(',').filter(Boolean).map(Number),
     status:           forceStatus || document.getElementById('ui_status').value,
     priority:         document.getElementById('ui_priority').value,
     is_paid:          document.getElementById('ui_is_paid').checked,
     assigned_to:      document.getElementById('ui_assigned').value ? parseInt(document.getElementById('ui_assigned').value) : null,
     deadline:         document.getElementById('ui_deadline').value || null,
-    // SEO
+
     slug:             document.getElementById('ui_slug').value,
     canonical_url:    document.getElementById('ui_canonical').value,
     meta_description: document.getElementById('ui_meta_desc').value,
@@ -809,7 +906,7 @@ async function submitArticle(forceStatus){
     noindex:          document.getElementById('ui_noindex').checked,
     nofollow:         document.getElementById('ui_nofollow').checked,
     in_sitemap:       document.getElementById('ui_in_sitemap').checked,
-    // Author display fields
+
     editor_id:        parseInt(document.getElementById('ui_editor_id').value) || null,
     editor_name:      document.getElementById('ed_name').value,
     editor_position:  document.getElementById('ed_position').value,
@@ -817,9 +914,16 @@ async function submitArticle(forceStatus){
     editor_photo:     document.getElementById('ed_photo').value,
     editor_twitter:   document.getElementById('ed_twitter').value,
     editor_linkedin:  document.getElementById('ed_linkedin').value,
-    editor_instagram: document.getElementById('ed_instagram').value,   // NEW
-    editor_facebook:  document.getElementById('ed_facebook').value,    // NEW
-    editor_articles:  document.getElementById('ed_articles').value
+    editor_instagram: document.getElementById('ed_instagram').value, 
+    editor_facebook:  document.getElementById('ed_facebook').value,    
+    editor_articles:  document.getElementById('ed_articles').value,
+    editor_youtube:   document.getElementById('ed_youtube').value,
+    editor_reddit:    document.getElementById('ed_reddit').value,
+
+    subcategories: (function() {
+      try { return JSON.parse(document.getElementById('ui_subcategory').value || '{}'); }
+      catch(e) { return {}; }
+    })(),
   };
 
   const articleId = '{{ original.pk|default:"" }}';
@@ -857,17 +961,20 @@ async function submitArticle(forceStatus){
 const editorData = [
   {% for u in adminform.form.fields.assigned_to.queryset %}
   {
-    id: {{ u.pk }},
-    name:      "{{ u.get_full_name|default:u.username }}",
-    position:  "{{ u.profile.position|default:'Reporter' }}",
-    bio:       "{{ u.profile.bio|default:'' }}",
-    photo:     "{{ u.profile.photo|default:'' }}",
-    twitter:   "{{ u.profile.twitter|default:'' }}",
-    linkedin:  "{{ u.profile.linkedin|default:'' }}",
-    instagram: "{{ u.profile.instagram|default:'' }}",
-    facebook:  "{{ u.profile.facebook|default:'' }}",
-    articles: {{ u.articles_authored.count|default:0 }}
-  },
+  id: {{ u.pk }},
+  name: "{{ u.get_full_name|default:u.username }}",
+  position: "{{ u.profile.position|default:'Reporter' }}",
+  bio: "{{ u.profile.bio|default:'' }}",
+  photo: "{{ u.profile.photo|default:'' }}",
+  twitter: "{{ u.profile.twitter|default:'' }}",
+  linkedin: "{{ u.profile.linkedin|default:'' }}",
+  instagram: "{{ u.profile.instagram|default:'' }}",
+  facebook: "{{ u.profile.facebook|default:'' }}",
+  youtube: "{{ u.profile.youtube|default:'' }}",
+  reddit:  "{{ u.profile.reddit|default:'' }}",
+
+  articles: {{ u.articles_authored.count|default:0 }}
+  }
   {% empty %}
   {id:1,name:'Priya Sharma',position:'Senior Political Editor',bio:'Covering national politics and governance for 8+ years.',photo:'',twitter:'@priyasharma',linkedin:'',instagram:'',facebook:'',articles:214},
   {id:2,name:'Rohit Mehta',position:'Business Correspondent',bio:'Tracking markets, policy, and corporate India.',photo:'',twitter:'@rohitmehta',linkedin:'',instagram:'',facebook:'',articles:187},
@@ -897,8 +1004,8 @@ function selectEditor(id){
   document.getElementById('ed_photo').value     = ed.photo || '';
   document.getElementById('ed_twitter').value   = ed.twitter || '';
   document.getElementById('ed_linkedin').value  = ed.linkedin || '';
-  document.getElementById('ed_instagram').value = ed.instagram || '';  // NEW
-  document.getElementById('ed_facebook').value  = ed.facebook || '';   // NEW
+  document.getElementById('ed_instagram').value = ed.instagram || '';  
+  document.getElementById('ed_facebook').value  = ed.facebook || '';  
   document.getElementById('ed_articles').value  = ed.articles || '';
   renderEditorList();
   updateEditorPreview();
@@ -947,7 +1054,6 @@ function updateEditorPreview(){
   const words   = content.split(/\s+/).filter(Boolean);
   const summary = words.slice(0,25).join(' ') + (words.length > 25 ? '…' : '');
 
-  // Desktop
   const slugEl    = document.getElementById('prev_card_slug');     if(slugEl)   slugEl.textContent    = slug || 'article-slug';
   const cardCat   = document.getElementById('prev_card_cat');      if(cardCat)  cardCat.textContent   = catName;
   const cardHl    = document.getElementById('prev_card_headline'); if(cardHl)   cardHl.textContent    = title || 'Article headline will appear here as you type…';
@@ -961,7 +1067,6 @@ function updateEditorPreview(){
   const cardApos  = document.getElementById('prev_card_author_pos');  if(cardApos)  cardApos.textContent  = pos  || 'Position';
   const cardTime  = document.getElementById('prev_card_time');         if(cardTime)  cardTime.textContent  = now;
 
-  // Mobile
   const mobCat      = document.getElementById('prev_mob_cat_tag');    if(mobCat)     mobCat.textContent     = catName;
   const mobHl       = document.getElementById('prev_mob_hl');          if(mobHl)      mobHl.textContent      = title || 'Article headline here…';
   const mobSum      = document.getElementById('prev_mob_sum');         if(mobSum)     mobSum.textContent     = summary || 'Summary preview…';
@@ -985,11 +1090,10 @@ function switchPreviewTab(btn,tab){
 document.getElementById('ui_content').addEventListener('input', updateEditorPreview);
 document.querySelectorAll('.cat-item').forEach(el=>el.addEventListener('click',()=>setTimeout(updateEditorPreview,50)));
 
-// INIT
 renderEditorList();
 updateEditorPreview();
 updateBioCount();
-// On load, init bio count
+
 (function(){ const bio=document.getElementById('ed_bio'); if(bio){ const e=new Event('input'); bio.dispatchEvent(e); } })();
 </script>
 {% endblock %}

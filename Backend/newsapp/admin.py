@@ -748,9 +748,12 @@ class FactCheckAdmin(admin.ModelAdmin):
         factcheck_rows = []
         legal_risk_count = 0
 
-        fcs = FactCheck.objects.select_related(
-            'article', 'article__author', 'article__category', 'checked_by'
-        ).order_by('-checked_at')
+        fcs = (
+            FactCheck.objects
+            .select_related('article', 'article__author', 'checked_by')
+            .prefetch_related('article__categories')
+            .order_by('-checked_at')
+        )
 
         for fc in fcs:
             is_legal_risk = (

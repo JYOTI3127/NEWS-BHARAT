@@ -1,12 +1,13 @@
 {% extends "admin/change_list.html" %}
 {% load i18n static %}
 
+{% block title %}Fact Check Management{% endblock %}
+
 {% block extrahead %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
 {% endblock %}
 
-{# Override these blocks so Django's default table doesn't render #}
 {% block result_list %}{% endblock %}
 {% block pagination %}{% endblock %}
 
@@ -78,7 +79,13 @@
           <!-- ── COL 1: ARTICLE ── -->
           <td>
             <div class="fc-article-cell">
-              <span class="fc-article__cat">{{ fc.article.category.name }}</span>
+              <span class="fc-article__cat">
+                {% for cat in fc.article.categories.all %}
+                  {{ cat.name }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                  Uncategorized
+                {% endfor %}
+              </span>
               <a href="/admin/newsapp/article/{{ fc.article.id }}/change/" class="fc-article__title">
                 {{ fc.article.title|truncatechars:48 }}
               </a>

@@ -1360,7 +1360,7 @@ html {
 .admin-topbar {
   background: rgb(255 255 255 / 97%) !important;
   color: #1e3a8a !important;
-  margin-left: 47px !important;
+  margin-left: 0px !important;
 }
 
 .topbar-search input {
@@ -3662,7 +3662,7 @@ text-decoration: none;
   margin: 0 auto 8px;
 }
 
-.sidebar-post-btn {
+/* .sidebar-post-btn {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3685,33 +3685,7 @@ text-decoration: none;
 
 .sidebar-post-btn svg {
   flex-shrink: 0;
-}
-
-.post-article-btn svg {
-  width: 1.4em;
-  height: 1.6em;
-  color: #fff !important;
-}
-
-.post-article-btn {
-  width: 265px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff00 !important;
-  color: #fff !important;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 7px;
-  border: 1px solid #ffffff33;
-  text-decoration: none;
-  margin: 14px 12px 6px;
-}
-
-.post-article-btn:hover {
-  background: #1d4ed8;
-}
+} */
 
 /* ══════════════════════════════════════════════════════════════
    ARTICLE EDITOR — ENHANCED TOOLBAR + PLAGIARISM MODAL
@@ -14400,7 +14374,6 @@ body {
   padding: 12px 18px;
   flex: 1;
   min-width: 140px;
-  box-shadow: var(--shadow);
 }
 
 .nstat-ic {
@@ -14460,4 +14433,57 @@ body {
 #cat_count_label.has-selection {
   color: #6366f1;
   font-weight: 600;
+}
+
+/* Category td — jo td art-cat ko contain kare */
+tr.art-row td:has(.art-cat) {
+  vertical-align: middle !important;
+  padding: 6px 8px !important;
+}
+
+/* Multiple chips ka wrap */
+tr.art-row td:has(.art-cat) {
+  display: table-cell !important;
+  line-height: 1 !important;
+}
+
+.art-cat {
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #162c6b !important;
+  background: rgba(22, 44, 107, 0.07) !important;
+  padding: 3px 8px !important;
+  border-radius: 20px !important;
+  margin: 2px 2px !important;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+}
+
+/* Subcategory list */
+.subcat-list {
+  margin: 0 0 2px 16px;
+  border-left: 2px solid rgba(255,255,255,0.08);
+  padding-left: 8px;
+}
+
+.subcat-item {
+  font-size: 0.8rem !important;
+  padding: 6px 10px !important;
+  opacity: 0.85;
+}
+
+.subcat-item:hover { opacity: 1; }
+
+.cat-expand-icon {
+  margin-left: auto;
+  opacity: 0.4;
+  transition: transform 0.2s;
+}
+
+.cat-item.selected .cat-expand-icon {
+  transform: rotate(180deg);
+  opacity: 0.7;
 }

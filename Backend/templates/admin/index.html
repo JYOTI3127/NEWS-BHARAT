@@ -60,7 +60,7 @@
   <div class="kpi-card">
     <div class="kpi-card-header">
       <span class="kpi-label">Total Articles</span>
-      <a href="" class="kpi-more-link" title="View all">&#x203A;</a>
+      <a href="/admin/newsapp/article/" class="kpi-more-link" title="View all">&#x203A;</a>
     </div>
     <div class="kpi-value" id="totalArticles">
        {{ published_articles }}
@@ -74,7 +74,7 @@
   <div class="kpi-card">
     <div class="kpi-card-header">
       <span class="kpi-label">Published</span>
-      <a href="" class="kpi-more-link">&#x203A;</a>
+      <a href="/admin/newsapp/article/?filter=published" class="kpi-more-link">&#x203A;</a>
     </div>
     <div class="kpi-value" id="publishedArticles">
       <div class="kpi-skeleton"></div>
@@ -100,7 +100,6 @@
       </span>
     </div>
   </div>
-
 </div>
 <!-- END ROW 1 -->
 
@@ -289,7 +288,15 @@
                 </div>
               </div>
             </td>
-            <td>{{ article.category.name|default:"—" }}</td>
+            <td>
+              {% if article.categories.all %}
+                {% for cat in article.categories.all %}
+                  {{ cat.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ article.author.get_full_name|default:article.author.username }}</td>
             <td>
               {% if article.assigned_to %}
@@ -682,6 +689,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+});
+
+window.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+    const filter = params.get("filter");
+
+    if (filter) {
+        const btn = document.querySelector(`.art-filter[onclick*="${filter}"]`);
+        
+        if (btn) {
+            btn.click();
+        }
+    }
 });
 </script>
 

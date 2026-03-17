@@ -29,8 +29,10 @@ class Category(models.Model):
     name           = models.CharField(max_length=100)
     slug           = models.SlugField(max_length=100, unique=True, blank=True)
     description    = models.TextField(blank=True)
-    status         = models.CharField(max_length=10, default='active')   # ← ADD
-    sub_categories = models.JSONField(default=dict, blank=True)          # ← ADD
+    status         = models.CharField(max_length=10, default='active')
+    sub_categories = models.JSONField(default=list, blank=True)
+    # Format: [{"id": 1, "name": "Politics"}, {"id": 2, "name": "Economy"}]
+    # Ya sirf names: ["Politics", "Economy"]
 
     class Meta:
         verbose_name_plural = "categories"
@@ -43,12 +45,6 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
-
-    def get_articles(self):
-        return self.articles.filter(status='published')
-
-    def get_article_count(self):
-        return self.articles.filter(status='published').count()
 
 class Article(models.Model):
     STATUS_CHOICES = [
@@ -97,6 +93,8 @@ class Article(models.Model):
     author_display_linkedin  = models.CharField(max_length=200, blank=True)
     author_display_instagram = models.CharField(max_length=200, blank=True)
     author_display_facebook  = models.CharField(max_length=200, blank=True)
+    author_display_youtube = models.CharField(max_length=200, blank=True)
+    author_display_reddit  = models.CharField(max_length=200, blank=True)
     author_display_articles_count = models.PositiveIntegerField(default=0)
  
     # ── SEO fields ──

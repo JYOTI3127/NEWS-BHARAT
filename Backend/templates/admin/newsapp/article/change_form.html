@@ -187,11 +187,16 @@
         Change Image
       </button>
 
+      <!-- 
+        NOTE: ui_image field sirf real URL ke liye hai (paste karke dene ke liye).
+        File upload hone par is field ko blob:// URL se mat bharo.
+        Actual file upload ui_image_file se hoga.
+      -->
       <input type="url"
             class="img-url-inp"
             id="ui_image"
             placeholder="Or paste image URL..."
-            value="{% if original.image %}{{ original.image.url }}{% else %}{{ original.image_url|default:'' }}{% endif %}"
+            value="{% if original.image %}{{ original.image.url }}{% elif original.image_url %}{{ original.image_url }}{% endif %}"
             oninput="previewUrl(this.value)">
 
       <div class="img-specs-box">
@@ -245,15 +250,18 @@
           <div class="subcat-list" id="subcat_{{ cat.pk }}"
               style="{% if original and cat in original.categories.all %}display:block{% else %}display:none{% endif %}">
             {% for sub in cat.sub_categories %}
-            <div class="cat-item subcat-item {% if original and sub.name in original.selected_subcategories %}selected{% endif %}"
-                onclick="toggleCat(this, '{{ cat.pk }}__{{ sub.name|slugify }}', 'sub')"
-                data-id="{{ cat.pk }}__{{ sub.name|slugify }}"
+            {# sub ek dict ho sakta hai {"name":"Politics"} ya sirf string #}
+            {% with sub_name=sub.name|default:sub %}
+            <div class="cat-item subcat-item {% if original and sub_name in original.selected_subcategories|default_if_none:'' %}selected{% endif %}"
+                onclick="toggleCat(this, '{{ cat.pk }}__{{ sub_name|slugify }}', 'sub')"
+                data-id="{{ cat.pk }}__{{ sub_name|slugify }}"
                 data-parent="{{ cat.pk }}"
-                data-subname="{{ sub.name }}"
+                data-subname="{{ sub_name }}"
                 data-type="sub">
               <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
-              <span class="cat-name">{{ sub.name }}</span>
+              <span class="cat-name">{{ sub_name }}</span>
             </div>
+            {% endwith %}
             {% endfor %}
           </div>
           {% endif %}
@@ -263,7 +271,7 @@
       </div>
 
       <input type="hidden" id="ui_category" value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
-      <input type="hidden" id="ui_subcategory" value="">
+      <input type="hidden" id="ui_subcategory" value="{% if original %}{{ original.selected_subcategories|default:'{}'|safe }}{% else %}{}{% endif %}">
 
       <div id="cat_count_label" style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px;">
         <span id="cat_selected_count">0</span> selected
@@ -443,7 +451,6 @@
         <input type="hidden" id="ui_editor_id" name="editor_id" value="{{ original.editor_id|default:'' }}">
       </div>
 
-      <!-- ✅ FIX: value reads from author_display_* fields, not editor_* -->
       <div class="ed-field">
         <div class="ed-label">Display Name</div>
         <input type="text" class="ed-inp" id="ed_name" placeholder="e.g. Priya Sharma"
@@ -501,7 +508,7 @@
         </div>
       </div>
 
-      <!-- Row 2: Instagram + Facebook (NEW) -->
+      <!-- Row 2: Instagram + Facebook -->
       <div class="ed-social-row">
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
@@ -523,13 +530,13 @@
         </div>
       </div>
 
+      <!-- Row 3: YouTube + Reddit -->
       <div class="ed-social-row">
-        <!-- YouTube -->
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23 7s-.2-1.7-.8-2.4c-.8-.9-1.7-.9-2.1-1C16.9 3 12 3 12 3s-4.9 0-8.1.6c-.4.1-1.3.1-2.1 1C1.2 5.3 1 7 1 7S1 8.7 1 10.4v1.2C1 13.3 1 15 1 15s.2 1.7.8 2.4c.8.9 1.9.9 2.4 1 1.7.2 7.8.6 7.8.6s4.9 0 8.1-.6c.4-.1 1.3-.1 2.1-1 .6-.7.8-2.4.8-2.4s0-1.7 0-3.4v-1.2C23 8.7 23 7 23 7z"/>
-              <polygon points="9.5,8 15.5,11.5 9.5,15"/>
+              <polygon points="9.5,8 15.5,11.5 9.5,15" fill="white"/>
             </svg>
             YouTube
           </div>
@@ -537,12 +544,11 @@
             value="{{ original.author_display_youtube|default:'' }}"
             oninput="updateEditorPreview()">
         </div>
-
-        <!-- Reddit -->
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4" fill="white"/>
             </svg>
             Reddit
           </div>
@@ -621,35 +627,64 @@
    showDropZone
 ══════════════════════════════════════════════ */
 function showDropZone() {
-  var dz  = document.getElementById('image_drop_zone');
-  var btn = document.getElementById('change_img_btn');
+  var dz   = document.getElementById('image_drop_zone');
+  var btn  = document.getElementById('change_img_btn');
   var prev = document.getElementById('img_preview');
   if (dz)   dz.style.display   = '';
   if (btn)  btn.style.display  = 'none';
   if (prev) prev.style.display = 'none';
+  // File input reset karo taaki same file dobara select ho sake
+  var fi = document.getElementById('ui_image_file');
+  if (fi) fi.value = '';
 }
 
 /* ══════════════════════════════════════════════
-   MULTI-CATEGORY — initialise from hidden input
-   which is already pre-filled by Django template
+   MULTI-CATEGORY — init + toggle
+   FIX: selectedSubs ko DB se load karo
 ══════════════════════════════════════════════ */
 var selectedCats = new Set();
-var selectedSubs = {};  // { "catPk": ["sub-slug-1", "sub-slug-2"] }
+// selectedSubs format: { "catPk": ["Sub Name 1", "Sub Name 2"] }
+var selectedSubs = {};
 
 (function initCats() {
+  // Main categories load karo hidden input se
   var existing = document.getElementById('ui_category').value;
   if (existing) {
     existing.split(',').filter(Boolean).forEach(function(id) {
       selectedCats.add(id.trim());
     });
   }
+
+  // Subcategories load karo — DB se aaya JSON
+  var subRaw = document.getElementById('ui_subcategory').value;
+  try {
+    var parsed = JSON.parse(subRaw);
+    if (parsed && typeof parsed === 'object') {
+      selectedSubs = parsed;
+    }
+  } catch(e) {
+    selectedSubs = {};
+  }
+
+  // Main categories highlight karo
   document.querySelectorAll('.cat-item[data-type="main"]').forEach(function(el) {
-    if (selectedCats.has(String(el.dataset.id))) {
+    var catId = String(el.dataset.id);
+    if (selectedCats.has(catId)) {
       el.classList.add('selected');
-      var subList = document.getElementById('subcat_' + el.dataset.id);
+      var subList = document.getElementById('subcat_' + catId);
       if (subList) subList.style.display = 'block';
     }
   });
+
+  // Subcategories highlight karo
+  document.querySelectorAll('.cat-item[data-type="sub"]').forEach(function(el) {
+    var parentId = String(el.getAttribute('data-parent'));
+    var subName  = el.getAttribute('data-subname');
+    if (selectedSubs[parentId] && selectedSubs[parentId].indexOf(subName) !== -1) {
+      el.classList.add('selected');
+    }
+  });
+
   syncCatInput();
 })();
 
@@ -658,7 +693,7 @@ function toggleCat(el, id, type) {
 
   if (type === 'main') {
     if (selectedCats.has(sid)) {
-      // Deselect main — aur uski subs bhi clear karo
+      // Deselect — subs bhi clear
       selectedCats.delete(sid);
       el.classList.remove('selected');
       delete selectedSubs[sid];
@@ -672,7 +707,6 @@ function toggleCat(el, id, type) {
     } else {
       selectedCats.add(sid);
       el.classList.add('selected');
-      // Subcategories dikhao
       var subList = document.getElementById('subcat_' + sid);
       if (subList) subList.style.display = 'block';
     }
@@ -700,13 +734,12 @@ function syncCatInput() {
   var arr = Array.from(selectedCats);
   document.getElementById('ui_category').value = arr.join(',');
 
-  // Subcategories ko alag hidden input mein save karo
+  // Subcategories JSON hidden input mein save karo
   var subInp = document.getElementById('ui_subcategory');
   if (subInp) subInp.value = JSON.stringify(selectedSubs);
 
   var n = arr.length;
   var subCount = Object.values(selectedSubs).reduce(function(acc, v) { return acc + v.length; }, 0);
-  var total = n + subCount;
 
   var labelEl = document.getElementById('cat_count_label');
   if (labelEl) {
@@ -737,64 +770,88 @@ function nbInsertLink(){const url=prompt('URL darj karein (e.g. https://example.
 function insertTag(tag){nbInsertTag(tag);}
 
 /* ══════════════════════════════════════════════
-   IMAGE
+   IMAGE — FIX: blob URL ui_image mein mat dalo
 ══════════════════════════════════════════════ */
+// Tracks karta hai ki kya naya file select hua hai
+var _newFileSelected = false;
+
 function previewImage(inp) {
-  const file=inp.files[0]; if(!file)return;
-  const url=URL.createObjectURL(file);
-  const prev=document.getElementById('img_preview');
-  prev.src=url; prev.style.display='block';
-  var dz=document.getElementById('image_drop_zone');   if(dz)  dz.style.display='none';
-  var btn=document.getElementById('change_img_btn');   if(btn) btn.style.display='flex';
-  document.getElementById('schema_image').textContent=file.name;
-  document.getElementById('ui_image').value=url;
-  updateSeoScore(); updateEditorPreview();
-  const infoBox=document.getElementById('img_file_info'); if(!infoBox)return;
-  infoBox.style.display='block';
-  document.getElementById('img_fi_name').textContent=file.name;
-  const sizeKB=file.size/1024,sizeMB=sizeKB/1024;
-  document.getElementById('img_fi_size').textContent=sizeMB>=1?sizeMB.toFixed(2)+' MB':Math.round(sizeKB)+' KB';
-  document.getElementById('img_fi_type').textContent=file.type||file.name.split('.').pop().toUpperCase();
-  const imgEl=new Image();
-  imgEl.onload=()=>{
-    document.getElementById('img_fi_dims').textContent=imgEl.naturalWidth+' × '+imgEl.naturalHeight+' px';
+  const file = inp.files[0];
+  if (!file) return;
+
+  _newFileSelected = true;
+
+  // Sirf preview ke liye blob URL banao — ui_image mein MAT dalo
+  const blobUrl = URL.createObjectURL(file);
+  const prev = document.getElementById('img_preview');
+  prev.src = blobUrl;
+  prev.style.display = 'block';
+
+  var dz  = document.getElementById('image_drop_zone');
+  var btn = document.getElementById('change_img_btn');
+  if (dz)  dz.style.display  = 'none';
+  if (btn) btn.style.display = 'flex';
+
+  // Schema update karo
+  document.getElementById('schema_image').textContent = file.name;
+
+  // ui_image field ko CLEAR karo taaki blob URL save na ho
+  // (actual file FormData se jayega)
+  document.getElementById('ui_image').value = '';
+
+  updateSeoScore();
+  updateEditorPreview();
+
+  // File info box
+  const infoBox = document.getElementById('img_file_info');
+  if (!infoBox) return;
+  infoBox.style.display = 'block';
+  document.getElementById('img_fi_name').textContent = file.name;
+  const sizeKB = file.size / 1024, sizeMB = sizeKB / 1024;
+  document.getElementById('img_fi_size').textContent = sizeMB >= 1 ? sizeMB.toFixed(2) + ' MB' : Math.round(sizeKB) + ' KB';
+  document.getElementById('img_fi_type').textContent = file.type || file.name.split('.').pop().toUpperCase();
+
+  const imgEl = new Image();
+  imgEl.onload = () => {
+    document.getElementById('img_fi_dims').textContent = imgEl.naturalWidth + ' × ' + imgEl.naturalHeight + ' px';
     URL.revokeObjectURL(imgEl.src);
-    const status=document.getElementById('img_fi_status');
-    const okSize  = file.size <= 1*1024*1024;
-    const okW     = imgEl.naturalWidth  <= 1200;
-    const okH     = imgEl.naturalHeight <= 675;
-    const ratio   = imgEl.naturalWidth / imgEl.naturalHeight;
-    const okRatio = Math.abs(ratio - (16/9)) < 0.08;
-    const okDim   = okW && okH && okRatio;
-    const okFmt   = ['image/jpeg'].includes(file.type);
-    if(okSize&&okDim&&okFmt){status.textContent='✓ Image meets all specifications';status.className='img-fi-status ok';}
-    else{
-      const issues=[];
-      if(!okSize)  issues.push('file > 1 MB');
-      if(!okW)     issues.push('width must be ≤ 1200 px (yours: '+imgEl.naturalWidth+'px)');
-      if(!okH)     issues.push('height must be ≤ 675 px (yours: '+imgEl.naturalHeight+'px)');
-      if(!okRatio) issues.push('aspect ratio should be 16:9');
-      if(!okFmt)   issues.push('format must be JPG');
-      status.textContent='⚠ Issues: '+issues.join(' · ');
-      status.className='img-fi-status warn';
+    const status   = document.getElementById('img_fi_status');
+    const okSize   = file.size <= 1 * 1024 * 1024;
+    const okW      = imgEl.naturalWidth  <= 1200;
+    const okH      = imgEl.naturalHeight <= 675;
+    const ratio    = imgEl.naturalWidth / imgEl.naturalHeight;
+    const okRatio  = Math.abs(ratio - (16 / 9)) < 0.08;
+    const okDim    = okW && okH && okRatio;
+    const okFmt    = ['image/jpeg'].includes(file.type);
+    if (okSize && okDim && okFmt) {
+      status.textContent = '✓ Image meets all specifications';
+      status.className   = 'img-fi-status ok';
+    } else {
+      const issues = [];
+      if (!okSize)  issues.push('file > 1 MB');
+      if (!okW)     issues.push('width must be ≤ 1200 px (yours: ' + imgEl.naturalWidth + 'px)');
+      if (!okH)     issues.push('height must be ≤ 675 px (yours: ' + imgEl.naturalHeight + 'px)');
+      if (!okRatio) issues.push('aspect ratio should be 16:9');
+      if (!okFmt)   issues.push('format must be JPG');
+      status.textContent = '⚠ Issues: ' + issues.join(' · ');
+      status.className   = 'img-fi-status warn';
     }
   };
-  imgEl.src=url;
+  imgEl.src = blobUrl;
 }
 
 function previewUrl(url) {
-  const prev=document.getElementById('img_preview');
-  if(url){prev.src=url;prev.style.display='block';}else prev.style.display='none';
-  document.getElementById('schema_image').textContent=url||'— from Featured Image';
-  updateSeoScore(); updateEditorPreview();
-}
-
-(function(){
-  var imgUrl="{% if original.image %}{{ original.image.url }}{% endif %}";
-  if(!imgUrl) return;
+  const prev = document.getElementById('img_preview');
+  if (url && !url.startsWith('blob:')) {
+    prev.src = url;
+    prev.style.display = 'block';
+    document.getElementById('schema_image').textContent = url;
+  } else {
+    prev.style.display = 'none';
+  }
   updateSeoScore();
   updateEditorPreview();
-})();
+}
 
 /* PLAGIARISM */
 function nbClosePlagModal(){document.getElementById('nb_plagModal').classList.remove('show');}
@@ -832,7 +889,6 @@ function generateSlug(){const title=document.getElementById('ui_title').value;if
 document.getElementById('ui_title').addEventListener('blur',function(){const slugInp=document.getElementById('ui_slug');if(!slugInp.readOnly&&!slugInp.value.trim())generateSlug();});
 document.getElementById('ui_title').addEventListener('input',function(){const el=document.getElementById('schema_headline');if(el)el.textContent=this.value||'— from Headline';updateSeoScore();updateEditorPreview();});
 
-
 (function initMeta(){
   const ta=document.getElementById('ui_meta_desc');
   if(!ta)return;
@@ -856,101 +912,130 @@ function syncNoindex(){if(!document.getElementById('ui_in_sitemap').checked){doc
 function updateSeoScore(){
   const title=document.getElementById('ui_title').value;const content=nbEditor.innerText||'';const meta=document.getElementById('ui_meta_desc').value;
   const focusKw=(document.getElementById('ui_focus_kw').value||'').toLowerCase().trim();const slug=document.getElementById('ui_slug').value;
-  const image=document.getElementById('ui_image').value;const words=content.trim().split(/\s+/).filter(Boolean).length;const first100=content.trim().split(/\s+/).slice(0,100).join(' ').toLowerCase();
+  
+  // Image check: actual file selected hai ya URL field mein real URL hai
+  const fileInput=document.getElementById('ui_image_file');
+  const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+  const urlVal  = document.getElementById('ui_image').value;
+  const hasImg  = hasFile || (urlVal && !urlVal.startsWith('blob:') && urlVal.length > 0);
+
+  const words=content.trim().split(/\s+/).filter(Boolean).length;const first100=content.trim().split(/\s+/).slice(0,100).join(' ').toLowerCase();
   const weights={chk_title:12,chk_focus:8,chk_kw_title:15,chk_meta:12,chk_kw_meta:10,chk_content:18,chk_kw_content:15,chk_slug:5,chk_image:5};
-  const checks={chk_title:title.length>=30&&title.length<=70,chk_focus:focusKw.length>0,chk_kw_title:focusKw.length>0&&title.toLowerCase().includes(focusKw),chk_meta:meta.length>=120&&meta.length<=160,chk_kw_meta:focusKw.length>0&&meta.toLowerCase().includes(focusKw),chk_content:words>=300,chk_kw_content:focusKw.length>0&&first100.includes(focusKw),chk_slug:slug.length>0,chk_image:image.length>0};
+  const checks={chk_title:title.length>=30&&title.length<=70,chk_focus:focusKw.length>0,chk_kw_title:focusKw.length>0&&title.toLowerCase().includes(focusKw),chk_meta:meta.length>=120&&meta.length<=160,chk_kw_meta:focusKw.length>0&&meta.toLowerCase().includes(focusKw),chk_content:words>=300,chk_kw_content:focusKw.length>0&&first100.includes(focusKw),chk_slug:slug.length>0,chk_image:hasImg};
   let score=0;for(const[id,pass]of Object.entries(checks)){const row=document.getElementById(id);if(row)row.className='slc-item '+(pass?'pass':'');if(pass)score+=(weights[id]||0);}
   score=Math.min(score,100);const ring=document.getElementById('seo_ring');if(ring){ring.style.strokeDashoffset=113.1-(score/100)*113.1;ring.style.stroke=score>=75?'#10b981':score>=50?'#f59e0b':'#2563eb';}
   const numEl=document.getElementById('seo_score_num');if(numEl)numEl.textContent=score;
   const lblEl=document.getElementById('seo_score_label');if(lblEl){const labels=[[0,'Not scored'],[30,'Needs work'],[55,'Getting better'],[75,'Good'],[90,'Excellent']];let label='Not scored';for(const[t,l]of labels)if(score>=t)label=l;lblEl.textContent=label;}
 }
-['ui_title','ui_content','ui_meta_desc','ui_focus_kw','ui_slug','ui_image'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateSeoScore);});
+['ui_title','ui_meta_desc','ui_focus_kw','ui_slug','ui_image'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateSeoScore);});
+nbEditor.addEventListener('input', updateSeoScore);
 updateSeoScore(); updateRobots();
 
-
 async function runSpellCheck(){const content=nbEditor.innerText.trim();if(!content){alert('Content is empty!');return;}const status=document.getElementById('ai_status');status.innerHTML='<span class="ai-loading"></span> AI is checking spelling…';try{const res=await fetch('/api/ai/spell-check/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({text:content})});const data=await res.json();if(data.corrected){nbEditor.innerText=data.corrected;nbSaveHistory();status.innerHTML='✦ Spelling corrected successfully!';}else status.innerHTML='✓ No spelling issues found.';}catch(e){status.innerHTML='✗ AI unavailable. Check API key.';}setTimeout(()=>status.innerHTML='',4000);}
-
 
 async function suggestKeywords(){const title=document.getElementById('ui_title').value;const content=nbEditor.innerText;if(!title&&!content){alert('Add some content first!');return;}const btn=document.getElementById('seo_ai_btn');btn.innerHTML='<div class="ai-loading"></div> Analysing…';try{const res=await fetch('/api/ai/seo-keywords/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({title,content:content.substring(0,1000)})});const data=await res.json();const kwList=document.getElementById('seo_kw_list');if(data.keywords&&data.keywords.length)kwList.innerHTML=data.keywords.map(kw=>`<span class="seo-kw" onclick="selectKw(this,'${kw}')">${kw}</span>`).join('');}catch(e){document.getElementById('seo_kw_list').innerHTML='<span class="seo-kw-placeholder" style="color:#ef4444">AI unavailable.</span>';}btn.innerHTML='<div class="ai-dot"></div> ✦ Suggest with AI';}
 function selectKw(el,kw){el.classList.toggle('active');const fkEl=document.getElementById('ui_focus_kw');if(el.classList.contains('active')&&!fkEl.value.trim()){fkEl.value=kw;updateSeoScore();}}
 
-
 function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').value;}
 
-async function submitArticle(forceStatus){
-  const title   = document.getElementById('ui_title').value.trim();
-  const content = nbEditor.innerHTML.trim();
+/* ══════════════════════════════════════════════
+   submitArticle — FIXED
+   1. editor_* fields → views.py mein author_display_* se map hote hain
+   2. blob URL kabhi nahi jayegi image_url mein
+   3. subcategories JSON properly jayega
+══════════════════════════════════════════════ */
+async function submitArticle(forceStatus) {
+  const title       = document.getElementById('ui_title').value.trim();
+  const content     = nbEditor.innerHTML.trim();
   const categoryVal = document.getElementById('ui_category').value;
 
-  if(!title)       { alert('Please enter a headline.'); return; }
-  if(!content)     { alert('Content cannot be empty.'); return; }
-  if(!categoryVal) { alert('Please select at least one category.'); return; }
+  if (!title)       { alert('Please enter a headline.'); return; }
+  if (!content)     { alert('Content cannot be empty.'); return; }
+  if (!categoryVal) { alert('Please select at least one category.'); return; }
 
-  const payload = {
-    title,
-    subtitle:         document.getElementById('ui_subtitle').value,
-    content,
-    image_url:        document.getElementById('ui_image').value,
+  // Image URL — sirf real URL bhejo, blob:// kabhi nahi
+  const rawImageUrl = document.getElementById('ui_image').value;
+  const safeImageUrl = (rawImageUrl && !rawImageUrl.startsWith('blob:')) ? rawImageUrl : '';
 
-    categories:       categoryVal.split(',').filter(Boolean).map(Number),
-    status:           forceStatus || document.getElementById('ui_status').value,
-    priority:         document.getElementById('ui_priority').value,
-    is_paid:          document.getElementById('ui_is_paid').checked,
-    assigned_to:      document.getElementById('ui_assigned').value ? parseInt(document.getElementById('ui_assigned').value) : null,
-    deadline:         document.getElementById('ui_deadline').value || null,
+  // Subcategories JSON
+  const subcategoriesJson = document.getElementById('ui_subcategory').value || '{}';
 
-    slug:             document.getElementById('ui_slug').value,
-    canonical_url:    document.getElementById('ui_canonical').value,
-    meta_description: document.getElementById('ui_meta_desc').value,
-    focus_keyword:    document.getElementById('ui_focus_kw').value,
-    noindex:          document.getElementById('ui_noindex').checked,
-    nofollow:         document.getElementById('ui_nofollow').checked,
-    in_sitemap:       document.getElementById('ui_in_sitemap').checked,
+  const formData = new FormData();
 
-    editor_id:        parseInt(document.getElementById('ui_editor_id').value) || null,
-    editor_name:      document.getElementById('ed_name').value,
-    editor_position:  document.getElementById('ed_position').value,
-    editor_bio:       document.getElementById('ed_bio').value,
-    editor_photo:     document.getElementById('ed_photo').value,
-    editor_twitter:   document.getElementById('ed_twitter').value,
-    editor_linkedin:  document.getElementById('ed_linkedin').value,
-    editor_instagram: document.getElementById('ed_instagram').value, 
-    editor_facebook:  document.getElementById('ed_facebook').value,    
-    editor_articles:  document.getElementById('ed_articles').value,
-    editor_youtube:   document.getElementById('ed_youtube').value,
-    editor_reddit:    document.getElementById('ed_reddit').value,
+  // Basic fields
+  formData.append('title',    title);
+  formData.append('subtitle', document.getElementById('ui_subtitle').value);
+  formData.append('content',  content);
+  formData.append('status',   forceStatus || document.getElementById('ui_status').value);
+  formData.append('priority', document.getElementById('ui_priority').value);
+  formData.append('is_paid',  document.getElementById('ui_is_paid').checked ? 'true' : 'false');
 
-    subcategories: (function() {
-      try { return JSON.parse(document.getElementById('ui_subcategory').value || '{}'); }
-      catch(e) { return {}; }
-    })(),
-  };
+  const deadline = document.getElementById('ui_deadline').value;
+  if (deadline) formData.append('deadline', deadline);
+
+  const assignedTo = document.getElementById('ui_assigned').value;
+  if (assignedTo) formData.append('assigned_to', assignedTo);
+
+  // SEO
+  formData.append('slug',             document.getElementById('ui_slug').value);
+  formData.append('canonical_url',    document.getElementById('ui_canonical').value);
+  formData.append('meta_description', document.getElementById('ui_meta_desc').value);
+  formData.append('focus_keyword',    document.getElementById('ui_focus_kw').value);
+  formData.append('noindex',          document.getElementById('ui_noindex').checked  ? 'true' : 'false');
+  formData.append('nofollow',         document.getElementById('ui_nofollow').checked ? 'true' : 'false');
+  formData.append('in_sitemap',       document.getElementById('ui_in_sitemap').checked ? 'true' : 'false');
+
+  // Image — file pehle, URL fallback
+  const fileInput = document.getElementById('ui_image_file');
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    formData.append('image', fileInput.files[0]);
+  } else if (safeImageUrl) {
+    formData.append('image_url', safeImageUrl);
+  }
+
+  // Editor / Author display fields
+  // Views.py mein editor_* → author_display_* map hota hai
+  formData.append('editor_name',      document.getElementById('ed_name').value);
+  formData.append('editor_position',  document.getElementById('ed_position').value);
+  formData.append('editor_bio',       document.getElementById('ed_bio').value);
+  formData.append('editor_photo',     document.getElementById('ed_photo').value);
+  formData.append('editor_twitter',   document.getElementById('ed_twitter').value);
+  formData.append('editor_linkedin',  document.getElementById('ed_linkedin').value);
+  formData.append('editor_instagram', document.getElementById('ed_instagram').value);
+  formData.append('editor_facebook',  document.getElementById('ed_facebook').value);
+  formData.append('editor_youtube',   document.getElementById('ed_youtube').value);
+  formData.append('editor_reddit',    document.getElementById('ed_reddit').value);
+  formData.append('editor_articles',  document.getElementById('ed_articles').value || '0');
+
+  const editorId = document.getElementById('ui_editor_id').value;
+  if (editorId) formData.append('editor_id', editorId);
+
+  // Categories (comma-separated IDs)
+  categoryVal.split(',').filter(Boolean).forEach(id => {
+    formData.append('categories', id.trim());
+  });
+
+  // Subcategories JSON string
+  formData.append('subcategories', subcategoriesJson);
 
   const articleId = '{{ original.pk|default:"" }}';
-  const url    = articleId ? `/api/articles/${articleId}/` : '/api/articles/';
-  const method = articleId ? 'PUT' : 'POST';
+  const url       = articleId ? `/api/articles/${articleId}/` : '/api/articles/';
+  const method    = articleId ? 'PUT' : 'POST';
 
   try {
-    const formData = new FormData();
-    Object.keys(payload).forEach(key => {
-      if(payload[key] === null || payload[key] === undefined) return;
-      if(Array.isArray(payload[key])){
-        payload[key].forEach(v => formData.append(key, v));
-      } else {
-        formData.append(key, payload[key]);
-      }
+    const res = await fetch(url, {
+      method,
+      headers: { 'X-CSRFToken': getCsrf() },
+      body: formData
     });
-    const fileInput = document.getElementById('ui_image_file');
-    if(fileInput && fileInput.files.length > 0) formData.append("image", fileInput.files[0]);
 
-    const res = await fetch(url, { method, headers: {'X-CSRFToken': getCsrf()}, body: formData });
-    if(res.ok){
+    if (res.ok) {
       window.location.href = '/admin/newsapp/article/';
     } else {
       const err = await res.json();
       alert('Error: ' + JSON.stringify(err));
     }
-  } catch(e) {
+  } catch (e) {
     alert('Server error. Please try again.');
   }
 }
@@ -961,23 +1046,22 @@ async function submitArticle(forceStatus){
 const editorData = [
   {% for u in adminform.form.fields.assigned_to.queryset %}
   {
-  id: {{ u.pk }},
-  name: "{{ u.get_full_name|default:u.username }}",
-  position: "{{ u.profile.position|default:'Reporter' }}",
-  bio: "{{ u.profile.bio|default:'' }}",
-  photo: "{{ u.profile.photo|default:'' }}",
-  twitter: "{{ u.profile.twitter|default:'' }}",
-  linkedin: "{{ u.profile.linkedin|default:'' }}",
-  instagram: "{{ u.profile.instagram|default:'' }}",
-  facebook: "{{ u.profile.facebook|default:'' }}",
-  youtube: "{{ u.profile.youtube|default:'' }}",
-  reddit:  "{{ u.profile.reddit|default:'' }}",
-
-  articles: {{ u.articles_authored.count|default:0 }}
-  }
+    id:        {{ u.pk }},
+    name:      "{{ u.get_full_name|default:u.username }}",
+    position:  "{{ u.profile.position|default:'Reporter' }}",
+    bio:       "{{ u.profile.bio|default:'' }}",
+    photo:     "{{ u.profile.photo|default:'' }}",
+    twitter:   "{{ u.profile.twitter|default:'' }}",
+    linkedin:  "{{ u.profile.linkedin|default:'' }}",
+    instagram: "{{ u.profile.instagram|default:'' }}",
+    facebook:  "{{ u.profile.facebook|default:'' }}",
+    youtube:   "{{ u.profile.youtube|default:'' }}",
+    reddit:    "{{ u.profile.reddit|default:'' }}",
+    articles:  {{ u.articles_authored.count|default:0 }}
+  }{% if not forloop.last %},{% endif %}
   {% empty %}
-  {id:1,name:'Priya Sharma',position:'Senior Political Editor',bio:'Covering national politics and governance for 8+ years.',photo:'',twitter:'@priyasharma',linkedin:'',instagram:'',facebook:'',articles:214},
-  {id:2,name:'Rohit Mehta',position:'Business Correspondent',bio:'Tracking markets, policy, and corporate India.',photo:'',twitter:'@rohitmehta',linkedin:'',instagram:'',facebook:'',articles:187},
+  {id:1,name:'Priya Sharma',position:'Senior Political Editor',bio:'Covering national politics and governance for 8+ years.',photo:'',twitter:'@priyasharma',linkedin:'',instagram:'',facebook:'',youtube:'',reddit:'',articles:214},
+  {id:2,name:'Rohit Mehta',position:'Business Correspondent',bio:'Tracking markets, policy, and corporate India.',photo:'',twitter:'@rohitmehta',linkedin:'',instagram:'',facebook:'',youtube:'',reddit:'',articles:187}
   {% endfor %}
 ];
 
@@ -988,25 +1072,27 @@ function getInitials(name){if(!name)return'?';return name.split(' ').slice(0,2).
 function renderEditorList(filter){
   const list=document.getElementById('ed_list');if(!list)return;
   const q=(filter||'').toLowerCase();
-  const filtered=editorData.filter(e=>e.name.toLowerCase().includes(q)||e.position.toLowerCase().includes(q));
+  const filtered=editorData.filter(e=>e.name.toLowerCase().includes(q)||(e.position||'').toLowerCase().includes(q));
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:#94a3b8;padding:8px">No editors found.</div>';return;}
-  list.innerHTML=filtered.map(e=>`<div class="ed-card ${String(e.id)===String(selectedEditorId)?'selected':''}" onclick="selectEditor(${e.id})" data-id="${e.id}"><div class="ed-card-av">${e.photo?`<img src="${e.photo}" alt="" onerror="this.style.display='none'">`:''}  <span style="${e.photo?'display:none':''}">${getInitials(e.name)}</span></div><div class="ed-card-info"><div class="ed-card-name">${e.name}</div><div class="ed-card-pos">${e.position}</div></div><div class="ed-card-check">${String(e.id)===String(selectedEditorId)?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div></div>`).join('');
+  list.innerHTML=filtered.map(e=>`<div class="ed-card ${String(e.id)===String(selectedEditorId)?'selected':''}" onclick="selectEditor(${e.id})" data-id="${e.id}"><div class="ed-card-av">${e.photo?`<img src="${e.photo}" alt="" onerror="this.style.display='none'">`:''}  <span style="${e.photo?'display:none':''}">${getInitials(e.name)}</span></div><div class="ed-card-info"><div class="ed-card-name">${e.name}</div><div class="ed-card-pos">${e.position||''}</div></div><div class="ed-card-check">${String(e.id)===String(selectedEditorId)?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div></div>`).join('');
 }
 
 function selectEditor(id){
   selectedEditorId = String(id);
   document.getElementById('ui_editor_id').value = id;
   const ed = editorData.find(e => String(e.id) === String(id));
-  if(!ed) return;
-  document.getElementById('ed_name').value      = ed.name;
-  document.getElementById('ed_position').value  = ed.position;
-  document.getElementById('ed_bio').value       = ed.bio;
-  document.getElementById('ed_photo').value     = ed.photo || '';
-  document.getElementById('ed_twitter').value   = ed.twitter || '';
-  document.getElementById('ed_linkedin').value  = ed.linkedin || '';
-  document.getElementById('ed_instagram').value = ed.instagram || '';  
-  document.getElementById('ed_facebook').value  = ed.facebook || '';  
-  document.getElementById('ed_articles').value  = ed.articles || '';
+  if (!ed) return;
+  document.getElementById('ed_name').value      = ed.name      || '';
+  document.getElementById('ed_position').value  = ed.position  || '';
+  document.getElementById('ed_bio').value       = ed.bio       || '';
+  document.getElementById('ed_photo').value     = ed.photo     || '';
+  document.getElementById('ed_twitter').value   = ed.twitter   || '';
+  document.getElementById('ed_linkedin').value  = ed.linkedin  || '';
+  document.getElementById('ed_instagram').value = ed.instagram || '';
+  document.getElementById('ed_facebook').value  = ed.facebook  || '';
+  document.getElementById('ed_youtube').value   = ed.youtube   || '';
+  document.getElementById('ed_reddit').value    = ed.reddit    || '';
+  document.getElementById('ed_articles').value  = ed.articles  || '';
   renderEditorList();
   updateEditorPreview();
   updateBioCount();
@@ -1022,12 +1108,13 @@ function updateSmallAvatar(url){
 }
 
 function updateEditorPreview(){
-  const name    = document.getElementById('ed_name').value.trim();
-  const pos     = document.getElementById('ed_position').value.trim();
-  const photo   = document.getElementById('ed_photo').value.trim();
-  const title   = document.getElementById('ui_title').value.trim();
-  const subtitle= document.getElementById('ui_subtitle').value.trim();
+  const name     = document.getElementById('ed_name').value.trim();
+  const pos      = document.getElementById('ed_position').value.trim();
+  const photo    = document.getElementById('ed_photo').value.trim();
+  const title    = document.getElementById('ui_title').value.trim();
+  const subtitle = document.getElementById('ui_subtitle').value.trim();
 
+  // Preview ke liye: pehle actual file ka blob URL check karo, phir saved URL
   const imgPreviewEl = document.getElementById('img_preview');
   const image = (imgPreviewEl && imgPreviewEl.style.display !== 'none' && imgPreviewEl.src)
                   ? imgPreviewEl.src

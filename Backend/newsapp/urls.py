@@ -29,4 +29,8 @@ urlpatterns = [
     path('notifications/<int:id>/unarchive/',views.unarchive_notification, name='api_notification_unarchive'),
     path('admin/online-status/', online_status_view, name='online_status'),
     path('live-cricket/', live_cricket),
+    path('settings/tag-creation-perm/', views.save_tag_creation_perm, name='save_tag_perm'),
+    path('homepage/hero/',        views.update_hero_slot,        name='hp_hero'),
+    path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
+    path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
 ]

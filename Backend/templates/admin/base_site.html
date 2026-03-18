@@ -9,8 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'admin/css/media_gallery.css' %}">
-<link rel="stylesheet" href="{% static 'admin/css/make_post.css' %}">
 {% block extrastyle %}{% endblock %}
 {% block extrahead %}{% endblock %}
 </head>
@@ -91,7 +89,13 @@
     </a>
 
     <!-- Media Button -->
-    <div class="media-btn-wrap">
+    <div class="media-btn-wrap"
+     onmouseenter="
+       var d = this.querySelector('.media-dropdown');
+       var r = this.getBoundingClientRect();
+       d.style.top  = r.bottom + 'px';
+       d.style.left = r.left   + 'px';
+     ">
       <button class="media-post-btn" data-tooltip="Media">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>

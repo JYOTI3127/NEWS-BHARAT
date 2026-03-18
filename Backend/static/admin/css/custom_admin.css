@@ -64,7 +64,7 @@ button { font-family: var(--font-body); cursor: pointer; }
 ul { list-style: none; }
 
 /* ─────────────────────────────────────────────
-   LAYOUT WRAPPER  ← KEY FIX
+   LAYOUT WRAPPER
 ───────────────────────────────────────────── */
 .admin-wrapper {
   display: flex !important;
@@ -88,27 +88,28 @@ ul { list-style: none; }
   display: flex;
   flex-direction: column;
   z-index: 200;
-  /* overflow:visible needed for tooltips */
   overflow: visible;
   flex-shrink: 0;
   transition: width 0.25s ease;
 }
 
-/* Inner sections need overflow:hidden so text clips on collapse */
+/* Inner sections clip text on collapse — media-btn-wrap is NOT here */
 .admin-sidebar .sidebar-logo,
 .admin-sidebar .panel-quick,
-.admin-sidebar .sidebar-nav,
 .admin-sidebar .panel-footer,
 .admin-sidebar .panel-user,
 .admin-sidebar .overview-quick-btn,
-.admin-sidebar .post-article-btn,
-.admin-sidebar .media-btn-wrap {
+.admin-sidebar .post-article-btn {
   overflow: hidden;
 }
 
+/* ─── FIX: media-btn-wrap must be overflow:visible so dropdown shows ─── */
+.admin-sidebar .media-btn-wrap {
+  overflow: visible;
+}
+
 /* ─────────────────────────────────────────────
-   MAIN CONTENT  ← KEY FIX
-   margin-left matches sidebar width and transitions with it
+   MAIN CONTENT
 ───────────────────────────────────────────── */
 .admin-main {
   margin-left: var(--sidebar-w) !important;
@@ -121,7 +122,6 @@ ul { list-style: none; }
   overflow-x: hidden;
 }
 
-/* When sidebar is collapsed, push main content in */
 .admin-sidebar.collapsed ~ .admin-main,
 body.sidebar-collapsed .admin-main {
   margin-left: var(--sidebar-w-collapsed) !important;
@@ -240,7 +240,7 @@ body.sidebar-collapsed .admin-main {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background var(--t);
-  position: relative;        /* needed for badge positioning */
+  position: relative;
   text-decoration: none;
 }
 .quick-item:hover { background: rgba(255,255,255,0.08); }
@@ -262,23 +262,23 @@ body.sidebar-collapsed .admin-main {
   flex-shrink: 0;
 }
 
-/* ── Badge — normal (expanded) state ── */
 .quick-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #fff;
-  background: #1d4ed8;
-  padding: 2px 6px;
-  border-radius: 20px;
-  line-height: 1.4;
-  transition: all 0.25s ease;
+    width: 25px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    background: #1d4ed8;
+    padding: 4px 9px;
+    border-radius: 20px;
+    line-height: 1.4;
+    transition: all 0.25s ease;
 }
 
 /* ─────────────────────────────────────────────
-   POST BUTTON
+   POST BUTTON — FIX: arrow black on hover
 ───────────────────────────────────────────── */
 .post-article-btn {
-  width: calc(100% - 24px); /* already margin 12px dono side se hai */
+  width: calc(100% - 24px);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -291,7 +291,7 @@ body.sidebar-collapsed .admin-main {
   border: 1px solid rgba(255,255,255,0.2);
   text-decoration: none;
   margin: 14px 12px 6px;
-  transition: background 0.18s;
+  transition: background 0.18s, color 0.18s;
 }
 
 .post-article-btn:hover {
@@ -300,27 +300,38 @@ body.sidebar-collapsed .admin-main {
   color: black !important;
 }
 
+/* ─── FIX: SVG pe !important hataya — ab hover pe black ho sakta hai ─── */
 .post-article-btn svg {
   width: 1.4em;
   height: 1.6em;
-  color: #fff !important;
+  color: #fff;          /* !important removed */
   flex-shrink: 0;
+  transition: color 0.18s;
+}
+
+.post-article-btn:hover svg {
+  color: #000 !important;  /* hover pe arrow black */
 }
 
 /* ─────────────────────────────────────────────
    NAV
 ───────────────────────────────────────────── */
 .sidebar-nav {
-  flex: 1;
+  flex: 1 1 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 12px;
   margin: 13px;
   border-radius: 11px;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
   border: 1px solid rgba(128,128,128,0.36);
+  min-height: 0;
+  height: 0;            /* ye trick hai — flex:1 ke saath height:0 scroll enable karta hai */
 }
-.sidebar-nav::-webkit-scrollbar { display: none; }
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15) !important; border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 
 .nav-section-label {
   font-size: 0.68rem;
@@ -337,18 +348,18 @@ body.sidebar-collapsed .admin-main {
 .nav-item { position: relative; }
 
 .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 9px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 0.84rem;
-    font-weight: 500;
-    color: rgb(255 255 255);
-    text-decoration: none;
-    cursor: pointer;
-    transition: background var(--t), color var(--t);
-    white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: rgb(255 255 255);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--t), color var(--t);
+  white-space: nowrap;
 }
 .nav-link:hover { background: rgba(255,255,255,0.08); color: #fff !important; }
 .nav-item.active > .nav-link {
@@ -366,10 +377,10 @@ body.sidebar-collapsed .admin-main {
   flex-shrink: 0;
 }
 .nav-icon svg {
-    width: 17px;
-    height: 17px;
-    color: #ffffff;
-    stroke-width: 1.8;
+  width: 17px;
+  height: 17px;
+  color: #ffffff;
+  stroke-width: 1.8;
 }
 .nav-item.active > .nav-link .nav-icon svg { color: #1e293b; }
 .nav-label { flex: 1; }
@@ -384,20 +395,26 @@ body.sidebar-collapsed .admin-main {
 .submenu { display: none; flex-direction: column; gap: 1px; padding: 4px 0 4px 30px; }
 .nav-item.has-submenu.open > .submenu { display: flex; }
 .submenu li a {
-  display: block;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: background var(--t), color var(--t);
+    display: block;
+    padding: 7px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #ffffffd1;
+    transition: background var(--t), color var(--t);
 }
 .submenu li a:hover { background: rgba(255,255,255,0.08); color: #fff; }
 
 /* ─────────────────────────────────────────────
-   MEDIA / SOCIAL BUTTONS
+   MEDIA / SOCIAL BUTTONS — FIX: dropdown now visible
 ───────────────────────────────────────────── */
-.media-btn-wrap { position: relative; margin: 0 12px 4px; flex-shrink: 0; }
+.media-btn-wrap {
+  position: relative;
+  margin: 0 12px 4px;
+  flex-shrink: 0;
+  /* overflow: visible already set above — dropdown can escape */
+}
 
 .media-post-btn {
   display: flex;
@@ -418,18 +435,21 @@ body.sidebar-collapsed .admin-main {
 .media-post-btn:hover { background: rgba(255,255,255,0.1); }
 .media-post-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
+/* ─── FIX: dropdown uses position:fixed so it escapes any overflow:hidden parent ─── */
 .media-dropdown {
   display: none;
-  position: absolute;
-  left: 0; right: 0;
+  position: fixed;           /* fixed instead of absolute — escapes overflow:hidden */
   background: #0f1f40;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
   padding: 4px;
-  z-index: 300;
-  margin-top: 4px;
+  z-index: 9999;             /* high z-index */
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
-.media-btn-wrap:hover .media-dropdown { display: block; }
+.media-btn-wrap:hover .media-dropdown {
+  display: block;
+}
 .media-dropdown a {
   display: flex;
   align-items: center;
@@ -440,6 +460,7 @@ body.sidebar-collapsed .admin-main {
   font-weight: 500;
   color: rgba(255,255,255,0.75);
   transition: background var(--t);
+  text-decoration: none;
 }
 .media-dropdown a:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .media-dropdown svg { width: 14px; height: 14px; flex-shrink: 0; }
@@ -682,7 +703,6 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
   width: var(--sidebar-w-collapsed) !important;
 }
 
-/* ── Hide logo icon completely when collapsed ── */
 .admin-sidebar.collapsed .logo-icon {
   width: 0 !important;
   height: 0 !important;
@@ -697,7 +717,6 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
   gap: 0 !important;
 }
 
-/* ── When collapsed: hide all text labels ── */
 .admin-sidebar.collapsed .nav-label,
 .admin-sidebar.collapsed .panel-user-info,
 .admin-sidebar.collapsed .panel-user-chevron,
@@ -713,14 +732,12 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
   display: none !important;
 }
 
-/* ── Hide logo image, keep space for toggle ── */
 .admin-sidebar.collapsed .logo-icon img {
   opacity: 0 !important;
   width: 0 !important;
   margin: 0 !important;
 }
 
-/* ── Center icons ── */
 .admin-sidebar.collapsed .nav-link,
 .admin-sidebar.collapsed .quick-item,
 .admin-sidebar.collapsed .post-article-btn,
@@ -731,20 +748,19 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
   padding-right: 0 !important;
 }
 
-/* ── Hide dropdowns & submenus ── */
+/* Hide dropdowns & submenus when collapsed */
 .admin-sidebar.collapsed .media-dropdown,
 .admin-sidebar.collapsed .submenu {
   display: none !important;
 }
 
-/* ── sidebar-nav border looks odd when narrow ── */
 .admin-sidebar.collapsed .sidebar-nav {
   margin: 8px 4px;
   border: none;
   padding: 0 4px;
 }
 
-/* ── Badge repositioned on top of icon when collapsed ── */
+/* Badge on icon when collapsed */
 .quick-item { position: relative; }
 
 .admin-sidebar.collapsed .quick-badge {
@@ -764,7 +780,6 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
   z-index: 10 !important;
 }
 
-/* ── Main content shifts with sidebar ── */
 .admin-sidebar.collapsed ~ .admin-main {
   margin-left: var(--sidebar-w-collapsed) !important;
 }
@@ -820,37 +835,43 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
 .quick-search-input:focus { border-color: rgba(255,255,255,0.4) !important; background: rgba(255,255,255,0.12) !important; }
 
 .quick-search-results {
-    margin: 0 2px 6px;
-    background: #94a3b8;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    overflow: hidden;
-    max-height: 260px;
-    overflow-y: auto;
+  margin: 0 2px 6px;
+  background: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .qs-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    font-size: 0.82rem;
-    color: rgb(255 255 255);
-    transition: background 0.15s;
-    text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  color: rgb(255 255 255);
+  transition: background 0.15s;
+  text-decoration: none;
 }
 .qs-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .qs-icon { font-size: 0.85rem; width: 18px; text-align: center; flex-shrink: 0; }
 .qs-label { flex: 1; }
 .qs-empty { padding: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.35); text-align: center; }
 
-/* Collapsed state mein search icon dikhta rahe */
 .admin-sidebar.collapsed .quick-search-wrap {
   justify-content: center;
 }
 .admin-sidebar.collapsed .quick-search-results {
   display: none !important;
 }
+
+/* ─────────────────────────────────────────────
+   DROPDOWN POSITION FIX via JS helper
+   (Agar position:fixed dropdown scroll ke saath
+   shift ho toh ye JS se set karo — HTML mein
+   onmouseenter="positionDropdown(this)" daalo)
+───────────────────────────────────────────── */
 
 /* ─────────────────────────────────────────────
    RESPONSIVE

@@ -32,7 +32,6 @@ class Category(models.Model):
     status         = models.CharField(max_length=10, default='active')
     sub_categories = models.JSONField(default=list, blank=True)
     # Format: [{"id": 1, "name": "Politics"}, {"id": 2, "name": "Economy"}]
-    # Ya sirf names: ["Politics", "Economy"]
 
     class Meta:
         verbose_name_plural = "categories"
@@ -76,6 +75,10 @@ class Article(models.Model):
         related_name='articles',
         blank=True
     )
+
+    # ── Selected subcategories (JSON) ──
+    # Format: {"cat_pk": ["Sub Name 1", "Sub Name 2"]}
+    selected_subcategories = models.JSONField(default=dict, blank=True)
  
     # ── Audit: kisne actually post kiya (backend only) ──
     author = models.ForeignKey(
@@ -93,8 +96,8 @@ class Article(models.Model):
     author_display_linkedin  = models.CharField(max_length=200, blank=True)
     author_display_instagram = models.CharField(max_length=200, blank=True)
     author_display_facebook  = models.CharField(max_length=200, blank=True)
-    author_display_youtube = models.CharField(max_length=200, blank=True)
-    author_display_reddit  = models.CharField(max_length=200, blank=True)
+    author_display_youtube   = models.CharField(max_length=200, blank=True)
+    author_display_reddit    = models.CharField(max_length=200, blank=True)
     author_display_articles_count = models.PositiveIntegerField(default=0)
  
     # ── SEO fields ──
@@ -125,7 +128,6 @@ class Article(models.Model):
     def clean(self):
         if self.assigned_to and self.pk:
             profile = self.assigned_to.profile
-            # Category check — assigned reporter allowed hai kya
             for cat in self.categories.all():
                 if not profile.assigned_categories.filter(id=cat.id).exists():
                     pass  # raise ValidationError if needed
@@ -155,7 +157,6 @@ class Article(models.Model):
                 )
  
             if old_article.status != self.status:
-                # Workflow Log Logic (Status Change)
                 ArticleWorkflowLog.objects.create(
                     article=self,
                     old_status=old_article.status,
@@ -164,7 +165,6 @@ class Article(models.Model):
                     remarks=""
                 )
  
-                # Auto set published_at
                 if self.status == "published":
                     self.published_at = timezone.now()
  
@@ -290,7 +290,7 @@ class MetalRate(models.Model):
     ]
 
     metal_type = models.CharField(max_length=10, choices=METAL_CHOICES)
-    price = models.FloatField()  # store in final display unit
+    price = models.FloatField()
     change = models.FloatField(default=0)
     percent_change = models.FloatField(default=0)
     trend = models.CharField(max_length=10, default="neutral")
@@ -331,13 +331,11 @@ class ReporterMonthlyPerformance(models.Model):
     month = models.IntegerField()
     year = models.IntegerField()
 
-    # Work Stats
     articles_assigned = models.IntegerField(default=0)
     articles_submitted = models.IntegerField(default=0)
     articles_published = models.IntegerField(default=0)
     articles_rejected = models.IntegerField(default=0)
 
-    # Metrics
     rejection_rate = models.FloatField(default=0)
     deadline_adherence_rate = models.FloatField(default=0)
 
@@ -355,29 +353,16 @@ class ReporterMonthlyPerformance(models.Model):
     def __str__(self):
         return f"{self.reporter.username} - {self.month}/{self.year}"
 
-# ============================================================
-#  models.py  —  Full Security System
-#  Features:
-#   - Auto User ID + Password generation
-#   - Failed login attempt tracking
-#   - Account lockout after 3 attempts
-#   - New ID+Pass generation after 6 total attempts
-#   - 2FA token storage
-#   - Session timeout tracking
-#   - Login rate limiting support
-# ============================================================
 
 import random
 import string
-import pyotp                          # pip install pyotp
+import pyotp
 from django.db import models
 from django.contrib.auth.models import User
 
 from django.utils import timezone
 from datetime import timedelta
 
-
-# ── Helpers ──────────────────────────────────────────────────
 
 def generate_user_id():
     while True:
@@ -398,8 +383,6 @@ def generate_password(length=12):
     return ''.join(chars)
 
 
-# ── UserProfile ───────────────────────────────────────────────
-
 class UserProfile(models.Model):
 
     GENDER_CHOICES = [
@@ -414,36 +397,40 @@ class UserProfile(models.Model):
         related_name='profile'
     )
 
-    # ───────── Credentials ─────────
     staff_id = models.CharField(
-    max_length=20,
-    unique=True,
-    blank=True,
-    null=True
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True
     )
     plain_password = models.CharField(max_length=50, blank=True)
 
-    # ───────── 2FA ─────────
     totp_secret = models.CharField(max_length=64, blank=True)
     is_2fa_enabled = models.BooleanField(default=False)
 
-    # ───────── Lockout ─────────
     failed_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     total_failed_ever = models.PositiveIntegerField(default=0)
     last_failed_at = models.DateTimeField(null=True, blank=True)
 
-    # ───────── Session ─────────
     remember_me = models.BooleanField(default=False)
     session_timeout_min = models.PositiveIntegerField(default=30)
 
-    # ───────── Rate limiting ─────────
     login_attempts_ip = models.JSONField(default=dict, blank=True)
 
-    # ───────── Profile Info ─────────
     roles = models.ManyToManyField('Role', blank=True)
     phone = models.CharField(max_length=15, blank=True)
     bio = models.TextField(blank=True)
+
+    # ── Social links for editor profile ──
+    position  = models.CharField(max_length=150, blank=True)
+    photo     = models.URLField(blank=True)
+    twitter   = models.CharField(max_length=200, blank=True)
+    linkedin  = models.CharField(max_length=200, blank=True)
+    instagram = models.CharField(max_length=200, blank=True)
+    facebook  = models.CharField(max_length=200, blank=True)
+    youtube   = models.CharField(max_length=200, blank=True)
+    reddit    = models.CharField(max_length=200, blank=True)
 
     gender = models.CharField(
         max_length=10,
@@ -473,20 +460,18 @@ class UserProfile(models.Model):
     last_seen = models.DateTimeField(null=True, blank=True)
 
     def is_online(self):
-            from django.utils import timezone
-            if not self.last_seen:
-                return False
-            return (timezone.now() - self.last_seen).total_seconds() < 300
+        from django.utils import timezone
+        if not self.last_seen:
+            return False
+        return (timezone.now() - self.last_seen).total_seconds() < 300
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.username} | {self.staff_id or 'No Staff ID'}"
 
-# ── LoginAttemptLog ───────────────────────────────────────────
 
 class LoginAttemptLog(models.Model):
-    """Audit log — every login attempt recorded."""
     STATUS_CHOICES = [
         ('success',     'Success'),
         ('wrong_pass',  'Wrong Password'),
@@ -609,12 +594,12 @@ class Message(models.Model):
     )
 
     receiver = models.ForeignKey(
-    User,
-    on_delete=models.CASCADE,
-    related_name="received_messages",
-    null=True,
-    blank=True
-)
+        User,
+        on_delete=models.CASCADE,
+        related_name="received_messages",
+        null=True,
+        blank=True
+    )
 
     created_at = models.DateTimeField(
         auto_now_add=True
@@ -622,7 +607,6 @@ class Message(models.Model):
 
     is_read = models.BooleanField(default=False)
 
-# models/notifications.py
 
 class Notification(models.Model):
 

@@ -6,6 +6,8 @@ from newsapp import views
 from newsapp.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('', lambda request: redirect('admin/'), name='home'),

@@ -96,7 +96,6 @@ def category_restore(request, cat_id):
 @api_view(['GET'])
 def category_posts(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
-    # FIX: category ForeignKey → categories ManyToMany
     articles = Article.objects.filter(
         categories=cat, status='published'
     ).order_by('-created_at')[:10]
@@ -111,6 +110,103 @@ def category_posts(request, cat_id):
 # ARTICLE VIEWS
 # ═══════════════════════════════════════════════════════
 
+def _save_article_from_request(request, article=None):
+    data  = request.POST
+    files = request.FILES
+    is_new = article is None
+
+    title    = data.get('title', '').strip()
+    subtitle = data.get('subtitle', '').strip()
+    content  = data.get('content', '').strip()
+
+    if not title or not content:
+        return None, {'error': 'Title aur content required hain'}
+
+    if is_new:
+        article = Article(author=request.user)
+
+    article.title    = title
+    article.subtitle = subtitle
+    article.content  = content
+
+    article.status   = data.get('status', article.status if not is_new else 'draft')
+    article.priority = int(data.get('priority', article.priority if not is_new else 5))
+    article.is_paid  = data.get('is_paid', 'false').lower() in ('true', '1', 'on')
+
+    deadline_val = data.get('deadline', '')
+    if deadline_val:
+        from django.utils.dateparse import parse_datetime
+        article.deadline = parse_datetime(deadline_val)
+    else:
+        article.deadline = None
+
+    assigned_id = data.get('assigned_to', '')
+    if assigned_id:
+        try:
+            article.assigned_to_id = int(assigned_id)
+        except (ValueError, TypeError):
+            article.assigned_to = None
+    else:
+        article.assigned_to = None
+
+    article.slug             = data.get('slug', '').strip()
+    article.canonical_url    = data.get('canonical_url', '').strip()
+    article.meta_description = data.get('meta_description', '').strip()
+    article.focus_keyword    = data.get('focus_keyword', '').strip()
+    article.noindex          = data.get('noindex', 'false').lower() in ('true', '1', 'on')
+    article.nofollow         = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
+    article.in_sitemap       = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
+
+    article.author_display_name      = data.get('editor_name',      data.get('author_display_name', '')).strip()
+    article.author_display_position  = data.get('editor_position',  data.get('author_display_position', '')).strip()
+    article.author_display_bio       = data.get('editor_bio',       data.get('author_display_bio', '')).strip()
+    article.author_display_photo     = data.get('editor_photo',     data.get('author_display_photo', '')).strip()
+    article.author_display_twitter   = data.get('editor_twitter',   data.get('author_display_twitter', '')).strip()
+    article.author_display_linkedin  = data.get('editor_linkedin',  data.get('author_display_linkedin', '')).strip()
+    article.author_display_instagram = data.get('editor_instagram', data.get('author_display_instagram', '')).strip()
+    article.author_display_facebook  = data.get('editor_facebook',  data.get('author_display_facebook', '')).strip()
+    article.author_display_youtube   = data.get('editor_youtube',   data.get('author_display_youtube', '')).strip()
+    article.author_display_reddit    = data.get('editor_reddit',    data.get('author_display_reddit', '')).strip()
+
+    articles_count = data.get('editor_articles', data.get('author_display_articles_count', 0))
+    try:
+        article.author_display_articles_count = int(articles_count) if articles_count else 0
+    except (ValueError, TypeError):
+        article.author_display_articles_count = 0
+
+    if 'image' in files and files['image']:
+        article.image     = files['image']
+        article.image_url = ''
+    else:
+        url_val = data.get('image_url', '').strip()
+        if url_val and not url_val.startswith('blob:'):
+            article.image_url = url_val
+
+    subcategories_raw = data.get('subcategories', '{}')
+    try:
+        subcategories_dict = json.loads(subcategories_raw)
+        article.selected_subcategories = subcategories_dict if isinstance(subcategories_dict, dict) else {}
+    except (json.JSONDecodeError, TypeError):
+        article.selected_subcategories = {}
+
+    try:
+        article.save()
+    except Exception as e:
+        return None, {'error': str(e)}
+
+    category_ids_raw = data.get('categories', '')
+    if category_ids_raw:
+        try:
+            cat_ids = [int(c) for c in str(category_ids_raw).split(',') if c.strip()]
+            article.categories.set(cat_ids)
+        except (ValueError, TypeError):
+            pass
+    elif 'categories' in data:
+        article.categories.clear()
+
+    return article, None
+
+
 @api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
@@ -121,11 +217,11 @@ def article_list(request):
     elif request.method == "POST":
         if not request.user.is_authenticated:
             return Response({"error": "Login required"}, status=401)
-        serializer = ArticleSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        article, error = _save_article_from_request(request)
+        if error:
+            return Response(error, status=400)
+        serializer = ArticleSerializer(article, context={'request': request})
+        return Response(serializer.data, status=201)
 
 
 @api_view(['GET'])
@@ -181,11 +277,11 @@ def article_detail(request, pk):
     elif request.method == "PUT":
         if not request.user.is_authenticated:
             return Response({"error": "Login required"}, status=401)
-        serializer = ArticleSerializer(article, data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        updated_article, error = _save_article_from_request(request, article=article)
+        if error:
+            return Response(error, status=400)
+        serializer = ArticleSerializer(updated_article, context={'request': request})
+        return Response(serializer.data)
 
     elif request.method == "DELETE":
         article.delete()
@@ -200,9 +296,9 @@ def dashboard_view(request):
     if not request.user.is_staff:
         return redirect("admin:login")
 
-    now             = timezone.now()
-    start_of_month  = now.replace(day=1)
-    week_ago        = now - timedelta(days=7)
+    now            = timezone.now()
+    start_of_month = now.replace(day=1)
+    week_ago       = now - timedelta(days=7)
 
     total_articles      = Article.objects.count()
     published_articles  = Article.objects.filter(status='published').count()
@@ -226,7 +322,6 @@ def dashboard_view(request):
         status='published', published_at__gte=start_of_month
     ).count()
 
-    # FIX: article_set → articles_authored (related_name)
     total_authors    = User.objects.filter(articles_authored__isnull=False).distinct().count()
     total_categories = Category.objects.count()
 
@@ -234,7 +329,6 @@ def dashboard_view(request):
         'author', 'assigned_to'
     ).order_by('-created_at')[:8]
 
-    # FIX: category__name → categories__name (ManyToMany)
     category_data = (
         Article.objects
         .values('categories__name')
@@ -245,9 +339,9 @@ def dashboard_view(request):
     max_count = max((c['article_count'] for c in category_data), default=1)
     category_stats = [
         {
-            'name': c['categories__name'],
+            'name':          c['categories__name'],
             'article_count': c['article_count'],
-            'pct': round((c['article_count'] / max_count) * 100, 1)
+            'pct':           round((c['article_count'] / max_count) * 100, 1)
         }
         for c in category_data
     ]
@@ -296,40 +390,167 @@ def dashboard_view(request):
     except Exception:
         top_reporters = []
 
+    # ── Homepage Control ──
     try:
-        homepage_slots = HomepageSlot.objects.filter(is_active=True)
+        hero_slot = HomepageSlot.objects.filter(slot_name='hero').select_related(
+            'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
+        ).first()
     except Exception:
-        homepage_slots = []
+        hero_slot = None
+
+    try:
+        latest_slot = HomepageSlot.objects.filter(slot_name='latest_news').select_related(
+            'category_filter'
+        ).first()
+    except Exception:
+        latest_slot = None
+
+    try:
+        ad_slot = HomepageSlot.objects.filter(slot_name='ad_banner').first()
+    except Exception:
+        ad_slot = None
+
+    published_articles_for_picker = Article.objects.filter(
+        status='published'
+    ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
+
+    categories = Category.objects.filter(status='active').order_by('name')
 
     context = {
-        "total_articles":        total_articles,
-        "published_articles":    published_articles,
-        "review_articles":       review_articles,
-        "fact_check_articles":   fact_check_articles,
-        "draft_articles":        draft_articles,
-        "scheduled_articles":    scheduled_articles,
-        "archived_articles":     archived_articles,
-        "rejected_articles":     rejected_articles,
-        "paid_articles":         paid_articles,
-        "overdue_articles":      overdue_articles,
-        "published_this_week":   published_this_week,
-        "published_this_month":  published_this_month,
-        "total_authors":         total_authors,
-        "total_categories":      total_categories,
-        "recent_articles":       recent_articles,
-        "recent_logs":           recent_logs,
-        "top_reporters":         top_reporters,
-        "category_stats":        category_stats,
-        "monthly_labels_json":   json.dumps(monthly_labels),
-        "monthly_pub_json":      json.dumps(monthly_pub),
-        "monthly_draft_json":    json.dumps(monthly_draft),
-        "donut_data_json":       json.dumps(donut_data),
-        "pending_fact_checks":   pending_fact_checks,
-        "verified_fact_checks":  verified_fact_checks,
-        "issues_fact_checks":    issues_fact_checks,
-        "homepage_slots":        homepage_slots,
+        "total_articles":                 total_articles,
+        "published_articles":             published_articles,
+        "review_articles":                review_articles,
+        "fact_check_articles":            fact_check_articles,
+        "draft_articles":                 draft_articles,
+        "scheduled_articles":             scheduled_articles,
+        "archived_articles":              archived_articles,
+        "rejected_articles":              rejected_articles,
+        "paid_articles":                  paid_articles,
+        "overdue_articles":               overdue_articles,
+        "published_this_week":            published_this_week,
+        "published_this_month":           published_this_month,
+        "total_authors":                  total_authors,
+        "total_categories":               total_categories,
+        "recent_articles":                recent_articles,
+        "recent_logs":                    recent_logs,
+        "top_reporters":                  top_reporters,
+        "category_stats":                 category_stats,
+        "monthly_labels_json":            json.dumps(monthly_labels),
+        "monthly_pub_json":               json.dumps(monthly_pub),
+        "monthly_draft_json":             json.dumps(monthly_draft),
+        "donut_data_json":                json.dumps(donut_data),
+        "pending_fact_checks":            pending_fact_checks,
+        "verified_fact_checks":           verified_fact_checks,
+        "issues_fact_checks":             issues_fact_checks,
+        # Homepage Control
+        "hero_slot":                      hero_slot,
+        "latest_slot":                    latest_slot,
+        "ad_slot":                        ad_slot,
+        "published_articles_for_picker":  published_articles_for_picker,
+        "categories":                     categories,
     }
     return render(request, "admin/index.html", context)
+
+
+# ═══════════════════════════════════════════════════════
+# HOMEPAGE CONTROL VIEWS
+# ═══════════════════════════════════════════════════════
+
+def _get_or_create_slot(slot_name):
+    slot, _ = HomepageSlot.objects.get_or_create(
+        slot_name=slot_name,
+        defaults={'mode': 'auto', 'is_active': True}
+    )
+    return slot
+
+
+@staff_member_required
+@require_POST
+def update_hero_slot(request):
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    slot      = _get_or_create_slot('hero')
+    slot.mode = 'manual'
+
+    main_id = data.get('main_article_id')
+    if main_id:
+        try:
+            slot.article = Article.objects.get(pk=main_id, status='published')
+        except Article.DoesNotExist:
+            return JsonResponse({'error': 'Main article not found'}, status=404)
+    else:
+        slot.article = None
+
+    ov1 = data.get('overlay_article_1')
+    slot.overlay_article_1 = Article.objects.filter(pk=ov1, status='published').first() if ov1 else None
+
+    ov2 = data.get('overlay_article_2')
+    slot.overlay_article_2 = Article.objects.filter(pk=ov2, status='published').first() if ov2 else None
+
+    ov3 = data.get('overlay_article_3')
+    slot.overlay_article_3 = Article.objects.filter(pk=ov3, status='published').first() if ov3 else None
+
+    slot.save()
+    return JsonResponse({'status': 'saved', 'slot': 'hero'})
+
+
+@staff_member_required
+@require_POST
+def update_latest_news_slot(request):
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    slot      = _get_or_create_slot('latest_news')
+    mode      = data.get('mode', 'auto')
+    slot.mode = mode
+
+    try:
+        slot.display_count = int(data.get('display_count', 4))
+    except (ValueError, TypeError):
+        slot.display_count = 4
+
+    cat_id = data.get('category_id')
+    slot.category_filter = Category.objects.filter(pk=cat_id).first() if cat_id else None
+
+    slot.save()
+
+    if mode == 'manual':
+        manual_ids = data.get('manual_ids', [])
+        if isinstance(manual_ids, list):
+            slot.manual_articles.set(
+                Article.objects.filter(pk__in=manual_ids, status='published')
+            )
+        else:
+            slot.manual_articles.clear()
+    else:
+        slot.manual_articles.clear()
+
+    return JsonResponse({'status': 'saved', 'slot': 'latest_news'})
+
+
+@staff_member_required
+@require_POST
+def update_ad_slot(request):
+    slot          = _get_or_create_slot('ad_banner')
+    slot.mode     = 'manual'
+    slot.ad_link_url = request.POST.get('ad_link_url', '').strip()
+    slot.is_active   = request.POST.get('is_active', 'true').lower() in ('true', '1', 'on')
+
+    if 'ad_image' in request.FILES and request.FILES['ad_image']:
+        slot.ad_image     = request.FILES['ad_image']
+        slot.ad_image_url = ''
+    else:
+        ad_url = request.POST.get('ad_image_url', '').strip()
+        if ad_url and not ad_url.startswith('blob:'):
+            slot.ad_image_url = ad_url
+
+    slot.save()
+    return JsonResponse({'status': 'saved', 'slot': 'ad_banner'})
 
 
 # ═══════════════════════════════════════════════════════
@@ -338,8 +559,8 @@ def dashboard_view(request):
 
 @api_view(['GET'])
 def weather_api(request):
-    city = request.GET.get("city", "Delhi")
-    url  = "https://api.openweathermap.org/data/2.5/weather"
+    city   = request.GET.get("city", "Delhi")
+    url    = "https://api.openweathermap.org/data/2.5/weather"
     params = {"q": city, "appid": settings.OPENWEATHER_API_KEY, "units": "metric"}
     try:
         response = requests.get(url, params=params, timeout=5)
@@ -431,7 +652,6 @@ def _format_article(article, request=None, highlight=None):
         except Exception:
             img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
 
-    # FIX: categories is now ManyToMany — take first category for display
     first_cat = article.categories.first()
 
     return {
@@ -468,7 +688,7 @@ def _search_elasticsearch(query, status, limit, request=None):
         ], minimum_should_match=1)
     )
     es_query = es_query.highlight('title', 'content', fragment_size=120,
-                                   pre_tags=['<mark>'], post_tags=['</mark>'])
+                                  pre_tags=['<mark>'], post_tags=['</mark>'])
     es_query = es_query[:limit]
     response = es_query.execute()
     articles_data = []
@@ -492,7 +712,7 @@ def _search_django_orm(query, status, limit, request=None):
         Q(title__icontains=query) |
         Q(content__icontains=query) |
         Q(author__username__icontains=query) |
-        Q(categories__name__icontains=query)   # FIX: category → categories
+        Q(categories__name__icontains=query)
     ).select_related('author').prefetch_related('categories').distinct()
     if status != 'all':
         qs = qs.filter(status=status)
@@ -501,18 +721,18 @@ def _search_django_orm(query, status, limit, request=None):
 
 @require_GET
 def search_api(request):
-    query  = request.GET.get('q', '').strip()
-    type_  = request.GET.get('type', 'all')
-    limit  = min(int(request.GET.get('limit', 8)), 20)
+    query    = request.GET.get('q', '').strip()
+    type_    = request.GET.get('type', 'all')
+    limit    = min(int(request.GET.get('limit', 8)), 20)
     s_status = request.GET.get('status', 'published')
 
     if len(query) < 2:
         return JsonResponse({"query": query, "total": 0, "articles": [], "categories": [],
                              "error": "Query must be at least 2 characters"}, status=400)
 
-    articles_data  = []
+    articles_data   = []
     categories_data = []
-    search_engine  = "orm"
+    search_engine   = "orm"
 
     if type_ in ('all', 'article'):
         try:
@@ -795,6 +1015,30 @@ Return the JSON array now:"""}]
 
 
 # ═══════════════════════════════════════════════════════
+# SETTINGS API
+# ═══════════════════════════════════════════════════════
+
+@staff_member_required
+@require_POST
+def save_tag_creation_perm(request):
+    try:
+        data = json.loads(request.body)
+        permission = data.get('permission', 'editor')
+        if permission not in ('superuser', 'editor', 'reporter'):
+            return JsonResponse({'error': 'Invalid permission value'}, status=400)
+        try:
+            from .models import SiteSettings
+            settings_obj, _ = SiteSettings.objects.get_or_create(pk=1)
+            settings_obj.tag_create_perm = permission
+            settings_obj.save()
+        except Exception:
+            pass
+        return JsonResponse({'status': 'saved', 'permission': permission})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ═══════════════════════════════════════════════════════
 # MEDIA VIEWS
 # ═══════════════════════════════════════════════════════
 
@@ -827,21 +1071,18 @@ def media_videos_api(request):
 def inbox_view(request):
     staff_users = User.objects.filter(is_staff=True).exclude(pk=request.user.pk).select_related('profile')
     for u in staff_users:
-            try:
-                u.online_status = u.profile.is_online()
-            except Exception:
-                u.online_status = False
+        try:
+            u.online_status = u.profile.is_online()
+        except Exception:
+            u.online_status = False
 
     conversations = Conversation.objects.filter(
         conversationmember__user=request.user
     ).prefetch_related(
-        'members',
-        'messages',
-        'messages__sender',
+        'members', 'messages', 'messages__sender',
     ).order_by('-updated_at').distinct()
 
     conv_id = request.GET.get("conv")
-
     active_conversation = None
     conv_messages = []
 
@@ -855,9 +1096,7 @@ def inbox_view(request):
         active_conversation = conversations.first()
 
     if active_conversation:
-        conv_messages = active_conversation.messages.select_related(
-            "sender"
-        ).order_by("created_at")
+        conv_messages = active_conversation.messages.select_related("sender").order_by("created_at")
 
     return render(request, 'admin/inbox.html', {
         'title':               'Inbox',
@@ -871,22 +1110,15 @@ def inbox_view(request):
 @staff_member_required
 def new_chat(request):
     users = User.objects.filter(is_staff=True).exclude(id=request.user.id).order_by('first_name', 'username')
-    return render(request, 'admin/new_chat.html', {
-        'title':     'New Chat',
-        'all_users': users,
-    })
+    return render(request, 'admin/new_chat.html', {'title': 'New Chat', 'all_users': users})
 
 
 @staff_member_required
 def start_conversation(request, user_id):
     other_user = get_object_or_404(User, id=user_id)
-
     existing = Conversation.objects.filter(
-        conv_type='private',
-        conversationmember__user=request.user
-    ).filter(
-        conversationmember__user=other_user
-    ).first()
+        conv_type='private', conversationmember__user=request.user
+    ).filter(conversationmember__user=other_user).first()
 
     if existing:
         return redirect(f'/inbox/?conv={existing.id}')
@@ -894,7 +1126,6 @@ def start_conversation(request, user_id):
     conv = Conversation.objects.create(conv_type='private')
     ConversationMember.objects.create(conversation=conv, user=request.user)
     ConversationMember.objects.create(conversation=conv, user=other_user)
-
     return redirect(f"{reverse('admin_inbox')}?conv={conv.id}")
 
 
@@ -916,31 +1147,20 @@ def send_message(request):
         return JsonResponse({"error": "Not a member"}, status=403)
 
     msg = Message.objects.create(
-        conversation=conv,
-        sender=request.user,
-        receiver=None,
-        text=text,
-        message_type='text',
+        conversation=conv, sender=request.user,
+        receiver=None, text=text, message_type='text',
     )
-
     conv.updated_at = timezone.now()
     conv.save(update_fields=["updated_at"])
 
     for member in conv.members.exclude(id=request.user.id):
         Notification.objects.create(
-            user=member,
-            notif_type="message",
-            title="New Message",
+            user=member, notif_type="message", title="New Message",
             message=f"{request.user.get_full_name() or request.user.username} sent a message",
-            icon="💬",
-            action_url="/admin/inbox/",
+            icon="💬", action_url="/admin/inbox/",
         )
 
-    return JsonResponse({
-        "status": "ok",
-        "msg_id": msg.id,
-        "time":   msg.created_at.strftime("%H:%M")
-    })
+    return JsonResponse({"status": "ok", "msg_id": msg.id, "time": msg.created_at.strftime("%H:%M")})
 
 
 @staff_member_required
@@ -953,7 +1173,6 @@ def create_group(request):
         return JsonResponse({'error': 'Group name aur kam se kam 2 members chahiye'}, status=400)
 
     conv = Conversation.objects.create(conv_type='group', name=name)
-
     ConversationMember.objects.create(conversation=conv, user=request.user)
 
     for uid in member_ids:
@@ -963,10 +1182,7 @@ def create_group(request):
         except (User.DoesNotExist, ValueError):
             pass
 
-    return JsonResponse({
-        'ok':       True,
-        'redirect': f"{reverse('admin_inbox')}?conv={conv.id}"
-    })
+    return JsonResponse({'ok': True, 'redirect': f"{reverse('admin_inbox')}?conv={conv.id}"})
 
 
 # ═══════════════════════════════════════════════════════
@@ -976,13 +1192,11 @@ def create_group(request):
 @staff_member_required
 def notifications_view(request):
     notifications = Notification.objects.filter(
-        user=request.user,
-        is_archived=False
+        user=request.user, is_archived=False
     ).order_by('-created_at')
 
     archived_notifications = Notification.objects.filter(
-        user=request.user,
-        is_archived=True
+        user=request.user, is_archived=True
     ).order_by('-created_at')
 
     unread_notifications = notifications.filter(is_read=False).count()
@@ -992,17 +1206,16 @@ def notifications_view(request):
     ).exclude(sender=request.user).filter(is_read=False).count()
 
     notifications_today = Notification.objects.filter(
-        user=request.user,
-        created_at__date=timezone.now().date()
+        user=request.user, created_at__date=timezone.now().date()
     ).count()
 
     return render(request, 'admin/notifications.html', {
-        'title':                   'Notifications',
-        'notifications':           notifications,
-        'archived_notifications':  archived_notifications,
-        'unread_notifications':    unread_notifications,
-        'unread_messages':         unread_messages,
-        'notifications_today':     notifications_today,
+        'title':                  'Notifications',
+        'notifications':          notifications,
+        'archived_notifications': archived_notifications,
+        'unread_notifications':   unread_notifications,
+        'unread_messages':        unread_messages,
+        'notifications_today':    notifications_today,
     })
 
 
@@ -1017,6 +1230,7 @@ def mark_notification_read(request, id):
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
 
+
 @login_required
 def archive_notification(request, id):
     if request.method == "POST":
@@ -1029,6 +1243,7 @@ def archive_notification(request, id):
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
 
+
 @login_required
 def unarchive_notification(request, id):
     if request.method == "POST":
@@ -1039,6 +1254,7 @@ def unarchive_notification(request, id):
             return JsonResponse({"status": "restored"})
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
+
 
 @staff_member_required
 def online_status_view(request):
@@ -1052,37 +1268,85 @@ def online_status_view(request):
         data.append({'id': u.id, 'online': online})
     return JsonResponse(data, safe=False)
 
+
 from rest_framework.response import Response
 from django.conf import settings
 
+
 @api_view(['GET'])
 def live_cricket(request):
+    try:
+        if not settings.CRICKET_API_KEY:
+            return Response({
+                "error": "Cricket API key not configured",
+                "live": [],
+                "upcoming": [],
+                "recent": []
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        url = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
 
-    url = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
+        response = requests.get(url, timeout=10)
 
-    response = requests.get(url)
-    data = response.json()
+        if response.status_code != 200:
+            return Response({
+                "error": f"Cricket API returned status {response.status_code}",
+                "live": [],
+                "upcoming": [],
+                "recent": []
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        data = response.json()
 
-    matches = data.get("data", [])
+        if data.get("status") != "success" or not data.get("data"):
+            return Response({
+                "error": "Invalid response from Cricket API",
+                "live": [],
+                "upcoming": [],
+                "recent": []
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        matches = data.get("data", [])
+        live = []
+        upcoming = []
+        recent = []
 
-    live = []
-    upcoming = []
-    recent = []
+        for match in matches:
+            match_status = str(match.get("status", "")).lower()
+            
+            # Categorize matches based on status
+            if "match over" in match_status or "won" in match_status or "beat" in match_status:
+                recent.append(match)
+            elif "upcoming" in match_status or "scheduled" in match_status:
+                upcoming.append(match)
+            else:
+                # Includes live/in progress matches
+                live.append(match)
 
-    for match in matches:
-        status = str(match.get("status", "")).lower()
-
-        if "won" in status or "beat" in status or "match over" in status:
-            recent.append(match)
-
-        elif "vs" in match.get("name", "").lower():
-            upcoming.append(match)
-
-        else:
-            live.append(match)
-
-    return Response({
-        "live": live[:1],        
-        "upcoming": upcoming[:3], 
-        "recent": recent[:3]     
-    })
+        return Response({
+            "live":     live[:1],
+            "upcoming": upcoming[:3],
+            "recent":   recent[:3]
+        })
+        
+    except requests.exceptions.Timeout:
+        return Response({
+            "error": "Cricket API request timed out",
+            "live": [],
+            "upcoming": [],
+            "recent": []
+        }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+    except requests.exceptions.RequestException as e:
+        return Response({
+            "error": f"Failed to fetch cricket data: {str(e)}",
+            "live": [],
+            "upcoming": [],
+            "recent": []
+        }, status=status.HTTP_502_BAD_GATEWAY)
+    except Exception as e:
+        return Response({
+            "error": f"Unexpected error: {str(e)}",
+            "live": [],
+            "upcoming": [],
+            "recent": []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

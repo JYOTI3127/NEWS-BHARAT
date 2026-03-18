@@ -30,8 +30,6 @@
       <div class="art-page-header__sub">{{ total_articles|default:"0" }} total &nbsp;·&nbsp; {{ published_articles|default:"0" }} published &nbsp;·&nbsp; {{ draft_articles|default:"0" }} drafts</div>
     </div>
   </div>
-
-  <!-- ADD NEW ARTICLE BUTTON -->
   <a href="/admin/newsapp/article/add/" class="art-add-btn">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <circle cx="12" cy="12" r="10"/>
@@ -95,9 +93,7 @@
             <span class="art-cat">
               {% for category in article.categories.all %}
                 {{ category.name }}{% if not forloop.last %}, {% endif %}
-              {% empty %}
-                —
-              {% endfor %}
+              {% empty %}—{% endfor %}
             </span>
           </td>
 
@@ -121,9 +117,9 @@
             {% endif %}
           </td>
 
-          <!-- Status -->
+          <!-- Status — FIX: |upper filter add kiya -->
           <td>
-            <span class="art-status status--{{ article.status }}">{{ article.status }}</span>
+            <span class="art-status status--{{ article.status }}">{{ article.status|upper }}</span>
           </td>
 
           <!-- Date -->
@@ -147,26 +143,19 @@
           <!-- Actions -->
           <td>
             <div class="art-actions">
-              <!-- Edit -->
               <a href="/admin/newsapp/article/{{ article.id }}/change/"
-                 class="art-action-btn art-action-btn--edit"
-                 title="Edit">
+                 class="art-action-btn art-action-btn--edit" title="Edit">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </a>
-
-              <!-- Delete -->
-              <button
-                class="art-action-btn art-action-btn--delete"
-                title="Delete"
+              <button class="art-action-btn art-action-btn--delete" title="Delete"
                 onclick="confirmDelete({{ article.id }}, '{{ article.title|escapejs|truncatechars:40 }}')">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6"/>
-                  <path d="M14 11v6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/>
                   <path d="M9 6V4h6v2"/>
                 </svg>
               </button>
@@ -191,7 +180,7 @@
 <!-- ── BOTTOM TWO COLUMNS ─────────────────────────── -->
 <div class="art-bottom-grid">
 
-  <!-- LEFT: POSTED IMAGES ──────────────────────────── -->
+  <!-- LEFT: POSTED IMAGES -->
   <div class="art-images-section">
     <div class="art-section-header">
       <div class="art-section-title">
@@ -204,11 +193,17 @@
     <div class="art-images-grid">
       {% for article in articles_with_images %}
         <div class="art-img-card">
-          <img src="{{ article.image.url }}" alt="{{ article.title }}" class="art-img-card__img">
+          <!-- FIX: image pe click karo toh lightbox mein badi hogi -->
+          <img src="{{ article.image.url }}"
+               alt="{{ article.title }}"
+               class="art-img-card__img"
+               onclick="openLightbox('{{ article.image.url }}', '{{ article.title|escapejs }}')"
+               style="cursor:zoom-in;">
           <div class="art-img-card__overlay">
             <div class="art-img-card__title">{{ article.title|truncatechars:30 }}</div>
             <div class="art-img-card__meta">
-              <span class="art-status status--{{ article.status }}">{{ article.status }}</span>
+              <!-- Status bhi uppercase -->
+              <span class="art-status status--{{ article.status }}">{{ article.status|upper }}</span>
               <span>{{ article.created_at|date:"d M" }}</span>
             </div>
             <a href="/admin/newsapp/article/{{ article.id }}/change/" class="art-img-card__link">
@@ -226,7 +221,7 @@
     </div>
   </div>
 
-  <!-- RIGHT: RECENT ACTIVITIES ─────────────────────── -->
+  <!-- RIGHT: RECENT ACTIVITIES -->
   <div class="art-activity-section">
     <div class="art-section-header">
       <div class="art-section-title">
@@ -249,9 +244,9 @@
             <span class="act-article">{{ log.article.title|truncatechars:32 }}</span>
           </div>
           <div class="act-transition">
-            <span class="act-status act-status--old">{{ log.old_status }}</span>
+            <span class="act-status act-status--old">{{ log.old_status|upper }}</span>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            <span class="act-status act-status--new status--{{ log.new_status }}">{{ log.new_status }}</span>
+            <span class="act-status act-status--new status--{{ log.new_status }}">{{ log.new_status|upper }}</span>
           </div>
           {% if log.remarks %}
           <div class="act-remark">"{{ log.remarks|truncatechars:55 }}"</div>
@@ -274,28 +269,23 @@
 <!-- ══════════════════════════════════════════ -->
 <div class="del-modal-backdrop" id="delBackdrop">
   <div class="del-modal" id="delModal">
-
-    <!-- Icon -->
     <div class="del-modal__icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <polyline points="3 6 5 6 21 6"/>
         <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-        <path d="M10 11v6"/>
-        <path d="M14 11v6"/>
+        <path d="M10 11v6"/><path d="M14 11v6"/>
         <path d="M9 6V4h6v2"/>
       </svg>
     </div>
-
     <h3 class="del-modal__title">Delete Article?</h3>
     <p class="del-modal__msg">
       Are you sure you want to permanently delete<br>
       <strong id="delArticleTitle"></strong>?<br>
       <span class="del-modal__warn">This action cannot be undone.</span>
     </p>
-
     <div class="del-modal__actions">
       <button class="del-modal__cancel" onclick="closeDeleteModal()">Cancel</button>
-      <a  class="del-modal__confirm" id="delConfirmLink" href="#">
+      <a class="del-modal__confirm" id="delConfirmLink" href="#">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -304,11 +294,17 @@
         Yes, Delete
       </a>
     </div>
-
   </div>
 </div>
 
-
+<!-- ══════════════════════════════════════════ -->
+<!-- LIGHTBOX — image badi karke dikhao        -->
+<!-- ══════════════════════════════════════════ -->
+<div id="nb_lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.90);z-index:99999;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;">
+  <img id="nb_lb_img" style="max-width:90vw;max-height:85vh;border-radius:10px;box-shadow:0 8px 48px rgba(0,0,0,0.6);object-fit:contain;">
+  <div id="nb_lb_caption" style="color:rgba(255,255,255,0.75);font-size:13px;margin-top:14px;max-width:80vw;text-align:center;"></div>
+  <button onclick="closeLightbox()" style="position:absolute;top:18px;right:22px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&#x2715;</button>
+</div>
 
 <script>
 /* ── Filter ──────────────────────────────────────── */
@@ -327,20 +323,35 @@ function confirmDelete(id, title) {
   document.getElementById('delBackdrop').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
-
 function closeDeleteModal() {
   document.getElementById('delBackdrop').classList.remove('active');
   document.body.style.overflow = '';
 }
-
-/* Close on backdrop click */
 document.getElementById('delBackdrop').addEventListener('click', function(e) {
   if (e.target === this) closeDeleteModal();
 });
 
-/* Close on Escape */
+/* ── Lightbox ────────────────────────────────────── */
+function openLightbox(src, caption) {
+  var lb  = document.getElementById('nb_lightbox');
+  var img = document.getElementById('nb_lb_img');
+  var cap = document.getElementById('nb_lb_caption');
+  img.src = src;
+  if (cap) cap.textContent = caption || '';
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('nb_lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+/* ESC se dono modal band */
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeDeleteModal();
+  if (e.key === 'Escape') {
+    closeDeleteModal();
+    closeLightbox();
+  }
 });
 </script>
 

@@ -352,13 +352,11 @@ class UserAdmin(BaseUserAdmin):
                 user.save()
 
                 # ── FIX: profile already created by post_save signal ──
-                # Explicitly save plain_password using update_fields
-                # so no other signal/save can overwrite it
                 profile = UserProfile.objects.get(user=user)
                 profile.plain_password = plain_pass
-                profile.save(update_fields=['plain_password'])   # ← KEY FIX
+                profile.save(update_fields=['plain_password'])
 
-                # Assign roles — staff_id signal triggers here
+                # Assign roles
                 profile.roles.set(roles)
 
                 # Refresh from DB to get signal-generated staff_id
@@ -430,7 +428,6 @@ News4Bharat
     # ── Password Change Override — plain_password sync ──
     def user_change_password(self, request, id, form_url=''):
         response = super().user_change_password(request, id, form_url)
-        # Agar POST tha aur successfully redirect hua
         if request.method == 'POST' and hasattr(response, 'status_code') and response.status_code == 302:
             try:
                 new_pass = request.POST.get('password1', '')
@@ -491,7 +488,7 @@ class NewsAdminSite(AdminSite):
     site_header = "NewsAdmin"
     site_title  = "News Admin Portal"
     index_title = "Dashboard"
-    login_template = 'admin/login.html' 
+    login_template = 'admin/login.html'
 
     # Logout ke baad login page pe redirect
     def logout(self, request, extra_context=None):
@@ -503,6 +500,45 @@ class NewsAdminSite(AdminSite):
     def index(self, request, extra_context=None):
         extra_context = extra_context or {}
 
+        # ── Homepage Control data — picker ke liye ──
+        try:
+            extra_context['published_articles_for_picker'] = Article.objects.filter(
+                status='published'
+            ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
+        except Exception:
+            extra_context['published_articles_for_picker'] = []
+
+        try:
+            extra_context['categories'] = Category.objects.filter(
+                status='active'
+            ).order_by('name')
+        except Exception:
+            extra_context['categories'] = []
+
+        try:
+            extra_context['hero_slot'] = HomepageSlot.objects.filter(
+                slot_name='hero'
+            ).select_related(
+                'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
+            ).first()
+        except Exception:
+            extra_context['hero_slot'] = None
+
+        try:
+            extra_context['latest_slot'] = HomepageSlot.objects.filter(
+                slot_name='latest_news'
+            ).select_related('category_filter').first()
+        except Exception:
+            extra_context['latest_slot'] = None
+
+        try:
+            extra_context['ad_slot'] = HomepageSlot.objects.filter(
+                slot_name='ad_banner'
+            ).first()
+        except Exception:
+            extra_context['ad_slot'] = None
+
+        # ── Existing dashboard stats ──
         try:
             now       = timezone.now()
             week_ago  = now - timedelta(days=7)
@@ -547,7 +583,7 @@ class NewsAdminSite(AdminSite):
             verified_fact_checks = FactCheck.objects.filter(status='verified').count()
             issues_fact_checks   = FactCheck.objects.filter(status='issues_found').count()
 
-            recent_articles = Article.objects.select_related('author', 'assigned_to').order_by('-created_at')[:8]
+            recent_articles = Article.objects.select_related('author', 'assigned_to').prefetch_related('categories').order_by('-created_at')[:8]
             recent_logs     = ArticleWorkflowLog.objects.select_related('article', 'changed_by').order_by('-changed_at')[:5]
             top_reporters   = ReporterMonthlyPerformance.objects.filter(
                 month=now.month, year=now.year
@@ -570,19 +606,41 @@ class NewsAdminSite(AdminSite):
             monthly_draft = [row['count'] for row in monthly_draft_qs]
 
             extra_context.update({
-                'total_articles': total_articles, 'published_articles': published_articles,
-                'draft_articles': draft_articles, 'archived_articles': archived_articles,
-                'review_articles': review_articles, 'fact_check_articles': fact_check_articles,
-                'rejected_articles': rejected_articles, 'scheduled_articles': scheduled_articles,
-                'overdue_articles': overdue_articles,
-                'published_this_month': published_this_month, 'published_this_week': published_this_week,
-                'paid_articles': paid_articles, 'free_articles': free_articles,
-                'total_authors': total_authors, 'active_profiles': active_profiles, 'suspended_users': suspended_users,
-                'total_categories': total_categories, 'category_stats': category_stats,
-                'pending_fact_checks': pending_fact_checks, 'verified_fact_checks': verified_fact_checks,
-                'issues_fact_checks': issues_fact_checks,
-                'recent_articles': recent_articles, 'recent_logs': recent_logs, 'top_reporters': top_reporters,
-                'monthly_labels': monthly_labels, 'monthly_pub': monthly_pub, 'monthly_draft': monthly_draft,
+                'total_articles':        total_articles,
+                'published_articles':    published_articles,
+                'draft_articles':        draft_articles,
+                'archived_articles':     archived_articles,
+                'review_articles':       review_articles,
+                'fact_check_articles':   fact_check_articles,
+                'rejected_articles':     rejected_articles,
+                'scheduled_articles':    scheduled_articles,
+                'overdue_articles':      overdue_articles,
+                'published_this_month':  published_this_month,
+                'published_this_week':   published_this_week,
+                'paid_articles':         paid_articles,
+                'free_articles':         free_articles,
+                'total_authors':         total_authors,
+                'active_profiles':       active_profiles,
+                'suspended_users':       suspended_users,
+                'total_categories':      total_categories,
+                'category_stats':        category_stats,
+                'pending_fact_checks':   pending_fact_checks,
+                'verified_fact_checks':  verified_fact_checks,
+                'issues_fact_checks':    issues_fact_checks,
+                'recent_articles':       recent_articles,
+                'recent_logs':           recent_logs,
+                'top_reporters':         top_reporters,
+                'monthly_labels':        monthly_labels,
+                'monthly_pub':           monthly_pub,
+                'monthly_draft':         monthly_draft,
+                # JSON versions for charts
+                'monthly_labels_json':   json.dumps(monthly_labels),
+                'monthly_pub_json':      json.dumps(monthly_pub),
+                'monthly_draft_json':    json.dumps(monthly_draft),
+                'donut_data_json':       json.dumps([
+                    published_articles, draft_articles, review_articles,
+                    archived_articles, rejected_articles, fact_check_articles,
+                ]),
             })
 
         except Exception as e:
@@ -779,12 +837,10 @@ class FactCheckAdmin(admin.ModelAdmin):
 class ArticleAdmin(admin.ModelAdmin):
     inlines = [ArticleVersionInline, WorkflowLogInline]
  
-    # List view
     list_display   = ['title', 'status', 'author', 'author_display_name', 'priority', 'created_at']
     list_filter    = ['status', 'categories', 'is_paid', 'priority']
     search_fields  = ['title', 'author__username', 'author_display_name']
  
-    # Detail / edit page sections
     fieldsets = (
         ('Basic Info', {
             'fields': ('title', 'subtitle', 'content', 'image', 'image_url', 'categories')
@@ -817,7 +873,6 @@ class ArticleAdmin(admin.ModelAdmin):
  
     def save_model(self, request, obj, form, change):
         if not change:
-            # Naya article — logged-in user ko author set karo
             obj.author = request.user
         if change:
             old_status = form.initial.get('status')
@@ -871,16 +926,10 @@ class PermissionAdmin(admin.ModelAdmin):
     list_display  = ('code', 'description')
     search_fields = ('code', 'description')
 
-    # Yeh function template ko extra context deta hai (group_count, user_count)
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
-
-        # Agar tumne Permission ko Groups ya Users se link kiya hai toh:
-        # extra_context['group_count'] = Group.objects.filter(permissions=...).count()
-        # Abhi ke liye 0 rahega — baad mein update karna
         extra_context['group_count'] = 0
         extra_context['user_count']  = 0
-
         return super().changelist_view(request, extra_context=extra_context)
 
 

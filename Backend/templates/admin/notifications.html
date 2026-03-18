@@ -64,44 +64,35 @@
   <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
 
     <div class="notif-filter-bar">
-      <!-- All -->
       <button class="notif-flt-btn active" onclick="filterNotifs('all',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         All
       </button>
-      <!-- Articles -->
       <button class="notif-flt-btn" onclick="filterNotifs('article',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Articles
       </button>
-      <!-- Assignments -->
       <button class="notif-flt-btn" onclick="filterNotifs('assign',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Assignments
       </button>
-      <!-- Roles -->
       <button class="notif-flt-btn" onclick="filterNotifs('role',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Roles
       </button>
-      <!-- Messages -->
       <button class="notif-flt-btn" onclick="filterNotifs('message',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Messages
       </button>
-      <!-- Social -->
       <button class="notif-flt-btn" onclick="filterNotifs('social',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Social
       </button>
-      <!-- Category -->
       <button class="notif-flt-btn" onclick="filterNotifs('category',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Category
       </button>
-      <!-- Divider -->
       <div class="notif-flt-divider"></div>
-      <!-- Archived -->
       <button class="notif-flt-btn archived-btn" id="archiveFilterBtn" onclick="filterNotifs('archived',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
         Archived
@@ -117,7 +108,6 @@
 
 <script>
 
-// ── SVG icons per type (no emojis) ──────────────────────────
 var TYPE_SVG = {
     article:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
     assign:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -127,9 +117,7 @@ var TYPE_SVG = {
     social:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
 };
 
-// ── Data from Django ──────────────────────────────────────────
 var RAW_NOTIFS = [
-
 {% for n in notifications %}
 {
     id: {{ n.id }},
@@ -142,7 +130,6 @@ var RAW_NOTIFS = [
     action_url: "{{ n.action_url|default:''|escapejs }}"
 },
 {% endfor %}
-
 {% for n in archived_notifications %}
 {
     id: {{ n.id }},
@@ -155,24 +142,16 @@ var RAW_NOTIFS = [
     action_url: "{{ n.action_url|default:''|escapejs }}"
 }{% if not forloop.last %},{% endif %}
 {% endfor %}
-
 ];
 
-// ── Deduplicate role notifications: keep only latest per unique message ──
 function deduplicateRoles(notifs) {
     var seen = {};
     var result = [];
-    // Iterate in reverse so latest wins, then reverse back
     var reversed = notifs.slice().reverse();
     reversed.forEach(function(n) {
         if (n.type === 'role') {
-            // key = message text (e.g. "Your role has been updated: Super Admin")
             var key = n.message;
-            if (!seen[key]) {
-                seen[key] = true;
-                result.push(n);
-            }
-            // If same message already seen, skip (duplicate)
+            if (!seen[key]) { seen[key] = true; result.push(n); }
         } else {
             result.push(n);
         }
@@ -181,17 +160,12 @@ function deduplicateRoles(notifs) {
 }
 
 var NOTIFS = deduplicateRoles(RAW_NOTIFS);
-
-// ── State ─────────────────────────────────────────────────────
 var currentFilter = "all";
-var ARCHIVED_IDS  = [];   // tracks archived notif ids
 
-// ── Helpers ───────────────────────────────────────────────────
 function esc(s){
     return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-// ── Stats ─────────────────────────────────────────────────────
 function updateStats(){
     var active = NOTIFS.filter(function(n){ return !n.is_archived; });
     var unread = active.filter(function(n){ return !n.is_read; }).length;
@@ -200,26 +174,18 @@ function updateStats(){
     document.getElementById("statRead").textContent   = active.length - unread;
     document.getElementById("statToday").textContent  = "{{ notifications_today|default:'—' }}";
 
-    // Archive count badge
     var archivedCount = NOTIFS.filter(function(n){ return n.is_archived; }).length;
     var badge = document.getElementById("archiveCountBadge");
     if(badge){
         badge.textContent = archivedCount;
         badge.style.display = archivedCount > 0 ? '' : 'none';
     }
-
-    // Sidebar badge: only show when unread > 0
     document.querySelectorAll('.notif-sidebar-badge, [data-notif-badge]').forEach(function(el){
-        if (unread > 0) {
-            el.textContent = unread;
-            el.style.display = '';
-        } else {
-            el.style.display = 'none';
-        }
+        if (unread > 0) { el.textContent = unread; el.style.display = ''; }
+        else { el.style.display = 'none'; }
     });
 }
 
-// ── Filter ────────────────────────────────────────────────────
 function filterNotifs(type, btn){
     currentFilter = type;
     document.querySelectorAll(".notif-flt-btn").forEach(function(b){ b.classList.remove("active"); });
@@ -232,7 +198,6 @@ var ICON_CLS = {
     category: "category", message: "message", social: "social"
 };
 
-// ── Render ────────────────────────────────────────────────────
 function renderList(){
     var list = document.getElementById("notifList");
     var isArchiveView = (currentFilter === 'archived');
@@ -264,7 +229,15 @@ function renderList(){
         var iconSvg = TYPE_SVG[n.type] || TYPE_SVG['article'];
         var cls     = ICON_CLS[n.type] || 'article';
 
-        // ── Eye (view/open) button — only if action_url exists ──
+        /* ── Poora card clickable hai —
+           cursor:pointer hamesha dikhega.
+           action_url hai toh click pe open hoga,
+           nahi hai toh sirf read mark hoga. ── */
+        var cursorStyle = 'cursor:pointer;';
+
+        /* Eye button — action_url wale cards pe bhi dikhega
+           lekin ab redundant hai kyunki poora card clickable hai.
+           Phir bhi rakha hai design consistency ke liye. */
         var eyeBtn = '';
         if(n.action_url && !isArchiveView){
             eyeBtn = '<button class="notif-icon-btn view-btn" title="Open" ' +
@@ -273,28 +246,27 @@ function renderList(){
                 '</button>';
         }
 
-        // ── Archive / Unarchive button ──
         var archiveBtn;
         if(isArchiveView){
-            // In archive view: show restore button
             archiveBtn = '<button class="notif-icon-btn restore-btn" title="Restore" ' +
                 'onclick="event.stopPropagation();unarchiveNotif('+n.id+')">' +
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>' +
                 '</button>';
         } else {
-            // Normal view: archive button (box icon)
             archiveBtn = '<button class="notif-icon-btn archive-btn" title="Archive" ' +
                 'onclick="event.stopPropagation();archiveNotif('+n.id+')">' +
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>' +
                 '</button>';
         }
 
-        // ── Archived tag ──
         var archivedTag = isArchiveView
             ? '<span class="notif-tag" style="background:#fef9c3;color:#92400e;">Archived</span>'
             : '';
 
-        return '<div class="notif-card'+(n.is_read?' ':' unread ')+(isArchiveView?'archived-card':'')+'" id="notif-'+n.id+'" onclick="cardClick('+n.id+')">'+
+        return '<div class="notif-card'+(n.is_read?' ':' unread ')+(isArchiveView?'archived-card':'')+'" '+
+            'id="notif-'+n.id+'" '+
+            'style="'+cursorStyle+'" '+
+            'onclick="cardClick('+n.id+',\''+esc(n.action_url || '')+'\')">'+
             '<div class="notif-icon-box '+cls+(isArchiveView?' archived-icon':'')+'">'+iconSvg+'</div>'+
             '<div class="notif-body">'+
                 '<div class="notif-text"><strong>'+esc(n.title)+'</strong> — '+esc(n.message)+'</div>'+
@@ -302,6 +274,9 @@ function renderList(){
                     '<span class="notif-time">'+esc(n.time)+'</span>'+
                     '<span class="notif-tag">'+esc(tag)+'</span>'+
                     archivedTag+
+                    (n.action_url && !isArchiveView
+                        ? '<span class="notif-tag" style="background:#e0f2fe;color:#0369a1;">Click to open →</span>'
+                        : '')+
                 '</div>'+
             '</div>'+
             (!n.is_read && !isArchiveView ? '<div class="unread-dot"></div>' : '')+
@@ -310,18 +285,22 @@ function renderList(){
     }).join("");
 }
 
-// ── Card click — mark read ────────────────────────────────────
-function cardClick(id){
+/* ── cardClick — UPDATED
+   Ab action_url bhi leta hai.
+   action_url hai → read mark karo + redirect karo
+   action_url nahi → sirf read mark karo ── */
+function cardClick(id, url){
     markRead(id);
+    if(url && url.trim() !== ''){
+        window.location.href = url;
+    }
 }
 
-// ── Open notification + redirect ──────────────────────────────
 function openNotif(id, url){
     markRead(id);
     if(url){ window.location.href = url; }
 }
 
-// ── Mark single read (visual only, no removal) ────────────────
 function markRead(id){
     var n = NOTIFS.find(function(x){ return x.id === id; });
     if(!n || n.is_read) return;
@@ -343,22 +322,18 @@ function markRead(id){
     }).catch(function(e){ console.log('Mark read failed:', e); });
 }
 
-// ── Archive notification ───────────────────────────────────────
 function archiveNotif(id){
     var n = NOTIFS.find(function(x){ return x.id === id; });
     if(!n) return;
 
-    // Animate out
     var card = document.getElementById("notif-"+id);
     if(card){
         card.classList.add("removing");
-        card.addEventListener("animationend", function(){
-            card.remove();
-        });
+        card.addEventListener("animationend", function(){ card.remove(); });
     }
 
     n.is_archived = true;
-    n.is_read     = true;   // archived = auto read
+    n.is_read     = true;
     updateStats();
     showToast("Notification archived");
 
@@ -370,7 +345,6 @@ function archiveNotif(id){
     }).catch(function(e){ console.log('Archive failed:', e); });
 }
 
-// ── Unarchive / Restore notification ─────────────────────────
 function unarchiveNotif(id){
     var n = NOTIFS.find(function(x){ return x.id === id; });
     if(!n) return;
@@ -378,9 +352,7 @@ function unarchiveNotif(id){
     var card = document.getElementById("notif-"+id);
     if(card){
         card.classList.add("removing");
-        card.addEventListener("animationend", function(){
-            card.remove();
-        });
+        card.addEventListener("animationend", function(){ card.remove(); });
     }
 
     n.is_archived = false;
@@ -395,7 +367,6 @@ function unarchiveNotif(id){
     }).catch(function(e){ console.log('Unarchive failed:', e); });
 }
 
-// ── Mark all read ─────────────────────────────────────────────
 function markAllRead(){
     NOTIFS.forEach(function(n){ n.is_read = true; });
     renderList();
@@ -410,7 +381,6 @@ function markAllRead(){
     }).catch(function(e){ console.log('Mark all read failed:', e); });
 }
 
-// ── Toast ─────────────────────────────────────────────────────
 function showToast(msg){
     var stack = document.getElementById("toastStack");
     if(!stack) return;
@@ -421,7 +391,6 @@ function showToast(msg){
     setTimeout(function(){ if(t.parentElement) t.remove(); }, 3000);
 }
 
-// ── Init ──────────────────────────────────────────────────────
 renderList();
 updateStats();
 

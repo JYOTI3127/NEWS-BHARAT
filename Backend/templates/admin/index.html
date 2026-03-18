@@ -8,7 +8,22 @@
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/homepage_control.css' %}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<style>
+/* KPI cards — full block clickable */
+.kpi-card.kpi-card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: box-shadow .18s, transform .18s;
+}
+.kpi-card.kpi-card--link:hover {
+  box-shadow: 0 4px 20px rgba(184,1,0,0.13);
+  transform: translateY(-2px);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -38,358 +53,335 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     ROW 1 — KPI CARDS
+     ROW 1 — 4 FULLY CLICKABLE KPI CARDS
 ══════════════════════════════════════════ -->
 <div class="kpi-row">
 
-  <!-- Highlight card -->
-  <div class="kpi-card kpi-card--highlight">
-    <div class="kpi-update-dot"></div>
-    <span class="kpi-update-label">Live</span>
-    <span class="kpi-update-date" id="liveDate">&#8212;</span>
-    <p class="kpi-update-text">
-      <strong>{{ published_this_week }}</strong> articles published this week.
-      <strong>{{ overdue_articles }}</strong> deadline{% if overdue_articles != 1 %}s{% endif %} overdue.
-    </p>
-    <a href="" class="kpi-see-btn">
-      View Articles &#x203A;
-    </a>
-  </div>
-
-  <!-- Total Articles -->
-  <div class="kpi-card">
+  <a href="/admin/newsapp/article/" class="kpi-card kpi-card--link">
     <div class="kpi-card-header">
       <span class="kpi-label">Total Articles</span>
-      <a href="/admin/newsapp/article/" class="kpi-more-link" title="View all">&#x203A;</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </div>
-    <div class="kpi-value" id="totalArticles">
-       {{ published_articles }}
-    </div>
-    <div class="kpi-trend">
-      <span class="trend-up">&#x2191; {{ published_this_month }} published this month</span>
-    </div>
-  </div>
+    <div class="kpi-value" id="totalArticles">{{ total_articles }}</div>
+    <div class="kpi-trend"><span class="trend-up">&#x2191; {{ published_this_month }} this month</span></div>
+  </a>
 
-  <!-- Published -->
-  <div class="kpi-card">
+  <a href="/admin/newsapp/article/?status__exact=published" class="kpi-card kpi-card--link">
     <div class="kpi-card-header">
       <span class="kpi-label">Published</span>
-      <a href="/admin/newsapp/article/?filter=published" class="kpi-more-link">&#x203A;</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </div>
-    <div class="kpi-value" id="publishedArticles">
-      <div class="kpi-skeleton"></div>
-    </div>
-    <div class="kpi-trend">
-      <span class="trend-up">&#x2191; {{ published_this_week }} this week</span>
-    </div>
-  </div>
+    <div class="kpi-value" id="publishedArticles">{{ published_articles }}</div>
+    <div class="kpi-trend"><span class="trend-up">&#x2191; {{ published_this_week }} this week</span></div>
+  </a>
 
-  <!-- In Review / Fact Check -->
-  <div class="kpi-card">
+  <a href="/admin/newsapp/article/?status__exact=draft" class="kpi-card kpi-card--link">
     <div class="kpi-card-header">
-      <span class="kpi-label">In Pipeline</span>
-      <a href="
-      " class="kpi-more-link">&#x203A;</a>
+      <span class="kpi-label">Drafts</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </div>
-    <div class="kpi-value" id="pipelineArticles">
-      <div class="kpi-skeleton"></div>
-    </div>
-    <div class="kpi-trend">
-      <span class="trend-neutral">
-        {{ review_articles }} review &middot; {{ fact_check_articles }} fact check
-      </span>
-    </div>
-  </div>
-</div>
-<!-- END ROW 1 -->
+    <div class="kpi-value" id="draftArticles">{{ draft_articles }}</div>
+    <div class="kpi-trend"><span class="trend-neutral">{{ review_articles }} in review</span></div>
+  </a>
 
-<!-- ══════════════════════════════════════════
-     ROW 1b — SECONDARY STAT PILLS
-══════════════════════════════════════════ -->
+  <a href="/admin/newsapp/article/?status__exact=scheduled" class="kpi-card kpi-card--link">
+    <div class="kpi-card-header">
+      <span class="kpi-label">Scheduled</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+    <div class="kpi-value" id="scheduledArticles">{{ scheduled_articles }}</div>
+    <div class="kpi-trend"><span class="trend-neutral">{{ overdue_articles }} overdue</span></div>
+  </a>
+
+</div>
+
+<!-- STAT PILLS -->
 <div class="stat-pills">
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--draft">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2"/>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ draft_articles }}</span>
-    <span class="stat-pill__label">Drafts</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--scheduled">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ scheduled_articles }}</span>
-    <span class="stat-pill__label">Scheduled</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--archived">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <polyline points="21 8 21 21 3 21 3 8" stroke="currentColor" stroke-width="2"/>
-        <rect x="1" y="3" width="22" height="5" stroke="currentColor" stroke-width="2"/>
-        <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ archived_articles }}</span>
-    <span class="stat-pill__label">Archived</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--rejected">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-        <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ rejected_articles }}</span>
-    <span class="stat-pill__label">Rejected</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--paid">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
-        <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ paid_articles }}</span>
-    <span class="stat-pill__label">Paid</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--overdue">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2"/>
-        <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2"/>
-        <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ overdue_articles }}</span>
-    <span class="stat-pill__label">Overdue</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--authors">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
-        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ total_authors }}</span>
-    <span class="stat-pill__label">Authors</span>
-  </div>
-  <div class="stat-pill">
-    <span class="stat-pill__icon stat-pill__icon--categories">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke="currentColor" stroke-width="2"/>
-        <line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </span>
-    <span class="stat-pill__val">{{ total_categories }}</span>
-    <span class="stat-pill__label">Categories</span>
-  </div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--archived"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="21 8 21 21 3 21 3 8" stroke="currentColor" stroke-width="2"/><rect x="1" y="3" width="22" height="5" stroke="currentColor" stroke-width="2"/><line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ archived_articles }}</span><span class="stat-pill__label">Archived</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--rejected"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ rejected_articles }}</span><span class="stat-pill__label">Rejected</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--paid"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="2"/><line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ paid_articles }}</span><span class="stat-pill__label">Paid</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--overdue"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ overdue_articles }}</span><span class="stat-pill__label">Overdue</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--authors"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ total_authors }}</span><span class="stat-pill__label">Authors</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--categories"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke="currentColor" stroke-width="2"/><line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ total_categories }}</span><span class="stat-pill__label">Categories</span></div>
+  <div class="stat-pill"><span class="stat-pill__icon stat-pill__icon--fact"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/></svg></span><span class="stat-pill__val">{{ fact_check_articles }}</span><span class="stat-pill__label">Fact Check</span></div>
 </div>
 
 <!-- ══════════════════════════════════════════
-     HOMEPAGE CONTROL — HYBRID
-══════════════════════════════════════════ -->
-<div class="dash-card dash-card--homepage">
-
-  <div class="dash-card-header">
-    <h3 class="dash-card-title">Homepage Control</h3>
-  </div>
-
-  <div class="homepage-grid">
-
-    {% for slot in homepage_slots %}
-    <div class="homepage-slot">
-      <div class="slot-header">
-        <span class="slot-name">{{ slot.slot_name|title }}</span>
-        <span class="slot-mode slot-mode--{{ slot.mode }}">
-          {{ slot.mode|upper }}
-        </span>
-      </div>
-
-      <div class="slot-body">
-        {% if slot.mode == "manual" and slot.article %}
-          <span class="slot-article">
-            {{ slot.article.title|truncatechars:40 }}
-          </span>
-          {% if slot.pin_until %}
-          <span class="slot-expiry">
-            Pinned until {{ slot.pin_until|date:"M d, H:i" }}
-          </span>
-          {% endif %}
-        {% else %}
-          <span class="slot-auto-rule">
-            Auto: {{ slot.auto_rule|default:"Latest Published" }}
-          </span>
-        {% endif %}
-      </div>
-
-      <div class="slot-actions">
-        <a href="" class="slot-edit-btn">Edit</a>
-      </div>
-    </div>
-    {% empty %}
-      <p class="empty-table">No homepage slots configured yet.</p>
-    {% endfor %}
-
-  </div>
-</div>
-
-<br>
-
-<!-- ══════════════════════════════════════════
-     ROW 2 — RECENT ARTICLES TABLE + BAR CHART
+     ROW 2 — RECENT ARTICLES + BAR CHART
+     (Homepage Control se UPAR)
 ══════════════════════════════════════════ -->
 <div class="dash-mid-row">
-
-  <!-- Recent Articles -->
   <div class="dash-card dash-card--articles">
     <div class="dash-card-header">
       <h3 class="dash-card-title">Recent Articles</h3>
       <a href="/admin/newsapp/article/" class="dash-card-link">View all &#x203A;</a>
     </div>
-
     <table class="articles-table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Category</th>
-          <th>Author</th>
-          <th>Assigned To</th>
-          <th>Date</th>
-          <th>Status</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Title</th><th>Category</th><th>Author</th><th>Assigned To</th><th>Date</th><th>Status</th></tr></thead>
       <tbody>
         {% if recent_articles %}
           {% for article in recent_articles %}
           <tr class="table-row-anim table-row-delay-{{ forloop.counter }}">
             <td>
               <div class="article-cell">
-                <div class="article-icon">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
-                    <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </div>
+                <div class="article-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg></div>
                 <div class="article-meta">
-                  <a href="/admin/newsapp/article/{{ article.pk }}/change/" class="article-name">
-                      {{ article.title|truncatechars:36 }}
-                  </a>
-                  {% if article.is_paid %}
-                  <span class="article-paid-tag">Paid</span>
-                  {% endif %}
+                  <a href="/admin/newsapp/article/{{ article.pk }}/change/" class="article-name">{{ article.title|truncatechars:36 }}</a>
+                  {% if article.is_paid %}<span class="article-paid-tag">Paid</span>{% endif %}
                 </div>
               </div>
             </td>
-            <td>
-              {% if article.categories.all %}
-                {% for cat in article.categories.all %}
-                  {{ cat.name }}{% if not forloop.last %}, {% endif %}
-                {% endfor %}
-              {% else %}
-                —
-              {% endif %}
-            </td>
+            <td>{% if article.categories.all %}{% for cat in article.categories.all %}{{ cat.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}—{% endif %}</td>
             <td>{{ article.author.get_full_name|default:article.author.username }}</td>
-            <td>
-              {% if article.assigned_to %}
-                {{ article.assigned_to.get_full_name|default:article.assigned_to.username }}
-              {% else %}
-                <span class="unassigned">Unassigned</span>
-              {% endif %}
-            </td>
+            <td>{% if article.assigned_to %}{{ article.assigned_to.get_full_name|default:article.assigned_to.username }}{% else %}<span class="unassigned">Unassigned</span>{% endif %}</td>
             <td class="date-cell">{{ article.created_at|date:"M d, Y" }}</td>
-            <td>
-              <span class="status-badge status-badge--{{ article.status }}">
-                {{ article.get_status_display }}
-              </span>
-            </td>
+            <td><span class="status-badge status-badge--{{ article.status }}">{{ article.get_status_display }}</span></td>
           </tr>
           {% endfor %}
         {% else %}
-          <tr>
-            <td colspan="6" class="empty-table">
-              No articles yet.
-              <a href="">Create your first &#x2192;</a>
-            </td>
-          </tr>
+          <tr><td colspan="6" class="empty-table">No articles yet. <a href="/admin/newsapp/article/add/">Create your first &#x2192;</a></td></tr>
         {% endif %}
       </tbody>
     </table>
   </div>
 
-  <!-- Publications Bar Chart -->
   <div class="dash-card dash-card--chart">
     <div class="dash-card-header">
       <h3 class="dash-card-title">Publications</h3>
       <div class="chart-legend">
-        <span class="legend-dot legend-dot--pub"></span>
-        <span class="legend-text">Published</span>
-        <span class="legend-dot legend-dot--draft"></span>
-        <span class="legend-text">Drafts</span>
+        <span class="legend-dot legend-dot--pub"></span><span class="legend-text">Published</span>
+        <span class="legend-dot legend-dot--draft"></span><span class="legend-text">Drafts</span>
       </div>
     </div>
     <div class="chart-value-hero">
       <span class="chart-hero-num">{{ total_articles }}</span>
-      <span class="chart-hero-trend">
-        &#x2191; {{ published_this_month }} this month
-      </span>
+      <span class="chart-hero-trend">&#x2191; {{ published_this_month }} this month</span>
     </div>
-    <div class="chart-wrap">
-      <canvas id="pubChart"></canvas>
-    </div>
+    <div class="chart-wrap"><canvas id="pubChart"></canvas></div>
   </div>
-
 </div>
-<!-- END ROW 2 -->
 
 <!-- ══════════════════════════════════════════
-     ROW 3 — CATEGORIES + DONUT + FACT CHECKS
+     HOMEPAGE CONTROL — DYNAMIC DATA
 ══════════════════════════════════════════ -->
-<div class="dash-bottom-row">
-
-  <!-- Category bars (real data from category_stats) -->
-  <div class="dash-card dash-card--categories">
-    <div class="dash-card-header">
-      <h3 class="dash-card-title">Articles by Category</h3>
-      <a href="" class="dash-card-link">Manage &#x203A;</a>
+<div class="hpc-card">
+  <div class="hpc-card-header">
+    <div class="hpc-card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Homepage Control
     </div>
+    <button class="hpc-save-btn" id="hpcSaveBtn" onclick="saveHomepageControl()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save Changes
+    </button>
+  </div>
+
+  <div class="hpc-tabs">
+    <button class="hpc-tab active" onclick="hpcTab(this,'hero')"><div class="hpc-tab-dot"></div>Hero Banner</button>
+    <button class="hpc-tab" onclick="hpcTab(this,'latest')"><div class="hpc-tab-dot"></div>Latest News</button>
+    <button class="hpc-tab" onclick="hpcTab(this,'ad')"><div class="hpc-tab-dot"></div>Ad Banner</button>
+  </div>
+
+  <!-- HERO TAB -->
+  <div class="hpc-panel active" id="hpc-hero">
+    <div class="hero-layout">
+      <div class="hero-main-slot {% if hero_slot and hero_slot.article %}filled{% endif %}" id="heroMainSlot">
+        {% if hero_slot and hero_slot.article %}
+          {% if hero_slot.article.image %}<img class="hero-img" src="{{ hero_slot.article.image.url }}" alt="">
+          {% else %}<div class="hero-slot-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No image on article</p></div>{% endif %}
+          <div class="hero-overlay">
+            <div class="hero-overlay-cat">{% if hero_slot.article.categories.first %}{{ hero_slot.article.categories.first.name }}{% endif %}</div>
+            <div class="hero-overlay-title">{{ hero_slot.article.title|truncatechars:80 }}</div>
+          </div>
+          <button class="hero-change-btn" onclick="openPicker('hero_main')">Change</button>
+        {% else %}
+          <div class="hero-slot-ph" onclick="openPicker('hero_main')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>Click to select hero article</p>
+          </div>
+          <button class="hero-change-btn" onclick="openPicker('hero_main')">Select</button>
+        {% endif %}
+      </div>
+
+      <div class="overlay-col">
+        <div class="overlay-col-label">Bottom overlay articles (3)</div>
+        <div class="overlay-slot-card" onclick="openPicker('overlay_1')">
+          <div class="overlay-num">1</div>
+          <div class="overlay-info">
+            {% if hero_slot and hero_slot.overlay_article_1 %}
+              <div class="overlay-title" id="overlayTitle1">{{ hero_slot.overlay_article_1.title|truncatechars:42 }}</div>
+              <div class="overlay-meta" id="overlayMeta1">{% if hero_slot.overlay_article_1.categories.first %}{{ hero_slot.overlay_article_1.categories.first.name }}{% endif %}</div>
+            {% else %}
+              <div class="overlay-title empty" id="overlayTitle1">— Select article</div>
+              <div class="overlay-meta" id="overlayMeta1">Click to pick</div>
+            {% endif %}
+          </div>
+          <button class="overlay-clear" onclick="clearOverlay(event,1)">&#xd7;</button>
+        </div>
+        <div class="overlay-slot-card" onclick="openPicker('overlay_2')">
+          <div class="overlay-num">2</div>
+          <div class="overlay-info">
+            {% if hero_slot and hero_slot.overlay_article_2 %}
+              <div class="overlay-title" id="overlayTitle2">{{ hero_slot.overlay_article_2.title|truncatechars:42 }}</div>
+              <div class="overlay-meta" id="overlayMeta2">{% if hero_slot.overlay_article_2.categories.first %}{{ hero_slot.overlay_article_2.categories.first.name }}{% endif %}</div>
+            {% else %}
+              <div class="overlay-title empty" id="overlayTitle2">— Select article</div>
+              <div class="overlay-meta" id="overlayMeta2">Click to pick</div>
+            {% endif %}
+          </div>
+          <button class="overlay-clear" onclick="clearOverlay(event,2)">&#xd7;</button>
+        </div>
+        <div class="overlay-slot-card" onclick="openPicker('overlay_3')">
+          <div class="overlay-num">3</div>
+          <div class="overlay-info">
+            {% if hero_slot and hero_slot.overlay_article_3 %}
+              <div class="overlay-title" id="overlayTitle3">{{ hero_slot.overlay_article_3.title|truncatechars:42 }}</div>
+              <div class="overlay-meta" id="overlayMeta3">{% if hero_slot.overlay_article_3.categories.first %}{{ hero_slot.overlay_article_3.categories.first.name }}{% endif %}</div>
+            {% else %}
+              <div class="overlay-title empty" id="overlayTitle3">— Select article</div>
+              <div class="overlay-meta" id="overlayMeta3">Click to pick</div>
+            {% endif %}
+          </div>
+          <button class="overlay-clear" onclick="clearOverlay(event,3)">&#xd7;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="picker-wrap" id="pickerWrap">
+      <div class="picker-head">
+        <span class="picker-head-title" id="pickerTitle">Select article</span>
+        <button class="picker-close" onclick="closePicker()">Close</button>
+      </div>
+      <div class="picker-box">
+        <div class="picker-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="pickerSearchInp" placeholder="Search published articles…" oninput="renderPicker(this.value)">
+        </div>
+        <div class="picker-list" id="pickerList"></div>
+      </div>
+    </div>
+
+    <input type="hidden" id="heroMainId"   value="{% if hero_slot and hero_slot.article %}{{ hero_slot.article.pk }}{% endif %}">
+    <input type="hidden" id="heroOverlay1" value="{% if hero_slot and hero_slot.overlay_article_1 %}{{ hero_slot.overlay_article_1.pk }}{% endif %}">
+    <input type="hidden" id="heroOverlay2" value="{% if hero_slot and hero_slot.overlay_article_2 %}{{ hero_slot.overlay_article_2.pk }}{% endif %}">
+    <input type="hidden" id="heroOverlay3" value="{% if hero_slot and hero_slot.overlay_article_3 %}{{ hero_slot.overlay_article_3.pk }}{% endif %}">
+  </div>
+
+  <!-- LATEST NEWS TAB -->
+  <div class="hpc-panel" id="hpc-latest">
+    <div class="ln-mode-row">
+      <button class="ln-mode-btn {% if not latest_slot or latest_slot.mode == 'auto' %}active{% endif %}" id="lnBtnAuto" onclick="setLnMode('auto')">Auto — latest published</button>
+      <button class="ln-mode-btn {% if latest_slot and latest_slot.mode == 'manual' %}active{% endif %}" id="lnBtnManual" onclick="setLnMode('manual')">Manual — I choose</button>
+    </div>
+    <div id="lnAutoBlock" style="{% if latest_slot and latest_slot.mode == 'manual' %}display:none{% endif %}">
+      <div class="ln-auto-info">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Latest published articles automatically fill this section. Just publish and it updates.
+      </div>
+      <div class="ln-row">
+        <label>Show how many:</label>
+        <select class="ln-select" id="lnCount">
+          <option value="4" {% if not latest_slot or latest_slot.display_count == 4 %}selected{% endif %}>4 articles</option>
+          <option value="6" {% if latest_slot and latest_slot.display_count == 6 %}selected{% endif %}>6 articles</option>
+          <option value="8" {% if latest_slot and latest_slot.display_count == 8 %}selected{% endif %}>8 articles</option>
+        </select>
+      </div>
+      <div class="ln-row">
+        <label>Filter by category:</label>
+        <select class="ln-select" id="lnCat">
+          <option value="">All categories</option>
+          {% for cat in categories %}
+            <option value="{{ cat.pk }}" {% if latest_slot and latest_slot.category_filter_id == cat.pk %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div id="lnManualBlock" style="{% if not latest_slot or latest_slot.mode != 'manual' %}display:none{% endif %}">
+      <div class="ln-manual-list" id="lnManualList">
+        {% if latest_slot and latest_slot.mode == 'manual' and latest_slot.manual_articles.exists %}
+          {% for art in latest_slot.manual_articles.all %}
+          <div class="ln-manual-item">
+            <div class="ln-num">{{ forloop.counter }}</div>
+            <div class="ln-item-title">{{ art.title|truncatechars:60 }}</div>
+            <button class="ln-remove" onclick="removeLn({{ art.pk }})">Remove</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="font-size:11px;color:#94a3b8;padding:4px 0">No articles selected yet.</div>
+        {% endif %}
+      </div>
+      <button class="ln-add-btn" onclick="openLnPicker()">+ Add article</button>
+      <div class="picker-wrap" id="lnPickerWrap" style="margin-top:10px">
+        <div class="picker-head">
+          <span class="picker-head-title">Add to Latest News</span>
+          <button class="picker-close" onclick="closeLnPicker()">Close</button>
+        </div>
+        <div class="picker-box">
+          <div class="picker-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="lnSearchInp" placeholder="Search…" oninput="renderLnPicker(this.value)">
+          </div>
+          <div class="picker-list" id="lnPickerList"></div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="lnMode"      value="{% if latest_slot %}{{ latest_slot.mode }}{% else %}auto{% endif %}">
+    <input type="hidden" id="lnManualIds" value="{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_slot.manual_articles.all %}{{ art.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+  </div>
+
+  <!-- AD BANNER TAB -->
+  <div class="hpc-panel" id="hpc-ad">
+    <label class="hpc-field-label">Current ad preview</label>
+    <div class="ad-preview" id="adPreview">
+      {% if ad_slot and ad_slot.ad_image %}<img src="{{ ad_slot.ad_image.url }}" alt="Ad">
+      {% elif ad_slot and ad_slot.ad_image_url %}<img src="{{ ad_slot.ad_image_url }}" alt="Ad">
+      {% else %}<div class="ad-preview-ph"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No ad image set</p></div>{% endif %}
+    </div>
+    <label class="hpc-field-label">Upload image</label>
+    <button class="ad-upload-btn" onclick="document.getElementById('adFileInp').click()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Choose image file
+    </button>
+    <input type="file" id="adFileInp" accept="image/*" style="display:none" onchange="previewAdFile(this)">
+    <label class="hpc-field-label" style="margin-top:4px">Or paste image URL</label>
+    <input type="url" class="hpc-input" id="adImageUrl" placeholder="https://example.com/banner.jpg"
+           value="{% if ad_slot and ad_slot.ad_image_url %}{{ ad_slot.ad_image_url }}{% endif %}"
+           oninput="previewAdUrl(this.value)">
+    <label class="hpc-field-label">Ad click URL</label>
+    <input type="url" class="hpc-input" id="adLinkUrl" placeholder="https://example.com"
+           value="{% if ad_slot and ad_slot.ad_link_url %}{{ ad_slot.ad_link_url }}{% endif %}">
+    <div class="ad-toggle-row">
+      <span class="ad-toggle-label">Show ad banner on homepage</span>
+      <label class="hpc-toggle">
+        <input type="checkbox" id="adActive" {% if ad_slot and ad_slot.is_active %}checked{% endif %}>
+        <span class="hpc-toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 3 -->
+<div class="dash-bottom-row">
+  <div class="dash-card dash-card--categories">
+    <div class="dash-card-header"><h3 class="dash-card-title">Articles by Category</h3><a href="" class="dash-card-link">Manage &#x203A;</a></div>
     <div class="category-bars">
       {% if category_stats %}
         {% for cat in category_stats %}
         <div class="cat-row">
           <span class="cat-label" title="{{ cat.name }}">{{ cat.name|truncatechars:14 }}</span>
-          <div class="cat-bar-track">
-            <div class="cat-bar-fill cat-bar--{% cycle 'high' 'mid' 'low' 'high' 'mid' 'low' %}"
-                 data-width="{{ cat.pct }}"></div>
-          </div>
+          <div class="cat-bar-track"><div class="cat-bar-fill cat-bar--{% cycle 'high' 'mid' 'low' 'high' 'mid' 'low' %}" data-width="{{ cat.pct }}"></div></div>
           <span class="cat-count">{{ cat.article_count }}</span>
         </div>
         {% endfor %}
-      {% else %}
-        <p class="empty-table">No categories yet. <a href="">Add one &#x2192;</a></p>
-      {% endif %}
+      {% else %}<p class="empty-table">No categories yet.</p>{% endif %}
     </div>
   </div>
 
-  <!-- Donut — article status distribution -->
   <div class="dash-card dash-card--donut">
-    <div class="dash-card-header">
-      <h3 class="dash-card-title">Status Split</h3>
-    </div>
+    <div class="dash-card-header"><h3 class="dash-card-title">Status Split</h3></div>
     <div class="donut-wrap">
       <canvas id="donutChart" width="150" height="150"></canvas>
-      <div class="donut-center">
-        <span class="donut-count">{{ total_articles }}</span>
-        <span class="donut-sub">Total</span>
-      </div>
+      <div class="donut-center"><span class="donut-count">{{ total_articles }}</span><span class="donut-sub">Total</span></div>
     </div>
     <div class="donut-legend">
       <span class="legend-item"><span class="ld ld--pub"></span> Published</span>
@@ -397,81 +389,39 @@
       <span class="legend-item"><span class="ld ld--review"></span> Review</span>
       <span class="legend-item"><span class="ld ld--archive"></span> Archived</span>
     </div>
-    <p class="donut-tip">Keep the pipeline flowing — {{ review_articles }} articles awaiting review.</p>
-    <a href="" class="guide-btn">Open All Articles</a>
+    <p class="donut-tip">{{ review_articles }} articles awaiting review.</p>
+    <a href="/admin/newsapp/article/" class="guide-btn">Open All Articles</a>
   </div>
 
-  <!-- Fact Check Status card -->
   <div class="dash-card dash-card--factcheck">
-    <div class="dash-card-header">
-      <h3 class="dash-card-title">Fact Checks</h3>
-      <a href="" class="dash-card-link">View &#x203A;</a>
-    </div>
+    <div class="dash-card-header"><h3 class="dash-card-title">Fact Checks</h3><a href="" class="dash-card-link">View &#x203A;</a></div>
     <div class="factcheck-rows">
-      <div class="fc-row">
-        <span class="fc-dot fc-dot--pending"></span>
-        <span class="fc-label">Pending</span>
-        <span class="fc-val">{{ pending_fact_checks }}</span>
-      </div>
-      <div class="fc-row">
-        <span class="fc-dot fc-dot--verified"></span>
-        <span class="fc-label">Verified</span>
-        <span class="fc-val">{{ verified_fact_checks }}</span>
-      </div>
-      <div class="fc-row">
-        <span class="fc-dot fc-dot--issues"></span>
-        <span class="fc-label">Issues Found</span>
-        <span class="fc-val">{{ issues_fact_checks }}</span>
-      </div>
+      <div class="fc-row"><span class="fc-dot fc-dot--pending"></span><span class="fc-label">Pending</span><span class="fc-val">{{ pending_fact_checks }}</span></div>
+      <div class="fc-row"><span class="fc-dot fc-dot--verified"></span><span class="fc-label">Verified</span><span class="fc-val">{{ verified_fact_checks }}</span></div>
+      <div class="fc-row"><span class="fc-dot fc-dot--issues"></span><span class="fc-label">Issues Found</span><span class="fc-val">{{ issues_fact_checks }}</span></div>
     </div>
-
     <div class="dash-card-divider"></div>
-
     <h4 class="dash-sub-heading">Top Reporters</h4>
     <div class="top-reporters">
-      {% if top_reporters %}
-        {% for perf in top_reporters %}
+      {% if top_reporters %}{% for perf in top_reporters %}
         <div class="reporter-row">
-          <div class="reporter-avatar">
-            {{ perf.reporter.first_name|first|upper }}{{ perf.reporter.last_name|first|upper }}
-          </div>
-          <div class="reporter-info">
-            <span class="reporter-name">
-              {{ perf.reporter.get_full_name|default:perf.reporter.username }}
-            </span>
-            <span class="reporter-stats">
-              {{ perf.published_articles }} pub &middot; {{ perf.rejected_articles }} rej
-            </span>
-          </div>
+          <div class="reporter-avatar">{{ perf.reporter.first_name|first|upper }}{{ perf.reporter.last_name|first|upper }}</div>
+          <div class="reporter-info"><span class="reporter-name">{{ perf.reporter.get_full_name|default:perf.reporter.username }}</span><span class="reporter-stats">{{ perf.published_articles }} pub &middot; {{ perf.rejected_articles }} rej</span></div>
           <span class="reporter-total">{{ perf.total_articles }}</span>
         </div>
-        {% endfor %}
-      {% else %}
-        <p class="empty-table">No reporter data yet.</p>
-      {% endif %}
+      {% endfor %}{% else %}<p class="empty-table">No reporter data yet.</p>{% endif %}
     </div>
   </div>
-
 </div>
 
-<!-- ══════════════════════════════════════════
-     ROW 4 — RECENT WORKFLOW LOGS
-══════════════════════════════════════════ -->
+<!-- ROW 4 — WORKFLOW LOGS -->
 <div class="dash-logs-row">
   <div class="dash-card dash-card--logs">
-    <div class="dash-card-header">
-      <h3 class="dash-card-title">Recent Workflow Activity</h3>
-      <a href="" class="dash-card-link">View all &#x203A;</a>
-    </div>
+    <div class="dash-card-header"><h3 class="dash-card-title">Recent Workflow Activity</h3><a href="" class="dash-card-link">View all &#x203A;</a></div>
     <div class="log-list">
-      {% if recent_logs %}
-        {% for log in recent_logs %}
+      {% if recent_logs %}{% for log in recent_logs %}
         <div class="log-row table-row-anim table-row-delay-{{ forloop.counter }}">
-          <div class="log-icon">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
+          <div class="log-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
           <div class="log-body">
             <span class="log-article">{{ log.article.title|truncatechars:40 }}</span>
             <span class="log-transition">
@@ -480,229 +430,81 @@
               <span class="status-badge status-badge--{{ log.new_status }}">{{ log.new_status }}</span>
             </span>
           </div>
-          <div class="log-meta">
-            <span class="log-user">{{ log.changed_by.username|default:"system" }}</span>
-            <span class="log-time">{{ log.changed_at|timesince }} ago</span>
-          </div>
+          <div class="log-meta"><span class="log-user">{{ log.changed_by.username|default:"system" }}</span><span class="log-time">{{ log.changed_at|timesince }} ago</span></div>
         </div>
-        {% endfor %}
-      {% else %}
-        <p class="empty-table">No workflow activity yet.</p>
-      {% endif %}
+      {% endfor %}{% else %}<p class="empty-table">No workflow activity yet.</p>{% endif %}
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     QUICK ACCESS — all registered models
-══════════════════════════════════════════ -->
+<!-- QUICK ACCESS -->
 <section class="quick-access">
   <h3 class="quick-title">Quick Access</h3>
   <div class="quick-grid">
-    {% for app in app_list %}
-      {% for model in app.models %}
-      <div class="quick-item-wrapper">
-        <a href="{{ model.admin_url }}" class="quick-item">
-          <span class="quick-icon">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="quick-label">{{ model.name }}</span>
-        </a>
-        {% if model.add_url %}
-        <a href="{{ model.add_url }}" class="quick-add" title="Add {{ model.name }}">+</a>
-        {% endif %}
-      </div>
-      {% endfor %}
-    {% endfor %}
+    {% for app in app_list %}{% for model in app.models %}
+    <div class="quick-item-wrapper">
+      <a href="{{ model.admin_url }}" class="quick-item">
+        <span class="quick-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="quick-label">{{ model.name }}</span>
+      </a>
+      {% if model.add_url %}<a href="{{ model.add_url }}" class="quick-add" title="Add {{ model.name }}">+</a>{% endif %}
+    </div>
+    {% endfor %}{% endfor %}
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════
-     JAVASCRIPT — reads Django context vars
-══════════════════════════════════════════ -->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+var HPC_ARTICLES=[{% for a in published_articles_for_picker %}{id:{{a.pk}},title:"{{a.title|escapejs}}",cat:"{% if a.categories.first %}{{a.categories.first.name|escapejs}}{% endif %}",image:"{% if a.image %}{{a.image.url}}{% elif a.image_url %}{{a.image_url}}{% endif %}",date:"{{a.published_at|date:'M d, Y'|default:a.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% empty %}{% endfor %}];
+var lnArticles=[{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_slot.manual_articles.all %}{id:{{art.pk}},title:"{{art.title|escapejs}}"}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
 
-  /* ── 1. Dates ──────────────────────────────────────────── */
-  var now = new Date();
+function hpcTab(btn,id){document.querySelectorAll('.hpc-tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.hpc-panel').forEach(function(p){p.classList.remove('active');});btn.classList.add('active');document.getElementById('hpc-'+id).classList.add('active');}
 
-  function fmt(d) {
-    return d.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }
+var _pickerTarget='hero_main';
+var PICKER_TITLES={hero_main:'Select main hero article',overlay_1:'Select overlay 1',overlay_2:'Select overlay 2',overlay_3:'Select overlay 3'};
+function openPicker(t){_pickerTarget=t;document.getElementById('pickerTitle').textContent=PICKER_TITLES[t]||'Select article';document.getElementById('pickerSearchInp').value='';document.getElementById('pickerWrap').classList.add('open');renderPicker('');document.getElementById('pickerWrap').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function closePicker(){document.getElementById('pickerWrap').classList.remove('open');}
+function renderPicker(q){var list=document.getElementById('pickerList');var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No published articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';return'<div class="picker-item" onclick="selectHeroArticle('+a.id+')">'+'<div class="picker-thumb">'+th+'</div>'+'<div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'—')+' · '+a.date+'</div></div>'+'<button class="picker-sel-btn" onclick="selectHeroArticle('+a.id+');event.stopPropagation()">Select</button></div>';}).join('');}
+function selectHeroArticle(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;if(_pickerTarget==='hero_main'){document.getElementById('heroMainId').value=id;var slot=document.getElementById('heroMainSlot');var ih=art.image?'<img class="hero-img" src="'+art.image+'" alt="">':'<div class="hero-slot-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No image</p></div>';slot.innerHTML=ih+'<div class="hero-overlay"><div class="hero-overlay-cat">'+(art.cat||'')+'</div><div class="hero-overlay-title">'+art.title.substring(0,80)+'</div></div><button class="hero-change-btn" onclick="openPicker(\'hero_main\')">Change</button>';slot.classList.add('filled');}else{var n=_pickerTarget.replace('overlay_','');document.getElementById('heroOverlay'+n).value=id;var te=document.getElementById('overlayTitle'+n);te.textContent=art.title.substring(0,42);te.classList.remove('empty');document.getElementById('overlayMeta'+n).textContent=(art.cat||'—');}closePicker();}
+function clearOverlay(e,n){e.stopPropagation();document.getElementById('heroOverlay'+n).value='';var t=document.getElementById('overlayTitle'+n);t.textContent='— Select article';t.classList.add('empty');document.getElementById('overlayMeta'+n).textContent='Click to pick';}
 
-  var ago = new Date(now);
-  ago.setMonth(now.getMonth() - 3);
+function setLnMode(mode){document.getElementById('lnMode').value=mode;if(mode==='auto'){document.getElementById('lnBtnAuto').classList.add('active');document.getElementById('lnBtnManual').classList.remove('active');document.getElementById('lnAutoBlock').style.display='';document.getElementById('lnManualBlock').style.display='none';}else{document.getElementById('lnBtnAuto').classList.remove('active');document.getElementById('lnBtnManual').classList.add('active');document.getElementById('lnAutoBlock').style.display='none';document.getElementById('lnManualBlock').style.display='';renderLnList();}}
+function renderLnList(){var list=document.getElementById('lnManualList');if(!lnArticles.length){list.innerHTML='<div style="font-size:11px;color:#94a3b8;padding:4px 0">No articles selected yet.</div>';return;}list.innerHTML=lnArticles.map(function(a,i){return'<div class="ln-manual-item"><div class="ln-num">'+(i+1)+'</div><div class="ln-item-title">'+a.title+'</div><button class="ln-remove" onclick="removeLn('+a.id+')">Remove</button></div>';}).join('');document.getElementById('lnManualIds').value=lnArticles.map(function(a){return a.id;}).join(',');}
+function removeLn(id){lnArticles=lnArticles.filter(function(a){return a.id!==id;});renderLnList();}
+function openLnPicker(){document.getElementById('lnPickerWrap').classList.add('open');document.getElementById('lnSearchInp').value='';renderLnPicker('');}
+function closeLnPicker(){document.getElementById('lnPickerWrap').classList.remove('open');}
+function renderLnPicker(q){var list=document.getElementById('lnPickerList');var sids=lnArticles.map(function(a){return a.id;});var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var sel=sids.indexOf(a.id)!==-1;var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';var btn=sel?'<button class="picker-sel-btn" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5" onclick="removeLn('+a.id+');renderLnPicker(document.getElementById(\'lnSearchInp\').value);event.stopPropagation()">Remove</button>':'<button class="picker-sel-btn" onclick="addLn('+a.id+');event.stopPropagation()">Add</button>';return'<div class="picker-item'+(sel?' selected':'')+'"><div class="picker-thumb">'+th+'</div><div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'—')+' · '+a.date+'</div></div>'+btn+'</div>';}).join('');}
+function addLn(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art||lnArticles.find(function(a){return a.id===id;}))return;lnArticles.push(art);renderLnList();renderLnPicker(document.getElementById('lnSearchInp').value);}
 
-  var currentDateRangeEl = document.getElementById('currentDateRange');
-  var liveDateEl = document.getElementById('liveDate');
+function previewAdUrl(url){var box=document.getElementById('adPreview');if(url&&url.indexOf('http')===0){box.innerHTML='<img src="'+url+'" style="max-width:100%;max-height:120px" onerror="this.parentElement.innerHTML=\'<div class=ad-preview-ph><p>Cannot load image</p></div>\'">';}else{box.innerHTML='<div class="ad-preview-ph"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No ad image set</p></div>';}}
+function previewAdFile(inp){var file=inp.files[0];if(!file)return;var url=URL.createObjectURL(file);document.getElementById('adPreview').innerHTML='<img src="'+url+'" style="max-width:100%;max-height:120px">';document.getElementById('adImageUrl').value='';}
 
-  if (currentDateRangeEl) {
-    currentDateRangeEl.textContent = fmt(ago) + ' – ' + fmt(now);
-  }
-  if (liveDateEl) {
-    liveDateEl.textContent = fmt(now);
-  }
+function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').value;}
+async function saveHomepageControl(){var btn=document.getElementById('hpcSaveBtn');btn.classList.add('saving');btn.innerHTML='Saving…';try{await fetch('/api/homepage/hero/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({main_article_id:document.getElementById('heroMainId').value||null,overlay_article_1:document.getElementById('heroOverlay1').value||null,overlay_article_2:document.getElementById('heroOverlay2').value||null,overlay_article_3:document.getElementById('heroOverlay3').value||null})});var lm=document.getElementById('lnMode').value;await fetch('/api/homepage/latest_news/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({mode:lm,display_count:document.getElementById('lnCount').value,category_id:document.getElementById('lnCat').value||null,manual_ids:lm==='manual'?(document.getElementById('lnManualIds').value||'').split(',').filter(Boolean).map(Number):[]})});var afd=new FormData();afd.append('ad_link_url',document.getElementById('adLinkUrl').value);afd.append('is_active',document.getElementById('adActive').checked?'true':'false');var af=document.getElementById('adFileInp').files[0];if(af){afd.append('ad_image',af);}else{afd.append('ad_image_url',document.getElementById('adImageUrl').value);}await fetch('/api/homepage/ad_banner/',{method:'POST',headers:{'X-CSRFToken':getCsrf()},body:afd});btn.classList.remove('saving');btn.classList.add('saved');btn.innerHTML='&#10003; Saved!';setTimeout(function(){btn.classList.remove('saved');btn.innerHTML='Save Changes';},2500);}catch(e){btn.classList.remove('saving');btn.innerHTML='&#x2715; Error';btn.style.background='#dc2626';setTimeout(function(){btn.style.background='';btn.innerHTML='Save Changes';},3000);}}
 
-  /* ── 2. Animated count-up ──────────────────────────────── */
-  function animateCount(id, target) {
-    var el = document.getElementById(id);
-    if (!el) return;
+document.addEventListener('DOMContentLoaded',function(){
+  var now=new Date();function fmt(d){return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
+  var ago=new Date(now);ago.setMonth(now.getMonth()-3);
+  var dr=document.getElementById('currentDateRange');if(dr)dr.textContent=fmt(ago)+' – '+fmt(now);
 
-    var start = 0;
-    var step = Math.max(1, Math.ceil(target / 50));
-    el.textContent = '0';
+  function animateCount(id,target){var el=document.getElementById(id);if(!el)return;var start=0,step=Math.max(1,Math.ceil(target/50));el.textContent='0';var t=setInterval(function(){start=Math.min(start+step,target);el.textContent=start.toLocaleString();if(start>=target)clearInterval(t);},20);}
+  animateCount('totalArticles',parseInt('{{total_articles|default:0}}',10)||0);
+  animateCount('publishedArticles',parseInt('{{published_articles|default:0}}',10)||0);
+  animateCount('draftArticles',parseInt('{{draft_articles|default:0}}',10)||0);
+  animateCount('scheduledArticles',parseInt('{{scheduled_articles|default:0}}',10)||0);
 
-    var timer = setInterval(function () {
-      start = Math.min(start + step, target);
-      el.textContent = start.toLocaleString();
-      if (start >= target) {
-        clearInterval(timer);
-      }
-    }, 20);
-  }
+  document.querySelectorAll('.cat-bar-fill').forEach(function(bar){bar.style.width=(parseFloat(bar.dataset.width)||0)+'%';});
 
-  animateCount(
-    'totalArticles',
-    parseInt('{{ total_articles|default:0 }}', 10) || 0
-  );
+  var ml=JSON.parse('{{monthly_labels_json|default:"[]"|escapejs}}');
+  var mp=JSON.parse('{{monthly_pub_json|default:"[]"|escapejs}}');
+  var md=JSON.parse('{{monthly_draft_json|default:"[]"|escapejs}}');
+  var dd=JSON.parse('{{donut_data_json|default:"[0,0,0,0,0,0]"|escapejs}}');
+  if(!Array.isArray(ml)||!ml.length){ml=['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];mp=md=[0,0,0,0,0,0,0,0,0,0,0,0];}
 
-  animateCount(
-    'publishedArticles',
-    parseInt('{{ published_articles|default:0 }}', 10) || 0
-  );
+  var pc=document.getElementById('pubChart');
+  if(pc){new Chart(pc.getContext('2d'),{type:'bar',data:{labels:ml,datasets:[{label:'Published',data:mp,backgroundColor:'#1a4731',borderRadius:6,barPercentage:.6},{label:'Drafts',data:md,backgroundColor:'#a8d5b5',borderRadius:6,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},y:{beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{stepSize:1,color:'#999',font:{size:10}}}}}});}
 
-  animateCount(
-    'pipelineArticles',
-    (parseInt('{{ review_articles|default:0 }}', 10) || 0) +
-    (parseInt('{{ fact_check_articles|default:0 }}', 10) || 0)
-  );
-
-  /* ── 3. Category bar widths ────────────────────────────── */
-  document.querySelectorAll('.cat-bar-fill').forEach(function (bar) {
-    var width = parseFloat(bar.dataset.width) || 0;
-    bar.style.width = width + '%';
-  });
-
-  /* ── 4. SAFE JSON DATA FROM DJANGO ────────────────────── */
-  var monthlyLabels = JSON.parse('{{ monthly_labels_json|default:"[]"|escapejs }}');
-  var monthlyPub    = JSON.parse('{{ monthly_pub_json|default:"[]"|escapejs }}');
-  var monthlyDraft  = JSON.parse('{{ monthly_draft_json|default:"[]"|escapejs }}');
-  var donutData     = JSON.parse('{{ donut_data_json|default:"[0,0,0,0,0,0]"|escapejs }}');
-
-  if (!Array.isArray(monthlyLabels) || monthlyLabels.length === 0) {
-    monthlyLabels = ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
-    monthlyPub    = [0,0,0,0,0,0,0,0,0,0,0,0];
-    monthlyDraft  = [0,0,0,0,0,0,0,0,0,0,0,0];
-  }
-
-  /* ── 5. Bar Chart ─────────────────────────────────────── */
-  var pubCanvas = document.getElementById('pubChart');
-
-  if (pubCanvas) {
-    new Chart(pubCanvas.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: monthlyLabels,
-        datasets: [
-          {
-            label: 'Published',
-            data: monthlyPub,
-            backgroundColor: '#1a4731',
-            borderRadius: 6,
-            barPercentage: 0.6
-          },
-          {
-            label: 'Drafts',
-            data: monthlyDraft,
-            backgroundColor: '#a8d5b5',
-            borderRadius: 6,
-            barPercentage: 0.6
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: '#999', font: { size: 10 } }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: '#f0f0f0' },
-            ticks: { stepSize: 1, color: '#999', font: { size: 10 } }
-          }
-        }
-      }
-    });
-  }
-
-  /* ── 6. Donut Chart ───────────────────────────────────── */
-  var donutCanvas = document.getElementById('donutChart');
-
-  if (donutCanvas) {
-    new Chart(donutCanvas.getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Published', 'Draft', 'Review', 'Archived', 'Rejected', 'Other'],
-        datasets: [{
-          data: donutData,
-          backgroundColor: [
-            '#1a4731',
-            '#4caf7d',
-            '#f0a500',
-            '#8fa899',
-            '#e05252',
-            '#a8d5b5'
-          ],
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        cutout: '72%',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function (ctx) {
-                return ' ' + ctx.label + ': ' + ctx.raw;
-              }
-            }
-          }
-        },
-        animation: {
-          animateRotate: true,
-          duration: 1000
-        }
-      }
-    });
-  }
-
-});
-
-window.addEventListener("DOMContentLoaded", function () {
-    const params = new URLSearchParams(window.location.search);
-    const filter = params.get("filter");
-
-    if (filter) {
-        const btn = document.querySelector(`.art-filter[onclick*="${filter}"]`);
-        
-        if (btn) {
-            btn.click();
-        }
-    }
+  var dc=document.getElementById('donutChart');
+  if(dc){new Chart(dc.getContext('2d'),{type:'doughnut',data:{labels:['Published','Draft','Review','Archived','Rejected','Other'],datasets:[{data:dd,backgroundColor:['#1a4731','#4caf7d','#f0a500','#8fa899','#e05252','#a8d5b5'],borderWidth:0,hoverOffset:6}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.label+': '+ctx.raw;}}}},animation:{animateRotate:true,duration:1000}}});}
 });
 </script>
-
 {% endblock %}

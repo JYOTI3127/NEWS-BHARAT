@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     FaChevronLeft,
     FaChevronRight,
@@ -49,184 +49,354 @@ const stories = [
   },
 ];
 
-const VISIBLE = 6;
-
 const tabs = ["Live", "Upcoming", "Recent"];
 
+// ── Responsive config ─────────────────────────────────────────
+// S(320) M(375) L(425) → mobile: 2 cards, stacked layout
+// Tablet(768)          → 4 cards, side by side
+// Laptop(1024)         → 5 cards, side by side
+// Laptop L(1440) + 4K  → 6 cards, side by side
+
+const useBreakpoint = () => {
+    const [bp, setBp] = useState(() => {
+        if (typeof window === "undefined") return "laptop";
+        const w = window.innerWidth;
+        if (w < 768) return "mobile";
+        if (w < 1024) return "tablet";
+        if (w < 1440) return "laptop";
+        return "large";
+    });
+
+    useEffect(() => {
+        const handler = () => {
+            const w = window.innerWidth;
+            if (w < 768) setBp("mobile");
+            else if (w < 1024) setBp("tablet");
+            else if (w < 1440) setBp("laptop");
+            else setBp("large");
+        };
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+
+    return bp;
+};
+
+const VISIBLE_MAP = {
+    mobile: 2,
+    tablet: 4,
+    laptop: 5,
+    large: 6,
+};
+
+// ── Helper ────────────────────────────────────────────────────
+const getScore = (scoreArr, teamName) => {
+    if (!scoreArr || scoreArr.length === 0) return null;
+    const innings = scoreArr.filter(s =>
+        s.inning.toLowerCase().includes(teamName.toLowerCase())
+    );
+    return innings.length > 0 ? innings[innings.length - 1] : scoreArr[scoreArr.length - 1];
+};
+
+// ── Match Card ────────────────────────────────────────────────
+const MatchCard = ({ match, type }) => {
+    const team1 = match.teamInfo?.[0];
+    const team2 = match.teamInfo?.[1];
+    const score1 = getScore(match.score, team1?.name || match.teams[0]);
+    const score2 = getScore(match.score, team2?.name || match.teams[1]);
+    const isLive = type === "live";
+
+    return (
+        <>
+            <div className="px-2.5 py-2 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                    {isLive ? (
+                        <>
+                            <FaCircle size={7} className="text-red-600 animate-pulse" />
+                            <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wide">Live</span>
+                        </>
+                    ) : (
+                        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                            {type === "upcoming" ? "Upcoming" : "Recent"}
+                        </span>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">{match.name}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{match.venue}</p>
+                {isLive ? (
+                    <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-0.5">
+                        <FaCirclePlay size={10} /> Match is ongoing
+                    </p>
+                ) : (
+                    <p className="text-[10px] text-red-600 font-medium mt-0.5 line-clamp-2">{match.status}</p>
+                )}
+            </div>
+
+            <div className="px-2.5 py-2.5">
+                <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex-1">
+                        {team1?.img && (
+                            <img
+                                src={team1.img} alt={team1.shortname}
+                                className="w-8 h-8 rounded-sm border border-gray-200 object-contain mb-1 bg-white"
+                                onError={e => { e.target.style.display = "none"; }}
+                            />
+                        )}
+                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
+                            {team1?.shortname || match.teams[0]}
+                        </p>
+                        {score1 ? (
+                            <>
+                                <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{score1.r}/{score1.w}</p>
+                                <p className="text-[10px] text-gray-400">({score1.o} OV)</p>
+                            </>
+                        ) : (
+                            <p className="text-[10px] text-gray-400">Yet to bat</p>
+                        )}
+                    </div>
+
+                    <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0">
+                        VS
+                    </div>
+
+                    <div className="flex-1 text-right">
+                        {team2?.img && (
+                            <div className="flex justify-end mb-1">
+                                <img
+                                    src={team2.img} alt={team2.shortname}
+                                    className="w-8 h-8 rounded-sm border border-gray-200 object-contain bg-white"
+                                    onError={e => { e.target.style.display = "none"; }}
+                                />
+                            </div>
+                        )}
+                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
+                            {team2?.shortname || match.teams[1]}
+                        </p>
+                        {score2 ? (
+                            <>
+                                <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{score2.r}/{score2.w}</p>
+                                <p className="text-[10px] text-gray-400">({score2.o} OV)</p>
+                            </>
+                        ) : (
+                            <p className="text-[10px] text-gray-400">Yet to bat</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
+// ── Multi Match Pagination ────────────────────────────────────
+const MultiMatch = ({ matches, type }) => {
+    const [idx, setIdx] = useState(0);
+
+    if (!matches || matches.length === 0) {
+        return <div className="px-2.5 py-4 text-center text-[11px] text-gray-400">No matches</div>;
+    }
+
+    return (
+        <>
+            <MatchCard match={matches[idx]} type={type} />
+            {matches.length > 1 && (
+                <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-gray-100">
+                    <button
+                        onClick={() => setIdx(i => Math.max(0, i - 1))}
+                        disabled={idx === 0}
+                        className={`${idx === 0 ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:text-red-600"} text-gray-400`}
+                    >
+                        <FaChevronLeft size={10} />
+                    </button>
+                    <span className="text-[10px] text-gray-400">{idx + 1} / {matches.length}</span>
+                    <button
+                        onClick={() => setIdx(i => Math.min(matches.length - 1, i + 1))}
+                        disabled={idx === matches.length - 1}
+                        className={`${idx === matches.length - 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:text-red-600"} text-gray-400`}
+                    >
+                        <FaChevronRight size={10} />
+                    </button>
+                </div>
+            )}
+        </>
+    );
+};
+
+// ── Main Component ────────────────────────────────────────────
 export default function VisualStoriesWithScore() {
+    const bp = useBreakpoint();
+    const VISIBLE = VISIBLE_MAP[bp];
+
     const [offset, setOffset] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
+    const [cricketData, setCricketData] = useState({ live: [], upcoming: [], recent: [] });
+    const [loading, setLoading] = useState(true);
+
+    const isMobile = bp === "mobile";
+
+    // Reset offset when VISIBLE changes (screen resize)
+    useEffect(() => {
+        setOffset(0);
+    }, [VISIBLE]);
 
     const canPrev = offset > 0;
     const canNext = offset < stories.length - VISIBLE;
 
+    useEffect(() => {
+        const fetchScores = async () => {
+            try {
+                const res = await fetch("https://api.news4bharat.com/api/live-cricket/");
+                const json = await res.json();
+                setCricketData(json);
+                if (json.live?.length > 0) setActiveTab(0);
+                else if (json.upcoming?.length > 0) setActiveTab(1);
+                else setActiveTab(2);
+            } catch (e) {
+                console.error("Cricket API error:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchScores();
+        const interval = setInterval(fetchScores, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const tabData = [cricketData.live, cricketData.upcoming, cricketData.recent];
+    const tabTypes = ["live", "upcoming", "recent"];
+
+    // ── Score card width per breakpoint
+    const scoreCardWidth = {
+        mobile: "100%",
+        tablet: "220px",
+        laptop: "220px",
+        large: "220px",
+    }[bp];
+
     return (
         <div
-            className="flex gap-3 font-sans"
+            className="font-sans"
             style={{ margin: "0 3% 22px" }}
         >
-            {/* Left: Visual Stories */}
-            <div className="flex-1 min-w-0">
-                {/* Header */}
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-5 bg-red-600 rounded-sm" />
-                    <span className="text-[18px] font-bold text-[#111] uppercase">
-                        Visual Stories
-                    </span>
+            {/* Mobile(320-425): stacked — stories on top, score below */}
+            {/* Tablet+(768+): side by side */}
+            <div className={`flex gap-3 ${isMobile ? "flex-col" : "flex-row items-start"}`}>
+
+                {/* ── Left: Visual Stories ── */}
+                <div className="flex-1 min-w-0">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1 h-5 bg-red-600 rounded-sm" />
+                        <span
+                            className="font-bold text-[#111] uppercase"
+                            style={{ fontSize: isMobile ? "14px" : "18px" }}
+                        >
+                            Visual Stories
+                        </span>
+                    </div>
+
+                    {/* Carousel */}
+                    <div className="relative">
+
+                        {/* Prev */}
+                        <button
+                            onClick={() => canPrev && setOffset((o) => o - 1)}
+                            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${
+                                !canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                            }`}
+                            style={{ border: "1px solid #999999" }}
+                        >
+                            <FaChevronLeft size={12} />
+                        </button>
+
+                        {/* Cards wrapper */}
+                        <div
+                            className="flex gap-2 overflow-hidden border border-gray-300"
+                            style={{ padding: "8px", borderRadius: "10px" }}
+                        >
+                            {stories.slice(offset, offset + VISIBLE).map((story) => (
+                                <div
+                                    key={story.id}
+                                    className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white"
+                                    style={{
+                                        width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
+                                    }}
+                                >
+                                    <div
+                                        className="w-full rounded-md overflow-hidden border border-gray-200"
+                                        style={{ aspectRatio: "3/4", position: "relative" }}
+                                    >
+                                        <img
+                                            src={story.img}
+                                            alt=""
+                                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+                                            style={{ border: "none", outline: "none" }}
+                                        />
+                                        <div
+                                            className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-500 ease-in-out"
+                                      
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 group-hover:text-[#D80100] mt-1 leading-snug line-clamp-3 p-[5px] transition-colors duration-300">
+                                        {story.text}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Next */}
+                        <button
+                            onClick={() => canNext && setOffset((o) => o + 1)}
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${
+                                !canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                            }`}
+                            style={{ border: "1px solid #999999" }}
+                        >
+                            <FaChevronRight size={12} />
+                        </button>
+
+                    </div>
                 </div>
 
-                {/* Carousel */}
-                <div className="flex items-center gap-1">
-                    {/* Prev */}
-                    <button
-                        onClick={() => canPrev && setOffset((o) => o - 1)}
-                        className={`w-9 h-9 rounded-full border-2 border-red-500 flex items-center justify-center bg-white shadow-md ${
-                            !canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-                        }`}
-                        style={{ border: "1px solid #999999" }}
-                    >
-                        <FaChevronLeft size={12} />
-                    </button>
-
-                    {/* Cards wrapper */}
-                    <div
-                        className="flex gap-2 flex-1 min-w-0 overflow-hidden border border-gray-300"
-                        style={{ padding: "8px", borderRadius: "10px" }}
-                    >
-                        {stories.slice(offset, offset + VISIBLE).map((story) => (
-                            <div
-                                key={story.id}
-                                className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg p-1.5 bg-white"
-                                style={{
-                                    width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
-                                }}
+                {/* ── Right: Live Score Card ── */}
+                <div
+                    className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
+                    style={{
+                        width: scoreCardWidth,
+                        // Mobile: no top margin (stacked layout)
+                        // Tablet+: align with carousel (not header)
+                        marginTop: isMobile ? "12px" : "3%",
+                        // Mobile: full width already handled by width:100%
+                        alignSelf: isMobile ? "stretch" : "flex-start",
+                    }}
+                >
+                    {/* Tabs */}
+                    <div className="flex border-b border-gray-200">
+                        {tabs.map((tab, i) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(i)}
+                                className={`flex-1 py-1.5 border-none cursor-pointer transition text-center ${
+                                    activeTab === i
+                                        ? "bg-red-600 text-white"
+                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                }`}
+                                style={{ fontSize: "9px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}
                             >
-                                {/* Inner image border */}
-                                <div
-                                    className="w-full rounded-md overflow-hidden border border-gray-200"
-                                    style={{ aspectRatio: "3/4", position: "relative" }}
-                                >
-                                    <img
-                                        src={story.img}
-                                        alt=""
-                                        className="absolute inset-0 w-full h-full object-cover"
-                                        style={{ border: "none", outline: "none" }}
-                                    />
-                                </div>
-                                <p className="text-[10px] text-gray-500 group-hover:text-[#D80100] mt-1 leading-snug line-clamp-3">
-                                    {story.text}
-                                </p>
-                            </div>
+                                {tab}
+                            </button>
                         ))}
                     </div>
 
-                    {/* Next */}
-                    <button
-                        onClick={() => canNext && setOffset((o) => o + 1)}
-                        className={`w-9 h-9 rounded-full border-2 border-[#999999] flex items-center justify-center bg-white ${
-                            !canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-                        }`}
-                        style={{ border: "1px solid #999999" }}
-                    >
-                        <FaChevronRight size={12} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Right: Live Score Card */}
-            <div
-                className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
-                style={{ width: "200px", minWidth: "200px" }}
-            >
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200">
-                    {tabs.map((tab, i) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(i)}
-                            className={`flex-1 text-center py-1.5 text-[10px] font-semibold uppercase tracking-wide border-none cursor-pointer transition ${
-                                activeTab === i
-                                    ? "bg-red-600 text-white"
-                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                            }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Meta */}
-                <div className="px-2.5 py-2 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                        <FaCircle size={7} className="text-red-600 animate-pulse" />
-                        <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wide">
-                            Live
-                        </span>
-                    </div>
-                    <p className="text-[11px] text-gray-600">
-                        May 29, ICC Men's T20 World Cup, 2026
-                    </p>
-                    <p className="text-[11px] text-gray-600">Feb 16, 15:00 (IST)</p>
-                    <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-0.5">
-                        <FaCirclePlay size={10} />  Match is ongoing
-                    </p>
-                </div>
-
-                {/* Teams */}
-                <div className="px-2.5 py-2.5">
-                    <div className="flex items-center justify-between gap-1.5">
-                        {/* Italy */}
-                        <div className="flex-1">
-                            <div
-                                className="w-8 h-5 rounded-sm border border-gray-200 mb-1 overflow-hidden"
-                                style={{
-                                    background:
-                                        "linear-gradient(to right, #009246 33%, #fff 33%, #fff 66%, #ce2b37 66%)",
-                                }}
-                            />
-                            <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
-                                Italy
-                            </p>
-                            <p className="text-base font-semibold text-gray-900">43/3</p>
-                            <p className="text-[10px] text-gray-400">(5.5 OV)</p>
+                    {/* Content */}
+                    {loading ? (
+                        <div className="px-2.5 py-4 text-center text-[11px] text-gray-400 animate-pulse">
+                            Loading scores...
                         </div>
-
-                        {/* VS */}
-                        <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0">
-                            VS
-                        </div>
-
-                        {/* England */}
-                        <div className="flex-1 text-right">
-                            <div
-                                className="w-8 h-5 rounded-sm border border-gray-200 mb-1 overflow-hidden ml-auto"
-                                style={{ background: "#fff", position: "relative" }}
-                            >
-                                <div
-                                    style={{
-                                        position: "absolute",
-                                        inset: 0,
-                                        background:
-                                            "repeating-linear-gradient(0deg,transparent,transparent 6px,#cc000044 6px,#cc000044 9px),repeating-linear-gradient(90deg,transparent,transparent 10px,#cc000044 10px,#cc000044 13px)",
-                                    }}
-                                />
-                            </div>
-                            <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
-                                England
-                            </p>
-                            <p className="text-base font-semibold text-gray-900">202/7</p>
-                            <p className="text-[10px] text-gray-400">(20 OV)</p>
-                        </div>
-                    </div>
-
-                    {/* Footer note */}
-                    <div className="mt-2 pt-1.5 border-t border-gray-200 text-[10px] text-gray-500 leading-snug">
-                        Italy 43/3 (5.5 ov) |{" "}
-                        <span className="text-red-600 font-medium">
-                           Italy need 160 runs off 25 balls (RRR: 11.25)
-                        </span>
-                    </div>
+                    ) : (
+                        <MultiMatch matches={tabData[activeTab]} type={tabTypes[activeTab]} />
+                    )}
                 </div>
+
             </div>
         </div>
     );

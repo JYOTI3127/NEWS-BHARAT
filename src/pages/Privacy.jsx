@@ -174,7 +174,6 @@ export default function PrivacyPage() {
             <span className="priv-hero-title-accent">  Policy</span>
           </h1>
 
-          <div className="priv-hero-divider" />
 
           <p className="priv-hero-desc">
 News4Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information.

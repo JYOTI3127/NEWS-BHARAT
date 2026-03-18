@@ -5,15 +5,18 @@ import VideoSection from '../components/Video'
 import NewsPortalSection from '../components/Newsportalsection'
 import StateNews from '../components/Statenews'
 import Newsletter from "../components/Newsletter";
+import VisualStoriesWithScore from '../components/Visualstories'
 
 const Home = () => {
   return (
     <>
       <NewsBanner />
-      <TrendingNews/>
+      <TrendingNews />
       {/* <VideoSection /> */}
+      <VisualStoriesWithScore />
       <NewsPortalSection />
       <Newsletter />
+
       <StateNews />
     </>
   )

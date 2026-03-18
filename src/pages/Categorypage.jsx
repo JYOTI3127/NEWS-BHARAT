@@ -6,7 +6,7 @@ import {
   Zap, Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "https://api.news4bharat.com/api";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
@@ -43,37 +43,24 @@ export default function CategoryPage() {
         const res = await fetch(`${API_BASE}/articles/`);
         const data = await res.json();
 
-        // DEBUG LOGS
-        console.log("✅ All articles from backend:", data);
-
         const all = Array.isArray(data) ? data : (data.results || []);
-        const filtered = all.filter(
-          (article) => article.category_details?.slug?.toLowerCase() === slug.toLowerCase()
+        const filtered = all.filter((article) =>
+          Array.isArray(article.category_details) &&
+          article.category_details.some(
+            (c) => c.slug?.toLowerCase() === slug.toLowerCase()
+          )
         );
 
-        // DEBUG LOGS
-        console.log("🔍 Current slug:", slug);
-        console.log("📦 Filtered articles:", filtered);
-        if (all.length > 0) {
-          console.log("🧩 Ek article ka structure:", all[0]);
-        }
-
-        const BASE = "http://127.0.0.1:8000";
-        const normalized = filtered.map((a) => {
-          const imgRaw = a.image_url || a.image || null;
-          const imgFull = imgRaw
-            ? (imgRaw.startsWith("http") ? imgRaw : `${BASE}${imgRaw}`)
-            : null;
-          return {
-            ...a,
-            image: imgFull,
-            author: (typeof a.author === "object" ? a.author?.username : a.author) || "News4Bharat",
-            description: a.subtitle || (a.content ? a.content.slice(0, 150) : ""),
-          };
-        });
+        const normalized = filtered.map((a) => ({
+          ...a,
+          // API already returns full URLs (https://api.news4bharat.com/media/...)
+          image: a.image_url || a.image || null,
+          author: (typeof a.author === "object" ? a.author?.username : a.author) || "News4Bharat",
+          description: a.subtitle || (a.content ? a.content.slice(0, 150) : ""),
+        }));
         setArticles(normalized);
       } catch (err) {
-        console.error("❌ Articles fetch error:", err);
+        console.error("Articles fetch error:", err);
         setArticles([]);
       }
 
@@ -102,7 +89,6 @@ export default function CategoryPage() {
       {/* Category Header */}
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
-          <div className="h-[4px] w-14 bg-[#D80100] mb-3" />
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
             {category?.name || slug}
           </h1>
@@ -123,7 +109,7 @@ export default function CategoryPage() {
 
           {/* Hero Article */}
           {heroArticle && (
-            <Link to={`/article/${heroArticle.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            <Link to={`/article/${heroArticle.slug || heroArticle.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
               <div className="bg-white rounded-[12px] overflow-hidden shadow-[0_2px_14px_rgba(0,0,0,0.08)] mb-7 hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)] transition-shadow duration-200">
                 <div className="relative w-full h-[220px] sm:h-[280px] lg:h-[320px] overflow-hidden">
                   {heroArticle.image
@@ -176,7 +162,7 @@ export default function CategoryPage() {
               {gridArticles.map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.id}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
@@ -239,7 +225,7 @@ export default function CategoryPage() {
               {trendingTop5.map((article, idx) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.id}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 min-w-[260px] lg:min-w-0">
@@ -268,7 +254,7 @@ export default function CategoryPage() {
               {articles.slice(0, 4).map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.id}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">

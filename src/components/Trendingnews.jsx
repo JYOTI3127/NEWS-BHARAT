@@ -72,40 +72,20 @@ const ArrowBtn = ({ direction, disabled, onClick }) => {
   return (
     <div onClick={disabled ? undefined : onClick} className={`${baseClass} ${stateClass}`}>
       <svg
-        width="32"
-        height="32"
-        viewBox="0 0 32 32"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+        width="32" height="32" viewBox="0 0 32 32"
+        fill="none" xmlns="http://www.w3.org/2000/svg"
         className="block overflow-visible"
       >
-        <circle
-          cx="16" cy="16" r="15"
-          fill="#ffffff"
-          stroke="#999999"
-          strokeWidth="1"
-        />
+        <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#999999" strokeWidth="1" />
         {direction === "left" ? (
-          <path
-            d="M19 10L13 16L19 22"
-            stroke={disabled ? "#c0c0c0" : "#999999"}
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          <path d="M19 10L13 16L19 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         ) : (
-          <path
-            d="M13 10L19 16L13 22"
-            stroke={disabled ? "#c0c0c0" : "#999999"}
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          <path d="M13 10L19 16L13 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         )}
       </svg>
     </div>
   );
-};  // ✅ Yeh closing bracket missing tha — fix ho gaya
+};
 
 const FlameSvg = () => (
   <svg width={22} height={30} viewBox="0 0 22 30">
@@ -114,7 +94,6 @@ const FlameSvg = () => (
   </svg>
 );
 
-// ── Inject Poppins font ───────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("poppins-font")) {
   const link = document.createElement("link");
   link.id   = "poppins-font";
@@ -125,9 +104,53 @@ if (typeof document !== "undefined" && !document.getElementById("poppins-font"))
 
 // ── Trending Bar ──────────────────────────────────────────────
 function TrendingBar() {
-  const [off, setOff] = useState(0);
-  const vis = 7;
-  const max = trendingTopics.length - vis;
+  const GAP = 8;
+  const [startIdx, setStartIdx] = useState(0);
+  const [translateX, setTranslateX] = useState(0);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const itemRefs = useRef([]);
+  const outerRef = useRef(null);
+
+  // startIdx ya items mount hone ke baad recalculate karo
+  useEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+
+    // translateX calculate karo
+    let px = 0;
+    for (let i = 0; i < startIdx; i++) {
+      const el = itemRefs.current[i];
+      if (el) px += el.offsetWidth + GAP;
+    }
+    setTranslateX(px);
+
+    // canPrev
+    setCanPrev(startIdx > 0);
+
+    // canNext: startIdx se aage ke items ki total width > outer visible width?
+    const outerWidth = outer.clientWidth;
+    let remaining = 0;
+    for (let i = startIdx; i < trendingTopics.length; i++) {
+      const el = itemRefs.current[i];
+      if (el) remaining += el.offsetWidth + GAP;
+    }
+    setCanNext(remaining - GAP > outerWidth);
+
+  }, [startIdx]);
+
+  // Mount ke baad bhi ek baar run karo (itemRefs populate hone ke liye)
+  useEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+    const outerWidth = outer.clientWidth;
+    let total = 0;
+    for (let i = 0; i < trendingTopics.length; i++) {
+      const el = itemRefs.current[i];
+      if (el) total += el.offsetWidth + GAP;
+    }
+    setCanNext(total - GAP > outerWidth);
+  }, []); // only on mount
 
   return (
     <div className="tn-trending-bar">
@@ -135,23 +158,32 @@ function TrendingBar() {
         <div className="tn-trending-label-line">TRENDING NEWS :</div>
       </div>
 
-      <ArrowBtn
-        direction="left"
-        disabled={off === 0}
-        onClick={() => setOff(o => Math.max(0, o - 1))}
-      />
+      <ArrowBtn direction="left" disabled={!canPrev} onClick={() => setStartIdx(i => i - 1)} />
 
-      <div className="tn-topics-list">
-        {trendingTopics.slice(off, off + vis).map((t, i) => (
-          <button key={i + off} className="tn-topic-btn">{t}</button>
-        ))}
+      <div ref={outerRef} style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: `${GAP}px`,
+            transform: `translateX(-${translateX}px)`,
+            transition: "transform 0.35s ease",
+            width: "max-content",
+          }}
+        >
+          {trendingTopics.map((t, i) => (
+            <button
+              key={i}
+              ref={el => { itemRefs.current[i] = el; }}
+              className="tn-topic-btn"
+              style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <ArrowBtn
-        direction="right"
-        disabled={off >= max}
-        onClick={() => setOff(o => Math.min(max, o + 1))}
-      />
+      <ArrowBtn direction="right" disabled={!canNext} onClick={() => setStartIdx(i => i + 1)} />
     </div>
   );
 }
@@ -207,7 +239,7 @@ function FeatureCards() {
   );
 }
 
-// ── Live Updates ──────────────────────────────────────────────
+// ── 60 Seconds ──────────────────────────────────────────────
 function LiveUpdates() {
   const scrollRef = useRef(null);
   const animRef = useRef(null);
@@ -221,7 +253,7 @@ function LiveUpdates() {
     const step = () => {
       if (autoScrollRef.current) {
         frame++;
-        if (frame % 3 === 0) { // har 3rd frame pe scroll — slow
+        if (frame % 3 === 0) {
           el.scrollTop += 1;
           if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
             el.scrollTop = 0;
@@ -245,12 +277,24 @@ function LiveUpdates() {
         onMouseLeave={() => { autoScrollRef.current = true; }}
       >
         {liveUpdates.map((item) => (
-          <div key={item.id} className="tn-live-item">
-            <div className="tn-live-dot" />
+          // 👇 group add kiya — taaki hover pe child elements color change kar sakein
+          <div key={item.id} className="tn-live-item group cursor-pointer">
+
+            {/* Dot: hover pe red ho jaye */}
+            <div className="tn-live-dot group-hover:bg-[#D80100] transition-colors duration-300" />
+
             <div>
-              <div className="tn-live-item-title">{item.title}</div>
-              <div className="tn-live-item-text">{item.text}</div>
+              {/* Title: hover pe red */}
+              <div className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300">
+                {item.title}
+              </div>
+
+              {/* Text: hover pe red (thoda light) */}
+              <div className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300">
+                {item.text}
+              </div>
             </div>
+
           </div>
         ))}
       </div>

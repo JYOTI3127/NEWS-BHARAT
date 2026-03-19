@@ -47,9 +47,24 @@ class ArticleSerializer(serializers.ModelSerializer):
     author             = UserSerializer(read_only=True)
     posted_by_username = serializers.SerializerMethodField()
     posted_by_fullname = serializers.SerializerMethodField()
+
+    # FIX 2: author_display_name as the primary "author name" for frontend
+    # Frontend should use display_author_name — falls back to username if blank
+    display_author_name = serializers.SerializerMethodField()
  
     # ── Image ──
     image_url = serializers.SerializerMethodField()
+
+    # FIX 1: image_alt and image_source explicitly exposed (they were missing from
+    # read_only_fields and not guaranteed to be included via __all__ + read_only combo)
+    image_alt    = serializers.CharField(required=False, allow_blank=True, default='')
+    image_source = serializers.CharField(required=False, allow_blank=True, default='')
+
+    # FIX 4: tags exposed as a Python list for easy frontend consumption
+    tags_list = serializers.SerializerMethodField()
+
+    # secondary_keywords exposed as list too
+    secondary_keywords_list = serializers.SerializerMethodField()
  
     # ── Frontend se aane wale editor_ fields (write-only) ──
     editor_name      = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
@@ -68,11 +83,13 @@ class ArticleSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id', 'created_at', 'published_at', 'author',
             'posted_by_username', 'posted_by_fullname',
+            'display_author_name',
             'author_display_name', 'author_display_position',
             'author_display_bio', 'author_display_photo',
             'author_display_twitter', 'author_display_linkedin',
             'author_display_instagram', 'author_display_facebook',
             'author_display_articles_count',
+            'tags_list', 'secondary_keywords_list',
         ]
  
     def get_category_details(self, obj):
@@ -83,6 +100,16 @@ class ArticleSerializer(serializers.ModelSerializer):
  
     def get_posted_by_fullname(self, obj):
         return obj.author.get_full_name() if obj.author else None
+
+    # FIX 2: Returns author_display_name if set, otherwise falls back to actual user's
+    # full name, then username. Frontend should use this field — never show raw author.username
+    def get_display_author_name(self, obj):
+        if obj.author_display_name and obj.author_display_name.strip():
+            return obj.author_display_name.strip()
+        if obj.author:
+            full = obj.author.get_full_name()
+            return full if full.strip() else obj.author.username
+        return ''
  
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -94,6 +121,18 @@ class ArticleSerializer(serializers.ModelSerializer):
             except Exception:
                 return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return obj.image_url
+
+    # FIX 4: tags stored as comma-separated string in DB, returned as list to frontend
+    def get_tags_list(self, obj):
+        if not obj.tags:
+            return []
+        return [t.strip() for t in obj.tags.split(',') if t.strip()]
+
+    # secondary_keywords as list
+    def get_secondary_keywords_list(self, obj):
+        if not obj.secondary_keywords:
+            return []
+        return [k.strip() for k in obj.secondary_keywords.split(',') if k.strip()]
  
     def create(self, validated_data):
         # editor_ fields nikalo aur author_display_* mein daalo
@@ -179,19 +218,28 @@ class ArticleSerializer(serializers.ModelSerializer):
  
  
 class ArticleMinSerializer(serializers.ModelSerializer):
+    # FIX 2: Uses display name with fallback — same logic as ArticleSerializer
     author_name = serializers.SerializerMethodField()
     date        = serializers.SerializerMethodField()
     image_url   = serializers.SerializerMethodField()
     categories  = CategorySerializer(many=True, read_only=True)
+    # FIX 1: image_alt and image_source in min serializer too for frontend image captions
+    image_alt    = serializers.CharField(read_only=True)
+    image_source = serializers.CharField(read_only=True)
  
     class Meta:
         model  = Article
-        fields = ['id', 'title', 'image', 'author_name', 'date', 'image_url', 'categories']
+        fields = ['id', 'title', 'image', 'author_name', 'date', 'image_url',
+                  'categories', 'image_alt', 'image_source']
  
     def get_author_name(self, obj):
-        if obj.author_display_name:
-            return obj.author_display_name
-        return obj.author.username if obj.author else ''
+        # FIX 2: Always prefer display name over actual username
+        if obj.author_display_name and obj.author_display_name.strip():
+            return obj.author_display_name.strip()
+        if obj.author:
+            full = obj.author.get_full_name()
+            return full if full.strip() else obj.author.username
+        return ''
  
     def get_date(self, obj):
         return obj.created_at.strftime('%b %d, %Y') if obj.created_at else ''

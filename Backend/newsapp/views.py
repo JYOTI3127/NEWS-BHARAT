@@ -153,9 +153,17 @@ def _save_article_from_request(request, article=None):
     article.canonical_url    = data.get('canonical_url', '').strip()
     article.meta_description = data.get('meta_description', '').strip()
     article.focus_keyword    = data.get('focus_keyword', '').strip()
+    article.secondary_keywords = data.get('secondary_keywords', '').strip()
     article.noindex          = data.get('noindex', 'false').lower() in ('true', '1', 'on')
     article.nofollow         = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
     article.in_sitemap       = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
+
+    # FIX 1: Save image_alt and image_source from POST data
+    article.image_alt    = data.get('image_alt', '').strip()
+    article.image_source = data.get('image_source', '').strip()
+
+    # FIX 4: Save tags (comma-separated string from frontend)
+    article.tags = data.get('tags', '').strip()
 
     article.author_display_name      = data.get('editor_name',      data.get('author_display_name', '')).strip()
     article.author_display_position  = data.get('editor_position',  data.get('author_display_position', '')).strip()
@@ -194,23 +202,52 @@ def _save_article_from_request(request, article=None):
     except Exception as e:
         return None, {'error': str(e)}
 
+    # FIX 3: Categories — JS sends comma-separated string in hidden input.
+    # We must handle BOTH cases:
+    #   a) Multiple form fields named 'categories' (getlist)
+    #   b) Single comma-separated string (from our JS hidden input)
     category_ids_raw = data.get('categories', '')
-    if category_ids_raw:
-        try:
-            cat_ids = [int(c) for c in str(category_ids_raw).split(',') if c.strip()]
-            article.categories.set(cat_ids)
-        except (ValueError, TypeError):
-            pass
+    category_list_raw = data.getlist('categories')  # handles multiple form fields
+
+    cat_ids = []
+    if len(category_list_raw) > 1:
+        # Multiple form fields — use getlist result directly
+        for c in category_list_raw:
+            # Each item might itself be comma-separated, handle both
+            for part in str(c).split(','):
+                part = part.strip()
+                if part:
+                    try:
+                        cat_ids.append(int(part))
+                    except (ValueError, TypeError):
+                        pass
+    elif category_ids_raw:
+        # Single value — might be comma-separated string like "1,2,3"
+        for part in str(category_ids_raw).split(','):
+            part = part.strip()
+            if part:
+                try:
+                    cat_ids.append(int(part))
+                except (ValueError, TypeError):
+                    pass
+
+    if cat_ids:
+        article.categories.set(cat_ids)
     elif 'categories' in data:
         article.categories.clear()
 
     return article, None
 
-
 @api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
+        category = request.GET.get('category')
+
         articles = Article.objects.filter(status="published")
+
+        if category:
+            articles = articles.filter(categories__slug=category).distinct()  
+
         serializer = ArticleSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -222,7 +259,6 @@ def article_list(request):
             return Response(error, status=400)
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data, status=201)
-
 
 @api_view(['GET'])
 def dashboard_articles(request):
@@ -654,6 +690,13 @@ def _format_article(article, request=None, highlight=None):
 
     first_cat = article.categories.first()
 
+    # FIX 2: Use display name in search results too
+    author_name = ''
+    if article.author_display_name and article.author_display_name.strip():
+        author_name = article.author_display_name.strip()
+    elif article.author:
+        author_name = article.author.get_full_name() or article.author.username
+
     return {
         "id":           article.id,
         "title":        article.title,
@@ -661,13 +704,19 @@ def _format_article(article, request=None, highlight=None):
         "category":     first_cat.name if first_cat else None,
         "category_id":  first_cat.id   if first_cat else None,
         "categories":   list(article.categories.values('id', 'name')),
-        "author":       article.author.username if article.author else None,
+        # FIX 2: author_name now uses display name
+        "author":       author_name,
         "status":       article.status,
         "published_at": article.published_at.isoformat() if article.published_at else None,
         "created_at":   article.created_at.isoformat()   if article.created_at   else None,
         "image":        img_url,
+        # FIX 1: image_alt and image_source in search results
+        "image_alt":    article.image_alt or '',
+        "image_source": article.image_source or '',
         "excerpt":      highlight or excerpt,
         "is_paid":      getattr(article, 'is_paid', False),
+        # Tags as list in search results too
+        "tags":         [t.strip() for t in article.tags.split(',') if t.strip()] if article.tags else [],
     }
 
 
@@ -1276,6 +1325,7 @@ from django.conf import settings
 @api_view(['GET'])
 def live_cricket(request):
     try:
+
         if not settings.CRICKET_API_KEY:
             return Response({
                 "error": "Cricket API key not configured",

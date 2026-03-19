@@ -7,6 +7,91 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/nb_editor.css' %}">
+<style>
+/* ══════════════════════════════════════════════════
+   EDITOR INLINE OVERRIDES
+   These override dashboard.css & custom_admin.css
+   without touching those files.
+══════════════════════════════════════════════════ */
+
+/* ── TOOLBAR: fixed below Django admin header ──
+   Django admin header is ~42px tall.
+   toolbar fixed at top:42px so it appears just below.
+   On scroll, it stays visible always.
+────────────────────────────────────────────────── */
+#nb_toolbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+}
+/* Push content area below toolbar + admin header */
+.nb-left {
+  padding-top: 60px !important; 
+}
+
+label.image-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+}
+.dz-browse-link {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.dz-fmt-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+  pointer-events: none;
+}
+
+/* ── SUBTITLE CHAR BADGE ──────────────────── */
+.subtitle-char-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 7px;
+  border-radius: 10px;
+  transition: color 0.2s;
+}
+
+/* ── FONT SELECT in toolbar ───────────────── */
+.nb-font-select {
+  padding: 3px 6px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  max-width: 130px;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.nb-font-select:hover  { border-color: #162c6b; }
+.nb-font-select:focus  { border-color: #162c6b; box-shadow: 0 0 0 2px rgba(22,44,107,0.10); }
+
+/* Render each font option in its own face */
+.nb-font-select option[value="Poppins"]       { font-family: 'Poppins', sans-serif; }
+.nb-font-select option[value="Georgia"]       { font-family: Georgia, serif; }
+.nb-font-select option[value="Times New Roman"]{ font-family: 'Times New Roman', Times, serif; }
+.nb-font-select option[value="Arial"]         { font-family: Arial, sans-serif; }
+.nb-font-select option[value="Courier New"]   { font-family: 'Courier New', monospace; }
+.nb-font-select option[value="Verdana"]       { font-family: Verdana, Geneva, sans-serif; }
+.nb-font-select option[value="Tahoma"]        { font-family: Tahoma, Geneva, sans-serif; }
+.nb-font-select option[value="Trebuchet MS"]  { font-family: 'Trebuchet MS', sans-serif; }
+.nb-font-select option[value="Impact"]        { font-family: Impact, Charcoal, sans-serif; }
+.nb-font-select option[value="Comic Sans MS"] { font-family: 'Comic Sans MS', cursive; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -25,23 +110,55 @@
     </div>
 
     <div class="nb-field">
-      <label class="nb-label">Subtitle / Deck</label>
-      <input type="text" class="nb-input" id="ui_subtitle" placeholder="Supporting line..." value="{{ original.subtitle|default:'' }}">
+      <label class="nb-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Subtitle / Deck
+        <span class="subtitle-char-badge" id="subtitle_count_badge">0 / 160</span>
+      </label>
+      <input type="text" class="nb-input" id="ui_subtitle"
+             placeholder="Supporting line..."
+             value="{{ original.subtitle|default:'' }}"
+             maxlength="160"
+             oninput="updateSubtitleCount()">
+      <div class="nb-field-hint" id="subtitle_hint" style="font-size:11px;color:var(--muted,#94a3b8);margin-top:4px;">
+        Aim for 80–160 characters for best display.
+      </div>
     </div>
 
     <div class="nb-field">
       <label class="nb-label">Content</label>
+
       <div class="nb-toolbar" id="nb_toolbar">
         <button onclick="nbUndo()" title="Undo (Ctrl+Z)">&#8617;</button>
         <button onclick="nbRedo()" title="Redo (Ctrl+Y)">&#8618;</button>
         <div class="sep"></div>
-        <select onchange="nbSetFontSize(this.value)" title="Font Size">
+
+        <!-- Font Family -->
+        <select class="nb-font-select" id="nb_fontFamilySelect"
+                onchange="nbSetFontFamily(this.value)" title="Font Family">
+          <option value="">Font</option>
+          <option value="Poppins"        style="font-family:Poppins">Poppins</option>
+          <option value="Arial"          style="font-family:Arial">Arial</option>
+          <option value="Georgia"        style="font-family:Georgia">Georgia</option>
+          <option value="Times New Roman"style="font-family:'Times New Roman'">Times New Roman</option>
+          <option value="Courier New"    style="font-family:'Courier New'">Courier New</option>
+          <option value="Verdana"        style="font-family:Verdana">Verdana</option>
+          <option value="Tahoma"         style="font-family:Tahoma">Tahoma</option>
+          <option value="Trebuchet MS"   style="font-family:'Trebuchet MS'">Trebuchet MS</option>
+          <option value="Impact"         style="font-family:Impact">Impact</option>
+          <option value="Comic Sans MS"  style="font-family:'Comic Sans MS'">Comic Sans MS</option>
+        </select>
+        <div class="sep"></div>
+
+        <!-- Font Size -->
+        <select onchange="nbSetFontSize(this.value)" title="Font Size" style="width:70px;">
           <option value="">Size</option>
-          <option value="1">Small</option>
-          <option value="3" selected>Normal</option>
-          <option value="4">Large</option>
-          <option value="5">X-Large</option>
-          <option value="6">Huge</option>
+          <option value="1">8pt</option>
+          <option value="2">10pt</option>
+          <option value="3" selected>12pt</option>
+          <option value="4">14pt</option>
+          <option value="5">18pt</option>
+          <option value="6">24pt</option>
+          <option value="7">36pt</option>
         </select>
         <div class="sep"></div>
         <button onclick="fmt('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
@@ -75,7 +192,18 @@
         <button onclick="nbInsertBlockquote()" title="Blockquote">&#10077;</button>
         <button onclick="nbInsertHR()" title="Horizontal Line">&mdash;</button>
         <div class="sep"></div>
-        <button onclick="nbInsertLink()" title="Insert Link">&#128279;</button>
+
+        <select onchange="nbSetLineHeight(this.value)" title="Line Spacing" style="width:72px;">
+          <option value="">&#8645; Space</option>
+          <option value="1.2">1.2×</option>
+          <option value="1.5" selected>1.5×</option>
+          <option value="1.8">1.8×</option>
+          <option value="2.0">2.0×</option>
+          <option value="2.5">2.5×</option>
+        </select>
+        <div class="sep"></div>
+
+
         <button onclick="fmt('removeFormat')" title="Clear Formatting">&#x2715;</button>
         <div class="sep"></div>
         <button class="ai-spell-btn" onclick="runSpellCheck()"><div class="ai-dot"></div>&#10022; AI Spell Fix</button>
@@ -163,13 +291,18 @@
         Featured Image
       </div>
 
-      <div class="image-drop" id="image_drop_zone"
-           style="{% if original.image %}display:none{% endif %}"
-           onclick="document.getElementById('ui_image_file').click()">
-        <input type="file" id="ui_image_file" accept="image/jpeg" onchange="previewImage(this)" style="display:none">
+      <!-- File input: OUTSIDE the drop zone, hidden via CSS not display:none -->
+      <input type="file" id="ui_image_file" accept="image/jpeg"
+             onchange="previewImage(this)"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;">
+
+      <!-- Drop zone: label wraps it for native click-to-browse without JS -->
+      <label class="image-drop" id="image_drop_zone" for="ui_image_file"
+             style="{% if original.image %}display:none{% endif %}">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <p>Drop image here or <strong>click to browse</strong></p>
-      </div>
+        <p>Drop image here or <strong class="dz-browse-link">click to browse</strong></p>
+        <span class="dz-fmt-hint">JPG only · Max 1MB · 16:9 preferred</span>
+      </label>
 
       <img id="img_preview"
            class="image-preview"
@@ -187,17 +320,41 @@
         Change Image
       </button>
 
-      <!-- 
-        NOTE: ui_image field sirf real URL ke liye hai (paste karke dene ke liye).
-        File upload hone par is field ko blob:// URL se mat bharo.
-        Actual file upload ui_image_file se hoga.
-      -->
       <input type="url"
             class="img-url-inp"
             id="ui_image"
             placeholder="Or paste image URL..."
             value="{% if original.image %}{{ original.image.url }}{% elif original.image_url %}{{ original.image_url }}{% endif %}"
             oninput="previewUrl(this.value)">
+
+      <div class="img-meta-fields">
+        <div class="img-meta-field">
+          <label class="img-meta-label" for="ui_image_alt">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Alt Text <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;">(SEO + Accessibility)</span>
+          </label>
+          <input type="text"
+                 class="img-meta-inp"
+                 id="ui_image_alt"
+                 placeholder="Describe the image for screen readers and SEO…"
+                 maxlength="200"
+                 value="{{ original.image_alt|default:'' }}">
+          <div style="font-size:10px;color:#94a3b8;margin-top:3px;">Briefly describe what's in the image. Used by search engines and screen readers.</div>
+        </div>
+        <div class="img-meta-field">
+          <label class="img-meta-label" for="ui_image_source">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Image Source / Credit
+          </label>
+          <input type="text"
+                 class="img-meta-inp"
+                 id="ui_image_source"
+                 placeholder="e.g. PTI, Reuters, AP, Getty Images, own photo…"
+                 maxlength="200"
+                 value="{{ original.image_source|default:'' }}">
+          <div style="font-size:10px;color:#94a3b8;margin-top:3px;">Credit the photographer or agency. Shown below the image on the article page.</div>
+        </div>
+      </div>
 
       <div class="img-specs-box">
         <div class="img-specs-title">
@@ -233,7 +390,6 @@
         {% for cat in adminform.form.fields.categories.queryset %}
           {% if cat.status != 'archived' %}
 
-          <!-- Main category -->
           <div class="cat-item {% if original and cat in original.categories.all %}selected{% endif %}"
               onclick="toggleCat(this, '{{ cat.pk }}', 'main')"
               data-id="{{ cat.pk }}"
@@ -245,12 +401,10 @@
             {% endif %}
           </div>
 
-          <!-- Subcategories from JSONField -->
           {% if cat.sub_categories %}
           <div class="subcat-list" id="subcat_{{ cat.pk }}"
               style="{% if original and cat in original.categories.all %}display:block{% else %}display:none{% endif %}">
             {% for sub in cat.sub_categories %}
-            {# sub ek dict ho sakta hai {"name":"Politics"} ya sirf string #}
             {% with sub_name=sub.name|default:sub %}
             <div class="cat-item subcat-item {% if original and sub_name in original.selected_subcategories|default_if_none:'' %}selected{% endif %}"
                 onclick="toggleCat(this, '{{ cat.pk }}__{{ sub_name|slugify }}', 'sub')"
@@ -277,6 +431,62 @@
         <span id="cat_selected_count">0</span> selected
       </div>
     </div>
+
+    <!-- ════════════════════════════════════════
+         CHANGE 1: ARTICLE TAGS CARD
+         Category card ke neeche, Google recognize karta hai
+    ════════════════════════════════════════════ -->
+    <div class="nb-card">
+      <div class="nb-card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+        Article Tags
+        <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)">Max 15 tags</span>
+      </div>
+
+      <!-- Tag input row -->
+      <div class="tags-input-row">
+        <input type="text"
+               id="tag_input"
+               placeholder="Tag likhein aur Enter ya Add dabayein…"
+               onkeydown="handleTagKeydown(event)"
+               maxlength="50">
+        <button onclick="addTagFromInput()">+ Add</button>
+      </div>
+
+      <!-- Tags chips display area -->
+      <div class="tags-chips-wrap" id="tags_chips_wrap">
+        <span class="tags-empty-hint" id="tags_empty_hint">
+          Koi tag nahi — upar type karke tags add karein
+        </span>
+      </div>
+
+      <!-- Suggested common tags (optional quick-add) -->
+      <div class="tags-suggestions" id="tags_suggestions_row">
+        <span class="tags-suggest-label">Quick add:</span>
+        <span class="tag-suggest-chip" onclick="addTag('Breaking News')">Breaking News</span>
+        <span class="tag-suggest-chip" onclick="addTag('India')">India</span>
+        <span class="tag-suggest-chip" onclick="addTag('Politics')">Politics</span>
+        <span class="tag-suggest-chip" onclick="addTag('Economy')">Economy</span>
+        <span class="tag-suggest-chip" onclick="addTag('Technology')">Technology</span>
+        <span class="tag-suggest-chip" onclick="addTag('Sports')">Sports</span>
+        <span class="tag-suggest-chip" onclick="addTag('Entertainment')">Entertainment</span>
+        <span class="tag-suggest-chip" onclick="addTag('Health')">Health</span>
+        <span class="tag-suggest-chip" onclick="addTag('World')">World</span>
+      </div>
+
+      <!-- Count info -->
+      <div class="tags-count-info" id="tags_count_info">
+        <span id="tags_count_num">0</span> / 15 tags added
+      </div>
+
+      <!-- Hidden input — yeh form ke sath submit hoga -->
+      <input type="hidden" id="ui_tags" name="tags"
+             value="{% if original.tags %}{{ original.tags|join:',' }}{% endif %}">
+    </div>
+    <!-- END TAGS CARD -->
 
   </div>
 </div>
@@ -327,15 +537,58 @@
         </div>
         <div class="seo-hint">{% if original.status == 'published' %}Slug is locked after publish. Any edit triggers an automatic 301 redirect.{% else %}Slug locks once you publish. After that, any change auto-redirects old URL → new URL (301).{% endif %}</div>
       </div>
+
+      <!-- CHANGE 3: Canonical URL — READ ONLY, slug se auto-generate hogi -->
       <div class="seo-field">
-        <div class="seo-field-label">Canonical URL <span class="seo-tag seo-tag--auto">Auto</span></div>
-        <input type="url" class="seo-inp" id="ui_canonical" placeholder="https://yourdomain.com/news/{{ original.slug|default:'article-slug' }}" value="{{ original.canonical_url|default:'' }}">
-        <div class="seo-hint">Leave blank — system auto-adds <code>rel=canonical</code> using the slug above.</div>
+        <div class="seo-field-label">
+          Canonical URL
+          <span class="seo-tag seo-tag--auto">Auto — Read Only</span>
+        </div>
+        <!-- readonly attribute + canonical-readonly CSS class -->
+        <input type="url"
+               class="seo-inp canonical-readonly"
+               id="ui_canonical"
+               placeholder="https://yourdomain.com/news/article-slug"
+               value="{{ original.canonical_url|default:'' }}"
+               readonly
+               tabindex="-1"
+               title="Canonical URL automatically generate hoti hai slug se — manually edit nahi kar sakte">
+        <div class="seo-hint">
+          Canonical URL automatically slug se generate hoti hai — yeh field editable nahi hai.
+          Slug change karo, canonical khud update ho jayegi.
+        </div>
       </div>
+      <!-- END CHANGE 3 -->
+
       <div class="seo-field">
         <div class="seo-field-label">Focus Keyword</div>
         <input type="text" class="seo-inp" id="ui_focus_kw" placeholder="e.g. India election results 2025" value="{{ original.focus_keyword|default:'' }}" oninput="updateSeoScore()">
         <div class="seo-hint">Should appear in headline, first 100 words, and meta description.</div>
+      </div>
+
+      <!-- SECONDARY KEYWORDS — focus kw ke neeche -->
+      <div class="seo-field">
+        <div class="seo-field-label">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Secondary Keywords
+          <span class="seo-tag" style="background:#f5f3ff;color:#7c3aed;border-color:#ddd6fe;">LSI / Supporting</span>
+        </div>
+        <div class="sec-kw-input-row">
+          <input type="text" id="sec_kw_input"
+                 placeholder="Type a keyword, press Enter or Add…"
+                 onkeydown="handleSecKwKeydown(event)"
+                 maxlength="80">
+          <button onclick="addSecKwFromInput()">+ Add</button>
+        </div>
+        <div class="sec-kw-chips-wrap" id="sec_kw_chips_wrap">
+          <span class="sec-kw-empty-hint" id="sec_kw_empty_hint">No secondary keywords yet.</span>
+        </div>
+        <div class="seo-hint">
+          LSI keywords — related terms Google uses to understand context. Max 10.
+          These don't show on page, only stored for SEO reference.
+        </div>
+        <input type="hidden" id="ui_secondary_keywords"
+               value="{{ original.secondary_keywords|default:'' }}">
       </div>
       <div class="seo-field">
         <div class="seo-field-label">
@@ -486,7 +739,6 @@
         <div class="ed-hint">Recommended: 200×200px square JPG/PNG. Displayed as circle.</div>
       </div>
 
-      <!-- Row 1: Twitter + LinkedIn -->
       <div class="ed-social-row">
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
@@ -508,7 +760,6 @@
         </div>
       </div>
 
-      <!-- Row 2: Instagram + Facebook -->
       <div class="ed-social-row">
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
@@ -530,7 +781,6 @@
         </div>
       </div>
 
-      <!-- Row 3: YouTube + Reddit -->
       <div class="ed-social-row">
         <div class="ed-field" style="flex:1">
           <div class="ed-label">
@@ -622,32 +872,431 @@
   </div>
 </div>
 
+<!-- AUTO-SAVE BADGE — bottom right floating indicator -->
+<div id="nb_autosave_badge">
+  <span class="autosave-dot" id="nb_as_dot"></span>
+  <span id="nb_as_text">Draft saved</span>
+  <span class="autosave-timer-text" id="nb_as_timer"></span>
+</div>
+
 <script>
 /* ══════════════════════════════════════════════
-   showDropZone
+   IMAGE DROP ZONE — Fixed
+   1. Drag & drop properly wired (no page navigation)
+   2. showDropZone() just resets state, no page refresh
+   3. "Change Image" button cancel bhi kaam karta hai
 ══════════════════════════════════════════════ */
 function showDropZone() {
   var dz   = document.getElementById('image_drop_zone');
   var btn  = document.getElementById('change_img_btn');
   var prev = document.getElementById('img_preview');
-  if (dz)   dz.style.display   = '';
+  if (dz)   dz.style.display   = 'flex';
   if (btn)  btn.style.display  = 'none';
   if (prev) prev.style.display = 'none';
-  // File input reset karo taaki same file dobara select ho sake
+  // File input reset — same file dobara select ho sake
   var fi = document.getElementById('ui_image_file');
   if (fi) fi.value = '';
+  // URL field bhi clear karo
+  var urlF = document.getElementById('ui_image');
+  if (urlF) urlF.value = '';
+  updateSeoScore();
+  updateEditorPreview();
+}
+
+// Drag & Drop events — proper preventDefault so file doesn't open in browser
+(function initDragDrop() {
+  var dz = document.getElementById('image_drop_zone');
+  if (!dz) return;
+
+  // Document level mein dragover/drop prevent karo — important!
+  document.addEventListener('dragover',  function(e){ e.preventDefault(); });
+  document.addEventListener('drop',      function(e){ e.preventDefault(); });
+
+  ['dragenter','dragover'].forEach(function(ev) {
+    dz.addEventListener(ev, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave','dragend'].forEach(function(ev) {
+    dz.addEventListener(ev, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove('drag-over');
+    });
+  });
+
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dz.classList.remove('drag-over');
+
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+
+    var file = files[0];
+    var fi = document.getElementById('ui_image_file');
+    if (!fi) return;
+
+    try {
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      fi.files = dt.files;
+      previewImage(fi);
+    } catch(err) {
+      // DataTransfer fallback — older browsers
+      previewImageFile(file);
+    }
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   SECONDARY KEYWORDS SYSTEM
+   Focus keyword ke neeche, LSI/supporting keywords
+   Save hote hain api ke sath
+══════════════════════════════════════════════ */
+var secondaryKws = [];
+
+(function initSecKws() {
+  var existing = document.getElementById('ui_secondary_keywords').value;
+  if (existing && existing.trim()) {
+    existing.split(',').forEach(function(k) {
+      var kw = k.trim();
+      if (kw) secondaryKws.push(kw);
+    });
+  }
+  renderSecKws();
+})();
+
+function addSecKwFromInput() {
+  var inp = document.getElementById('sec_kw_input');
+  var raw = inp.value.trim();
+  if (!raw) return;
+  raw.split(',').map(function(k){ return k.trim(); }).filter(Boolean).forEach(addSecKw);
+  inp.value = '';
+  inp.focus();
+}
+
+function addSecKw(kw) {
+  kw = kw.trim();
+  if (!kw) return;
+  if (secondaryKws.length >= 10) { alert('Maximum 10 secondary keywords allowed.'); return; }
+  var lower = kw.toLowerCase();
+  if (secondaryKws.some(function(k){ return k.toLowerCase() === lower; })) return;
+  secondaryKws.push(kw);
+  renderSecKws();
+}
+
+function removeSecKw(i) {
+  secondaryKws.splice(i, 1);
+  renderSecKws();
+}
+
+function renderSecKws() {
+  var wrap  = document.getElementById('sec_kw_chips_wrap');
+  var hint  = document.getElementById('sec_kw_empty_hint');
+  var hidEl = document.getElementById('ui_secondary_keywords');
+  if (hidEl) hidEl.value = secondaryKws.join(',');
+
+  if (!secondaryKws.length) {
+    wrap.innerHTML = '';
+    if (hint) { hint.style.display = ''; wrap.appendChild(hint); }
+    return;
+  }
+  if (hint) hint.style.display = 'none';
+  wrap.innerHTML = secondaryKws.map(function(kw, i) {
+    return '<span class="sec-kw-chip">'
+      + escapeHtml(kw)
+      + '<span class="sec-kw-chip-remove" onclick="removeSecKw(' + i + ')" title="Remove">✕</span>'
+      + '</span>';
+  }).join('');
+}
+
+function handleSecKwKeydown(e) {
+  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSecKwFromInput(); }
 }
 
 /* ══════════════════════════════════════════════
+   AUTO-SAVE AS DRAFT
+   Har 30 sec mein — sirf tab jab kuch change hua ho
+   LocalStorage mein bhi save hota hai as fallback
+══════════════════════════════════════════════ */
+var _asLastSavedHash  = '';
+var _asTimer          = null;
+var _asCountdown      = null;
+var _asIntervalSec    = 30;
+var _asSecsLeft       = _asIntervalSec;
+var _asIsSaving       = false;
+
+function _asGetHash() {
+  return (
+    (document.getElementById('ui_title')   ? document.getElementById('ui_title').value   : '') +
+    (document.getElementById('ui_content') ? document.getElementById('ui_content').innerHTML : '') +
+    (document.getElementById('ui_meta_desc') ? document.getElementById('ui_meta_desc').value : '')
+  ).length.toString(); // simplified hash — length change detect karna enough hai
+}
+
+function _asShowBadge(state, msg, timer) {
+  var badge  = document.getElementById('nb_autosave_badge');
+  var dot    = document.getElementById('nb_as_dot');
+  var text   = document.getElementById('nb_as_text');
+  var timerEl= document.getElementById('nb_as_timer');
+  if (!badge) return;
+
+  badge.className = 'show ' + (state || '');
+  if (dot)   dot.className   = 'autosave-dot' + (state === 'saving' ? ' pulse' : '');
+  if (text)  text.textContent = msg || '';
+  if (timerEl) timerEl.textContent = timer || '';
+}
+
+function _asHideBadge() {
+  var badge = document.getElementById('nb_autosave_badge');
+  if (badge) badge.className = '';
+}
+
+function _asSaveToLocalStorage() {
+  try {
+    var key  = 'nb_autosave_{{ original.pk|default:"new" }}';
+    var data = {
+      title:    document.getElementById('ui_title')  ? document.getElementById('ui_title').value   : '',
+      subtitle: document.getElementById('ui_subtitle')? document.getElementById('ui_subtitle').value: '',
+      content:  document.getElementById('ui_content') ? document.getElementById('ui_content').innerHTML : '',
+      meta:     document.getElementById('ui_meta_desc')? document.getElementById('ui_meta_desc').value : '',
+      slug:     document.getElementById('ui_slug')    ? document.getElementById('ui_slug').value    : '',
+      focus_kw: document.getElementById('ui_focus_kw')? document.getElementById('ui_focus_kw').value: '',
+      sec_kws:  secondaryKws.join(','),
+      tags:     articleTags.join(','),
+      ts:       new Date().toISOString()
+    };
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch(e) { /* localStorage unavailable — ignore */ }
+}
+
+async function _asAutoSave() {
+  if (_asIsSaving) return;
+
+  var currentHash = _asGetHash();
+  if (currentHash === _asLastSavedHash) {
+    // Kuch nahi badla — silently skip
+    return;
+  }
+
+  var title   = document.getElementById('ui_title')   ? document.getElementById('ui_title').value.trim()   : '';
+  var content = document.getElementById('ui_content') ? document.getElementById('ui_content').innerHTML.trim() : '';
+  if (!title && !content) return; // Completely empty — save mat karo
+
+  _asIsSaving = true;
+  _asShowBadge('saving', 'Auto-saving draft…', '');
+
+  // LocalStorage mein hamesha save karo (offline fallback)
+  _asSaveToLocalStorage();
+
+  try {
+    var formData = new FormData();
+    formData.append('title',    title || 'Untitled Draft');
+    formData.append('subtitle', document.getElementById('ui_subtitle') ? document.getElementById('ui_subtitle').value : '');
+    formData.append('content',  content);
+    formData.append('status',   'draft');
+    formData.append('slug',     document.getElementById('ui_slug')    ? document.getElementById('ui_slug').value    : '');
+    formData.append('meta_description', document.getElementById('ui_meta_desc') ? document.getElementById('ui_meta_desc').value : '');
+    formData.append('focus_keyword',    document.getElementById('ui_focus_kw')  ? document.getElementById('ui_focus_kw').value  : '');
+    formData.append('secondary_keywords', secondaryKws.join(','));
+
+    var articleId = '{{ original.pk|default:"" }}';
+    var url    = articleId ? ('/api/articles/' + articleId + '/') : '/api/articles/';
+    var method = articleId ? 'PUT' : 'POST';
+
+    var res = await fetch(url, {
+      method: method,
+      headers: { 'X-CSRFToken': getCsrf() },
+      body: formData
+    });
+
+    if (res.ok) {
+      _asLastSavedHash = currentHash;
+      var now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      _asShowBadge('saved', '✓ Draft saved', now);
+      setTimeout(_asHideBadge, 3000);
+    } else {
+      // API failed — localStorage fallback already done
+      _asShowBadge('', '⚠ Saved locally', '');
+      setTimeout(_asHideBadge, 3000);
+    }
+  } catch(e) {
+    _asShowBadge('', '⚠ Saved locally', '');
+    setTimeout(_asHideBadge, 3000);
+  }
+
+  _asIsSaving = false;
+}
+
+function _asStartCountdown() {
+  clearInterval(_asCountdown);
+  _asSecsLeft = _asIntervalSec;
+  _asCountdown = setInterval(function() {
+    _asSecsLeft--;
+    if (_asSecsLeft <= 0) {
+      _asSecsLeft = _asIntervalSec;
+      _asAutoSave();
+    }
+  }, 1000);
+}
+
+// Page load pe start karo
+_asStartCountdown();
+
+// Koi bhi field change hote hi countdown reset karo
+['ui_title','ui_subtitle','ui_meta_desc','ui_focus_kw','ui_slug'].forEach(function(id) {
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('input', function() { _asSecsLeft = _asIntervalSec; });
+});
+if (document.getElementById('ui_content')) {
+  document.getElementById('ui_content').addEventListener('input', function() { _asSecsLeft = _asIntervalSec; });
+}
+
+// Page close / navigate hone par bhi save karo
+window.addEventListener('beforeunload', function(e) {
+  var hash = _asGetHash();
+  if (hash !== _asLastSavedHash && hash !== '0') {
+    _asSaveToLocalStorage(); // Synchronous fallback
+  }
+});
+
+/* ══════════════════════════════════════════════
+   CHANGE 1: TAGS SYSTEM
+   Article tags — manually add/remove, form ke sath save
+══════════════════════════════════════════════ */
+var articleTags = [];
+
+// DB se existing tags load karo
+(function initTags() {
+  var existingVal = document.getElementById('ui_tags').value;
+  if (existingVal && existingVal.trim()) {
+    existingVal.split(',').forEach(function(t) {
+      var tag = t.trim();
+      if (tag) articleTags.push(tag);
+    });
+  }
+  renderTags();
+})();
+
+function addTagFromInput() {
+  var inp = document.getElementById('tag_input');
+  var raw = inp.value.trim();
+  if (!raw) return;
+
+  // Multiple tags ek saath add karo (comma separated)
+  var parts = raw.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+  parts.forEach(function(tag) { addTag(tag); });
+  inp.value = '';
+  inp.focus();
+}
+
+function addTag(tag) {
+  tag = tag.trim();
+  if (!tag) return;
+
+  // Max 15 tags
+  if (articleTags.length >= 15) {
+    alert('Maximum 15 tags allowed.');
+    return;
+  }
+
+  // Duplicate check — case insensitive
+  var lower = tag.toLowerCase();
+  if (articleTags.some(function(t){ return t.toLowerCase() === lower; })) return;
+
+  articleTags.push(tag);
+  renderTags();
+}
+
+function removeTag(index) {
+  articleTags.splice(index, 1);
+  renderTags();
+}
+
+function renderTags() {
+  var wrap    = document.getElementById('tags_chips_wrap');
+  var hint    = document.getElementById('tags_empty_hint');
+  var countEl = document.getElementById('tags_count_num');
+  var hidden  = document.getElementById('ui_tags');
+
+  // Hidden input update karo
+  hidden.value = articleTags.join(',');
+
+  // Count update
+  if (countEl) countEl.textContent = articleTags.length;
+
+  if (!articleTags.length) {
+    wrap.innerHTML = '';
+    if (hint) { hint.style.display = ''; wrap.appendChild(hint); }
+    return;
+  }
+
+  if (hint) hint.style.display = 'none';
+
+  wrap.innerHTML = articleTags.map(function(tag, i) {
+    return '<span class="tag-chip">'
+      + escapeHtml(tag)
+      + '<span class="tag-chip-remove" onclick="removeTag(' + i + ')" title="Remove tag">✕</span>'
+      + '</span>';
+  }).join('');
+}
+
+function handleTagKeydown(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addTagFromInput();
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ══════════════════════════════════════════════
+   CHANGE 3: CANONICAL URL — auto-update from slug
+   Slug change hone par canonical auto set hogi
+══════════════════════════════════════════════ */
+var SITE_BASE_URL = 'https://news4bharat.com'; // Apna domain yahan set karo
+
+function updateCanonicalFromSlug() {
+  var slugVal = document.getElementById('ui_slug').value.trim();
+  var canonEl = document.getElementById('ui_canonical');
+  if (!canonEl) return;
+
+  if (slugVal) {
+    canonEl.value = SITE_BASE_URL + '/news/' + slugVal;
+  } else {
+    canonEl.value = '';
+    canonEl.placeholder = SITE_BASE_URL + '/news/article-slug';
+  }
+}
+
+// Slug field ka input event — canonical auto-update
+document.getElementById('ui_slug').addEventListener('input', function() {
+  updateCanonicalFromSlug();
+});
+
+// Page load pe agar slug pehle se hai to canonical set karo
+(function initCanonical() {
+  var slugInp = document.getElementById('ui_slug');
+  var canonEl = document.getElementById('ui_canonical');
+  // Agar canonical already DB mein saved hai to use rakho, warna slug se generate karo
+  if (canonEl && !canonEl.value && slugInp && slugInp.value) {
+    updateCanonicalFromSlug();
+  }
+})();
+
+/* ══════════════════════════════════════════════
    MULTI-CATEGORY — init + toggle
-   FIX: selectedSubs ko DB se load karo
 ══════════════════════════════════════════════ */
 var selectedCats = new Set();
-// selectedSubs format: { "catPk": ["Sub Name 1", "Sub Name 2"] }
 var selectedSubs = {};
 
 (function initCats() {
-  // Main categories load karo hidden input se
   var existing = document.getElementById('ui_category').value;
   if (existing) {
     existing.split(',').filter(Boolean).forEach(function(id) {
@@ -655,7 +1304,6 @@ var selectedSubs = {};
     });
   }
 
-  // Subcategories load karo — DB se aaya JSON
   var subRaw = document.getElementById('ui_subcategory').value;
   try {
     var parsed = JSON.parse(subRaw);
@@ -666,7 +1314,6 @@ var selectedSubs = {};
     selectedSubs = {};
   }
 
-  // Main categories highlight karo
   document.querySelectorAll('.cat-item[data-type="main"]').forEach(function(el) {
     var catId = String(el.dataset.id);
     if (selectedCats.has(catId)) {
@@ -676,7 +1323,6 @@ var selectedSubs = {};
     }
   });
 
-  // Subcategories highlight karo
   document.querySelectorAll('.cat-item[data-type="sub"]').forEach(function(el) {
     var parentId = String(el.getAttribute('data-parent'));
     var subName  = el.getAttribute('data-subname');
@@ -693,7 +1339,6 @@ function toggleCat(el, id, type) {
 
   if (type === 'main') {
     if (selectedCats.has(sid)) {
-      // Deselect — subs bhi clear
       selectedCats.delete(sid);
       el.classList.remove('selected');
       delete selectedSubs[sid];
@@ -734,7 +1379,6 @@ function syncCatInput() {
   var arr = Array.from(selectedCats);
   document.getElementById('ui_category').value = arr.join(',');
 
-  // Subcategories JSON hidden input mein save karo
   var subInp = document.getElementById('ui_subcategory');
   if (subInp) subInp.value = JSON.stringify(selectedSubs);
 
@@ -761,6 +1405,63 @@ let nbHistTimer; nbEditor.addEventListener('input',()=>{clearTimeout(nbHistTimer
 nbEditor.addEventListener('keydown',(e)=>{if(e.ctrlKey||e.metaKey){if(e.key==='z'&&!e.shiftKey){e.preventDefault();nbUndo();}if(e.key==='y'){e.preventDefault();nbRedo();}if(e.key==='z'&&e.shiftKey){e.preventDefault();nbRedo();}}});
 function fmt(cmd,val){nbSaveHistory();nbEditor.focus();document.execCommand(cmd,false,val!==undefined?val:null);setTimeout(nbSaveHistory,50);}
 function nbSetFontSize(size){if(!size)return;nbSaveHistory();nbEditor.focus();document.execCommand('fontSize',false,size);setTimeout(nbSaveHistory,50);}
+
+/* ══════════════════════════════════════════════
+   FONT FAMILY — apply to selection
+   Uses execCommand('fontName') which works across
+   all contenteditable browsers.
+   After applying, resets the dropdown to blank
+   so it acts as a one-shot command picker.
+══════════════════════════════════════════════ */
+function nbSetFontFamily(family) {
+  if (!family) return;
+  nbSaveHistory();
+  nbEditor.focus();
+  document.execCommand('fontName', false, family);
+  setTimeout(nbSaveHistory, 50);
+  // Reset selector so it doesn't show a "stuck" value
+  var sel = document.getElementById('nb_fontFamilySelect');
+  if (sel) setTimeout(function(){ sel.value = ''; }, 80);
+}
+
+/* ══════════════════════════════════════════════
+   PASTE CLEANER
+   When user pastes from Word / Google Docs etc,
+   strip all inline font-family styles so the
+   content inherits the editor's font instead.
+   User can then manually apply a font if needed.
+
+   We do NOT strip font-size or bold/italic/color —
+   only font-family, which is the usual culprit
+   when pasted text looks different.
+══════════════════════════════════════════════ */
+nbEditor.addEventListener('paste', function(e) {
+  e.preventDefault();
+  var html = '';
+  if (e.clipboardData && e.clipboardData.getData) {
+    html = e.clipboardData.getData('text/html');
+    if (!html) {
+      // Fallback: plain text
+      var plain = e.clipboardData.getData('text/plain');
+      document.execCommand('insertText', false, plain);
+      return;
+    }
+  }
+
+  // Strip font-family from all inline styles
+  // Keeps everything else (bold, color, size, etc.)
+  html = html.replace(/font-family\s*:[^;}"']*(;|(?=\s*[}"']))/gi, '');
+
+  // Also remove <font face="..."> attributes
+  html = html.replace(/(<font[^>]*)\sface\s*=\s*["'][^"']*["']/gi, '$1');
+
+  // Strip Word-specific class/style gunk (mso-* properties)
+  html = html.replace(/mso-[^;]+;/gi, '');
+
+  // Insert cleaned HTML
+  document.execCommand('insertHTML', false, html);
+  nbSaveHistory();
+});
 function nbApplyTextColor(color){document.getElementById('nb_textColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();document.execCommand('foreColor',false,color);setTimeout(nbSaveHistory,50);}
 function nbApplyBgColor(color){document.getElementById('nb_bgColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();document.execCommand('hiliteColor',false,color);setTimeout(nbSaveHistory,50);}
 function nbInsertTag(tag){nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const el=document.createElement(tag);el.appendChild(range.extractContents());if(!el.textContent.trim())el.textContent=tag==='h2'?'Heading 2':'Heading 3';range.insertNode(el);range.setStartAfter(el);range.collapse(true);sel.removeAllRanges();sel.addRange(range);setTimeout(nbSaveHistory,50);}
@@ -770,9 +1471,8 @@ function nbInsertLink(){const url=prompt('URL darj karein (e.g. https://example.
 function insertTag(tag){nbInsertTag(tag);}
 
 /* ══════════════════════════════════════════════
-   IMAGE — FIX: blob URL ui_image mein mat dalo
+   IMAGE
 ══════════════════════════════════════════════ */
-// Tracks karta hai ki kya naya file select hua hai
 var _newFileSelected = false;
 
 function previewImage(inp) {
@@ -781,7 +1481,6 @@ function previewImage(inp) {
 
   _newFileSelected = true;
 
-  // Sirf preview ke liye blob URL banao — ui_image mein MAT dalo
   const blobUrl = URL.createObjectURL(file);
   const prev = document.getElementById('img_preview');
   prev.src = blobUrl;
@@ -792,17 +1491,12 @@ function previewImage(inp) {
   if (dz)  dz.style.display  = 'none';
   if (btn) btn.style.display = 'flex';
 
-  // Schema update karo
   document.getElementById('schema_image').textContent = file.name;
-
-  // ui_image field ko CLEAR karo taaki blob URL save na ho
-  // (actual file FormData se jayega)
   document.getElementById('ui_image').value = '';
 
   updateSeoScore();
   updateEditorPreview();
 
-  // File info box
   const infoBox = document.getElementById('img_file_info');
   if (!infoBox) return;
   infoBox.style.display = 'block';
@@ -853,6 +1547,23 @@ function previewUrl(url) {
   updateEditorPreview();
 }
 
+// Fallback: directly accept a File object (for older browser DataTransfer)
+function previewImageFile(file) {
+  if (!file) return;
+  var blobUrl = URL.createObjectURL(file);
+  var prev = document.getElementById('img_preview');
+  prev.src = blobUrl;
+  prev.style.display = 'block';
+  var dz  = document.getElementById('image_drop_zone');
+  var btn = document.getElementById('change_img_btn');
+  if (dz)  dz.style.display  = 'none';
+  if (btn) btn.style.display = 'flex';
+  document.getElementById('schema_image').textContent = file.name;
+  document.getElementById('ui_image').value = '';
+  updateSeoScore();
+  updateEditorPreview();
+}
+
 /* PLAGIARISM */
 function nbClosePlagModal(){document.getElementById('nb_plagModal').classList.remove('show');}
 async function runPlagiarismCheck(){
@@ -885,7 +1596,7 @@ async function saveTagPerm(){const selected=document.querySelector('input[name="
 document.querySelectorAll('input[name="tag_create_perm"]').forEach(r=>r.addEventListener('change',updateTagPermStatus));updateTagPermStatus();
 
 /* SLUG */
-function generateSlug(){const title=document.getElementById('ui_title').value;if(!title)return;const slug=title.toLowerCase().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim().substring(0,80);const inp=document.getElementById('ui_slug');if(!inp.readOnly){inp.value=slug;updateSeoScore();updateEditorPreview();}}
+function generateSlug(){const title=document.getElementById('ui_title').value;if(!title)return;const slug=title.toLowerCase().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim().substring(0,80);const inp=document.getElementById('ui_slug');if(!inp.readOnly){inp.value=slug;updateCanonicalFromSlug();updateSeoScore();updateEditorPreview();}}
 document.getElementById('ui_title').addEventListener('blur',function(){const slugInp=document.getElementById('ui_slug');if(!slugInp.readOnly&&!slugInp.value.trim())generateSlug();});
 document.getElementById('ui_title').addEventListener('input',function(){const el=document.getElementById('schema_headline');if(el)el.textContent=this.value||'— from Headline';updateSeoScore();updateEditorPreview();});
 
@@ -913,7 +1624,6 @@ function updateSeoScore(){
   const title=document.getElementById('ui_title').value;const content=nbEditor.innerText||'';const meta=document.getElementById('ui_meta_desc').value;
   const focusKw=(document.getElementById('ui_focus_kw').value||'').toLowerCase().trim();const slug=document.getElementById('ui_slug').value;
   
-  // Image check: actual file selected hai ya URL field mein real URL hai
   const fileInput=document.getElementById('ui_image_file');
   const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
   const urlVal  = document.getElementById('ui_image').value;
@@ -939,10 +1649,7 @@ function selectKw(el,kw){el.classList.toggle('active');const fkEl=document.getEl
 function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').value;}
 
 /* ══════════════════════════════════════════════
-   submitArticle — FIXED
-   1. editor_* fields → views.py mein author_display_* se map hote hain
-   2. blob URL kabhi nahi jayegi image_url mein
-   3. subcategories JSON properly jayega
+   submitArticle — tags bhi send karo
 ══════════════════════════════════════════════ */
 async function submitArticle(forceStatus) {
   const title       = document.getElementById('ui_title').value.trim();
@@ -953,16 +1660,13 @@ async function submitArticle(forceStatus) {
   if (!content)     { alert('Content cannot be empty.'); return; }
   if (!categoryVal) { alert('Please select at least one category.'); return; }
 
-  // Image URL — sirf real URL bhejo, blob:// kabhi nahi
   const rawImageUrl = document.getElementById('ui_image').value;
   const safeImageUrl = (rawImageUrl && !rawImageUrl.startsWith('blob:')) ? rawImageUrl : '';
 
-  // Subcategories JSON
   const subcategoriesJson = document.getElementById('ui_subcategory').value || '{}';
 
   const formData = new FormData();
 
-  // Basic fields
   formData.append('title',    title);
   formData.append('subtitle', document.getElementById('ui_subtitle').value);
   formData.append('content',  content);
@@ -981,20 +1685,24 @@ async function submitArticle(forceStatus) {
   formData.append('canonical_url',    document.getElementById('ui_canonical').value);
   formData.append('meta_description', document.getElementById('ui_meta_desc').value);
   formData.append('focus_keyword',    document.getElementById('ui_focus_kw').value);
+  formData.append('secondary_keywords', document.getElementById('ui_secondary_keywords') ? document.getElementById('ui_secondary_keywords').value : '');
   formData.append('noindex',          document.getElementById('ui_noindex').checked  ? 'true' : 'false');
   formData.append('nofollow',         document.getElementById('ui_nofollow').checked ? 'true' : 'false');
   formData.append('in_sitemap',       document.getElementById('ui_in_sitemap').checked ? 'true' : 'false');
 
-  // Image — file pehle, URL fallback
+  // Image
+  // Image
   const fileInput = document.getElementById('ui_image_file');
   if (fileInput && fileInput.files && fileInput.files.length > 0) {
     formData.append('image', fileInput.files[0]);
   } else if (safeImageUrl) {
     formData.append('image_url', safeImageUrl);
   }
+  // FIX 1: image_alt and image_source submit karo
+  formData.append('image_alt',    document.getElementById('ui_image_alt').value.trim());
+  formData.append('image_source', document.getElementById('ui_image_source').value.trim());
 
-  // Editor / Author display fields
-  // Views.py mein editor_* → author_display_* map hota hai
+  // Editor / Author
   formData.append('editor_name',      document.getElementById('ed_name').value);
   formData.append('editor_position',  document.getElementById('ed_position').value);
   formData.append('editor_bio',       document.getElementById('ed_bio').value);
@@ -1010,13 +1718,15 @@ async function submitArticle(forceStatus) {
   const editorId = document.getElementById('ui_editor_id').value;
   if (editorId) formData.append('editor_id', editorId);
 
-  // Categories (comma-separated IDs)
+  // Categories
   categoryVal.split(',').filter(Boolean).forEach(id => {
     formData.append('categories', id.trim());
   });
-
-  // Subcategories JSON string
   formData.append('subcategories', subcategoriesJson);
+
+  // CHANGE 1: Tags — comma-separated string bhejo
+  const tagsVal = document.getElementById('ui_tags').value;
+  if (tagsVal) formData.append('tags', tagsVal);
 
   const articleId = '{{ original.pk|default:"" }}';
   const url       = articleId ? `/api/articles/${articleId}/` : '/api/articles/';
@@ -1101,6 +1811,30 @@ function selectEditor(id){
 function filterEditors(val){ renderEditorList(val); }
 function updateBioCount(){const bio=document.getElementById('ed_bio'),badge=document.getElementById('ed_bio_count');if(bio&&badge)badge.textContent=bio.value.length+'/200';}
 
+function updateSubtitleCount(){
+  var inp   = document.getElementById('ui_subtitle');
+  var badge = document.getElementById('subtitle_count_badge');
+  var hint  = document.getElementById('subtitle_hint');
+  if (!inp) return;
+  var len = inp.value.length;
+  if (badge) badge.textContent = len + ' / 160';
+  if (badge) {
+    badge.style.color = len === 0 ? '#94a3b8' : len < 40 ? '#f59e0b' : len <= 160 ? '#10b981' : '#ef4444';
+  }
+  if (hint) {
+    hint.textContent = len === 0
+      ? 'Aim for 80–160 characters for best display.'
+      : len < 40
+      ? 'Too short — expand to at least 40 characters.'
+      : len <= 80
+      ? 'Good — can be longer for more detail.'
+      : len <= 160
+      ? '✓ Good subtitle length.'
+      : 'Too long — trim to 160 characters.';
+  }
+  updateEditorPreview();
+}
+
 function updateSmallAvatar(url){
   const img=document.getElementById('ed_avatar_img'),ph=document.getElementById('ed_avatar_placeholder');
   if(url){img.src=url;img.style.display='block';if(ph)ph.style.display='none';}
@@ -1114,7 +1848,6 @@ function updateEditorPreview(){
   const title    = document.getElementById('ui_title').value.trim();
   const subtitle = document.getElementById('ui_subtitle').value.trim();
 
-  // Preview ke liye: pehle actual file ka blob URL check karo, phir saved URL
   const imgPreviewEl = document.getElementById('img_preview');
   const image = (imgPreviewEl && imgPreviewEl.style.display !== 'none' && imgPreviewEl.src)
                   ? imgPreviewEl.src
@@ -1180,6 +1913,7 @@ document.querySelectorAll('.cat-item').forEach(el=>el.addEventListener('click',(
 renderEditorList();
 updateEditorPreview();
 updateBioCount();
+updateSubtitleCount();
 
 (function(){ const bio=document.getElementById('ed_bio'); if(bio){ const e=new Event('input'); bio.dispatchEvent(e); } })();
 </script>

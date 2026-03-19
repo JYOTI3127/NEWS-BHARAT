@@ -3705,7 +3705,12 @@ text-decoration: none;
   align-items: center;
   box-shadow: 0 2px 12px rgba(59, 130, 246, 0.08);
   row-gap: 5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;         /* Firefox */
+  -ms-overflow-style: none;      /* IE */
 }
+.nb-toolbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
 /* ── Toolbar buttons ── */
 .nb-toolbar button {
@@ -4212,7 +4217,6 @@ text-decoration: none;
 
 /* AI Button */
 .ai-spell-btn {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -4531,20 +4535,81 @@ text-decoration: none;
   color: var(--text);
 }
 
-/* Image Card */
+/* ──────────────────────────────────────────────
+   5. IMAGE DRAG & DROP — Fixed
+   File picker opens on click only,
+   drag-drop works properly on the zone
+────────────────────────────────────────────── */
 .image-drop {
-  border: 2px dashed var(--border);
+  position: relative;
+  border: 2px dashed var(--border, #cbd5e1);
   border-radius: 10px;
-  padding: 24px 16px;
+  padding: 28px 16px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--input-bg, #f8fafc);
+  /* Prevent the drop zone from intercepting pointer events on children */
+  overflow: hidden;
 }
+.image-drop:hover,
+.image-drop.drag-over {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.image-drop.drag-over {
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+.image-drop p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted, #64748b);
+  pointer-events: none;
+}
+.image-drop svg {
+  pointer-events: none;
+  color: var(--muted, #94a3b8);
+}
+ 
+/* Browse button inside drop zone */
+.dz-browse-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #2563eb;
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dz-browse-btn:hover { color: #1d4ed8; }
 
-.image-drop:hover {
-  border-color: var(--red);
-  background: var(--red-dim);
+/* ──────────────────────────────────────────────
+   7. FONT FAMILY SELECT — toolbar dropdown
+   Shows fonts in their own typeface in the list
+────────────────────────────────────────────── */
+.nb-font-select {
+  padding: 3px 6px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  max-width: 136px;
+  min-width: 90px;
+  height: 28px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  vertical-align: middle;
+}
+.nb-font-select:hover { border-color: #162c6b; }
+.nb-font-select:focus {
+  border-color: #162c6b;
+  box-shadow: 0 0 0 2px rgba(22,44,107,0.10);
 }
 
 .image-drop input {
@@ -4656,7 +4721,292 @@ text-decoration: none;
   color: var(--text);
 }
 
+/* ──────────────────────────────────────────────
+   6. AUTO-SAVE INDICATOR
+   Bottom-right corner mein floating badge
+────────────────────────────────────────────── */
+#nb_autosave_badge {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+#nb_autosave_badge.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+#nb_autosave_badge.saving {
+  background: #1e40af;
+  color: #dbeafe;
+}
+#nb_autosave_badge.saved {
+  background: #14532d;
+  color: #bbf7d0;
+}
+#nb_autosave_badge.error {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+ 
+.autosave-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.autosave-dot.pulse {
+  animation: nbPulse 0.9s ease-in-out infinite;
+}
+@keyframes nbPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+ 
+/* Timer countdown ring (optional — shown in badge) */
+.autosave-timer-text {
+  font-size: 10px;
+  opacity: 0.65;
+  margin-left: 2px;
+}
+
+/* ──────────────────────────────────────────────
+   3. TAGS CARD
+   Article tags — chip UI with add/remove
+────────────────────────────────────────────── */
+.tags-input-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.tags-input-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--input-bg, #f8fafc);
+  color: var(--text, #1e293b);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.tags-input-row input:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.tags-input-row button {
+  padding: 7px 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.tags-input-row button:hover { background: #1d4ed8; }
+ 
+.tags-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 0;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #2563eb;
+  cursor: default;
+  transition: background 0.15s;
+}
+.tag-chip:hover { background: #dbeafe; }
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: #bfdbfe;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 9px;
+  color: #1d4ed8;
+  font-weight: 700;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.tag-chip-remove:hover { background: #93c5fd; }
+ 
+.tags-empty-hint {
+  font-size: 11px;
+  color: var(--muted, #94a3b8);
+  padding: 2px 0;
+}
+.tags-suggestions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.tags-suggest-label {
+  font-size: 10px;
+  color: var(--muted, #94a3b8);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+.tag-suggest-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: var(--card-bg, #f8fafc);
+  border: 1px dashed var(--border, #cbd5e1);
+  border-radius: 20px;
+  font-size: 10px;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tag-suggest-chip:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+.tags-count-info {
+  font-size: 10px;
+  color: var(--muted, #94a3b8);
+  margin-top: 8px;
+}
+.tags-count-info span { color: #2563eb; font-weight: 600; }
+ 
+ 
+/* ──────────────────────────────────────────────
+   4. SECONDARY KEYWORDS
+   Focus keyword ke neeche — comma-separated tags
+────────────────────────────────────────────── */
+.sec-kw-input-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sec-kw-input-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--input-bg, #f8fafc);
+  color: var(--text, #1e293b);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.sec-kw-input-row input:focus {
+  border-color: #7c3aed;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+}
+.sec-kw-input-row button {
+  padding: 6px 12px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.sec-kw-input-row button:hover { background: #6d28d9; }
+ 
+.sec-kw-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 0;
+  margin-bottom: 6px;
+}
+.sec-kw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #7c3aed;
+  transition: background 0.15s;
+}
+.sec-kw-chip:hover { background: #ede9fe; }
+.sec-kw-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  background: #ddd6fe;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 8px;
+  color: #6d28d9;
+  font-weight: 700;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.sec-kw-chip-remove:hover { background: #c4b5fd; }
+.sec-kw-empty-hint {
+  font-size: 10px;
+  color: var(--muted, #94a3b8);
+  font-style: italic;
+}
+
 /* SEO Card */
+/* ──────────────────────────────────────────────
+   2. CANONICAL URL — Read-Only styling
+   Greyed out, cursor shows it's locked
+────────────────────────────────────────────── */
+.seo-inp.canonical-readonly {
+  background: var(--input-bg, #f1f5f9) !important;
+  color: var(--muted, #94a3b8) !important;
+  cursor: not-allowed !important;
+  border-color: var(--border, #e2e8f0) !important;
+  user-select: none;
+  font-style: italic;
+}
+.seo-inp.canonical-readonly:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--border, #e2e8f0) !important;
+}
+
 .seo-score-ring {
   display: flex;
   align-items: center;
@@ -14841,3 +15191,62 @@ tr.art-row td:has(.art-cat) {
 }
 .hpc-toggle input:checked + .hpc-toggle-slider             { background: #16a34a; }
 .hpc-toggle input:checked + .hpc-toggle-slider:before      { transform: translateX(16px); }
+
+
+.img-meta-fields {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.img-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.img-meta-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.img-meta-inp {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 12px;
+  background: #f8faff;
+  color: #1e293b;
+  outline: none;
+  font-family: inherit;
+  transition: border-color .2s, box-shadow .2s;
+  box-sizing: border-box;
+}
+.img-meta-inp:focus {
+  border-color: #162c6b;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(22,44,107,0.08);
+}
+
+/* ── Source view textarea (HTML mode) ── */
+#nb_source_ta {
+  width: 100%;
+  min-height: 380px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  padding: 12px;
+  border: 1.5px solid #162c6b;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+  background: #1e293b;
+  color: #e2e8f0;
+  box-sizing: border-box;
+}

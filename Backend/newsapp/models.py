@@ -24,14 +24,12 @@ class Permission(models.Model):
 
 from django.utils.text import slugify
 
-
 class Category(models.Model):
     name           = models.CharField(max_length=100)
     slug           = models.SlugField(max_length=100, unique=True, blank=True)
     description    = models.TextField(blank=True)
     status         = models.CharField(max_length=10, default='active')
     sub_categories = models.JSONField(default=list, blank=True)
-    # Format: [{"id": 1, "name": "Politics"}, {"id": 2, "name": "Economy"}]
 
     class Meta:
         verbose_name_plural = "categories"
@@ -63,6 +61,9 @@ class Article(models.Model):
     content  = models.TextField()
     image    = models.ImageField(upload_to="articles/", blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
+    # FIX 1: image_alt and image_source were already in model — confirmed present
+    image_alt    = models.CharField(max_length=200, blank=True, default='')
+    image_source = models.CharField(max_length=200, blank=True, default='')
  
     def get_image(self):
         if self.image:
@@ -105,9 +106,14 @@ class Article(models.Model):
     canonical_url    = models.URLField(blank=True)
     meta_description = models.TextField(blank=True)
     focus_keyword    = models.CharField(max_length=100, blank=True)
+    # FIX: secondary_keywords field
+    secondary_keywords = models.CharField(max_length=500, blank=True, default='')
     noindex          = models.BooleanField(default=False)
     nofollow         = models.BooleanField(default=False)
     in_sitemap       = models.BooleanField(default=True)
+
+    # ── Tags (comma-separated string stored, exposed as list via serializer) ──
+    tags = models.CharField(max_length=500, blank=True, default='')
  
     status   = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     priority = models.IntegerField(default=5)

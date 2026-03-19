@@ -37,7 +37,8 @@ const footerLinks = {
   ],
   MORE: [
     "Entertainment",
-    "60 Second Read"
+    "60 Second Read",
+    "Health"
   ]
 };
 

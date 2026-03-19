@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-import newsImg from "../assets/1770841302874.webp";
+import { useNavigate } from "react-router-dom";
 
-const slides = [
-  { id: 1, author: "Politics",     title: "Bondi Criticised After Saying All Epstein Files Have Been Released", category: "Politics",     image: newsImg },
-  { id: 2, author: "Environment",  title: "Climate Summit Reaches Historic Agreement on Carbon Emissions",       category: "Environment",  image: newsImg },
-  { id: 3, author: "Technology",   title: "Tech Giants Face New Antitrust Regulations Across Europe",           category: "Technology",   image: newsImg },
-  { id: 4, author: "World",        title: "Middle East Peace Talks Resume After Years of Stalemate",            category: "World",        image: newsImg },
-];
+const API_BASE = "https://api.news4bharat.com/api";
 
-const bottomNews = [
-  { id: 1, title: "What Is The Dart Frog Toxin Allegedly Used To Kill Alexei Navalny?",                        time: "1 hr ago",  region: "Europe"      },
-  { id: 2, title: "Female Israeli soldiers rescued after being chased by ultra-Orthodox men",                   time: "2 hrs ago", region: "Middle East" },
-  { id: 3, title: "'Dragged out and set on fire' – the Bangladesh mob killing that shocked the world",          time: "1 hr ago",  region: "Asia"        },
-];
+const timeAgo = (dateStr) => {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (hrs > 0)  return `${hrs} hr${hrs > 1 ? "s" : ""} ago`;
+  if (mins > 0) return `${mins} min${mins > 1 ? "s" : ""} ago`;
+  return "Just now";
+};
 
-/* ── Icons ── */
 const ArrowCircleIcon = () => (
   <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
     stroke="rgba(255,255,255,0.82)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -46,23 +46,71 @@ const ShareCircleIcon = () => (
 );
 
 export default function NewsBanner() {
-  const [current, setCurrent]   = useState(0);
-  const [animating, setAnimating] = useState(false);
-  const [direction, setDirection] = useState("next");
+  const navigate = useNavigate();
+
+  const [slides,     setSlides]     = useState([]);
+  const [bottomNews, setBottomNews] = useState([]);
+  const [current,    setCurrent]    = useState(0);
+  const [animating,  setAnimating]  = useState(false);
+  const [direction,  setDirection]  = useState("next");
 
   useEffect(() => {
+    fetch(`${API_BASE}/articles/`)
+      .then((r) => r.json())
+      .then((data) => {
+        const all = Array.isArray(data) ? data : (data.results || []);
+
+        const sorted = all
+          .filter((a) => a.status === "published" || a.image_url)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // Top 4 with image → slides
+        const withImg   = sorted.filter((a) => a.image_url);
+        const slideData = (withImg.length >= 4 ? withImg : sorted).slice(0, 4);
+
+        setSlides(slideData.map((a) => ({
+          id:       a.id,
+          slug:     a.slug,
+          author:   a.category_details?.[0]?.name || "News",
+          title:    a.title,
+          category: a.category_details?.[0]?.name || "News",
+          image:    a.image_url || a.image || newsImg,
+        })));
+
+        // Bottom news — pehle 3 articles (slides se alag)
+        const bottomArticles = sorted.slice(0, 3);
+        setBottomNews(bottomArticles.map((a) => ({
+          id:     a.id,
+          slug:   a.slug,
+          title:  a.title,
+          desc:   a.subtitle || "",
+          time:   timeAgo(a.published_at || a.created_at),
+          region: a.category_details?.[0]?.name || "News",
+        })));
+      })
+      .catch(() => {
+        // API fail → kuch nahi dikhega
+        setSlides([]);
+        setBottomNews([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (slides.length === 0) return;
     const interval = setInterval(() => {
       goTo((current + 1) % slides.length, "next");
     }, 5000);
     return () => clearInterval(interval);
-  }, [current]);
+  }, [current, slides.length]);
 
   const goTo = (index, dir = "next") => {
-    if (animating || index === current) return;
+    if (animating || index === current || slides.length === 0) return;
     setDirection(dir);
     setAnimating(true);
     setTimeout(() => { setCurrent(index); setAnimating(false); }, 600);
   };
+
+  if (slides.length === 0) return null;
 
   const slide = slides[current];
 
@@ -70,22 +118,18 @@ export default function NewsBanner() {
     <div className="nb-root">
       <div className="nb-container">
 
-        {/* Background image */}
         <img
           key={current}
           src={slide.image}
           alt={slide.title}
           className={`nb-bg absolute inset-0 w-full h-full object-cover object-top z-0 transform transition-all duration-500 ease-linear ${animating ? "opacity-0" : "opacity-100"} ${animating ? (direction === "next" ? "translate-x-8 scale-[1.02]" : "-translate-x-8 scale-[1.02]") : "translate-x-0 scale-100"}`}
+          onError={(e) => { e.target.src = newsImg; }}
         />
 
-        {/* Gradient overlay */}
         <div className="nb-gradient-overlay" />
 
-        {/* Content */}
-        <div
-          className={`nb-inner transform transition-all duration-500 delay-100 ease-linear ${animating ? "opacity-0 translate-y-[10px]" : "opacity-100 translate-y-0"}`}
-        >
-          {/* Hero */}
+        <div className={`nb-inner transform transition-all duration-500 delay-100 ease-linear ${animating ? "opacity-0 translate-y-[10px]" : "opacity-100 translate-y-0"}`}>
+
           <div className="nb-hero">
             <div className="nb-author-row">
               <div className="nb-redbar" />
@@ -94,18 +138,26 @@ export default function NewsBanner() {
             <h1 className="nb-headline">{slide.title}</h1>
             <div className="nb-separator" />
             <div className="nb-actions">
-              <button className="nb-pill"><ArrowCircleIcon /><span>Read More</span></button>
+              <button className="nb-pill" onClick={() => { if (slide.slug) navigate(`/article/${slide.slug}`); }}>
+                <ArrowCircleIcon /><span>Read More</span>
+              </button>
               <button className="nb-pill"><PlayCircleIcon /><span>Watch Video</span></button>
-              <button className="nb-pill"><ShareCircleIcon /><span>Share</span></button>
+              <button className="nb-pill" onClick={() => navigator.clipboard?.writeText(window.location.origin + `/article/${slide.slug}`)}>
+                <ShareCircleIcon /><span>Share</span>
+              </button>
             </div>
           </div>
 
-          {/* Bottom news */}
           <div className="nb-bottom">
             {bottomNews.map((item) => (
-              <div key={item.id} className="nb-news-card">
-                <p className="nb-news-title">{item.title}</p>
-                <div className="nb-news-meta">
+              <div
+                key={item.id}
+                className="nb-news-card"
+                style={{ cursor: item.slug ? "pointer" : "default" }}
+                onClick={() => { if (item.slug) navigate(`/article/${item.slug}`); }}
+              >
+                <p className="nb-news-title" style={{ color: "#ffffff" }}>{item.title}</p>
+                <div className="nb-news-meta" style={{ color: "rgba(255,255,255,0.6)" }}>
                   <span>{item.time}</span>
                   <span className="nb-meta-sep">|</span>
                   <span>{item.region}</span>
@@ -113,8 +165,8 @@ export default function NewsBanner() {
               </div>
             ))}
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

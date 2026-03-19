@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 
 export default function ArticleCard({ article }) {
   const {
-    id,
     title,
     subtitle,
     category_details,
@@ -13,7 +12,6 @@ export default function ArticleCard({ article }) {
     slug,
   } = article;
 
-  // image_url from API is already a full URL (e.g. https://api.news4bharat.com/media/...)
   const imageUrl = image_url || null;
 
   const date = published_at || created_at;
@@ -25,10 +23,9 @@ export default function ArticleCard({ article }) {
       })
     : "";
 
-  // Use slug if available, fallback to id
-  const articlePath = slug ? `/article/${slug}` : `/article/${id}`;
+  // ✅ Sirf slug — ID hata diya
+  const articlePath = `/article/${slug}`;
 
-  // First category for badge
   const primaryCategory = category_details?.[0];
 
   return (

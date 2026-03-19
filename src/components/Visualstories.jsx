@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     FaChevronLeft,
     FaChevronRight,
@@ -6,57 +7,12 @@ import {
     FaCircle,
 } from "react-icons/fa6";
 
-const stories = [
-  {
-    id: 1,
-    img: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 2,
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 3,
-    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 4,
-    img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 5,
-    img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 6,
-    img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 7,
-    img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-  {
-    id: 8,
-    img: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=200&h=280&fit=crop",
-    text: "In the 1500s, a lion introduced a new kind of call, bringing a fresh change to the land...",
-  },
-];
+const API_BASE = "https://api.news4bharat.com/api";
+const CATEGORY_SLUG = "bharat-economy"; // Bharat Economy & Business
 
 const tabs = ["Live", "Upcoming", "Recent"];
 
 // ── Responsive config ─────────────────────────────────────────
-// S(320) M(375) L(425) → mobile: 2 cards, stacked layout
-// Tablet(768)          → 4 cards, side by side
-// Laptop(1024)         → 5 cards, side by side
-// Laptop L(1440) + 4K  → 6 cards, side by side
-
 const useBreakpoint = () => {
     const [bp, setBp] = useState(() => {
         if (typeof window === "undefined") return "laptop";
@@ -85,7 +41,7 @@ const useBreakpoint = () => {
 const VISIBLE_MAP = {
     mobile: 2,
     tablet: 4,
-    laptop: 5,
+    laptop: 6,
     large: 6,
 };
 
@@ -121,8 +77,8 @@ const MatchCard = ({ match, type }) => {
                         </span>
                     )}
                 </div>
-                <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">{match.name}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{match.venue}</p>
+                <p className="text-[11px] text-gray-600 leading-snug line-clamp-2">{match.name}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">{match.venue}</p>
                 {isLive ? (
                     <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-0.5">
                         <FaCirclePlay size={10} /> Match is ongoing
@@ -138,11 +94,11 @@ const MatchCard = ({ match, type }) => {
                         {team1?.img && (
                             <img
                                 src={team1.img} alt={team1.shortname}
-                                className="w-8 h-8 rounded-sm border border-gray-200 object-contain mb-1 bg-white"
+                                className="w-13 h-13 rounded-sm border border-gray-200 object-contain mb-1 bg-white"
                                 onError={e => { e.target.style.display = "none"; }}
                             />
                         )}
-                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide pl-2">
                             {team1?.shortname || match.teams[0]}
                         </p>
                         {score1 ? (
@@ -164,17 +120,17 @@ const MatchCard = ({ match, type }) => {
                             <div className="flex justify-end mb-1">
                                 <img
                                     src={team2.img} alt={team2.shortname}
-                                    className="w-8 h-8 rounded-sm border border-gray-200 object-contain bg-white"
+                                    className="w-13 h-13 rounded-sm border border-gray-200 object-contain bg-white"
                                     onError={e => { e.target.style.display = "none"; }}
                                 />
                             </div>
                         )}
-                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide pr-3">
                             {team2?.shortname || match.teams[1]}
                         </p>
                         {score2 ? (
                             <>
-                                <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{score2.r}/{score2.w}</p>
+                                <p className="text-sm font-semibold text-gray-900 whitespace-nowrap pr-2">{score2.r}/{score2.w}</p>
                                 <p className="text-[10px] text-gray-400">({score2.o} OV)</p>
                             </>
                         ) : (
@@ -221,26 +177,75 @@ const MultiMatch = ({ matches, type }) => {
     );
 };
 
+// ── Skeleton Card ─────────────────────────────────────────────
+const SkeletonCard = ({ visible }) => (
+    <>
+        {Array.from({ length: visible }).map((_, i) => (
+            <div
+                key={i}
+                className="flex-shrink-0 border border-gray-200 rounded-lg bg-white"
+                style={{ width: `calc((100% - ${(visible - 1) * 8}px) / ${visible})` }}
+            >
+                <div
+                    className="w-full rounded-md overflow-hidden bg-gray-200 animate-pulse"
+                    style={{ aspectRatio: "3/4" }}
+                />
+                <div className="p-1.5 space-y-1">
+                    <div className="h-2 bg-gray-200 rounded animate-pulse w-full" />
+                    <div className="h-2 bg-gray-200 rounded animate-pulse w-3/4" />
+                </div>
+            </div>
+        ))}
+    </>
+);
+
 // ── Main Component ────────────────────────────────────────────
 export default function VisualStoriesWithScore() {
     const bp = useBreakpoint();
     const VISIBLE = VISIBLE_MAP[bp];
+    const navigate = useNavigate();
 
     const [offset, setOffset] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [cricketData, setCricketData] = useState({ live: [], upcoming: [], recent: [] });
-    const [loading, setLoading] = useState(true);
+    const [cricketLoading, setCricketLoading] = useState(true);
+
+    // ── API: Bharat Economy & Business articles ───────────────
+    const [stories, setStories] = useState([]);
+    const [storiesLoading, setStoriesLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${API_BASE}/articles/`)
+            .then((r) => r.json())
+            .then((data) => {
+                const all = Array.isArray(data) ? data : (data.results || []);
+
+                // Filter by bharat-economy category slug
+                const filtered = all.filter((a) =>
+                    Array.isArray(a.category_details) &&
+                    a.category_details.some((c) => c.slug === CATEGORY_SLUG)
+                );
+
+                // Newest first
+                const sorted = filtered.sort(
+                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+                );
+
+                setStories(sorted);
+                setStoriesLoading(false);
+            })
+            .catch(() => setStoriesLoading(false));
+    }, []);
 
     const isMobile = bp === "mobile";
 
-    // Reset offset when VISIBLE changes (screen resize)
-    useEffect(() => {
-        setOffset(0);
-    }, [VISIBLE]);
+    // Reset offset on resize or new data
+    useEffect(() => { setOffset(0); }, [VISIBLE, stories.length]);
 
     const canPrev = offset > 0;
     const canNext = offset < stories.length - VISIBLE;
 
+    // Cricket scores
     useEffect(() => {
         const fetchScores = async () => {
             try {
@@ -253,7 +258,7 @@ export default function VisualStoriesWithScore() {
             } catch (e) {
                 console.error("Cricket API error:", e);
             } finally {
-                setLoading(false);
+                setCricketLoading(false);
             }
         };
         fetchScores();
@@ -261,10 +266,9 @@ export default function VisualStoriesWithScore() {
         return () => clearInterval(interval);
     }, []);
 
-    const tabData = [cricketData.live, cricketData.upcoming, cricketData.recent];
+    const tabData  = [cricketData.live, cricketData.upcoming, cricketData.recent];
     const tabTypes = ["live", "upcoming", "recent"];
 
-    // ── Score card width per breakpoint
     const scoreCardWidth = {
         mobile: "100%",
         tablet: "220px",
@@ -272,13 +276,11 @@ export default function VisualStoriesWithScore() {
         large: "220px",
     }[bp];
 
+    // Visible stories slice
+    const visibleStories = stories.slice(offset, offset + VISIBLE);
+
     return (
-        <div
-            className="font-sans"
-            style={{ margin: "0 3% 22px" }}
-        >
-            {/* Mobile(320-425): stacked — stories on top, score below */}
-            {/* Tablet+(768+): side by side */}
+        <div className="font-sans" style={{ margin: "0 3% 22px" }}>
             <div className={`flex gap-3 ${isMobile ? "flex-col" : "flex-row items-start"}`}>
 
                 {/* ── Left: Visual Stories ── */}
@@ -290,7 +292,7 @@ export default function VisualStoriesWithScore() {
                             className="font-bold text-[#111] uppercase"
                             style={{ fontSize: isMobile ? "14px" : "18px" }}
                         >
-                            Visual Stories
+                            Bharat Economy & Business
                         </span>
                     </div>
 
@@ -313,34 +315,48 @@ export default function VisualStoriesWithScore() {
                             className="flex gap-2 overflow-hidden border border-gray-300"
                             style={{ padding: "8px", borderRadius: "10px" }}
                         >
-                            {stories.slice(offset, offset + VISIBLE).map((story) => (
-                                <div
-                                    key={story.id}
-                                    className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white"
-                                    style={{
-                                        width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
-                                    }}
-                                >
-                                    <div
-                                        className="w-full rounded-md overflow-hidden border border-gray-200"
-                                        style={{ aspectRatio: "3/4", position: "relative" }}
-                                    >
-                                        <img
-                                            src={story.img}
-                                            alt=""
-                                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
-                                            style={{ border: "none", outline: "none" }}
-                                        />
-                                        <div
-                                            className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-500 ease-in-out"
-                                      
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-gray-500 group-hover:text-[#D80100] mt-1 leading-snug line-clamp-3 p-[5px] transition-colors duration-300">
-                                        {story.text}
-                                    </p>
+                            {storiesLoading ? (
+                                <SkeletonCard visible={VISIBLE} />
+                            ) : stories.length === 0 ? (
+                                // No articles yet — empty state
+                                <div className="flex-1 flex items-center justify-center py-10 text-[12px] text-gray-400">
+                                    No articles in this category yet.
                                 </div>
-                            ))}
+                            ) : (
+                                visibleStories.map((article) => (
+                                    <div
+                                        key={article.id}
+                                        className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white"
+                                        style={{
+                                            width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
+                                        }}
+                                        onClick={() => navigate(`/article/${article.slug}`)}
+                                    >
+                                        <div
+                                            className="w-full rounded-md overflow-hidden border border-gray-200"
+                                            style={{ aspectRatio: "3/4", position: "relative" }}
+                                        >
+                                            {article.image_url ? (
+                                                <img
+                                                    src={article.image_url}
+                                                    alt={article.title}
+                                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+                                                    onError={(e) => { e.target.style.display = "none"; }}
+                                                />
+                                            ) : (
+                                                // No image fallback
+                                                <div className="absolute inset-0 w-full h-full bg-gray-100 flex items-center justify-center">
+                                                    <span className="text-[10px] text-gray-400 text-center px-1">No Image</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-black transition-opacity duration-500 ease-in-out" />
+                                        </div>
+                                        <p className="text-[9px] text-gray-500 group-hover:text-[#D80100] mt-1 leading-snug line-clamp-3 p-[5px] transition-colors duration-300">
+                                            {article.subtitle ? article.subtitle.slice(0, 100) : article.title}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </div>
 
                         {/* Next */}
@@ -362,10 +378,8 @@ export default function VisualStoriesWithScore() {
                     className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
                     style={{
                         width: scoreCardWidth,
-                        // Mobile: no top margin (stacked layout)
-                        // Tablet+: align with carousel (not header)
                         marginTop: isMobile ? "12px" : "3%",
-                        // Mobile: full width already handled by width:100%
+                        height: "278px",
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
@@ -388,7 +402,7 @@ export default function VisualStoriesWithScore() {
                     </div>
 
                     {/* Content */}
-                    {loading ? (
+                    {cricketLoading ? (
                         <div className="px-2.5 py-4 text-center text-[11px] text-gray-400 animate-pulse">
                             Loading scores...
                         </div>

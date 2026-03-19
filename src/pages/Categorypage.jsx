@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import {
-  Clock, User, TrendingUp, ChevronRight, Flame,
-  Globe, BarChart2, Cpu, Trophy, FileText, PenLine,
-  Zap, Newspaper, RefreshCw, BookOpen, Eye,
+  Clock, User, TrendingUp, ChevronRight,
+  Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
 
 const API_BASE = "https://api.news4bharat.com/api";
@@ -17,11 +16,19 @@ const formatViews = (v) => {
   return v.toString();
 };
 
+const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
+
 export default function CategoryPage() {
   const { slug } = useParams();
-  const [category, setCategory] = useState(null);
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  // URL se subcategory nikalo: /category/bharat-economy?subcategory=Banking
+  const searchParams  = new URLSearchParams(location.search);
+  const subFilter     = searchParams.get("subcategory") || "";
+
+  const [category, setCategory]     = useState(null);
+  const [articles, setArticles]     = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
@@ -51,13 +58,35 @@ export default function CategoryPage() {
           )
         );
 
-        const normalized = filtered.map((a) => ({
+        // ✅ Newest first — created_at se sort
+        const sorted = filtered.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        // ✅ Subcategory filter — ?subcategory=Banking
+        const finalArticles = subFilter
+          ? sorted.filter((a) => {
+              // selected_subcategories mein check karo
+              const selectedSubs = a.selected_subcategories || {};
+              const allSelected  = Object.values(selectedSubs).flat();
+              if (allSelected.length > 0) {
+                return allSelected.some(
+                  (s) => s.toLowerCase() === subFilter.toLowerCase()
+                );
+              }
+              // Fallback: title/content mein search
+              const text = `${a.title} ${a.subtitle || ""} ${stripHtml(a.content || "")}`.toLowerCase();
+              return text.includes(subFilter.toLowerCase());
+            })
+          : sorted;
+
+        const normalized = finalArticles.map((a) => ({
           ...a,
-          // API already returns full URLs (https://api.news4bharat.com/media/...)
           image: a.image_url || a.image || null,
           author: (typeof a.author === "object" ? a.author?.username : a.author) || "News4Bharat",
           description: a.subtitle || (a.content ? a.content.slice(0, 150) : ""),
         }));
+
         setArticles(normalized);
       } catch (err) {
         console.error("Articles fetch error:", err);
@@ -69,10 +98,10 @@ export default function CategoryPage() {
     fetchData();
   }, [slug]);
 
-  const heroArticle = articles[0] || null;
-  const gridArticles = articles.slice(1, visibleCount + 1);
-  const trendingTop5 = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
-  const hasMore = visibleCount + 1 < articles.length;
+  const heroArticle   = articles[0] || null;
+  const gridArticles  = articles.slice(1, visibleCount + 1);
+  const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+  const hasMore       = visibleCount + 1 < articles.length;
 
   if (loading) {
     return (
@@ -90,7 +119,7 @@ export default function CategoryPage() {
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
-            {category?.name || slug}
+            {subFilter ? `${category?.name || slug} › ${subFilter}` : (category?.name || slug)}
           </h1>
           {category?.description && (
             <p className="text-[13px] text-[#666] mb-2 leading-[1.6]">{category.description}</p>
@@ -107,9 +136,12 @@ export default function CategoryPage() {
         {/* LEFT MAIN CONTENT */}
         <div className="min-w-0">
 
-          {/* Hero Article */}
+          {/* Hero Article — newest article */}
           {heroArticle && (
-            <Link to={`/article/${heroArticle.slug || heroArticle.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            <Link
+              to={`/article/${heroArticle.slug}`}
+              style={{ textDecoration: "none", color: "inherit", display: "block" }}
+            >
               <div className="bg-white rounded-[12px] overflow-hidden shadow-[0_2px_14px_rgba(0,0,0,0.08)] mb-7 hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)] transition-shadow duration-200">
                 <div className="relative w-full h-[220px] sm:h-[280px] lg:h-[320px] overflow-hidden">
                   {heroArticle.image
@@ -162,7 +194,7 @@ export default function CategoryPage() {
               {gridArticles.map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}`}
+                  to={`/article/${article.slug}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
@@ -225,7 +257,7 @@ export default function CategoryPage() {
               {trendingTop5.map((article, idx) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}`}
+                  to={`/article/${article.slug}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 min-w-[260px] lg:min-w-0">
@@ -254,7 +286,7 @@ export default function CategoryPage() {
               {articles.slice(0, 4).map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}`}
+                  to={`/article/${article.slug}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">

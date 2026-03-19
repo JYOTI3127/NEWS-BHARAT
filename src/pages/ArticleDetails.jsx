@@ -160,18 +160,7 @@ export default function ArticleDetails() {
                 <Clock size={13} /> {formatDate(date)}
               </span>
             )}
-            {/* All categories */}
-            <div className="flex flex-wrap gap-2 ml-auto">
-              {article.category_details?.map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/category/${cat.slug}`}
-                  className="text-[11px] bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-500 font-medium px-2 py-0.5 rounded transition-colors"
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
+
           </div>
 
           {/* Hero Image */}

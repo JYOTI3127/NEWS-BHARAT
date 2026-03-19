@@ -1,91 +1,28 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
-// ── DATA ──────────────────────────────────────────────────────
-const trendingTopics = [
-  "Breaking News","Politics Today","Latest India News","World Headlines",
-  "Business Updates","Stock Market","Technology News","Entertainment Buzz",
-  "Bollywood News","Sports Highlights","Cricket Updates","Weather Today","Elections 2026",
-];
+const API_URL        = "https://api.news4bharat.com/api/articles/";
+const CATEGORIES_URL = "https://api.news4bharat.com/api/categories/";
 
-const latestNews = [
-  { id: 1, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 2, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 3, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 4, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 5, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 6, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 7, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-  { id: 8, title: "Lorem Ipsum Dolor Sit Amet Consetetur Sadipscing", desc: "Elitr Sed Diam Nonumy Eirmod Tempor Invidunt Ut Labore" },
-];
+// ── Helpers ───────────────────────────────────────────────────
+const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 
-const featureCards = [
-  { id: 1, image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&q=80", title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." },
-  { id: 2, image: "https://images.unsplash.com/photo-1482731215275-a1f151646268?w=600&q=80", title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." },
-  { id: 3, image: "https://images.unsplash.com/photo-1578496781379-7dcfb995293d?w=600&q=80", title: "The story of Nikhil Gupta remains unclear, but when CIA agents were caught ..." },
-];
-
-const liveUpdates = [
-  { id: 1, title: "Markets Open", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 2, title: "Sensex Surges", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 3, title: "Oil Prices Steady", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 4, title: "Rupee Strengthens", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 5, title: "IT Sector Update", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 6, title: "Gold Retreats", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 7, title: "Bond Yields Rise", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-  { id: 8, title: "FII Activity", text: "It was a small question, yet nearly 3,000 people showed up. They came. They came." },
-];
-const bannerSlides = [
-  {
-    leftBgClass: "bg-[#1e5c42]",
-    brand1: "PRATIYOGITA", brand2: "DARPAN",
-    price: "PRICE ₹125.00", date: "FEBRUARY 2024",
-    tagline: "WHERE EXCELLENCE GUIDES THE SUCCESS",
-    midBgClass: "bg-[#f5a000]", midTag: "Semi Annual", midBoxBgClass: "bg-[#6a1fa2]",
-    midL1: "Current", midL2: "Affairs", midL3: "Special",
-    rightBgClass: "bg-[#f5e000]", rl: "MOST USEFUL FOR", rb: "UNION & STATE", rs: "CIVIL SERVICES EXAM",
-  },
-  {
-    leftBgClass: "bg-[#0d3b6e]",
-    brand1: "COMPETITION", brand2: "TIMES",
-    price: "PRICE ₹150.00", date: "MARCH 2024",
-    tagline: "YOUR GATEWAY TO SUCCESS",
-    midBgClass: "bg-[#e53935]", midTag: "Annual", midBoxBgClass: "bg-[#b71c1c]",
-    midL1: "General", midL2: "Knowledge", midL3: "Special",
-    rightBgClass: "bg-[#b2fab4]", rl: "BEST RESOURCE FOR", rb: "SSC & BANKING", rs: "EXAMINATION PREP",
-  },
-  {
-    leftBgClass: "bg-[#1a1a2e]",
-    brand1: "CAREER", brand2: "LAUNCHER",
-    price: "PRICE ₹99.00", date: "APRIL 2024",
-    tagline: "LAUNCHING CAREERS SINCE 1995",
-    midBgClass: "bg-[#7b1fa2]", midTag: "Monthly", midBoxBgClass: "bg-[#4a148c]",
-    midL1: "Reasoning", midL2: "& Aptitude", midL3: "Special",
-    rightBgClass: "bg-[#ffe082]", rl: "TOP CHOICE FOR", rb: "UPSC & STATE PSC", rs: "ASPIRANTS NATIONWIDE",
-  },
-];
-
-// ── Circle Arrow Icon ─────────────────────────────────────────
-const ArrowBtn = ({ direction, disabled, onClick }) => {
-  const baseClass = "w-8 h-8 min-w-[32px] min-h-[32px] flex items-center justify-center box-border select-none";
-  const stateClass = disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer";
-
-  return (
-    <div onClick={disabled ? undefined : onClick} className={`${baseClass} ${stateClass}`}>
-      <svg
-        width="32" height="32" viewBox="0 0 32 32"
-        fill="none" xmlns="http://www.w3.org/2000/svg"
-        className="block overflow-visible"
-      >
-        <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#999999" strokeWidth="1" />
-        {direction === "left" ? (
-          <path d="M19 10L13 16L19 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-        ) : (
-          <path d="M13 10L19 16L13 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-        )}
-      </svg>
-    </div>
-  );
-};
+// ── Icons ─────────────────────────────────────────────────────
+const ArrowBtn = ({ direction, disabled, onClick }) => (
+  <div
+    onClick={disabled ? undefined : onClick}
+    className={`w-8 h-8 min-w-[32px] flex items-center justify-center select-none ${
+      disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+    }`}
+  >
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#999999" strokeWidth="1" />
+      {direction === "left"
+        ? <path d="M19 10L13 16L19 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        : <path d="M13 10L19 16L13 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  </div>
+);
 
 const FlameSvg = () => (
   <svg width={22} height={30} viewBox="0 0 22 30">
@@ -102,89 +39,68 @@ if (typeof document !== "undefined" && !document.getElementById("poppins-font"))
   document.head.appendChild(link);
 }
 
-// ── Trending Bar ──────────────────────────────────────────────
-function TrendingBar() {
-  const GAP = 8;
-  const [startIdx, setStartIdx] = useState(0);
-  const [translateX, setTranslateX] = useState(0);
-  const [canPrev, setCanPrev] = useState(false);
-  const [canNext, setCanNext] = useState(false);
-  const itemRefs = useRef([]);
-  const outerRef = useRef(null);
+// ── API Hook ──────────────────────────────────────────────────
+function useArticles() {
+  const [articles,   setArticles]   = useState([]);
+  const [categories, setCategories] = useState([]); // [{ name, slug }]
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
 
-  // startIdx ya items mount hone ke baad recalculate karo
   useEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
+    Promise.all([
+      fetch(API_URL).then((r) => { if (!r.ok) throw new Error("Articles API error"); return r.json(); }),
+      fetch(CATEGORIES_URL).then((r) => r.ok ? r.json() : []).catch(() => []),
+    ])
+      .then(([articleData, catData]) => {
 
-    // translateX calculate karo
-    let px = 0;
-    for (let i = 0; i < startIdx; i++) {
-      const el = itemRefs.current[i];
-      if (el) px += el.offsetWidth + GAP;
-    }
-    setTranslateX(px);
+        // ── Articles: newest first ──────────────────────────
+        const published = Array.isArray(articleData)
+          ? articleData
+              .filter((a) => a.status === "published" || a.image_url)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          : [];
+        setArticles(published);
 
-    // canPrev
-    setCanPrev(startIdx > 0);
+        // ── Categories: { name, slug } ──────────────────────
+        const fromApi = Array.isArray(catData)
+          ? catData
+              .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
+              .map((c) => ({ name: c.name || c.title, slug: c.slug }))
+          : [];
 
-    // canNext: startIdx se aage ke items ki total width > outer visible width?
-    const outerWidth = outer.clientWidth;
-    let remaining = 0;
-    for (let i = startIdx; i < trendingTopics.length; i++) {
-      const el = itemRefs.current[i];
-      if (el) remaining += el.offsetWidth + GAP;
-    }
-    setCanNext(remaining - GAP > outerWidth);
+        if (fromApi.length > 0) {
+          setCategories(fromApi);
+        } else {
+          // Fallback: articles ke category_details se nikalo
+          const seen = new Set();
+          const fromArticles = [];
+          published.forEach((a) => {
+            (a.category_details || []).forEach((cat) => {
+              if (cat.name && !seen.has(cat.name)) {
+                seen.add(cat.name);
+                fromArticles.push({ name: cat.name, slug: cat.slug || "" });
+              }
+            });
+          });
+          setCategories(fromArticles);
+        }
 
-  }, [startIdx]);
+        setLoading(false);
+      })
+      .catch((e) => { setError(e.message); setLoading(false); });
+  }, []);
 
-  // Mount ke baad bhi ek baar run karo (itemRefs populate hone ke liye)
-  useEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
-    const outerWidth = outer.clientWidth;
-    let total = 0;
-    for (let i = 0; i < trendingTopics.length; i++) {
-      const el = itemRefs.current[i];
-      if (el) total += el.offsetWidth + GAP;
-    }
-    setCanNext(total - GAP > outerWidth);
-  }, []); // only on mount
+  return { articles, categories, loading, error };
+}
 
+// ── Skeleton ──────────────────────────────────────────────────
+function Skeleton({ h = "16px", w = "100%", mb = "8px" }) {
   return (
-    <div className="tn-trending-bar">
-      <div className="tn-trending-label">
-        <div className="tn-trending-label-line">TRENDING NEWS :</div>
-      </div>
-
-      <ArrowBtn direction="left" disabled={!canPrev} onClick={() => setStartIdx(i => i - 1)} />
-
-      <div ref={outerRef} style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            gap: `${GAP}px`,
-            transform: `translateX(-${translateX}px)`,
-            transition: "transform 0.35s ease",
-            width: "max-content",
-          }}
-        >
-          {trendingTopics.map((t, i) => (
-            <button
-              key={i}
-              ref={el => { itemRefs.current[i] = el; }}
-              className="tn-topic-btn"
-              style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <ArrowBtn direction="right" disabled={!canNext} onClick={() => setStartIdx(i => i + 1)} />
-    </div>
+    <div style={{
+      height: h, width: w, marginBottom: mb, borderRadius: 4,
+      background: "linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)",
+      backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+    }} />
   );
 }
 
@@ -198,40 +114,166 @@ function SecHeader({ title }) {
   );
 }
 
+// ── Trending Bar ──────────────────────────────────────────────
+// Category button click → /category/:slug
+function TrendingBar({ categories }) {
+  const navigate = useNavigate();
+  const GAP = 8;
+  const [startIdx,   setStartIdx]   = useState(0);
+  const [translateX, setTranslateX] = useState(0);
+  const [canPrev,    setCanPrev]    = useState(false);
+  const [canNext,    setCanNext]    = useState(false);
+  const itemRefs = useRef([]);
+  const outerRef = useRef(null);
+
+  const topics = categories.length > 0 ? categories : [{ name: "Loading...", slug: "" }];
+
+  useEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+    let px = 0;
+    for (let i = 0; i < startIdx; i++) {
+      const el = itemRefs.current[i];
+      if (el) px += el.offsetWidth + GAP;
+    }
+    setTranslateX(px);
+    setCanPrev(startIdx > 0);
+    const outerWidth = outer.clientWidth;
+    let remaining = 0;
+    for (let i = startIdx; i < topics.length; i++) {
+      const el = itemRefs.current[i];
+      if (el) remaining += el.offsetWidth + GAP;
+    }
+    setCanNext(remaining - GAP > outerWidth);
+  }, [startIdx, topics.length]);
+
+  useEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+    const outerWidth = outer.clientWidth;
+    let total = 0;
+    for (let i = 0; i < topics.length; i++) {
+      const el = itemRefs.current[i];
+      if (el) total += el.offsetWidth + GAP;
+    }
+    setCanNext(total - GAP > outerWidth);
+  }, [topics.length]);
+
+  return (
+    <div className="tn-trending-bar">
+      <div className="tn-trending-label">
+        <div className="tn-trending-label-line">TRENDING NEWS :</div>
+      </div>
+      <ArrowBtn direction="left" disabled={!canPrev} onClick={() => setStartIdx((i) => i - 1)} />
+      <div ref={outerRef} style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+        <div style={{
+          display: "flex", gap: `${GAP}px`,
+          transform: `translateX(-${translateX}px)`,
+          transition: "transform 0.35s ease", width: "max-content",
+        }}>
+          {topics.map((cat, i) => (
+            <button
+              key={i}
+              ref={(el) => { itemRefs.current[i] = el; }}
+              className="tn-topic-btn"
+              style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+              onClick={() => { if (cat.slug) navigate(`/category/${cat.slug}`); }}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ArrowBtn direction="right" disabled={!canNext} onClick={() => setStartIdx((i) => i + 1)} />
+    </div>
+  );
+}
+
 // ── Latest News ───────────────────────────────────────────────
-function LatestNews() {
+// Article click → /article/:slug
+function LatestNews({ articles, loading }) {
+  const navigate = useNavigate();
+
   return (
     <div className="tn-latest-news">
       <SecHeader title="LATEST NEWS" />
       <div className="tn-latest-scroll">
-        {latestNews.map((n) => (
-          <div key={n.id} className="tn-latest-item">
-            <div className="tn-latest-item-title">{n.title}</div>
-            <div className="tn-latest-item-desc">{n.desc}</div>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
+                <Skeleton h="13px" w="90%" mb="6px" />
+                <Skeleton h="11px" w="70%" mb="0" />
+              </div>
+            ))
+          : articles.length === 0
+          ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+          : articles.map((article) => {
+              const desc = article.subtitle
+                ? article.subtitle
+                : stripHtml(article.content);
+              return (
+                <div
+                  key={article.id}
+                  className="tn-latest-item"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => navigate(`/article/${article.slug}`)}
+                >
+                  <div className="tn-latest-item-title">
+                    {article.title || "Untitled"}
+                  </div>
+                  <div className="tn-latest-item-desc">
+                    {desc.slice(0, 160)}{desc.length > 160 ? "..." : ""}
+                  </div>
+                </div>
+              );
+            })}
       </div>
     </div>
   );
 }
 
 // ── Feature Cards ─────────────────────────────────────────────
-function FeatureCards() {
-  const [hov, setHov] = useState(null);
+// Card click → /article/:slug
+function FeatureCards({ articles, loading }) {
+  const navigate  = useNavigate();
+  const withImage = articles.filter((a) => a.image_url);
+  const cards     = withImage.slice(0, 3);
+
+  if (loading) {
+    return (
+      <div className="tn-feature-cards">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="tn-feature-card">
+            <div className="tn-feature-card-img-wrap" style={{ background: "#e8e8e8" }} />
+            <div className="tn-feature-card-body" style={{ padding: "10px 12px" }}>
+              <Skeleton h="13px" w="90%" mb="4px" />
+              <Skeleton h="11px" w="70%" mb="0" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="tn-feature-cards">
-      {featureCards.map((c) => (
+      {cards.map((card) => (
         <div
-          key={c.id}
-          onMouseEnter={() => setHov(c.id)}
-          onMouseLeave={() => setHov(null)}
+          key={card.id}
           className="tn-feature-card"
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate(`/article/${card.slug}`)}
         >
           <div className="tn-feature-card-img-wrap">
-            <img src={c.image} alt="" />
+            <img
+              src={card.image_url}
+              alt={card.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
           </div>
           <div className="tn-feature-card-body">
-            <div className="tn-feature-card-title">{c.title}</div>
+            <div className="tn-feature-card-title">{card.title}</div>
           </div>
         </div>
       ))}
@@ -239,30 +281,34 @@ function FeatureCards() {
   );
 }
 
-// ── 60 Seconds ──────────────────────────────────────────────
-function LiveUpdates() {
-  const scrollRef = useRef(null);
-  const animRef = useRef(null);
+// ── 60 Seconds ────────────────────────────────────────────────
+// Item click → /60-seconds/:slug
+function LiveUpdates({ articles, loading }) {
+  const navigate      = useNavigate();
+  const scrollRef     = useRef(null);
+  const animRef       = useRef(null);
   const autoScrollRef = useRef(true);
+
+  // ── Filter: sirf 60-second-read category ─────────────────
+  const sixtyArticles = articles.filter((a) =>
+    Array.isArray(a.category_details) &&
+    a.category_details.some((c) => c.slug === "60-second-read")
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     let frame = 0;
-
     const step = () => {
       if (autoScrollRef.current) {
         frame++;
         if (frame % 3 === 0) {
           el.scrollTop += 1;
-          if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
-            el.scrollTop = 0;
-          }
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight) el.scrollTop = 0;
         }
       }
       animRef.current = requestAnimationFrame(step);
     };
-
     animRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animRef.current);
   }, []);
@@ -276,53 +322,82 @@ function LiveUpdates() {
         onMouseEnter={() => { autoScrollRef.current = false; }}
         onMouseLeave={() => { autoScrollRef.current = true; }}
       >
-        {liveUpdates.map((item) => (
-          // 👇 group add kiya — taaki hover pe child elements color change kar sakein
-          <div key={item.id} className="tn-live-item group cursor-pointer">
-
-            {/* Dot: hover pe red ho jaye */}
-            <div className="tn-live-dot group-hover:bg-[#D80100] transition-colors duration-300" />
-
-            <div>
-              {/* Title: hover pe red */}
-              <div className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300">
-                {item.title}
+        {loading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
+                <Skeleton h="11px" w="50px" mb="6px" />
+                <Skeleton h="11px" w="95%" mb="0" />
               </div>
-
-              {/* Text: hover pe red (thoda light) */}
-              <div className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300">
-                {item.text}
-              </div>
-            </div>
-
-          </div>
-        ))}
+            ))
+          : sixtyArticles.length === 0
+          ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+          : sixtyArticles.map((item) => {
+              const catName = item.category_details?.[0]?.name || "News";
+              const text    = item.subtitle ? item.subtitle : stripHtml(item.content);
+              return (
+                <div
+                  key={item.id}
+                  className="tn-live-item group cursor-pointer"
+                  onClick={() => navigate(`/article/${item.slug}`)}
+                >
+                  <div className="tn-live-dot group-hover:bg-[#D80100] transition-colors duration-300" />
+                  <div>
+                    <div className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300">
+                      {catName}
+                    </div>
+                    <div className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300">
+                      {text.slice(0, 100)}{text.length > 100 ? "..." : ""}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
       </div>
     </div>
   );
 }
 
 // ── Banner ────────────────────────────────────────────────────
+const bannerSlides = [
+  {
+    leftBgClass: "bg-[#1e5c42]", brand1: "PRATIYOGITA", brand2: "DARPAN",
+    price: "PRICE ₹125.00", date: "FEBRUARY 2024", tagline: "WHERE EXCELLENCE GUIDES THE SUCCESS",
+    midBgClass: "bg-[#f5a000]", midTag: "Semi Annual", midBoxBgClass: "bg-[#6a1fa2]",
+    midL1: "Current", midL2: "Affairs", midL3: "Special",
+    rightBgClass: "bg-[#f5e000]", rl: "MOST USEFUL FOR", rb: "UNION & STATE", rs: "CIVIL SERVICES EXAM",
+  },
+  {
+    leftBgClass: "bg-[#0d3b6e]", brand1: "COMPETITION", brand2: "TIMES",
+    price: "PRICE ₹150.00", date: "MARCH 2024", tagline: "YOUR GATEWAY TO SUCCESS",
+    midBgClass: "bg-[#e53935]", midTag: "Annual", midBoxBgClass: "bg-[#b71c1c]",
+    midL1: "General", midL2: "Knowledge", midL3: "Special",
+    rightBgClass: "bg-[#b2fab4]", rl: "BEST RESOURCE FOR", rb: "SSC & BANKING", rs: "EXAMINATION PREP",
+  },
+  {
+    leftBgClass: "bg-[#1a1a2e]", brand1: "CAREER", brand2: "LAUNCHER",
+    price: "PRICE ₹99.00", date: "APRIL 2024", tagline: "LAUNCHING CAREERS SINCE 1995",
+    midBgClass: "bg-[#7b1fa2]", midTag: "Monthly", midBoxBgClass: "bg-[#4a148c]",
+    midL1: "Reasoning", midL2: "& Aptitude", midL3: "Special",
+    rightBgClass: "bg-[#ffe082]", rl: "TOP CHOICE FOR", rb: "UPSC & STATE PSC", rs: "ASPIRANTS NATIONWIDE",
+  },
+];
+
 function Banner() {
   const [cur, setCur]       = useState(0);
   const [fading, setFading] = useState(false);
-  const total = bannerSlides.length;
 
   useEffect(() => {
     const t = setInterval(() => {
       setFading(true);
-      setTimeout(() => { setCur(c => (c + 1) % total); setFading(false); }, 350);
+      setTimeout(() => { setCur((c) => (c + 1) % bannerSlides.length); setFading(false); }, 350);
     }, 4000);
     return () => clearInterval(t);
   }, []);
 
   const s = bannerSlides[cur];
-
   return (
     <div className="tn-banner">
-      <div
-        className={`tn-banner-slide transition-all duration-300 ease-out ${fading ? "opacity-0 translate-y-[6px]" : "opacity-100 translate-y-0"}`}
-      >
+      <div className={`tn-banner-slide transition-all duration-300 ease-out ${fading ? "opacity-0 translate-y-[6px]" : "opacity-100 translate-y-0"}`}>
         <div className={`tn-banner-left ${s.leftBgClass}`}>
           <div className="tn-banner-left-redbar" />
           <div className="tn-banner-left-greenbar" />
@@ -357,16 +432,38 @@ function Banner() {
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────
+// ── MAIN ──────────────────────────────────────────────────────
 export default function TrendingNews() {
+  const { articles, categories, loading, error } = useArticles();
+
   return (
     <div className="tn-page">
-      <TrendingBar />
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+      `}</style>
+
+      <TrendingBar categories={categories} />
+
+      {error && (
+        <div style={{ background: "#fff3f3", color: "#c00", padding: "8px 16px", fontSize: 13, fontFamily: "Poppins,sans-serif" }}>
+          ⚠️ API Error: {error}
+        </div>
+      )}
+
       <div className="tn-inner">
         <div className="tn-grid">
-          <div className="col-news"><LatestNews /></div>
-          <div className="col-cards"><FeatureCards /></div>
-          <div className="col-live"><LiveUpdates /></div>
+          <div className="col-news">
+            <LatestNews articles={articles} loading={loading} />
+          </div>
+          <div className="col-cards">
+            <FeatureCards articles={articles} loading={loading} />
+          </div>
+          <div className="col-live">
+            <LiveUpdates articles={articles} loading={loading} />
+          </div>
         </div>
         <Banner />
       </div>

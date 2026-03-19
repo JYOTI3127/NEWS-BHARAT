@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-// ── Data ───────────────────────────────────────────────────────
+const API_BASE = "https://api.news4bharat.com/api";
+
+// ── State List ────────────────────────────────────────────────
 const stateList = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
   "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
@@ -9,34 +12,13 @@ const stateList = [
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
 ];
 
-const featuredCard = {
-  img: "https://images.unsplash.com/photo-1616530940355-351fabd9524b?w=700&q=80",
-  title: "Four arrested from Haryana in firing incident at Rohit Shetty's house; shooter linked to Bishnoi gang",
-  tag: "BREAKING",
-  date: "Mar 6, 2026",
-};
+// ── Helpers ───────────────────────────────────────────────────
+const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 
-const bottomLeftCard = {
-  img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&q=80",
-  tag: "ENTERTAINMENT",
-  date: "Mar 5, 2026",
-  title: "Lorem Ipsum has been the industry's standard dummy text and has survived.",
-};
+const imgSrc = (a) => a?.image_url || a?.image || null;
 
-const midCards = [
-  { id: 1, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&q=80", tag: "FILM", date: "Mar 4, 2026", label: "TritiyaBishwa", hd: false, teaser: false, title: "Lorem Ipsum has been the industry's standard dummy text and has centuries." },
-  { id: 2, img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80", tag: "OTT", date: "Mar 3, 2026", label: "REBOOT", hd: false, teaser: false, title: "Lorem Ipsum has been the industry's standard dummy text and has centuries." },
-  { id: 3, img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=400&q=80", tag: "MOVIES", date: "Mar 2, 2026", label: "Golmaal", hd: true, teaser: true, title: "Lorem Ipsum has been the industry's standard dummy text and has centuries." },
-];
-
-const defenceNews = [
-  { id: 1, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", date: "Mar 6", title: "Lorem Ipsum has been the industry's standard dummy." },
-  { id: 2, img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", date: "Mar 5", title: "Lorem Ipsum has been the industry's standard dummy." },
-  { id: 3, img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", date: "Mar 4", title: "Lorem Ipsum has been the industry's standard dummy." },
-  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", date: "Mar 3", title: "Lorem Ipsum has been the industry's standard dummy." },
-  { id: 5, img: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=200&q=80", date: "Mar 2", title: "Lorem Ipsum has been the industry's standard dummy." },
-  { id: 6, img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", date: "Mar 1", title: "Lorem Ipsum has been the industry's standard dummy." },
-];
+const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 
 // ── Breakpoint Hook ───────────────────────────────────────────
 const useBreakpoint = () => {
@@ -64,16 +46,98 @@ const useBreakpoint = () => {
   return bp;
 };
 
-// ── Component ─────────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────
+function Sk({ h = "12px", w = "100%", mb = "5px" }) {
+  return (
+    <div style={{
+      height: h, width: w, marginBottom: mb, borderRadius: 4,
+      background: "linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)",
+      backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+    }} />
+  );
+}
+
+// ── Image with fallback ───────────────────────────────────────
+function ArticleImg({ src, alt, style }) {
+  const [err, setErr] = useState(false);
+  if (!src || err) {
+    return (
+      <div style={{
+        ...style, background: "#f0ece8",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{ fontSize: 10, color: "#bbb" }}>No Image</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src} alt={alt}
+      style={{ ...style, objectFit: "cover", display: "block" }}
+      onError={() => setErr(true)}
+    />
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────
 export default function StateNews() {
   const [activeState, setActiveState] = useState("Andhra Pradesh");
-  const tabsRef = useRef(null);
-  const bp = useBreakpoint();
+  const [stateArticles, setStateArticles] = useState([]);
+  const [startupArticles, setStartupArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const tabsRef  = useRef(null);
+  const navigate = useNavigate();
+  const bp       = useBreakpoint();
 
   const isMobile = bp === "mobile";
   const isTablet = bp === "tablet";
-  const isLaptop = bp === "laptop";
-  const isLarge = bp === "large";
+
+  // ── Fetch all articles once ───────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/articles/`)
+      .then((r) => r.json())
+      .then((data) => {
+        const all = Array.isArray(data) ? data : (data.results || []);
+
+        // States of Bharat — slug: state-of-bharat
+        const states = all
+          .filter((a) =>
+            Array.isArray(a.category_details) &&
+            a.category_details.some((c) => c.slug === "state-of-bharat")
+          )
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // Bharat's Startups — slug: bharat-startups
+        const startups = all
+          .filter((a) =>
+            Array.isArray(a.category_details) &&
+            a.category_details.some((c) => c.slug === "bharat-startups")
+          )
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        setStateArticles(states);
+        setStartupArticles(startups);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // ── State tab filter ──────────────────────────────────────
+  // Backend mein selected_subcategories nahi hai abhi,
+  // toh activeState se title/content mein match karo
+  const filteredByState = stateArticles.filter((a) => {
+    const text = `${a.title} ${a.subtitle || ""} ${stripHtml(a.content || "")}`.toLowerCase();
+    return text.includes(activeState.toLowerCase());
+  });
+
+  // Agar koi match nahi toh saare state articles dikhao
+  const displayArticles = filteredByState.length > 0 ? filteredByState : stateArticles;
+
+  const featuredCard   = displayArticles[0] || null;
+  const bottomLeftCard = displayArticles[1] || null;
+  const midCards       = displayArticles.slice(2, 5);
+  const sidebarItems   = startupArticles.slice(0, 6);
 
   const scroll = (dir) => {
     if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 200, behavior: "smooth" });
@@ -81,6 +145,12 @@ export default function StateNews() {
 
   return (
     <div className="sn-wrap">
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+      `}</style>
 
       {/* Heading */}
       <div className="sn-heading-row">
@@ -102,12 +172,14 @@ export default function StateNews() {
         </button>
 
         <div className="sn-tabs-scroll-area" ref={tabsRef}>
-          {stateList.map(s => (
+          {stateList.map((s) => (
             <button
               key={s}
               className={`sn-tab-btn${activeState === s ? " active" : ""}`}
               onClick={() => setActiveState(s)}
-            >{s}</button>
+            >
+              {s}
+            </button>
           ))}
         </div>
 
@@ -117,7 +189,7 @@ export default function StateNews() {
         >
           <span
             className="inline-flex items-center justify-center w-7 h-7 min-w-[28px] min-h-[28px] rounded-full border border-white/90 bg-red-600 overflow-hidden"
-            style={{ marginLeft: isMobile ? "0" : "30%" }}
+            style={{ marginLeft: isMobile ? "0" : "11%" }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4 2L8 6L4 10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -141,54 +213,67 @@ export default function StateNews() {
         <div
           className="sn-left-mid"
           style={{
-            flex: 1,
-            minWidth: 0,
+            flex: 1, minWidth: 0,
             display: "grid",
             gap: "12px",
-            // Mobile: single column stack
-            // Tablet: 2 col (featured | mid), small card below featured
-            // Laptop+: same as tablet but more space
-            gridTemplateColumns: isMobile
-              ? "1fr"
-              : "1fr 1fr",
-            gridTemplateRows: isMobile
-              ? "auto"
-              : "auto auto",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gridTemplateRows: isMobile ? "auto" : "auto auto",
           }}
         >
           {/* Featured big card */}
           <div
             className="sn-featured-wrap"
-            style={{
-              gridColumn: isMobile ? "1" : "1",
-              gridRow: isMobile ? "auto" : "1",
-            }}
+            style={{ gridColumn: isMobile ? "1" : "1", gridRow: isMobile ? "auto" : "1" }}
           >
-            <div
-              className="sn-big-card"
-              style={{
-                position: "relative",
-                borderRadius: "8px",
-                overflow: "hidden",
+            {loading ? (
+              <div style={{
+                borderRadius: 8, overflow: "hidden",
                 height: isMobile ? "200px" : isTablet ? "220px" : "260px",
-              }}
-            >
-              <img
-                src={featuredCard.img}
-                alt="featured"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              />
-              <div className="sn-big-overlay" style={{
-                position: "absolute", inset: 0,
-                background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)",
-                padding: "12px",
-                display: "flex", flexDirection: "column", justifyContent: "flex-end",
-              }}>
-                <div className="sn-big-badge">{featuredCard.tag}</div>
-                <p className="sn-big-title" style={{ fontSize: isMobile ? "12px" : "14px" }}>{featuredCard.title}</p>
-                <span className="sn-big-date">{featuredCard.date}</span>
+                background: "#f0ece8",
+                animation: "shimmer 1.4s infinite",
+              }} />
+            ) : featuredCard ? (
+              <div
+                className="sn-big-card"
+                style={{
+                  position: "relative", borderRadius: "8px", overflow: "hidden",
+                  height: isMobile ? "200px" : isTablet ? "220px" : "260px",
+                  cursor: "pointer",
+                }}
+                onClick={() => navigate(`/article/${featuredCard.slug}`)}
+              >
+                <ArticleImg
+                  src={imgSrc(featuredCard)}
+                  alt={featuredCard.title}
+                  style={{ width: "100%", height: "100%" }}
+                />
+                <div className="sn-big-overlay" style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)",
+                  padding: "12px",
+                  display: "flex", flexDirection: "column", justifyContent: "flex-end",
+                }}>
+                  <div className="sn-big-badge">
+                    {featuredCard.category_details?.[0]?.name || "STATE NEWS"}
+                  </div>
+                  <p className="sn-big-title" style={{ fontSize: isMobile ? "12px" : "14px" }}>
+                    {featuredCard.title}
+                  </p>
+                  <span className="sn-big-date">
+                    {formatDate(featuredCard.published_at || featuredCard.created_at)}
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                borderRadius: 8, height: isMobile ? "200px" : "260px",
+                background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ color: "#bbb", fontSize: 13 }}>
+                  No articles for {activeState} yet
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Middle 3 cards — right column */}
@@ -197,138 +282,148 @@ export default function StateNews() {
             style={{
               gridColumn: isMobile ? "1" : "2",
               gridRow: isMobile ? "auto" : "1 / 3",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              overflowX: "visible",
+              display: "flex", flexDirection: "column", gap: "10px",
             }}
           >
-            {midCards.map(card => (
-              <div
-                className="sn-mid-card"
-                key={card.id}
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: "8px",
-                  width: "100%",
-                }}
-              >
-                <div
-                  className="sn-mid-img"
-                  style={{
-                    position: "relative",
-                    flexShrink: 0,
-                    width: "100px",
-                    height: "78px",
-                    borderRadius: "6px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <img src={card.img} alt={card.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  {card.label && <div className="sn-mov-label">{card.label}</div>}
-                  {card.hd && <span className="sn-hd-badge">HD</span>}
-                  {card.teaser && <span className="sn-teaser-badge">TEASER</span>}
-                </div>
-                <div className="sn-mid-text" style={{ flex: 1, minWidth: 0 }}>
-                  <span className="sn-card-tag">{card.tag}</span>
-                  <p className="sn-mid-title">{card.title}</p>
-                  <span className="sn-card-date">{card.date}</span>
-                </div>
-              </div>
-            ))}
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="sn-mid-card" style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                    <div style={{ flex: 1 }}>
+                      <Sk h="10px" w="50px" mb="5px" />
+                      <Sk h="12px" w="95%" mb="4px" />
+                      <Sk h="10px" w="40px" mb="0" />
+                    </div>
+                  </div>
+                ))
+              : midCards.length === 0
+              ? <div style={{ color: "#bbb", fontSize: 12, padding: "8px 0" }}>No more articles</div>
+              : midCards.map((card) => (
+                  <div
+                    className="sn-mid-card"
+                    key={card.id}
+                    style={{ display: "flex", gap: "8px", cursor: "pointer" }}
+                    onClick={() => navigate(`/article/${card.slug}`)}
+                  >
+                    <div className="sn-mid-img" style={{
+                      flexShrink: 0, width: "100px", height: "78px",
+                      borderRadius: "6px", overflow: "hidden",
+                    }}>
+                      <ArticleImg
+                        src={imgSrc(card)}
+                        alt={card.title}
+                        style={{ width: "100%", height: "100%" }}
+                      />
+                    </div>
+                    <div className="sn-mid-text" style={{ flex: 1, minWidth: 0 }}>
+                      <span className="sn-card-tag">
+                        {card.category_details?.[0]?.name || "STATE"}
+                      </span>
+                      <p className="sn-mid-title">{card.title}</p>
+                      <span className="sn-card-date">
+                        {formatDate(card.published_at || card.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
           </div>
 
-          {/* Small card — bottom left (hidden on mobile, shown on tablet+) */}
+          {/* Small card — bottom left (tablet+) */}
           {!isMobile && (
             <div
               className="sn-small-card"
               style={{
-                gridColumn: "1",
-                gridRow: "2",
-                display: "flex",
-                flexDirection: "row",
-                gap: "8px",
+                gridColumn: "1", gridRow: "2",
+                display: "flex", gap: "8px",
+                cursor: bottomLeftCard ? "pointer" : "default",
               }}
+              onClick={() => bottomLeftCard && navigate(`/article/${bottomLeftCard.slug}`)}
             >
-              <div style={{
-                flexShrink: 0, width: "100px", height: "78px",
-                borderRadius: "6px", overflow: "hidden",
-              }}>
-                <img src={bottomLeftCard.img} alt="news" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-              <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
-                <span className="sn-card-tag">{bottomLeftCard.tag}</span>
-                <p className="sn-sc-title">{bottomLeftCard.title}</p>
-                <span className="sn-card-date">{bottomLeftCard.date}</span>
-              </div>
+              {loading ? (
+                <>
+                  <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                  <div style={{ flex: 1 }}>
+                    <Sk h="10px" w="50px" mb="5px" />
+                    <Sk h="12px" w="95%" mb="4px" />
+                    <Sk h="10px" w="40px" mb="0" />
+                  </div>
+                </>
+              ) : bottomLeftCard ? (
+                <>
+                  <div style={{ flexShrink: 0, width: "100px", height: "78px", borderRadius: "6px", overflow: "hidden" }}>
+                    <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
+                  </div>
+                  <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
+                    <span className="sn-card-tag">{bottomLeftCard.category_details?.[0]?.name || "STATE"}</span>
+                    <p className="sn-sc-title">{bottomLeftCard.title}</p>
+                    <span className="sn-card-date">{formatDate(bottomLeftCard.published_at || bottomLeftCard.created_at)}</span>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
 
-          {/* Mobile: small card shown below mid cards as full row */}
-          {isMobile && (
-            <div style={{ display: "flex", gap: "8px" }}>
-              <div style={{
-                flexShrink: 0, width: "90px", height: "70px",
-                borderRadius: "6px", overflow: "hidden",
-              }}>
-                <img src={bottomLeftCard.img} alt="news" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {/* Mobile small card */}
+          {isMobile && bottomLeftCard && !loading && (
+            <div
+              style={{ display: "flex", gap: "8px", cursor: "pointer" }}
+              onClick={() => navigate(`/article/${bottomLeftCard.slug}`)}
+            >
+              <div style={{ flexShrink: 0, width: "90px", height: "70px", borderRadius: "6px", overflow: "hidden" }}>
+                <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span className="sn-card-tag">{bottomLeftCard.tag}</span>
+                <span className="sn-card-tag">{bottomLeftCard.category_details?.[0]?.name || "STATE"}</span>
                 <p className="sn-sc-title">{bottomLeftCard.title}</p>
-                <span className="sn-card-date">{bottomLeftCard.date}</span>
+                <span className="sn-card-date">{formatDate(bottomLeftCard.published_at || bottomLeftCard.created_at)}</span>
               </div>
             </div>
           )}
-
         </div>
 
-        {/* ── RIGHT: Defence panel ── */}
+        {/* ── RIGHT: Bharat's Startups ── */}
         <div
           className="sn-defence"
-          style={{
-            width: isMobile ? "100%" : isTablet ? "200px" : "220px",
-            flexShrink: 0,
-          }}
+          style={{ width: isMobile ? "100%" : isTablet ? "200px" : "220px", flexShrink: 0 }}
         >
-          <div className="sn-defence-head">डिफेंस न्यूज़</div>
           <div
-            className="sn-defence-scroll"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              overflowX: "visible",
-              overflowY: "auto",
-            }}
+            className="sn-defence-head"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/category/bharat-startups")}
           >
-            {defenceNews.map((item) => (
-              <div
-                className="sn-defence-item"
-                key={item.id}
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: "8px",
-                  width: "100%",
-                }}
-              >
-                <div style={{
-                  flexShrink: 0,
-                  width: "64px",
-                  height: "50px",
-                  borderRadius: "5px",
-                  overflow: "hidden",
-                }}>
-                  <img src={item.img} alt="news" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-                <div className="sn-di-text-wrap" style={{ flex: 1, minWidth: 0 }}>
-                  <p className="sn-di-title">{item.title}</p>
-                  <span className="sn-di-date">{item.date}</span>
-                </div>
-              </div>
-            ))}
+            Bharat's Startups
+          </div>
+          <div className="sn-defence-scroll" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="sn-defence-item" style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ flexShrink: 0, width: 64, height: 50, borderRadius: 5, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                    <div style={{ flex: 1 }}>
+                      <Sk h="11px" w="95%" mb="4px" />
+                      <Sk h="10px" w="40px" mb="0" />
+                    </div>
+                  </div>
+                ))
+              : sidebarItems.length === 0
+              ? <div style={{ padding: "12px 0", color: "#bbb", fontSize: 12, textAlign: "center" }}>No articles yet</div>
+              : sidebarItems.map((item) => (
+                  <div
+                    className="sn-defence-item"
+                    key={item.id}
+                    style={{ display: "flex", gap: "8px", cursor: "pointer" }}
+                    onClick={() => navigate(`/article/${item.slug}`)}
+                  >
+                    <div style={{ flexShrink: 0, width: "64px", height: "50px", borderRadius: "5px", overflow: "hidden" }}>
+                      <ArticleImg src={imgSrc(item)} alt={item.title} style={{ width: "100%", height: "100%" }} />
+                    </div>
+                    <div className="sn-di-text-wrap" style={{ flex: 1, minWidth: 0 }}>
+                      <p className="sn-di-title">{item.title}</p>
+                      <span className="sn-di-date">
+                        {formatDate(item.published_at || item.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
           </div>
         </div>
 

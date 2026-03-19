@@ -1,110 +1,120 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-// ── DATA ──────────────────────────────────────────────────────
-const healthFeatured = {
-  img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=700&q=80",
-  category: "HEALTH",
-  date: "Mar 6, 2026",
-  title: "New health policy set to transform the country's healthcare system — key changes explained",
-};
+const API_BASE = "https://api.news4bharat.com/api";
 
-const healthSmallCard = {
-  img: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&q=80",
-  category: "WELLNESS",
-  date: "Mar 5, 2026",
-  title: "A 30-minute daily walk can reduce the risk of heart disease by up to 40%",
-};
+// ── API Hook ──────────────────────────────────────────────────
+function useCategoryArticles(slug) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading]   = useState(true);
 
-const healthMidCards = [
-  {
-    id: 1,
-    img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&q=80",
-    category: "FITNESS",
-    date: "Mar 4, 2026",
-    title: "Rising mental health crisis in India — cases of depression increasing rapidly among youth",
-  },
-  {
-    id: 2,
-    img: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&q=80",
-    category: "MEDICINE",
-    date: "Mar 3, 2026",
-    title: "Successful trial of a new medicine for diabetes patients, expected to launch soon",
-  },
-  {
-    id: 3,
-    img: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&q=80",
-    category: "NUTRITION",
-    date: "Mar 2, 2026",
-    title: "Blend of Ayurveda and modern science — 5 effective ways to boost immunity",
-  },
-];
+  useEffect(() => {
+    fetch(`${API_BASE}/articles/`)
+      .then((r) => r.json())
+      .then((data) => {
+        const all = Array.isArray(data) ? data : (data.results || []);
+        const filtered = all
+          .filter((a) =>
+            Array.isArray(a.category_details) &&
+            a.category_details.some((c) => c.slug === slug)
+          )
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setArticles(filtered);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [slug]);
 
-const sidebarNews = [
-  { 
-    id: 1, 
-    img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=200&q=80", 
-    category: "BOLLYWOOD", 
-    date: "Mar 6", 
-    title: "A new revolution in the film industry as OTT platforms change the direction of cinema" 
-  },
-  { 
-    id: 2, 
-    img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&q=80", 
-    category: "OTT", 
-    date: "Mar 5", 
-    title: "Indian content dominates the list of most watched web series worldwide" 
-  },
-  { 
-    id: 3, 
-    img: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=200&q=80", 
-    category: "MUSIC", 
-    date: "Mar 4", 
-    title: "Announcement made for the release of the biggest music album of the year" 
-  },
-  { 
-    id: 4, 
-    img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80", 
-    category: "AWARDS", 
-    date: "Mar 3", 
-    title: "Filmfare Awards 2026 announced — find out who won the Best Actor title" 
-  },
-  { 
-    id: 5, 
-    img: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=200&q=80", 
-    category: "CELEBRITY", 
-    date: "Mar 2", 
-    title: "Rare and unseen photos of Bollywood celebrities go viral among fans" 
-  },
-];
+  return { articles, loading };
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+
+const imgSrc = (a) => a?.image_url || a?.image || null;
 
 // ── Section Header ─────────────────────────────────────────────
-function SectionHeader({ title }) {
+function SectionHeader({ title, slug }) {
+  const navigate = useNavigate();
   return (
     <div className="nps-section-header">
       <div className="nps-section-header-left">
         <div className="nps-section-bar" />
         <span className="nps-section-title">{title}</span>
       </div>
-      <a href="#" className="nps-read-more-link">Read More›</a>
+      <button
+        onClick={() => navigate(`/category/${slug}`)}
+        className="nps-read-more-link"
+        style={{ background: "none", border: "none", cursor: "pointer" }}
+      >
+        Read More›
+      </button>
     </div>
   );
 }
 
-// ── Category Tag ───────────────────────────────────────────────
 function CategoryTag({ label }) {
   return <span className="hs-cat-tag">{label}</span>;
 }
 
-// ── Date Label ─────────────────────────────────────────────────
 function DateLabel({ date }) {
   return <span className="hs-date">{date}</span>;
 }
 
-// ── HEALTH SECTION ────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────
+function Sk({ h = "14px", w = "100%", mb = "6px", radius = "4px" }) {
+  return (
+    <div style={{
+      height: h, width: w, marginBottom: mb, borderRadius: radius,
+      background: "linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)",
+      backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+    }} />
+  );
+}
+
+// ── Image with fallback ───────────────────────────────────────
+function ArticleImg({ src, alt, className, style }) {
+  const [err, setErr] = useState(false);
+  if (!src || err) {
+    return (
+      <div
+        className={className}
+        style={{ ...style, background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <span style={{ fontSize: 11, color: "#bbb" }}>No Image</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} style={style} onError={() => setErr(true)} />;
+}
+
+// ── MAIN COMPONENT ────────────────────────────────────────────
 export function EntertainmentSection() {
+  const navigate = useNavigate();
+
+  // Bharat Explainers — main left section
+  const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers");
+
+  // Bharat in Numbers — sidebar
+  const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-numbers");
+
+  // Derived data
+  const featured   = explainers[0] || null;
+  const smallCard  = explainers[1] || null;
+  const midCards   = explainers.slice(2, 5);
+  const sidebarItems = numbers.slice(0, 5);
+
   return (
     <div className="nps-entertainment">
-      <SectionHeader title="HEALTH" />
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+      `}</style>
+
+      <SectionHeader title="BHARAT EXPLAINERS" slug="bharat-explainers" />
 
       <div className="nps-ent-layout">
 
@@ -112,65 +122,164 @@ export function EntertainmentSection() {
         <div className="nps-ent-left-mid">
 
           {/* Featured big card */}
-          <div className="hs-featured-card">
-            <div className="hs-featured-img-wrap">
-              <img src={healthFeatured.img} alt="featured" />
-              <div className="hs-featured-overlay">
-                <CategoryTag label={healthFeatured.category} />
-                <p className="hs-featured-title">{healthFeatured.title}</p>
-                <DateLabel date={healthFeatured.date} />
+          {explainersLoading ? (
+            <div className="hs-featured-card">
+              <div className="hs-featured-img-wrap" style={{ background: "#f0ece8" }}>
+                <Sk h="100%" w="100%" mb="0" radius="0" />
               </div>
             </div>
-          </div>
+          ) : featured ? (
+            <div
+              className="hs-featured-card"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate(`/article/${featured.slug}`)}
+            >
+              <div className="hs-featured-img-wrap">
+                <ArticleImg
+                  src={imgSrc(featured)}
+                  alt={featured.title}
+                  className="w-full h-full object-cover"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+                <div className="hs-featured-overlay">
+                  <CategoryTag label={featured.category_details?.[0]?.name || "EXPLAINER"} />
+                  <p className="hs-featured-title">{featured.title}</p>
+                  <DateLabel date={formatDate(featured.published_at || featured.created_at)} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="hs-featured-card">
+              <div className="hs-featured-img-wrap" style={{ background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: "#bbb", fontSize: 13 }}>No articles yet</span>
+              </div>
+            </div>
+          )}
 
           {/* Small card below featured */}
-          <div className="hs-small-card">
-            <div className="hs-small-img">
-              <img src={healthSmallCard.img} alt="small" />
+          {explainersLoading ? (
+            <div className="hs-small-card">
+              <div className="hs-small-img" style={{ background: "#f0ece8" }} />
+              <div className="hs-small-text">
+                <Sk h="11px" w="60px" mb="6px" />
+                <Sk h="13px" w="90%" mb="4px" />
+                <Sk h="11px" w="50px" mb="0" />
+              </div>
             </div>
-            <div className="hs-small-text">
-              <CategoryTag label={healthSmallCard.category} />
-              <p className="hs-small-title">{healthSmallCard.title}</p>
-              <DateLabel date={healthSmallCard.date} />
+          ) : smallCard ? (
+            <div
+              className="hs-small-card"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate(`/article/${smallCard.slug}`)}
+            >
+              <div className="hs-small-img">
+                <ArticleImg
+                  src={imgSrc(smallCard)}
+                  alt={smallCard.title}
+                  className="w-full h-full object-cover"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <div className="hs-small-text">
+                <CategoryTag label={smallCard.category_details?.[0]?.name || "EXPLAINER"} />
+                <p className="hs-small-title">{smallCard.title}</p>
+                <DateLabel date={formatDate(smallCard.published_at || smallCard.created_at)} />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Middle: 3 horizontal cards */}
           <div className="hs-mid-col">
-            {healthMidCards.map(card => (
-              <div key={card.id} className="hs-mid-card">
-                <div className="hs-mid-img">
-                  <img src={card.img} alt={card.title} />
-                </div>
-                <div className="hs-mid-text">
-                  <CategoryTag label={card.category} />
-                  <p className="hs-mid-title">{card.title}</p>
-                  <DateLabel date={card.date} />
-                </div>
-              </div>
-            ))}
+            {explainersLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="hs-mid-card">
+                    <div className="hs-mid-img" style={{ background: "#f0ece8" }} />
+                    <div className="hs-mid-text">
+                      <Sk h="11px" w="60px" mb="5px" />
+                      <Sk h="13px" w="95%" mb="4px" />
+                      <Sk h="11px" w="50px" mb="0" />
+                    </div>
+                  </div>
+                ))
+              : midCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="hs-mid-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/article/${card.slug}`)}
+                  >
+                    <div className="hs-mid-img">
+                      <ArticleImg
+                        src={imgSrc(card)}
+                        alt={card.title}
+                        className="w-full h-full object-cover"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div className="hs-mid-text">
+                      <CategoryTag label={card.category_details?.[0]?.name || "EXPLAINER"} />
+                      <p className="hs-mid-title">{card.title}</p>
+                      <DateLabel date={formatDate(card.published_at || card.created_at)} />
+                    </div>
+                  </div>
+                ))}
           </div>
 
         </div>
 
-        {/* ── SIDEBAR ── */}
+        {/* ── SIDEBAR: Bharat in Numbers ── */}
         <div className="nps-health-sidebar">
-          <div className="nps-health-header">
-            <span className="nps-health-header-text">ENTERTAINMENT</span>
+          <div
+            className="nps-health-header"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/category/bharat-numbers")}
+          >
+            <span className="nps-health-header-text">BHARAT IN NUMBERS</span>
           </div>
           <div className="nps-health-scroll">
-            {sidebarNews.map(item => (
-              <div key={item.id} className="nps-health-item">
-                <div className="nps-health-img">
-                  <img src={item.img} alt="news" />
-                </div>
-                <div className="nps-health-text-wrap">
-                  <span className="hs-sidebar-cat">{item.category}</span>
-                  <p className="nps-health-text">{item.title}</p>
-                  <span className="hs-sidebar-date">{item.date}</span>
-                </div>
-              </div>
-            ))}
+            {numbersLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="nps-health-item">
+                    <div className="nps-health-img" style={{ background: "#f0ece8" }} />
+                    <div className="nps-health-text-wrap">
+                      <Sk h="10px" w="50px" mb="5px" />
+                      <Sk h="12px" w="95%" mb="4px" />
+                      <Sk h="10px" w="40px" mb="0" />
+                    </div>
+                  </div>
+                ))
+              : sidebarItems.length === 0
+              ? (
+                  <div style={{ padding: "16px", color: "#bbb", fontSize: 12, textAlign: "center" }}>
+                    No articles yet
+                  </div>
+                )
+              : sidebarItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="nps-health-item"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/article/${item.slug}`)}
+                  >
+                    <div className="nps-health-img">
+                      <ArticleImg
+                        src={imgSrc(item)}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div className="nps-health-text-wrap">
+                      <span className="hs-sidebar-cat">
+                        {item.category_details?.[0]?.name || "NUMBERS"}
+                      </span>
+                      <p className="nps-health-text">{item.title}</p>
+                      <span className="hs-sidebar-date">
+                        {formatDate(item.published_at || item.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
           </div>
         </div>
 

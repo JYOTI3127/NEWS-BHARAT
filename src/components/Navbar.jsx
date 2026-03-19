@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import logoBig from "../assets/NEWS4BHARAT LOGO 2.png";
 import logoSmall from "../assets/NEWS4BHARAT.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   BarChart2, Search, Mic, Menu, X, Radio, FileText,
@@ -34,14 +34,11 @@ const getIconForCategory = (name) => {
   return map[name] || Newspaper;
 };
 
-// Slug empty ho toh label se banao
 const makeSlug = (slug, label) => {
   if (slug && slug.trim() !== "") return slug;
-  // Label se slug banao
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 };
 
-// Backend slugs jo label se match nahi karte
 const SLUG_OVERRIDES = {
   "bharat-in-numbers": "bharat-numbers",
   "states-of-bharat":  "state-of-bharat",
@@ -84,7 +81,6 @@ const navLinks = [
   { label: "Sports",            path: "/category/sports" },
   { label: "World News",        path: "/category/world-news" },
   { label: "Trending",          path: "/category/trending" },
-  // { label: "Comming Soon",      path: "/CommingSoon" },
 ];
 
 const LogoFull = () => (
@@ -117,6 +113,7 @@ const Header = () => {
   const [showResults, setShowResults]     = useState(false);
   const searchRef         = useRef(null);
   const searchDebounceRef = useRef(null);
+  const navigate          = useNavigate();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -148,19 +145,27 @@ const Header = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res    = await fetch("http://127.0.0.1:8000/api/categories/");
+        const res    = await fetch("https://api.news4bharat.com/api/categories/");
         const data   = await res.json();
         const active = data.filter(cat => cat.status === "active");
 
         const sections = active.map(cat => {
-          const subKeys     = Object.keys(cat.sub_categories);
+          const subKeys     = Object.keys(cat.sub_categories || {});
           let subcategories = null;
           let links         = null;
 
           if (subKeys.length > 1) {
-            subcategories = subKeys.map(key => ({ label: key, topics: cat.sub_categories[key] }));
-          } else if (subKeys.length === 1 && cat.sub_categories[subKeys[0]].length > 0) {
-            links = cat.sub_categories[subKeys[0]];
+            subcategories = subKeys.map(key => ({
+              label:  key,
+              topics: cat.sub_categories[key],
+            }));
+          } else if (subKeys.length === 1 && (cat.sub_categories[subKeys[0]] || []).length > 0) {
+            const vals = cat.sub_categories[subKeys[0]];
+            if (subKeys[0] === "default") {
+              links = vals;
+            } else {
+              subcategories = [{ label: subKeys[0], topics: vals }];
+            }
           }
 
           return {
@@ -174,7 +179,7 @@ const Header = () => {
 
         setNavSections(sections);
       } catch (err) {
-        console.error("❌ [Categories API] Fail hui:", err.message);
+        console.error("Categories API fail:", err.message);
         setNavSections(NAV_SECTIONS);
       }
     };
@@ -283,6 +288,14 @@ const Header = () => {
     setExpandedSubcat(prev => prev === label ? null : label);
   };
 
+  // Drawer close + navigate helper
+  const goTo = (path) => {
+    setIsOpen(false);
+    setExpandedSection(null);
+    setExpandedSubcat(null);
+    navigate(path);
+  };
+
   const sensexPrice  = markets?.sensex?.price  ?? null;
   const sensexChange = markets?.sensex?.change ?? null;
   const sensexTrend  = markets?.sensex?.trend  ?? "up";
@@ -293,9 +306,10 @@ const Header = () => {
   const goldChange   = metals?.gold?.change    ?? null;
   const silverPrice  = metals?.silver?.price   ?? null;
   const silverChange = metals?.silver?.change  ?? null;
-const tickerBarClasses = isMobile
-  ? "flex flex-nowrap items-center px-2.5 py-1 border-b border-slate-200"
-  : `flex flex-nowrap items-center overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
+
+  const tickerBarClasses = isMobile
+    ? "flex flex-nowrap items-center px-2.5 py-1 border-b border-slate-200"
+    : `flex flex-nowrap items-center overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
 
   const topBarClasses = isMobile
     ? "hidden"
@@ -390,7 +404,6 @@ const tickerBarClasses = isMobile
             const sectionOpen = expandedSection === label;
             const hasSubcats  = subcategories && subcategories.length > 0;
             const hasLinks    = links && links.length > 0;
-            // ✅ Slug empty ho toh label se banao
             const finalSlug   = getFinalSlug(slug, label);
 
             return (
@@ -398,13 +411,16 @@ const tickerBarClasses = isMobile
                 <div className="drawer-section-head" onClick={() => toggleSection(label)}>
                   <span className="drawer-section-label">
                     {Icon && <Icon size={15} color="#D80100" strokeWidth={2} />}
-                    <Link
-                      to={`/category/${finalSlug}`}
-                      className="no-underline text-inherit"
-                      onClick={() => setIsOpen(false)}
+                    {/* ✅ Category name click → category page */}
+                    <span
+                      className="no-underline text-inherit cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goTo(`/category/${finalSlug}`);
+                      }}
                     >
                       {label}
-                    </Link>
+                    </span>
                   </span>
                   {(hasSubcats || hasLinks) && (
                     <ChevronDown
@@ -421,6 +437,7 @@ const tickerBarClasses = isMobile
                       const subcatOpen = expandedSubcat === `${label}__${sub.label}`;
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
+                          {/* Subcategory head — click karke expand/collapse */}
                           <div
                             className={`drawer-subcat-head flex items-center justify-between cursor-pointer border-b border-slate-200 px-4 py-2 pl-7 text-[13px] font-medium transition-colors duration-150 ${subcatOpen ? "text-red-600 bg-red-50" : "text-slate-800 bg-transparent"}`}
                             onClick={(e) => toggleSubcat(e, `${label}__${sub.label}`)}
@@ -435,15 +452,15 @@ const tickerBarClasses = isMobile
 
                           {subcatOpen && (
                             <div className="drawer-topics-list">
-                              {sub.topics.map((topic) => (
-                                <a
+                              {(sub.topics || []).map((topic) => (
+                                // ✅ Topic click → /category/slug?subcategory=topic
+                                <span
                                   key={topic}
-                                  href="#"
-                                  className="drawer-topic-link block px-4 py-1.5 pl-11 text-[12.5px] text-slate-600 no-underline border-b border-slate-100 transition-colors duration-150 font-sans hover:text-red-600 hover:bg-red-50"
-                                  onClick={(e) => e.preventDefault()}
+                                  className="drawer-topic-link block px-4 py-1.5 pl-11 text-[12.5px] text-slate-600 no-underline border-b border-slate-100 transition-colors duration-150 font-sans hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                  onClick={() => goTo(`/category/${finalSlug}?subcategory=${encodeURIComponent(topic)}`)}
                                 >
                                   › {topic}
-                                </a>
+                                </span>
                               ))}
                             </div>
                           )}
@@ -451,10 +468,15 @@ const tickerBarClasses = isMobile
                       );
                     })
                   ) : hasLinks ? (
+                    // ✅ Links click → /category/slug?subcategory=link
                     links.map((link) => (
-                      <a key={link} href="#" className="drawer-sub-link" onClick={(e) => e.preventDefault()}>
+                      <span
+                        key={link}
+                        className="drawer-sub-link cursor-pointer"
+                        onClick={() => goTo(`/category/${finalSlug}?subcategory=${encodeURIComponent(link)}`)}
+                      >
                         {link}
-                      </a>
+                      </span>
                     ))
                   ) : null}
                 </div>

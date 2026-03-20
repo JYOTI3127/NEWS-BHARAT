@@ -181,9 +181,6 @@ CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 LOGOUT_REDIRECT_URL = '/admin/login/'
 LOGIN_URL = '/admin/login/'
 
-# Development mein — console pe dikhega
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
 # Production mein — real email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -207,6 +204,13 @@ GS_PROJECT_ID = 'news4bharat-490809'
 import json
 from google.oauth2 import service_account
 
-GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
-    json.loads(os.environ.get("GCS_CREDENTIALS"))
-)
+import os
+
+GCS_JSON = os.environ.get("GCS_CREDENTIALS")
+
+if GCS_JSON:
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+        json.loads(GCS_JSON)
+    )
+else:
+    GS_CREDENTIALS = None

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News4Bharat — Weekly Newsletter</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:  #1950DF;
+  --gold:  #FEAD17;
+  --red:   #FA2E1A;
+  --green: #0FBC87;
+  --gray:  #808080;
+  --black: #0a0a0a;
+  --white: #ffffff;
+  --bg:    #F7F6F3;
+  --ink:   #1a1a1a;
+  --muted: #6b6b6b;
+  --border:#e5e3de;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #ece9e3;
+  color: var(--ink);
+}
+
+.email-wrap {
+  max-width: 640px;
+  margin: 32px auto;
+  background: var(--white);
+  box-shadow: 0 2px 40px rgba(0,0,0,0.10);
+}
+
+/* ── HEADER ─────────────────────────────── */
+.header {
+  background: var(--white);
+  padding: 28px 36px 0;
+  border-bottom: 1px solid var(--border);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.logo-name {
+  font-size: 22px; font-weight: 800;
+  color: var(--black); letter-spacing: -0.5px;
+  line-height: 1;
+}
+.logo-name span { color: var(--blue); }
+.logo-sub {
+  font-size: 8px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 2.5px;
+  color: var(--muted); margin-top: 3px;
+}
+.header-info { text-align: right; }
+.hi-issue { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.hi-date  { font-size: 11px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+.header-rule { display: flex; height: 3px; margin-top: 20px; }
+.hr-seg { flex: 1; }
+
+/* ── HERO ───────────────────────────────── */
+.hero { padding: 32px 36px; border-bottom: 1px solid var(--border); }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 16px;
+}
+.hero-dot { width: 7px; height: 7px; background: var(--blue); border-radius: 50%; }
+.hero-cat-text {
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--blue);
+}
+.hero-img {
+  width: 100%; height: 280px;
+  object-fit: cover; display: block;
+  margin-bottom: 20px; border-radius: 2px;
+}
+.hero-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 30px; line-height: 1.25;
+  color: var(--black); margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+.hero-title em { color: var(--blue); font-style: italic; }
+.hero-body {
+  font-size: 13px; color: var(--muted);
+  line-height: 1.8; margin-bottom: 18px;
+}
+.hero-footer {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.hero-by { font-size: 10px; color: #aaa; }
+.hero-by b { color: var(--ink); font-weight: 600; }
+.cta-btn {
+  display: inline-block; background: var(--blue); color: #fff;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 9px 20px; text-decoration: none; border-radius: 2px;
+}
+
+/* ── SECTION LABEL ──────────────────────── */
+.sec-head {
+  padding: 24px 36px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sh-line { flex: 1; height: 1px; background: var(--border); }
+.sh-label {
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2.5px;
+  color: var(--muted); white-space: nowrap;
+}
+.sh-accent { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── BREAKING NEWS ──────────────────────── */
+.breaking-wrap {
+  background: var(--bg);
+  border-top: 2px solid var(--red);
+  padding: 0 36px 4px;
+}
+.breaking-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px; flex-wrap: wrap;
+}
+.bh-badge {
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 2px;
+}
+.bh-title { font-size: 12px; font-weight: 700; color: var(--ink); }
+.bh-count { margin-left: auto; font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+.breaking-item {
+  display: grid; grid-template-columns: 72px 1fr;
+  gap: 14px; padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+.breaking-item:last-child { border-bottom: none; }
+.bi-img {
+  width: 72px; height: 54px;
+  object-fit: cover; display: block;
+  border-radius: 2px;
+}
+.bi-cat {
+  font-size: 8px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px;
+}
+.bi-title {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink); line-height: 1.45; margin-bottom: 3px;
+}
+.bi-meta {
+  font-size: 9px; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.bi-dot { width: 2px; height: 2px; background: #ccc; border-radius: 50%; }
+
+/* ── FEATURED CARD ──────────────────────── */
+.news-section { padding: 0 36px 8px; }
+
+.card-featured {
+  display: grid; grid-template-columns: 190px 1fr;
+  gap: 20px; padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+.cf-img {
+  width: 190px; height: 130px;
+  object-fit: cover; display: block;
+  border-radius: 2px;
+}
+.cf-cat {
+  font-size: 8px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+}
+.cf-title {
+  font-size: 14px; font-weight: 700;
+  color: var(--ink); line-height: 1.45; margin-bottom: 6px;
+}
+.cf-desc { font-size: 11px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
+.cf-meta { display: flex; align-items: center; gap: 8px; }
+.cf-time { font-size: 9px; color: #bbb; text-transform: uppercase; letter-spacing: 0.8px; }
+.cf-read { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; }
+
+/* ── SMALL 2-COL ────────────────────────── */
+.small-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 20px; padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sg-img {
+  width: 100%; height: 108px;
+  object-fit: cover; display: block;
+  border-radius: 2px; margin-bottom: 10px;
+}
+.sg-cat {
+  font-size: 8px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;
+}
+.sg-title { font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.45; margin-bottom: 5px; }
+.sg-desc { font-size: 10px; color: var(--muted); line-height: 1.65; }
+.sg-time { font-size: 9px; color: #bbb; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+
+/* ── PULL QUOTE ─────────────────────────── */
+.mid-quote {
+  margin: 8px 36px 4px;
+  padding: 20px 22px;
+  border-left: 3px solid var(--gold);
+  background: #fffdf5;
+}
+.mq-text {
+  font-family: 'DM Serif Display', serif;
+  font-size: 15px; font-style: italic;
+  color: var(--ink); line-height: 1.65; margin-bottom: 8px;
+}
+.mq-attr { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.mq-attr b { color: var(--ink); font-weight: 700; }
+
+/* ── EXPLAINER STRIP ────────────────────── */
+.explainer-strip { background: var(--black); padding: 28px 36px; }
+.es-head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.es-badge {
+  background: var(--gold); color: var(--black);
+  font-size: 9px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 5px 12px;
+}
+.es-sub { font-size: 10px; color: #555; }
+.es-grid { display: flex; flex-direction: column; gap: 0; }
+.es-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid #1c1c1c;
+}
+.es-item:last-child { border-bottom: none; padding-bottom: 0; }
+.es-num { font-size: 11px; font-weight: 800; color: var(--gold); flex-shrink: 0; width: 20px; padding-top: 2px; }
+.es-title { font-size: 12px; font-weight: 600; color: #fff; line-height: 1.45; margin-bottom: 3px; }
+.es-desc { font-size: 10px; color: #555; line-height: 1.6; }
+.es-pill {
+  display: inline-block; margin-top: 6px;
+  font-size: 8px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--green); border: 1px solid #1e3d33;
+  padding: 2px 8px; border-radius: 20px;
+}
+
+/* ── FOOTER ─────────────────────────────── */
+.footer {
+  background: var(--bg);
+  padding: 28px 36px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.footer-logo-row {
+  display: flex; align-items: center;
+  justify-content: center; gap: 8px; margin-bottom: 14px;
+}
+.fl-mark { display: flex; gap: 2px; }
+.fl-s { width: 8px; height: 8px; border-radius: 1px; }
+.fl-name { font-size: 16px; font-weight: 800; color: var(--black); }
+.fl-name span { color: var(--blue); }
+.footer-links {
+  display: flex; justify-content: center;
+  gap: 20px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.footer-links a {
+  font-size: 9px; color: var(--muted);
+  text-decoration: none; text-transform: uppercase; letter-spacing: 1px;
+}
+.footer-divider { height: 1px; background: var(--border); margin: 16px 0; }
+.footer-copy { font-size: 9px; color: #bbb; line-height: 1.8; }
+.footer-copy a { color: #aaa; text-decoration: none; }
+
+/* ── COLOR HELPERS ───────────────────────── */
+.c-blue  { color: var(--blue); }
+.c-red   { color: var(--red); }
+.c-green { color: var(--green); }
+.c-gold  { color: #d4910e; }
+.c-gray  { color: var(--gray); }
+</style>
+</head>
+<body>
+<div class="email-wrap">
+
+<!-- ═══════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-top">
+    <div>
+      <div class="logo-name">News<span>4</span>Bharat</div>
+      <div class="logo-sub">The Voice of India</div>
+    </div>
+    <div class="header-info">
+      <div class="hi-issue">Weekly Digest · Issue #42</div>
+      <div class="hi-date">March 17 – 23, 2025</div>
+    </div>
+  </div>
+  <!-- 5-color brand stripe -->
+  <div class="header-rule">
+    <div class="hr-seg" style="background:var(--blue)"></div>
+    <div class="hr-seg" style="background:var(--gold)"></div>
+    <div class="hr-seg" style="background:var(--red)"></div>
+    <div class="hr-seg" style="background:var(--green)"></div>
+    <div class="hr-seg" style="background:var(--gray)"></div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════
+     HERO / COVER STORY
+════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <div class="hero-dot"></div>
+    <span class="hero-cat-text">Cover Story</span>
+  </div>
+  <img class="hero-img"
+    src="https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=700&q=80&fit=crop"
+    alt="Indian Parliament Building" />
+  <h1 class="hero-title">India's <em>Digital Revolution</em> Gets Its Biggest Law Yet</h1>
+  <p class="hero-body">The Digital India Bill 2025 passed in Lok Sabha with 322 votes, replacing the 24-year-old IT Act. The sweeping legislation addresses AI governance, data privacy, platform liability, and digital rights — reshaping how 900 million Indians interact online.</p>
+  <div class="hero-footer">
+    <span class="hero-by">By <b>N4B Political Desk</b> · 22 March 2025</span>
+    <a href="#" class="cta-btn">Read Full Story →</a>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     BREAKING NEWS THIS WEEK (7 stories)
+════════════════════════════════════════════ -->
+<div class="sec-head">
+  <div class="sh-accent" style="background:var(--red)"></div>
+  <span class="sh-label">Breaking News This Week</span>
+  <div class="sh-line"></div>
+</div>
+
+<div class="breaking-wrap">
+  <div class="breaking-head">
+    <span class="bh-badge">🔴 Breaking</span>
+    <span class="bh-title">7 Stories You Can't Miss</span>
+    <span class="bh-count">17–23 Mar 2025</span>
+  </div>
+
+  <!-- Breaking Story 1 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=200&q=80&fit=crop"
+      alt="RBI Markets" />
+    <div>
+      <div class="bi-cat c-green">Economy</div>
+      <div class="bi-title">RBI Cuts Repo Rate by 25bps — First Cut in 4 Years, EMIs Set to Fall</div>
+      <div class="bi-meta">
+        <span>Tue, 18 Mar</span>
+        <span class="bi-dot"></span>
+        <span>3 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 2 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1457364887197-9150188c107b?w=200&q=80&fit=crop"
+      alt="ISRO Space" />
+    <div>
+      <div class="bi-cat c-blue">Space</div>
+      <div class="bi-title">ISRO's Gaganyaan Crew Module Clears Critical Pad Abort Safety Test</div>
+      <div class="bi-meta">
+        <span>Wed, 19 Mar</span>
+        <span class="bi-dot"></span>
+        <span>4 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 3 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&q=80&fit=crop"
+      alt="Cybersecurity" />
+    <div>
+      <div class="bi-cat c-red">Security</div>
+      <div class="bi-title">India Foils Major Cyberattack on Northern Power Grid; Pakistan Nexus Suspected</div>
+      <div class="bi-meta">
+        <span>Thu, 20 Mar</span>
+        <span class="bi-dot"></span>
+        <span>5 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 4 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=200&q=80&fit=crop"
+      alt="India UAE Diplomacy" />
+    <div>
+      <div class="bi-cat c-blue">Diplomacy</div>
+      <div class="bi-title">India–UAE Sign $100B Trade Deal; PM Calls it "New Era of Partnership"</div>
+      <div class="bi-meta">
+        <span>Thu, 20 Mar</span>
+        <span class="bi-dot"></span>
+        <span>3 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 5 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=200&q=80&fit=crop"
+      alt="Expressway Highway" />
+    <div>
+      <div class="bi-cat c-gold">Infrastructure</div>
+      <div class="bi-title">Delhi–Mumbai Expressway Fully Opens; 12-Hour Journey Now Under 8 Hours</div>
+      <div class="bi-meta">
+        <span>Fri, 21 Mar</span>
+        <span class="bi-dot"></span>
+        <span>4 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 6 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=200&q=80&fit=crop"
+      alt="Child Health Immunisation" />
+    <div>
+      <div class="bi-cat c-green">Health</div>
+      <div class="bi-title">India Achieves 100% Child Immunisation Coverage — A Historic First</div>
+      <div class="bi-meta">
+        <span>Sat, 22 Mar</span>
+        <span class="bi-dot"></span>
+        <span>3 min read</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breaking Story 7 -->
+  <div class="breaking-item">
+    <img class="bi-img"
+      src="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&q=80&fit=crop"
+      alt="Cricket IPL" />
+    <div>
+      <div class="bi-cat c-blue">Cricket</div>
+      <div class="bi-title">India Win ODI Series 3-1 vs South Africa; Gill Smashes 142* at Wankhede</div>
+      <div class="bi-meta">
+        <span>Sun, 23 Mar</span>
+        <span class="bi-dot"></span>
+        <span>2 min read</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /breaking-wrap -->
+
+<!-- ═══════════════════════════════════════════
+     TOP STORIES (3 featured cards)
+════════════════════════════════════════════ -->
+<div class="sec-head">
+  <div class="sh-accent" style="background:var(--blue)"></div>
+  <span class="sh-label">Top Stories</span>
+  <div class="sh-line"></div>
+</div>
+
+<div class="news-section">
+
+  <!-- Featured Story 1 -->
+  <div class="card-featured">
+    <img class="cf-img"
+      src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400&q=80&fit=crop"
+      alt="Solar Energy India" />
+    <div>
+      <div class="cf-cat c-green">Energy</div>
+      <div class="cf-title">India's Solar Capacity Crosses 100 GW — Ahead of Schedule by 2 Years</div>
+      <div class="cf-desc">The milestone, achieved at Rajasthan's Bhadla Solar Park, makes India the world's 3rd largest solar power nation, leapfrogging Germany and Japan.</div>
+      <div class="cf-meta">
+        <span class="cf-time">Tue, 18 Mar</span>
+        <a href="#" class="cf-read c-green">Read More →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured Story 2 -->
+  <div class="card-featured">
+    <img class="cf-img"
+      src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80&fit=crop"
+      alt="India Tech Startups" />
+    <div>
+      <div class="cf-cat c-blue">Startups</div>
+      <div class="cf-title">India Now Has 130 Unicorns — Surpasses UK to Become World #3</div>
+      <div class="cf-desc">Three new unicorns minted this week: Krutrim AI, UrbanClap Pro, and Zepto Health push India's total past a landmark global milestone.</div>
+      <div class="cf-meta">
+        <span class="cf-time">Wed, 19 Mar</span>
+        <a href="#" class="cf-read c-blue">Read More →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured Story 3 -->
+  <div class="card-featured">
+    <img class="cf-img"
+      src="https://images.unsplash.com/photo-1570126618953-d437176e8c79?w=400&q=80&fit=crop"
+      alt="NEP Education India" />
+    <div>
+      <div class="cf-cat c-gray">Education</div>
+      <div class="cf-title">NEP 2025 Adopted by 28 States — No Streams from Class 11, Coding from Grade 4</div>
+      <div class="cf-desc">India's transformative education overhaul brings mother-tongue instruction, flexible subjects, and technology skills to 250 million school students nationwide.</div>
+      <div class="cf-meta">
+        <span class="cf-time">Thu, 20 Mar</span>
+        <a href="#" class="cf-read c-gray">Read More →</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /news-section -->
+
+<!-- ═══════════════════════════════════════════
+     EDITORIAL PULL QUOTE
+════════════════════════════════════════════ -->
+<div class="mid-quote">
+  <div class="mq-text">"India is not emerging — India has emerged. The question now is not whether India will lead, but in which domains it will lead first."</div>
+  <div class="mq-attr">— <b>Dr. Raghuram Rajan</b>, Former RBI Governor · Davos 2025</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MORE FROM BHARAT (2×2 small grid)
+════════════════════════════════════════════ -->
+<div class="sec-head" style="padding-top:28px;">
+  <div class="sh-accent" style="background:var(--gold)"></div>
+  <span class="sh-label">More From Bharat</span>
+  <div class="sh-line"></div>
+</div>
+
+<div class="news-section" style="padding-top:0;">
+
+  <!-- Row 1 -->
+  <div class="small-grid">
+    <div>
+      <img class="sg-img"
+        src="https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=400&q=80&fit=crop"
+        alt="India Elections" />
+      <div class="sg-cat c-red">Politics</div>
+      <div class="sg-title">EC Announces Schedule for 5 State Polls in Q2 2025</div>
+      <div class="sg-desc">Bihar, Jharkhand, Haryana, Delhi & J&K go to polls across 6 phases covering 320M voters.</div>
+      <div class="sg-time">Mon, 17 Mar</div>
+    </div>
+    <div>
+      <img class="sg-img"
+        src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&q=80&fit=crop"
+        alt="BSE Sensex Markets" />
+      <div class="sg-cat c-green">Markets</div>
+      <div class="sg-title">Sensex Crosses 85,000 for First Time as FIIs Pour ₹28,000 Cr</div>
+      <div class="sg-desc">Foreign investors return on macro stability and rate-cut bets, pushing indices to record highs.</div>
+      <div class="sg-time">Fri, 21 Mar</div>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="small-grid">
+    <div>
+      <img class="sg-img"
+        src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&q=80&fit=crop"
+        alt="IPL Cricket" />
+      <div class="sg-cat c-blue">IPL 2025</div>
+      <div class="sg-title">KL Rahul Breaks Auction Record at ₹24 Crore — CSK's Bold Bet</div>
+      <div class="sg-desc">214 players sold for a combined ₹1,200 crore in the most expensive IPL mega auction ever held.</div>
+      <div class="sg-time">Sat, 22 Mar</div>
+    </div>
+    <div>
+      <img class="sg-img"
+        src="https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=400&q=80&fit=crop"
+        alt="Jio Satellite Internet" />
+      <div class="sg-cat c-gold">Technology</div>
+      <div class="sg-title">Jio Satellite Internet Launches in 50 New Remote Districts</div>
+      <div class="sg-desc">JioSpaceFiber bridges India's digital divide, connecting Himalayan and northeast communities.</div>
+      <div class="sg-time">Wed, 19 Mar</div>
+    </div>
+  </div>
+
+</div><!-- /news-section -->
+
+<!-- ═══════════════════════════════════════════
+     EXPLAINERS (dark strip)
+════════════════════════════════════════════ -->
+<div class="explainer-strip">
+  <div class="es-head">
+    <span class="es-badge">💡 Explainers</span>
+    <span class="es-sub">Understand the story behind the story</span>
+  </div>
+  <div class="es-grid">
+
+    <div class="es-item">
+      <div class="es-num">01</div>
+      <div>
+        <div class="es-title">What Is the Digital India Bill & How Does It Affect You?</div>
+        <div class="es-desc">A plain-language breakdown from VPN rules and AI liability to your rights as an internet user.</div>
+        <span class="es-pill">6 min read</span>
+      </div>
+    </div>
+
+    <div class="es-item">
+      <div class="es-num">02</div>
+      <div>
+        <div class="es-title">Repo Rate Cut: What It Means for Your Home Loan EMI Right Now</div>
+        <div class="es-desc">RBI cut rates — but will your bank pass it on? We decode transmission lag and what to expect next.</div>
+        <span class="es-pill">4 min read</span>
+      </div>
+    </div>
+
+    <div class="es-item">
+      <div class="es-num">03</div>
+      <div>
+        <div class="es-title">Electoral Bonds SC Verdict: What the 400-Page Ruling Actually Says</div>
+        <div class="es-desc">We decode what's invalidated, what remains, and how it changes India's electoral funding before 2029.</div>
+        <span class="es-pill">7 min read</span>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /explainer-strip -->
+
+<!-- ═══════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════ -->
+<footer class="footer">
+  <div class="footer-logo-row">
+    <div class="fl-mark">
+      <div class="fl-s" style="background:var(--blue)"></div>
+      <div class="fl-s" style="background:var(--red)"></div>
+      <div class="fl-s" style="background:var(--green)"></div>
+    </div>
+    <div class="fl-name">News<span>4</span>Bharat</div>
+  </div>
+  <div class="footer-links">
+    <a href="#">Home</a>
+    <a href="#">Politics</a>
+    <a href="#">Economy</a>
+    <a href="#">Sports</a>
+    <a href="#">Tech</a>
+    <a href="#">World</a>
+    <a href="#">Unsubscribe</a>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="footer-copy">
+    © 2025 News4Bharat Media Pvt. Ltd. All rights reserved.<br>
+    You're receiving this because you subscribed at <a href="#">news4bharat.com</a>. &nbsp;·&nbsp; <a href="#">Unsubscribe</a>
+  </div>
+</footer>
+
+</div><!-- /email-wrap -->
+</body>
+</html>
+

@@ -23,14 +23,23 @@ class UserSerializer(serializers.ModelSerializer):
  
 class CategorySerializer(serializers.ModelSerializer):
     article_count  = serializers.SerializerMethodField()
-    sub_categories = serializers.ReadOnlyField()
- 
+    sub_categories = serializers.SerializerMethodField()  # ReadOnlyField ki jagah yeh
+
     class Meta:
         model  = Category
         fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count']
-    
+
     def get_article_count(self, obj):
         return obj.articles.filter(status='published').count()
+
+    def get_sub_categories(self, obj):
+        subs = obj.sub_categories
+        # Agar DB mein purana list format pada hai — dict mein convert karo
+        if isinstance(subs, list):
+            return {'default': subs} if subs else {}
+        if isinstance(subs, dict):
+            return subs
+        return {}
  
  
 class ArticleSerializer(serializers.ModelSerializer):

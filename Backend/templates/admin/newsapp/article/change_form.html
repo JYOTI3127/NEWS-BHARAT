@@ -26,7 +26,6 @@ label.image-drop {
 .nb-font-select { padding: 3px 6px; border: 1.5px solid #e2e8f0; border-radius: 6px; background: #fff; font-size: 12px; color: #374151; cursor: pointer; outline: none; max-width: 130px; transition: border-color 0.15s; font-family: inherit; }
 .nb-font-select:hover, .nb-font-select:focus { border-color: #162c6b; }
 
-/* ── COLOR BUTTONS ── */
 .nb-color-btn {
   position: relative; display: inline-flex; align-items: center; gap: 3px;
   padding: 3px 6px; border: 1.5px solid #e2e8f0; border-radius: 6px; background: #fff;
@@ -37,17 +36,15 @@ label.image-drop {
 .nb-color-btn input[type="color"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
 .nb-color-swatch { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-top: 1px; pointer-events: none; }
 
-/* ── INLINE IMAGE — editor body ── */
 .nb-inline-img {
   max-width: 100%; height: auto; display: block; margin: 8px 0;
   border-radius: 4px; cursor: pointer; outline: 2px solid transparent;
   transition: outline-color 0.15s;
 }
 .nb-inline-img.nb-img-selected { outline: 2px solid #2563eb; }
-/* ── RESIZE HANDLES ── */
+
 .nb-resize-handle {
-  position: fixed;
-  width: 10px; height: 10px;
+  position: fixed; width: 10px; height: 10px;
   background: #2563eb; border: 2px solid #fff;
   border-radius: 2px; z-index: 10000;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
@@ -61,8 +58,6 @@ label.image-drop {
 .nb-resize-handle[data-pos="e"]  { cursor: e-resize; }
 .nb-resize-handle[data-pos="w"]  { cursor: w-resize; }
 
-
-/* ── IMAGE TOOLBAR (floats above selected image) ── */
 #nb_img_toolbar {
   position: fixed; z-index: 9999;
   background: #1e293b; border-radius: 8px; padding: 4px 6px;
@@ -83,7 +78,6 @@ label.image-drop {
   border-radius: 4px; padding: 2px 5px; font-size: 11px; outline: none;
 }
 
-/* ── CATEGORY SELECT-ALL button ── */
 .cat-select-all-btn {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 10px; margin-bottom: 8px;
@@ -95,16 +89,17 @@ label.image-drop {
 .cat-select-all-btn:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 .cat-select-all-btn.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 
-/* ── SUB-SUB CATEGORY ── */
-.subsubcat-list { padding-left: 28px; display: none; }
-.subsubcat-item { padding-left: 4px; }
-.subsubcat-item .cat-checkbox { width: 13px; height: 13px; }
+/* ── Section heading inside sub-list ── */
+.cat-section-heading {
+  font-size: 10px; font-weight: 700; color: var(--muted, #94a3b8);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 8px 8px 4px 28px; margin-top: 4px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── FLOATING IMAGE TOOLBAR ── -->
 <div id="nb_img_toolbar">
   <button onclick="nbImgAlign('left')" title="Align Left">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>Left
@@ -115,7 +110,6 @@ label.image-drop {
   <button onclick="nbImgAlign('right')" title="Align Right">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>Right
   </button>
-  <div class="nb-tb-sep"></div>
   <div class="nb-tb-sep"></div>
   <button onclick="nbImgCrop()" title="Crop image">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 2 6 8 2 8"/><polyline points="18 22 18 16 22 16"/><path d="M6 8H18V20"/><path d="M2 8H16V20"/></svg>Crop
@@ -220,7 +214,6 @@ label.image-drop {
         <button onclick="nbInsertLink()" title="Insert Link" style="font-size:13px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;pointer-events:none;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         </button>
-        <!-- FIX: Better image insert icon — proper photo/picture SVG -->
         <button onclick="nbInsertInlineImage()" title="Insert image into content" style="font-size:13px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;pointer-events:none;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         </button>
@@ -378,7 +371,13 @@ label.image-drop {
       </div>
     </div>
 
-    <!-- CATEGORY CARD -->
+    <!-- ════════════════════════════════════════
+         CATEGORY CARD — FULLY REWRITTEN
+         Handles DB format: {"SectionName": ["item1","item2"], ...}
+         e.g. {"Macro-Economy": ["GDP & Growth", "Inflation"], ...}
+              {"default": ["Editorial", "Opinions"]}
+              {} or []  (empty)
+    ════════════════════════════════════════ -->
     <div class="nb-card">
       <div class="nb-card-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
@@ -386,7 +385,6 @@ label.image-drop {
         <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)">Select one or more</span>
       </div>
 
-      <!-- SELECT ALL button -->
       <button class="cat-select-all-btn" id="cat_select_all_btn" onclick="toggleSelectAllCats()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Select All Categories
@@ -397,8 +395,8 @@ label.image-drop {
           {% if cat.status != 'archived' %}
 
           <div class="cat-item {% if original and cat in original.categories.all %}selected{% endif %}"
-              onclick="toggleCat(this, '{{ cat.pk }}', 'main')"
-              data-id="{{ cat.pk }}" data-type="main">
+               onclick="toggleCat(this,'{{ cat.pk }}','main')"
+               data-id="{{ cat.pk }}" data-type="main">
             <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
             <span class="cat-name">{{ cat.name }}</span>
             {% if cat.sub_categories %}
@@ -408,53 +406,26 @@ label.image-drop {
 
           {% if cat.sub_categories %}
           <div class="subcat-list" id="subcat_{{ cat.pk }}"
-              style="{% if original and cat in original.categories.all %}display:block{% else %}display:none{% endif %}">
-            {% for sub in cat.sub_categories %}
-              {# sub can be a string OR a dict with {name, sub_categories} #}
-              {% if sub.name %}
-                {# dict format — has nested sub_categories #}
-                {% with sub_name=sub.name %}
-                <div class="cat-item subcat-item {% if original and sub_name in original.selected_subcategories|default_if_none:'' %}selected{% endif %}"
-                    onclick="toggleCat(this, '{{ cat.pk }}__{{ sub_name|slugify }}', 'sub')"
-                    data-id="{{ cat.pk }}__{{ sub_name|slugify }}"
-                    data-parent="{{ cat.pk }}" data-subname="{{ sub_name }}" data-type="sub"
-                    data-has-children="{% if sub.sub_categories %}true{% else %}false{% endif %}">
-                  <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
-                  <span class="cat-name">{{ sub_name }}</span>
-                  {% if sub.sub_categories %}
-                    <svg class="cat-expand-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                  {% endif %}
-                </div>
-                {% if sub.sub_categories %}
-                <div class="subsubcat-list" id="subsubcat_{{ cat.pk }}__{{ sub_name|slugify }}">
-                  {% for subsub in sub.sub_categories %}
-                    {% with subsub_name=subsub.name|default:subsub %}
-                    <div class="cat-item subcat-item subsubcat-item"
-                        onclick="toggleCat(this, '{{ cat.pk }}__{{ sub_name|slugify }}__{{ subsub_name|slugify }}', 'subsub')"
-                        data-id="{{ cat.pk }}__{{ sub_name|slugify }}__{{ subsub_name|slugify }}"
-                        data-parent="{{ cat.pk }}" data-subparent="{{ sub_name|slugify }}"
-                        data-subname="{{ subsub_name }}" data-type="subsub">
-                      <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
-                      <span class="cat-name">{{ subsub_name }}</span>
-                    </div>
-                    {% endwith %}
-                  {% endfor %}
-                </div>
-                {% endif %}
-                {% endwith %}
-              {% else %}
-                {# plain string format #}
-                {% with sub_name=sub %}
-                <div class="cat-item subcat-item {% if original and sub_name in original.selected_subcategories|default_if_none:'' %}selected{% endif %}"
-                    onclick="toggleCat(this, '{{ cat.pk }}__{{ sub_name|slugify }}', 'sub')"
-                    data-id="{{ cat.pk }}__{{ sub_name|slugify }}"
-                    data-parent="{{ cat.pk }}" data-subname="{{ sub_name }}" data-type="sub">
-                  <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
-                  <span class="cat-name">{{ sub_name }}</span>
-                </div>
-                {% endwith %}
+               style="{% if original and cat in original.categories.all %}display:block{% else %}display:none{% endif %}">
+
+            {% for section_key, section_items in cat.sub_categories.items %}
+              {% if section_key != 'default' %}
+                <div class="cat-section-heading">{{ section_key }}</div>
               {% endif %}
+              {% for item in section_items %}
+                <div class="cat-item subcat-item"
+                     onclick="toggleCat(this,'{{ cat.pk }}__{{ item|slugify }}','sub')"
+                     data-id="{{ cat.pk }}__{{ item|slugify }}"
+                     data-parent="{{ cat.pk }}"
+                     data-subname="{{ item }}"
+                     data-section="{{ section_key }}"
+                     data-type="sub">
+                  <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
+                  <span class="cat-name">{{ item }}</span>
+                </div>
+              {% endfor %}
             {% endfor %}
+
           </div>
           {% endif %}
 
@@ -462,8 +433,10 @@ label.image-drop {
         {% endfor %}
       </div>
 
-      <input type="hidden" id="ui_category" value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
-      <input type="hidden" id="ui_subcategory" value="{% if original %}{{ original.selected_subcategories|default:'{}'|safe }}{% else %}{}{% endif %}">
+      <input type="hidden" id="ui_category"
+             value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+      <input type="hidden" id="ui_subcategory"
+             value="{% if original %}{{ original.selected_subcategories|default:'{}'|safe }}{% else %}{}{% endif %}">
       <div id="cat_count_label" style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px;">
         <span id="cat_selected_count">0</span> selected
       </div>
@@ -730,32 +703,7 @@ label.image-drop {
         </div>
       </div>
       <div class="ed-preview-frame" id="preview_desktop">
-        <div class="prev-card-outer">
-          <div class="prev-card">
-            <div class="prev-card-topbar">
-              <div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">news4bharat.com › news › <span id="prev_card_slug">article-slug</span></span></div></div>
-              <div class="prev-card-source-badge">news4bharat.com</div>
-            </div>
-            <div class="prev-card-body">
-              <div class="prev-card-text">
-                <div class="prev-card-category" id="prev_card_cat">Category</div>
-                <h2 class="prev-card-headline" id="prev_card_headline">Article headline will appear here as you type…</h2>
-                <p class="prev-card-summary" id="prev_card_summary">Article summary will be taken from your content.</p>
-              </div>
-              <div class="prev-card-img-wrap">
-                <img id="prev_card_img" src="" alt="" style="display:none">
-                <div class="prev-card-img-ph" id="prev_card_img_ph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-              </div>
-            </div>
-            <div class="prev-card-footer">
-              <div class="prev-card-author">
-                <div class="prev-card-avatar" id="prev_card_avatar"><span id="prev_card_initials">?</span><img id="prev_card_avatar_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
-                <div class="prev-card-author-info"><span class="prev-card-author-name" id="prev_card_author_name">Editor Name</span><span class="prev-card-author-dot">·</span><span class="prev-card-author-pos" id="prev_card_author_pos">Position</span></div>
-              </div>
-              <div class="prev-card-time" id="prev_card_time">Just now</div>
-            </div>
-          </div>
-        </div>
+        <div class="prev-card-outer"><div class="prev-card"><div class="prev-card-topbar"><div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">news4bharat.com › news › <span id="prev_card_slug">article-slug</span></span></div></div><div class="prev-card-source-badge">news4bharat.com</div></div><div class="prev-card-body"><div class="prev-card-text"><div class="prev-card-category" id="prev_card_cat">Category</div><h2 class="prev-card-headline" id="prev_card_headline">Article headline will appear here as you type…</h2><p class="prev-card-summary" id="prev_card_summary">Article summary will be taken from your content.</p></div><div class="prev-card-img-wrap"><img id="prev_card_img" src="" alt="" style="display:none"><div class="prev-card-img-ph" id="prev_card_img_ph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div><div class="prev-card-footer"><div class="prev-card-author"><div class="prev-card-avatar" id="prev_card_avatar"><span id="prev_card_initials">?</span><img id="prev_card_avatar_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="prev-card-author-info"><span class="prev-card-author-name" id="prev_card_author_name">Editor Name</span><span class="prev-card-author-dot">·</span><span class="prev-card-author-pos" id="prev_card_author_pos">Position</span></div></div><div class="prev-card-time" id="prev_card_time">Just now</div></div></div></div>
       </div>
       <div class="ed-preview-frame ed-preview-mobile" id="preview_mobile" style="display:none">
         <div class="prev-mobile-scene"><div class="prev-mobile-phone"><div class="prev-mobile-notch"></div><div class="prev-mobile-screen"><div class="prev-mob-card"><div class="prev-mob-topbar"><div class="prev-mob-logo">N</div><div class="prev-mob-site">NewsPortal</div><div class="prev-mob-url">news4bharat.com</div></div><div class="prev-mob-body"><div class="prev-mob-text"><div class="prev-mob-cat-tag" id="prev_mob_cat_tag">Category</div><div class="prev-mob-hl" id="prev_mob_hl">Article headline here…</div><div class="prev-mob-sum" id="prev_mob_sum">Summary preview…</div></div><div class="prev-mob-thumb" id="prev_mob_thumb"><img id="prev_mob_thumb_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:5px"><svg id="prev_mob_thumb_ph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div><div class="prev-mob-footer"><div class="prev-mob-av" id="prev_mob_av"><span id="prev_mob_av_init">?</span><img id="prev_mob_av_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><span class="prev-mob-aname" id="prev_mob_aname">Editor</span><span class="prev-mob-dot">·</span><span class="prev-mob-time" id="prev_mob_time">Just now</span></div></div></div></div></div>
@@ -781,7 +729,6 @@ label.image-drop {
   <span class="autosave-timer-text" id="nb_as_timer"></span>
 </div>
 
-<!-- Crop canvas (hidden, used for crop operation) -->
 <canvas id="nb_crop_canvas" style="display:none;"></canvas>
 
 <script>
@@ -794,166 +741,22 @@ function showDropZone(){var dz=document.getElementById('image_drop_zone'),btn=do
 /* ══════════════════════════════════════════════
    INLINE IMAGE TOOLBAR + DRAG RESIZE
 ══════════════════════════════════════════════ */
-var _nbActiveImg = null;
-var _nbHandles   = [];
-var HANDLE_POSITIONS = ['nw','n','ne','e','se','s','sw','w'];
-
-function nbCreateHandles() {
-  nbRemoveHandles();
-  HANDLE_POSITIONS.forEach(function(pos) {
-    var h = document.createElement('div');
-    h.className = 'nb-resize-handle';
-    h.setAttribute('data-pos', pos);
-    document.body.appendChild(h);
-    _nbHandles.push(h);
-    nbWireHandle(h, pos);
-  });
-}
-
-function nbRemoveHandles() {
-  _nbHandles.forEach(function(h){ if(h.parentNode) h.parentNode.removeChild(h); });
-  _nbHandles = [];
-}
-
-function nbPositionHandles(img) {
-  if(!img || !_nbHandles.length) return;
-  var r = img.getBoundingClientRect();
-  // Handles are position:fixed — use viewport coords directly, NO scrollY
-  var positions = {
-    nw:[r.left-5,           r.top-5],
-    n: [r.left+r.width/2-5, r.top-5],
-    ne:[r.right-5,          r.top-5],
-    e: [r.right-5,          r.top+r.height/2-5],
-    se:[r.right-5,          r.top+r.height-5],
-    s: [r.left+r.width/2-5, r.top+r.height-5],
-    sw:[r.left-5,           r.top+r.height-5],
-    w: [r.left-5,           r.top+r.height/2-5]
-  };
-  _nbHandles.forEach(function(h){
-    var pos=h.getAttribute('data-pos'), xy=positions[pos];
-    h.style.left=xy[0]+'px'; h.style.top=xy[1]+'px';
-  });
-}
-
-function nbWireHandle(handle, pos) {
-  var startX,startY,startW,startH,aspectRatio;
-  handle.addEventListener('mousedown', function(e){
-    e.preventDefault(); e.stopPropagation();
-    if(!_nbActiveImg) return;
-    startX=e.clientX; startY=e.clientY;
-    startW=_nbActiveImg.offsetWidth; startH=_nbActiveImg.offsetHeight;
-    aspectRatio=startW/startH;
-    function onMove(e){
-      var dx=e.clientX-startX, dy=e.clientY-startY;
-      var newW=startW, newH=startH;
-      if(pos==='e'||pos==='ne'||pos==='se') newW=Math.max(50,startW+dx);
-      if(pos==='w'||pos==='nw'||pos==='sw') newW=Math.max(50,startW-dx);
-      if(pos==='s'||pos==='se'||pos==='sw') newH=Math.max(50,startH+dy);
-      if(pos==='n'||pos==='ne'||pos==='nw') newH=Math.max(50,startH-dy);
-      if(['nw','ne','se','sw'].includes(pos)){
-        var sign=(pos==='se'||pos==='ne')?(dx>0?1:-1):(dx<0?1:-1);
-        newW=Math.max(50,startW+sign*(Math.abs(dx)+Math.abs(dy))/2);
-        newH=Math.round(newW/aspectRatio);
-      }
-      _nbActiveImg.style.width=newW+'px';
-      _nbActiveImg.style.height=newH+'px';
-      nbPositionHandles(_nbActiveImg);
-      nbRepositionToolbar(_nbActiveImg);
-    }
-    function onUp(){ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); nbSaveHistory(); }
-    document.addEventListener('mousemove',onMove);
-    document.addEventListener('mouseup',onUp);
-  });
-}
-
-function nbRepositionToolbar(img) {
-  var tb=document.getElementById('nb_img_toolbar');
-  var rect=img.getBoundingClientRect();
-  // Toolbar is position:fixed — viewport coords, NO scrollY
-  var top=rect.top-44;
-  if(top<8) top=rect.bottom+6;
-  tb.style.top=top+'px'; tb.style.left=rect.left+'px';
-}
-
-function nbShowImgToolbar(img) {
-  _nbActiveImg = img;
-  document.querySelectorAll('.nb-inline-img').forEach(function(i){ i.classList.remove('nb-img-selected'); });
-  img.classList.add('nb-img-selected');
-  var tb = document.getElementById('nb_img_toolbar');
-  tb.classList.add('visible');
-  nbRepositionToolbar(img);
-  nbCreateHandles();
-  nbPositionHandles(img);
-}
-
-function nbHideImgToolbar() {
-  var tb=document.getElementById('nb_img_toolbar');
-  if(tb) tb.classList.remove('visible');
-  nbRemoveHandles();
-  if(_nbActiveImg){ _nbActiveImg.classList.remove('nb-img-selected'); _nbActiveImg=null; }
-}
-
-document.addEventListener('click', function(e) {
-  var tb=document.getElementById('nb_img_toolbar');
-  var isHandle=e.target.classList.contains('nb-resize-handle');
-  var isImg=e.target.classList.contains('nb-inline-img');
-  var inTb=tb&&tb.contains(e.target);
-  if(!isHandle&&!isImg&&!inTb) nbHideImgToolbar();
-});
-
-// Scroll: reposition fixed handles to stay on image
-window.addEventListener('scroll', function(){
-  if(_nbActiveImg){ nbPositionHandles(_nbActiveImg); nbRepositionToolbar(_nbActiveImg); }
-}, {passive:true});
-
-function nbImgAlign(dir) {
-  if(!_nbActiveImg) return;
-  _nbActiveImg.style.float='none';
-  _nbActiveImg.style.marginLeft=_nbActiveImg.style.marginRight='';
-  _nbActiveImg.style.display='block';
-  if(dir==='left') { _nbActiveImg.style.float='left';  _nbActiveImg.style.marginRight='12px'; }
-  if(dir==='right'){ _nbActiveImg.style.float='right'; _nbActiveImg.style.marginLeft='12px'; }
-  if(dir==='center'){ _nbActiveImg.style.marginLeft='auto'; _nbActiveImg.style.marginRight='auto'; }
-  setTimeout(function(){ nbPositionHandles(_nbActiveImg); nbRepositionToolbar(_nbActiveImg); },50);
-  nbSaveHistory();
-}
-
-function nbImgCrop() {
-  if(!_nbActiveImg) return;
-  var src=_nbActiveImg.src;
-  var w=_nbActiveImg.naturalWidth||_nbActiveImg.offsetWidth;
-  var h=_nbActiveImg.naturalHeight||_nbActiveImg.offsetHeight;
-  var input=prompt('Crop — enter: left%, top%, width%, height%\nExample: 10,10,80,80','0,0,100,100');
-  if(!input) return;
-  var parts=input.split(',').map(function(v){ return parseFloat(v.trim()); });
-  if(parts.length!==4||parts.some(isNaN)){ alert('Invalid format. Use: left,top,width,height (percentages)'); return; }
-  var canvas=document.getElementById('nb_crop_canvas');
-  var ctx=canvas.getContext('2d');
-  var srcX=(parts[0]/100)*w,srcY=(parts[1]/100)*h,srcW=(parts[2]/100)*w,srcH=(parts[3]/100)*h;
-  canvas.width=srcW; canvas.height=srcH;
-  var tempImg=new Image(); tempImg.crossOrigin='anonymous';
-  tempImg.onload=function(){ ctx.drawImage(tempImg,srcX,srcY,srcW,srcH,0,0,srcW,srcH); _nbActiveImg.src=canvas.toDataURL('image/jpeg',0.9); nbSaveHistory(); };
-  tempImg.src=src;
-}
-
-function nbImgAltEdit() {
-  if(!_nbActiveImg) return;
-  var newAlt=prompt('Edit alt text for this image:',_nbActiveImg.alt||'');
-  if(newAlt!==null){ _nbActiveImg.alt=newAlt; nbSaveHistory(); }
-}
-
-function nbImgRemove() {
-  if(!_nbActiveImg) return;
-  if(!confirm('Remove this image from the article content?')) return;
-  var imgToRemove=_nbActiveImg;
-  nbHideImgToolbar();
-  imgToRemove.remove();
-  nbSaveHistory();
-}
-
-document.getElementById('ui_content').addEventListener('click', function(e) {
-  if(e.target&&e.target.classList.contains('nb-inline-img')){ e.stopPropagation(); nbShowImgToolbar(e.target); }
-});
+var _nbActiveImg=null,_nbHandles=[];
+var HANDLE_POSITIONS=['nw','n','ne','e','se','s','sw','w'];
+function nbCreateHandles(){nbRemoveHandles();HANDLE_POSITIONS.forEach(function(pos){var h=document.createElement('div');h.className='nb-resize-handle';h.setAttribute('data-pos',pos);document.body.appendChild(h);_nbHandles.push(h);nbWireHandle(h,pos);});}
+function nbRemoveHandles(){_nbHandles.forEach(function(h){if(h.parentNode)h.parentNode.removeChild(h);});_nbHandles=[];}
+function nbPositionHandles(img){if(!img||!_nbHandles.length)return;var r=img.getBoundingClientRect();var positions={nw:[r.left-5,r.top-5],n:[r.left+r.width/2-5,r.top-5],ne:[r.right-5,r.top-5],e:[r.right-5,r.top+r.height/2-5],se:[r.right-5,r.top+r.height-5],s:[r.left+r.width/2-5,r.top+r.height-5],sw:[r.left-5,r.top+r.height-5],w:[r.left-5,r.top+r.height/2-5]};_nbHandles.forEach(function(h){var pos=h.getAttribute('data-pos'),xy=positions[pos];h.style.left=xy[0]+'px';h.style.top=xy[1]+'px';});}
+function nbWireHandle(handle,pos){var startX,startY,startW,startH,aspectRatio;handle.addEventListener('mousedown',function(e){e.preventDefault();e.stopPropagation();if(!_nbActiveImg)return;startX=e.clientX;startY=e.clientY;startW=_nbActiveImg.offsetWidth;startH=_nbActiveImg.offsetHeight;aspectRatio=startW/startH;function onMove(e){var dx=e.clientX-startX,dy=e.clientY-startY,newW=startW,newH=startH;if(pos==='e'||pos==='ne'||pos==='se')newW=Math.max(50,startW+dx);if(pos==='w'||pos==='nw'||pos==='sw')newW=Math.max(50,startW-dx);if(pos==='s'||pos==='se'||pos==='sw')newH=Math.max(50,startH+dy);if(pos==='n'||pos==='ne'||pos==='nw')newH=Math.max(50,startH-dy);if(['nw','ne','se','sw'].includes(pos)){var sign=(pos==='se'||pos==='ne')?(dx>0?1:-1):(dx<0?1:-1);newW=Math.max(50,startW+sign*(Math.abs(dx)+Math.abs(dy))/2);newH=Math.round(newW/aspectRatio);}_nbActiveImg.style.width=newW+'px';_nbActiveImg.style.height=newH+'px';nbPositionHandles(_nbActiveImg);nbRepositionToolbar(_nbActiveImg);}function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);nbSaveHistory();}document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);});}
+function nbRepositionToolbar(img){var tb=document.getElementById('nb_img_toolbar'),rect=img.getBoundingClientRect(),top=rect.top-44;if(top<8)top=rect.bottom+6;tb.style.top=top+'px';tb.style.left=rect.left+'px';}
+function nbShowImgToolbar(img){_nbActiveImg=img;document.querySelectorAll('.nb-inline-img').forEach(function(i){i.classList.remove('nb-img-selected');});img.classList.add('nb-img-selected');var tb=document.getElementById('nb_img_toolbar');tb.classList.add('visible');nbRepositionToolbar(img);nbCreateHandles();nbPositionHandles(img);}
+function nbHideImgToolbar(){var tb=document.getElementById('nb_img_toolbar');if(tb)tb.classList.remove('visible');nbRemoveHandles();if(_nbActiveImg){_nbActiveImg.classList.remove('nb-img-selected');_nbActiveImg=null;}}
+document.addEventListener('click',function(e){var tb=document.getElementById('nb_img_toolbar');var isHandle=e.target.classList.contains('nb-resize-handle');var isImg=e.target.classList.contains('nb-inline-img');var inTb=tb&&tb.contains(e.target);if(!isHandle&&!isImg&&!inTb)nbHideImgToolbar();});
+window.addEventListener('scroll',function(){if(_nbActiveImg){nbPositionHandles(_nbActiveImg);nbRepositionToolbar(_nbActiveImg);}},{passive:true});
+function nbImgAlign(dir){if(!_nbActiveImg)return;_nbActiveImg.style.float='none';_nbActiveImg.style.marginLeft=_nbActiveImg.style.marginRight='';_nbActiveImg.style.display='block';if(dir==='left'){_nbActiveImg.style.float='left';_nbActiveImg.style.marginRight='12px';}if(dir==='right'){_nbActiveImg.style.float='right';_nbActiveImg.style.marginLeft='12px';}if(dir==='center'){_nbActiveImg.style.marginLeft='auto';_nbActiveImg.style.marginRight='auto';}setTimeout(function(){nbPositionHandles(_nbActiveImg);nbRepositionToolbar(_nbActiveImg);},50);nbSaveHistory();}
+function nbImgCrop(){if(!_nbActiveImg)return;var src=_nbActiveImg.src,w=_nbActiveImg.naturalWidth||_nbActiveImg.offsetWidth,h=_nbActiveImg.naturalHeight||_nbActiveImg.offsetHeight;var input=prompt('Crop — enter: left%, top%, width%, height%\nExample: 10,10,80,80','0,0,100,100');if(!input)return;var parts=input.split(',').map(function(v){return parseFloat(v.trim());});if(parts.length!==4||parts.some(isNaN)){alert('Invalid format. Use: left,top,width,height (percentages)');return;}var canvas=document.getElementById('nb_crop_canvas'),ctx=canvas.getContext('2d');var srcX=(parts[0]/100)*w,srcY=(parts[1]/100)*h,srcW=(parts[2]/100)*w,srcH=(parts[3]/100)*h;canvas.width=srcW;canvas.height=srcH;var tempImg=new Image();tempImg.crossOrigin='anonymous';tempImg.onload=function(){ctx.drawImage(tempImg,srcX,srcY,srcW,srcH,0,0,srcW,srcH);_nbActiveImg.src=canvas.toDataURL('image/jpeg',0.9);nbSaveHistory();};tempImg.src=src;}
+function nbImgAltEdit(){if(!_nbActiveImg)return;var newAlt=prompt('Edit alt text for this image:',_nbActiveImg.alt||'');if(newAlt!==null){_nbActiveImg.alt=newAlt;nbSaveHistory();}}
+function nbImgRemove(){if(!_nbActiveImg)return;if(!confirm('Remove this image from the article content?'))return;var imgToRemove=_nbActiveImg;nbHideImgToolbar();imgToRemove.remove();nbSaveHistory();}
+document.getElementById('ui_content').addEventListener('click',function(e){if(e.target&&e.target.classList.contains('nb-inline-img')){e.stopPropagation();nbShowImgToolbar(e.target);}});
 
 /* ══════════════════════════════════════════════
    SECONDARY KEYWORDS
@@ -974,7 +777,7 @@ function _asGetHash(){return((document.getElementById('ui_title')?document.getEl
 function _asShowBadge(state,msg,timer){var badge=document.getElementById('nb_autosave_badge'),dot=document.getElementById('nb_as_dot'),text=document.getElementById('nb_as_text'),timerEl=document.getElementById('nb_as_timer');if(!badge)return;badge.className='show '+(state||'');if(dot)dot.className='autosave-dot'+(state==='saving'?' pulse':'');if(text)text.textContent=msg||'';if(timerEl)timerEl.textContent=timer||'';}
 function _asHideBadge(){var badge=document.getElementById('nb_autosave_badge');if(badge)badge.className='';}
 function _asSaveToLocalStorage(){try{var key='nb_autosave_{{ original.pk|default:"new" }}',data={title:document.getElementById('ui_title')?document.getElementById('ui_title').value:'',subtitle:document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'',content:document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'',meta:document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'',slug:document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'',focus_kw:document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'',sec_kws:secondaryKws.join(','),tags:articleTags.join(','),ts:new Date().toISOString()};localStorage.setItem(key,JSON.stringify(data));}catch(e){}}
-async function _asAutoSave(){if(_asIsSaving)return;var currentHash=_asGetHash();if(currentHash===_asLastSavedHash)return;var title=document.getElementById('ui_title')?document.getElementById('ui_title').value.trim():'',content=document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML.trim():'';if(!title&&!content)return;_asIsSaving=true;_asShowBadge('saving','Auto-saving draft…','');_asSaveToLocalStorage();try{var formData=new FormData();formData.append('title',title||'Untitled Draft');formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');formData.append('content',content);formData.append('status','draft');formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');formData.append('secondary_keywords',secondaryKws.join(','));var articleId='{{ original.pk|default:"" }}',url=articleId?('/api/articles/'+articleId+'/'):'/api/articles/',method=articleId?'PUT':'POST';var res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});if(res.ok){_asLastSavedHash=currentHash;var now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});_asShowBadge('saved','✓ Draft saved',now);setTimeout(_asHideBadge,3000);}else{_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}}catch(e){_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}  _asIsSaving=false;}
+async function _asAutoSave(){if(_asIsSaving)return;var currentHash=_asGetHash();if(currentHash===_asLastSavedHash)return;var title=document.getElementById('ui_title')?document.getElementById('ui_title').value.trim():'',content=document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML.trim():'';if(!title&&!content)return;_asIsSaving=true;_asShowBadge('saving','Auto-saving draft…','');_asSaveToLocalStorage();try{var formData=new FormData();formData.append('title',title||'Untitled Draft');formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');formData.append('content',content);formData.append('status','draft');formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');formData.append('secondary_keywords',secondaryKws.join(','));var articleId='{{ original.pk|default:"" }}',url=articleId?('/api/articles/'+articleId+'/'):'/api/articles/',method=articleId?'PUT':'POST';var res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});if(res.ok){_asLastSavedHash=currentHash;var now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});_asShowBadge('saved','✓ Draft saved',now);setTimeout(_asHideBadge,3000);}else{_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}}catch(e){_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}_asIsSaving=false;}
 function _asStartCountdown(){clearInterval(_asCountdown);_asSecsLeft=_asIntervalSec;_asCountdown=setInterval(function(){_asSecsLeft--;if(_asSecsLeft<=0){_asSecsLeft=_asIntervalSec;_asAutoSave();}},1000);}
 _asStartCountdown();
 ['ui_title','ui_subtitle','ui_meta_desc','ui_focus_kw','ui_slug'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('input',function(){_asSecsLeft=_asIntervalSec;});});
@@ -1002,79 +805,83 @@ document.getElementById('ui_slug').addEventListener('input',function(){updateCan
 (function initCanonical(){var slugInp=document.getElementById('ui_slug'),canonEl=document.getElementById('ui_canonical');if(canonEl&&!canonEl.value&&slugInp&&slugInp.value)updateCanonicalFromSlug();})();
 
 /* ══════════════════════════════════════════════
-   CATEGORIES — with Select All + sub-sub support
+   CATEGORIES
+   selectedSubs format: { "catPk": ["SubName1", "SubName2"] }
+   Stored JSON: { "subs": {...}, "subsubs": {} }
 ══════════════════════════════════════════════ */
 var selectedCats = new Set();
-var selectedSubs = {};  
-var selectedSubSubs = {}; 
+var selectedSubs = {};
 
 (function initCats(){
   var existing = document.getElementById('ui_category').value;
   if(existing) existing.split(',').filter(Boolean).forEach(function(id){ selectedCats.add(id.trim()); });
+
   var subRaw = document.getElementById('ui_subcategory').value;
-  try { var parsed = JSON.parse(subRaw); if(parsed && typeof parsed === 'object') selectedSubs = parsed.subs || {}; selectedSubSubs = parsed.subsubs || {}; } catch(e){ selectedSubs = {}; }
-  // Init visual state
+  try {
+    var parsed = JSON.parse(subRaw);
+    if(parsed && typeof parsed === 'object') {
+      // Support both old {subs:{}} format and new flat {"catPk":["..."]} format
+      selectedSubs = parsed.subs || parsed || {};
+    }
+  } catch(e){ selectedSubs = {}; }
+
+  // Restore visual state for main cats
   document.querySelectorAll('.cat-item[data-type="main"]').forEach(function(el){
     var catId = String(el.dataset.id);
-    if(selectedCats.has(catId)){ el.classList.add('selected'); var sl = document.getElementById('subcat_'+catId); if(sl) sl.style.display='block'; }
-  });
-  document.querySelectorAll('.cat-item[data-type="sub"]').forEach(function(el){
-    var parentId = String(el.getAttribute('data-parent')), subName = el.getAttribute('data-subname');
-    if(selectedSubs[parentId] && selectedSubs[parentId].indexOf(subName) !== -1){
+    if(selectedCats.has(catId)){
       el.classList.add('selected');
-      // Show sub-sub list if exists
-      var subSlug = el.getAttribute('data-id').split('__')[1];
-      var ssl = document.getElementById('subsubcat_' + el.getAttribute('data-parent') + '__' + subSlug);
-      if(ssl) ssl.style.display = 'block';
+      var sl = document.getElementById('subcat_'+catId);
+      if(sl) sl.style.display = 'block';
     }
   });
+
+  // Restore visual state for sub cats
+  document.querySelectorAll('.cat-item[data-type="sub"]').forEach(function(el){
+    var parentId = String(el.getAttribute('data-parent'));
+    var subName  = el.getAttribute('data-subname');
+    if(selectedSubs[parentId] && selectedSubs[parentId].indexOf(subName) !== -1){
+      el.classList.add('selected');
+    }
+  });
+
   syncCatInput();
   updateSelectAllBtn();
 })();
 
 function toggleCat(el, id, type) {
   var sid = String(id);
+
   if(type === 'main') {
     if(selectedCats.has(sid)){
-      selectedCats.delete(sid); el.classList.remove('selected');
+      selectedCats.delete(sid);
+      el.classList.remove('selected');
       delete selectedSubs[sid];
       var subList = document.getElementById('subcat_'+sid);
-      if(subList){ subList.style.display='none'; subList.querySelectorAll('.cat-item').forEach(function(s){ s.classList.remove('selected'); }); }
+      if(subList){
+        subList.style.display = 'none';
+        subList.querySelectorAll('.cat-item').forEach(function(s){ s.classList.remove('selected'); });
+      }
     } else {
-      selectedCats.add(sid); el.classList.add('selected');
+      selectedCats.add(sid);
+      el.classList.add('selected');
       var subList = document.getElementById('subcat_'+sid);
-      if(subList) subList.style.display='block';
+      if(subList) subList.style.display = 'block';
     }
+
   } else if(type === 'sub') {
-    var parentId = String(el.getAttribute('data-parent')), subName = el.getAttribute('data-subname');
+    var parentId = String(el.getAttribute('data-parent'));
+    var subName  = el.getAttribute('data-subname');
     if(!selectedSubs[parentId]) selectedSubs[parentId] = [];
     var idx = selectedSubs[parentId].indexOf(subName);
-    if(idx !== -1){ selectedSubs[parentId].splice(idx, 1); el.classList.remove('selected'); }
-    else { selectedSubs[parentId].push(subName); el.classList.add('selected'); }
-    // Toggle sub-sub list visibility
-    var subSlug = sid.split('__').slice(1).join('__');
-    var ssl = document.getElementById('subsubcat_' + parentId + '__' + subSlug);
-    if(ssl) ssl.style.display = el.classList.contains('selected') ? 'block' : 'none';
-  } else if(type === 'subsub') {
-    // sub-sub categories stored same way as subs, just deeper key
-    var parentId = String(el.getAttribute('data-parent'));
-    var subParent = el.getAttribute('data-subparent');
-    var subName   = el.getAttribute('data-subname');
-
-    var key = parentId + '__' + subParent;
-
-    if(!selectedSubSubs[key]) selectedSubSubs[key] = [];
-
-    var idx = selectedSubSubs[key].indexOf(subName);
-
     if(idx !== -1){
-      selectedSubSubs[key].splice(idx, 1);
+      selectedSubs[parentId].splice(idx, 1);
       el.classList.remove('selected');
     } else {
-      selectedSubSubs[key].push(subName);
+      selectedSubs[parentId].push(subName);
       el.classList.add('selected');
     }
   }
+
   syncCatInput();
   updateSelectAllBtn();
   setTimeout(updateEditorPreview, 50);
@@ -1083,50 +890,48 @@ function toggleCat(el, id, type) {
 function syncCatInput(){
   var arr = Array.from(selectedCats);
   document.getElementById('ui_category').value = arr.join(',');
+
   var subInp = document.getElementById('ui_subcategory');
-  if(subInp) subInp.value = JSON.stringify({
-  subs: selectedSubs,
-  subsubs: selectedSubSubs
-  });
+  if(subInp) subInp.value = JSON.stringify({ subs: selectedSubs });
+
   var n = arr.length;
-  var subCount = Object.values(selectedSubs).reduce(function(acc,v){ return acc + v.length; }, 0);
+  var subCount = Object.values(selectedSubs).reduce(function(acc,v){ return acc + (Array.isArray(v) ? v.length : 0); }, 0);
   var labelEl = document.getElementById('cat_count_label');
-  if(labelEl) labelEl.innerHTML = '<span id="cat_selected_count">'+n+'</span> categor'+(n===1?'y':'ies')+(subCount>0?' · <span style="color:#60a5fa">'+subCount+' subcategor'+(subCount===1?'y':'ies')+'</span>':'')+' selected';
+  if(labelEl) labelEl.innerHTML =
+    '<span id="cat_selected_count">'+n+'</span> categor'+(n===1?'y':'ies')+
+    (subCount>0?' · <span style="color:#60a5fa">'+subCount+' sub'+(subCount===1?'':'s')+'</span>':'')+
+    ' selected';
 }
 
-/* SELECT ALL CATEGORIES */
 function toggleSelectAllCats() {
   var allMainItems = document.querySelectorAll('.cat-item[data-type="main"]');
   var allSelected  = Array.from(allMainItems).every(function(el){ return selectedCats.has(String(el.dataset.id)); });
-  if(allSelected) {
-    // Deselect all
+  if(allSelected){
     allMainItems.forEach(function(el){
       var sid = String(el.dataset.id);
       selectedCats.delete(sid); el.classList.remove('selected');
       delete selectedSubs[sid];
-      var subList = document.getElementById('subcat_'+sid);
-      if(subList){ subList.style.display='none'; subList.querySelectorAll('.cat-item').forEach(function(s){ s.classList.remove('selected'); }); }
+      var sl = document.getElementById('subcat_'+sid);
+      if(sl){ sl.style.display='none'; sl.querySelectorAll('.cat-item').forEach(function(s){ s.classList.remove('selected'); }); }
     });
   } else {
-    // Select all + show all sub lists
     allMainItems.forEach(function(el){
       var sid = String(el.dataset.id);
       selectedCats.add(sid); el.classList.add('selected');
-      var subList = document.getElementById('subcat_'+sid);
-      if(subList) subList.style.display='block';
+      var sl = document.getElementById('subcat_'+sid);
+      if(sl) sl.style.display = 'block';
     });
   }
   syncCatInput(); updateSelectAllBtn(); setTimeout(updateEditorPreview, 50);
 }
 
-function updateSelectAllBtn() {
+function updateSelectAllBtn(){
   var btn = document.getElementById('cat_select_all_btn');
   if(!btn) return;
   var allMainItems = document.querySelectorAll('.cat-item[data-type="main"]');
   if(!allMainItems.length) return;
   var allSelected = Array.from(allMainItems).every(function(el){ return selectedCats.has(String(el.dataset.id)); });
   btn.classList.toggle('active', allSelected);
-  btn.querySelector('svg + span, svg ~ span') && null; // just update text
   btn.innerHTML = allSelected
     ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Deselect All Categories'
     : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Select All Categories';
@@ -1163,54 +968,8 @@ function nbApplyBgColor(color){document.getElementById('nb_bgColorSwatch').style
 function nbInsertTag(tag){nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const el=document.createElement(tag);el.appendChild(range.extractContents());if(!el.textContent.trim())el.textContent=tag==='h2'?'Heading 2':'Heading 3';range.insertNode(el);range.setStartAfter(el);range.collapse(true);sel.removeAllRanges();sel.addRange(range);setTimeout(nbSaveHistory,50);}
 function nbInsertBlockquote(){nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const bq=document.createElement('blockquote');bq.appendChild(range.extractContents());if(!bq.textContent.trim())bq.textContent='Quote here...';range.insertNode(bq);const inner=document.createRange();inner.selectNodeContents(bq);inner.collapse(false);sel.removeAllRanges();sel.addRange(inner);setTimeout(nbSaveHistory,50);}
 function nbInsertHR(){nbSaveHistory();nbEditor.focus();document.execCommand('insertHorizontalRule',false,null);setTimeout(nbSaveHistory,50);}
-
-/* ── FIX: Link insert — all English prompts ── */
-function nbInsertLink(){
-  nbEditor.focus();
-  const sel=window.getSelection();
-  const selectedText=sel&&sel.toString().trim();
-  const url=prompt('Enter URL (e.g. https://example.com):');
-  if(!url||!url.trim())return;
-  if(selectedText){
-    fmt('createLink',url.trim());
-  }else{
-    const displayText=prompt('Enter link display text:',url.trim())||url.trim();
-    const a=document.createElement('a');
-    a.href=url.trim();a.textContent=displayText;a.target='_blank';a.rel='noopener noreferrer';
-    const range=sel.getRangeAt(0);
-    range.deleteContents();range.insertNode(a);
-    range.setStartAfter(a);range.collapse(true);
-    sel.removeAllRanges();sel.addRange(range);
-  }
-  setTimeout(nbSaveHistory,50);
-}
-
-/* ── Inline image insert ── */
-function nbInsertInlineImage(){
-  var inp=document.createElement('input');
-  inp.type='file';inp.accept='image/*';inp.style.display='none';
-  document.body.appendChild(inp);
-  inp.addEventListener('change',function(){
-    var file=inp.files[0];if(!file){document.body.removeChild(inp);return;}
-    var reader=new FileReader();
-    reader.onload=function(ev){
-      nbEditor.focus();
-      var sel=window.getSelection();
-      var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;
-      var img=document.createElement('img');
-      img.src=ev.target.result;
-      img.className='nb-inline-img';
-      img.style.maxWidth='100%';
-      img.alt=file.name.replace(/\.[^.]+$/,'');
-      if(range){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true);sel.removeAllRanges();sel.addRange(range);}
-      else nbEditor.appendChild(img);
-      nbSaveHistory();
-      document.body.removeChild(inp);
-    };
-    reader.readAsDataURL(file);
-  });
-  inp.click();
-}
+function nbInsertLink(){nbEditor.focus();const sel=window.getSelection();const selectedText=sel&&sel.toString().trim();const url=prompt('Enter URL (e.g. https://example.com):');if(!url||!url.trim())return;if(selectedText){fmt('createLink',url.trim());}else{const displayText=prompt('Enter link display text:',url.trim())||url.trim();const a=document.createElement('a');a.href=url.trim();a.textContent=displayText;a.target='_blank';a.rel='noopener noreferrer';const range=sel.getRangeAt(0);range.deleteContents();range.insertNode(a);range.setStartAfter(a);range.collapse(true);sel.removeAllRanges();sel.addRange(range);}setTimeout(nbSaveHistory,50);}
+function nbInsertInlineImage(){var inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.style.display='none';document.body.appendChild(inp);inp.addEventListener('change',function(){var file=inp.files[0];if(!file){document.body.removeChild(inp);return;}var reader=new FileReader();reader.onload=function(ev){nbEditor.focus();var sel=window.getSelection();var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;var img=document.createElement('img');img.src=ev.target.result;img.className='nb-inline-img';img.style.maxWidth='100%';img.alt=file.name.replace(/\.[^.]+$/,'');if(range){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true);sel.removeAllRanges();sel.addRange(range);}else nbEditor.appendChild(img);nbSaveHistory();document.body.removeChild(inp);};reader.readAsDataURL(file);});inp.click();}
 function insertTag(tag){nbInsertTag(tag);}
 
 /* ══════════════════════════════════════════════
@@ -1271,20 +1030,57 @@ function getCsrf(){return document.querySelector('[name=csrfmiddlewaretoken]').v
 ══════════════════════════════════════════════ */
 async function submitArticle(forceStatus){
   const title=document.getElementById('ui_title').value.trim(),content=nbEditor.innerHTML.trim(),categoryVal=document.getElementById('ui_category').value;
-  if(!title){alert('Please enter a headline.');return;}if(!content){alert('Content cannot be empty.');return;}if(!categoryVal){alert('Please select at least one category.');return;}
-  const rawImageUrl=document.getElementById('ui_image').value;const safeImageUrl=(rawImageUrl&&!rawImageUrl.startsWith('blob:'))?rawImageUrl:'';const subcategoriesJson=document.getElementById('ui_subcategory').value||'{}';
+  if(!title){alert('Please enter a headline.');return;}
+  if(!content){alert('Content cannot be empty.');return;}
+  if(!categoryVal){alert('Please select at least one category.');return;}
+  const rawImageUrl=document.getElementById('ui_image').value;
+  const safeImageUrl=(rawImageUrl&&!rawImageUrl.startsWith('blob:'))?rawImageUrl:'';
+  const subcategoriesJson=document.getElementById('ui_subcategory').value||'{}';
   const formData=new FormData();
-  formData.append('title',title);formData.append('subtitle',document.getElementById('ui_subtitle').value);formData.append('content',content);formData.append('status',forceStatus||document.getElementById('ui_status').value);formData.append('priority',document.getElementById('ui_priority').value);formData.append('is_paid',document.getElementById('ui_is_paid').checked?'true':'false');
-  const deadline=document.getElementById('ui_deadline').value;if(deadline)formData.append('deadline',deadline);const assignedTo=document.getElementById('ui_assigned').value;if(assignedTo)formData.append('assigned_to',assignedTo);
-  formData.append('slug',document.getElementById('ui_slug').value);formData.append('canonical_url',document.getElementById('ui_canonical').value);formData.append('meta_description',document.getElementById('ui_meta_desc').value);formData.append('focus_keyword',document.getElementById('ui_focus_kw').value);formData.append('secondary_keywords',document.getElementById('ui_secondary_keywords')?document.getElementById('ui_secondary_keywords').value:'');formData.append('noindex',document.getElementById('ui_noindex').checked?'true':'false');formData.append('nofollow',document.getElementById('ui_nofollow').checked?'true':'false');formData.append('in_sitemap',document.getElementById('ui_in_sitemap').checked?'true':'false');
-  const fileInput=document.getElementById('ui_image_file');if(fileInput&&fileInput.files&&fileInput.files.length>0)formData.append('image',fileInput.files[0]);else if(safeImageUrl)formData.append('image_url',safeImageUrl);
-  formData.append('image_alt',document.getElementById('ui_image_alt').value.trim());formData.append('image_source',document.getElementById('ui_image_source').value.trim());
-  formData.append('editor_name',document.getElementById('ed_name').value);formData.append('editor_position',document.getElementById('ed_position').value);formData.append('editor_bio',document.getElementById('ed_bio').value);formData.append('editor_photo',document.getElementById('ed_photo').value);formData.append('editor_twitter',document.getElementById('ed_twitter').value);formData.append('editor_linkedin',document.getElementById('ed_linkedin').value);formData.append('editor_instagram',document.getElementById('ed_instagram').value);formData.append('editor_facebook',document.getElementById('ed_facebook').value);formData.append('editor_youtube',document.getElementById('ed_youtube').value);formData.append('editor_reddit',document.getElementById('ed_reddit').value);formData.append('editor_articles',document.getElementById('ed_articles').value||'0');
+  formData.append('title',title);
+  formData.append('subtitle',document.getElementById('ui_subtitle').value);
+  formData.append('content',content);
+  formData.append('status',forceStatus||document.getElementById('ui_status').value);
+  formData.append('priority',document.getElementById('ui_priority').value);
+  formData.append('is_paid',document.getElementById('ui_is_paid').checked?'true':'false');
+  const deadline=document.getElementById('ui_deadline').value;if(deadline)formData.append('deadline',deadline);
+  const assignedTo=document.getElementById('ui_assigned').value;if(assignedTo)formData.append('assigned_to',assignedTo);
+  formData.append('slug',document.getElementById('ui_slug').value);
+  formData.append('canonical_url',document.getElementById('ui_canonical').value);
+  formData.append('meta_description',document.getElementById('ui_meta_desc').value);
+  formData.append('focus_keyword',document.getElementById('ui_focus_kw').value);
+  formData.append('secondary_keywords',document.getElementById('ui_secondary_keywords')?document.getElementById('ui_secondary_keywords').value:'');
+  formData.append('noindex',document.getElementById('ui_noindex').checked?'true':'false');
+  formData.append('nofollow',document.getElementById('ui_nofollow').checked?'true':'false');
+  formData.append('in_sitemap',document.getElementById('ui_in_sitemap').checked?'true':'false');
+  const fileInput=document.getElementById('ui_image_file');
+  if(fileInput&&fileInput.files&&fileInput.files.length>0)formData.append('image',fileInput.files[0]);
+  else if(safeImageUrl)formData.append('image_url',safeImageUrl);
+  formData.append('image_alt',document.getElementById('ui_image_alt').value.trim());
+  formData.append('image_source',document.getElementById('ui_image_source').value.trim());
+  formData.append('editor_name',document.getElementById('ed_name').value);
+  formData.append('editor_position',document.getElementById('ed_position').value);
+  formData.append('editor_bio',document.getElementById('ed_bio').value);
+  formData.append('editor_photo',document.getElementById('ed_photo').value);
+  formData.append('editor_twitter',document.getElementById('ed_twitter').value);
+  formData.append('editor_linkedin',document.getElementById('ed_linkedin').value);
+  formData.append('editor_instagram',document.getElementById('ed_instagram').value);
+  formData.append('editor_facebook',document.getElementById('ed_facebook').value);
+  formData.append('editor_youtube',document.getElementById('ed_youtube').value);
+  formData.append('editor_reddit',document.getElementById('ed_reddit').value);
+  formData.append('editor_articles',document.getElementById('ed_articles').value||'0');
   const editorId=document.getElementById('ui_editor_id').value;if(editorId)formData.append('editor_id',editorId);
-  categoryVal.split(',').filter(Boolean).forEach(id=>{formData.append('categories',id.trim());});formData.append('subcategories',subcategoriesJson);
+  categoryVal.split(',').filter(Boolean).forEach(id=>{formData.append('categories',id.trim());});
+  formData.append('subcategories',subcategoriesJson);
   const tagsVal=document.getElementById('ui_tags').value;if(tagsVal)formData.append('tags',tagsVal);
-  const articleId='{{ original.pk|default:"" }}';const url=articleId?`/api/articles/${articleId}/`:'/api/articles/';const method=articleId?'PUT':'POST';
-  try{const res=await fetch(url,{method,headers:{'X-CSRFToken':getCsrf()},body:formData});if(res.ok)window.location.href='/admin/newsapp/article/';else{const err=await res.json();alert('Error: '+JSON.stringify(err));}}catch(e){alert('Server error. Please try again.');}
+  const articleId='{{ original.pk|default:"" }}';
+  const url=articleId?`/api/articles/${articleId}/`:'/api/articles/';
+  const method=articleId?'PUT':'POST';
+  try{
+    const res=await fetch(url,{method,headers:{'X-CSRFToken':getCsrf()},body:formData});
+    if(res.ok)window.location.href='/admin/newsapp/article/';
+    else{const err=await res.json();alert('Error: '+JSON.stringify(err));}
+  }catch(e){alert('Server error. Please try again.');}
 }
 
 /* ══════════════════════════════════════════════

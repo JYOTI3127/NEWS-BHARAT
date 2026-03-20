@@ -29,7 +29,7 @@ class Category(models.Model):
     slug           = models.SlugField(max_length=100, unique=True, blank=True)
     description    = models.TextField(blank=True)
     status         = models.CharField(max_length=10, default='active')
-    sub_categories = models.JSONField(default=list, blank=True)
+    sub_categories = models.JSONField(default=dict, blank=True)
 
     class Meta:
         verbose_name_plural = "categories"

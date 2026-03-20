@@ -1399,4 +1399,4 @@ def live_cricket(request):
             "live": [],
             "upcoming": [],
             "recent": []
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 

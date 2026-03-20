@@ -476,7 +476,7 @@ label.image-drop {
         <span id="tags_count_num">0</span> / 15 tags added
       </div>
       <input type="hidden" id="ui_tags" name="tags"
-             value="{% if original.tags %}{{ original.tags|join:',' }}{% endif %}">
+             value="{% if original.tags %}{{ original.tags }}{% endif %}">
     </div>
 
   </div>
@@ -961,7 +961,60 @@ nbEditor.addEventListener('keydown',(e)=>{
 function fmt(cmd,val){nbSaveHistory();nbEditor.focus();document.execCommand(cmd,false,val!==undefined?val:null);setTimeout(nbSaveHistory,50);}
 function nbSetFontSize(size){if(!size)return;nbSaveHistory();nbEditor.focus();document.execCommand('fontSize',false,size);setTimeout(nbSaveHistory,50);}
 function nbSetFontFamily(family){if(!family)return;nbSaveHistory();nbEditor.focus();document.execCommand('fontName',false,family);setTimeout(nbSaveHistory,50);var sel=document.getElementById('nb_fontFamilySelect');if(sel)setTimeout(function(){sel.value='';},80);}
-function nbSetLineHeight(value){if(!value)return;nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);let node=range.commonAncestorContainer;while(node&&node!==nbEditor){if(node.nodeType===1){const tag=node.tagName.toLowerCase();if(['p','div','h1','h2','h3','h4','li','blockquote'].includes(tag)){node.style.lineHeight=value;setTimeout(nbSaveHistory,50);return;}}node=node.parentNode;}const wrapper=document.createElement('div');wrapper.style.lineHeight=value;try{const extracted=range.extractContents();wrapper.appendChild(extracted);range.insertNode(wrapper);range.setStartAfter(wrapper);range.collapse(true);sel.removeAllRanges();sel.addRange(range);}catch(e){}setTimeout(nbSaveHistory,50);}
+function nbSetLineHeight(value){
+  if(!value)return;
+  nbSaveHistory();
+  nbEditor.focus();
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);
+
+  // ── FIX: Apply line-height to ALL block-level nodes inside selection ──
+  const BLOCK_TAGS=['p','div','h1','h2','h3','h4','h5','h6','li','blockquote','td','th'];
+
+  // Get all nodes inside the editor
+  const allNodes=nbEditor.querySelectorAll(BLOCK_TAGS.join(','));
+  let applied=false;
+
+  allNodes.forEach(function(node){
+    // Check if this node intersects the selection
+    const nodeRange=document.createRange();
+    nodeRange.selectNodeContents(node);
+    if(range.compareBoundaryPoints(Range.END_TO_START,nodeRange)<0 &&
+       range.compareBoundaryPoints(Range.START_TO_END,nodeRange)>0){
+      node.style.lineHeight=value;
+      applied=true;
+    }
+  });
+
+  // If nothing was applied (e.g. cursor inside a plain text node with no block wrapper),
+  // walk up to find the nearest block and apply there
+  if(!applied){
+    let node=range.commonAncestorContainer;
+    while(node&&node!==nbEditor){
+      if(node.nodeType===1){
+        const tag=node.tagName.toLowerCase();
+        if(BLOCK_TAGS.includes(tag)){node.style.lineHeight=value;break;}
+      }
+      node=node.parentNode;
+    }
+    // Last resort: wrap selection in a div with line-height
+    if(!node||node===nbEditor){
+      const wrapper=document.createElement('div');
+      wrapper.style.lineHeight=value;
+      try{
+        const extracted=range.extractContents();
+        wrapper.appendChild(extracted);
+        range.insertNode(wrapper);
+        range.setStartAfter(wrapper);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }catch(e){}
+    }
+  }
+  setTimeout(nbSaveHistory,50);
+}
 nbEditor.addEventListener('paste',function(e){e.preventDefault();var html='';if(e.clipboardData&&e.clipboardData.getData){html=e.clipboardData.getData('text/html');if(!html){document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));return;}}html=html.replace(/font-family\s*:[^;}"']*(;|(?=\s*[}"']))/gi,'');html=html.replace(/(<font[^>]*)\sface\s*=\s*["'][^"']*["']/gi,'$1');html=html.replace(/mso-[^;]+;/gi,'');document.execCommand('insertHTML',false,html);nbSaveHistory();});
 function nbApplyTextColor(color){document.getElementById('nb_textColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();document.execCommand('foreColor',false,color);setTimeout(nbSaveHistory,50);}
 function nbApplyBgColor(color){document.getElementById('nb_bgColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();try{document.execCommand('hiliteColor',false,color);}catch(e){document.execCommand('backColor',false,color);}setTimeout(nbSaveHistory,50);}

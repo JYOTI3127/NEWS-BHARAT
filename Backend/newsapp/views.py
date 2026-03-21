@@ -484,6 +484,7 @@ def dashboard_view(request):
         "ad_slot":                        ad_slot,
         "published_articles_for_picker":  published_articles_for_picker,
         "categories":                     categories,
+        "mp3_categories":                 categories,
     }
     return render(request, "admin/index.html", context)
 

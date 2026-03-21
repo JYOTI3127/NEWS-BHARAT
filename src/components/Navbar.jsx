@@ -72,7 +72,7 @@ const NAV_SECTIONS = [
 ];
 
 const navLinks = [
-  { label: "Breaking News",     path: "/category/breaking-now" },
+  { label: "Breaking News",     path: "/category/breaking-news" },
   { label: "States of Bharat",  path: "/category/state-of-bharat" },
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },
   { label: "Bharat in Numbers", path: "/category/bharat-numbers" },
@@ -81,6 +81,7 @@ const navLinks = [
   { label: "Sports",            path: "/category/sports" },
   { label: "World News",        path: "/category/world-news" },
   { label: "Trending",          path: "/category/trending" },
+  
 ];
 
 const LogoFull = () => (

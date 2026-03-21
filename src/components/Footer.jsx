@@ -38,7 +38,8 @@ const footerLinks = {
   MORE: [
     "Entertainment",
     "60 Second Read",
-    "Health"
+    "Health",
+
   ]
 };
 
@@ -59,6 +60,7 @@ const policyLinks = [
   { label: "Contact Us", path: "/contact" },
   { label: "Privacy Policy", path: "/privacy-policy" },
   { label: "Terms & Conditions", path: "/terms-of-service" },
+  { label: "News Letter",   path: "/NewsletterAgent" },
 ];
 
 const AppleIcon = () => (

@@ -217,9 +217,8 @@ img {
 }
 
 .nb-bg {
-  @apply absolute inset-0 bg-cover bg-[center_top] z-0;
+  @apply absolute inset-0 bg-cover bg-[center_top] z-0 cursor-pointer;
 }
-
 .nb-overlay-left {
   @apply absolute top-0 left-0 w-[20%] h-full z-[1] backdrop-blur-[10px];
   mask-image: linear-gradient(to right, black 0%, black 40%, rgba(0, 0, 0, 0.6) 65%, rgba(0, 0, 0, 0.2) 80%, transparent 100%);
@@ -6771,6 +6770,7 @@ img {
   background-size: cover;
   background-position: center top;
   z-index: 0;
+   cursor: pointer !important;
 }
 
 .nb-overlay-left {

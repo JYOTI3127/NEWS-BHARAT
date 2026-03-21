@@ -59,25 +59,19 @@ export default function NewsBanner() {
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
-
         const sorted = all
           .filter((a) => a.status === "published" || a.image_url)
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-        // Top 4 with image → slides
         const withImg   = sorted.filter((a) => a.image_url);
         const slideData = (withImg.length >= 4 ? withImg : sorted).slice(0, 4);
-
         setSlides(slideData.map((a) => ({
           id:       a.id,
           slug:     a.slug,
           author:   a.category_details?.[0]?.name || "News",
           title:    a.title,
           category: a.category_details?.[0]?.name || "News",
-          image:    a.image_url || a.image || newsImg,
+          image:    a.image_url || a.image || "",
         })));
-
-        // Bottom news — pehle 3 articles (slides se alag)
         const bottomArticles = sorted.slice(0, 3);
         setBottomNews(bottomArticles.map((a) => ({
           id:     a.id,
@@ -88,11 +82,7 @@ export default function NewsBanner() {
           region: a.category_details?.[0]?.name || "News",
         })));
       })
-      .catch(() => {
-        // API fail → kuch nahi dikhega
-        setSlides([]);
-        setBottomNews([]);
-      });
+      .catch(() => { setSlides([]); setBottomNews([]); });
   }, []);
 
   useEffect(() => {
@@ -110,51 +100,95 @@ export default function NewsBanner() {
     setTimeout(() => { setCurrent(index); setAnimating(false); }, 600);
   };
 
+  const navigateToArticle = (slug) => {
+    if (slug) navigate(`/article/${slug}`);
+  };
+
   if (slides.length === 0) return null;
 
   const slide = slides[current];
 
   return (
     <div className="nb-root">
-      <div className="nb-container">
 
+      {/* ── nb-container pe onClick — poori banner clickable hai ── */}
+      <div
+        className="nb-container"
+        onClick={() => navigateToArticle(slide.slug)}
+        style={{ cursor: "pointer" }}
+      >
+
+        {/* Image */}
         <img
           key={current}
           src={slide.image}
           alt={slide.title}
-          className={`nb-bg absolute inset-0 w-full h-full object-cover object-top z-0 transform transition-all duration-500 ease-linear ${animating ? "opacity-0" : "opacity-100"} ${animating ? (direction === "next" ? "translate-x-8 scale-[1.02]" : "-translate-x-8 scale-[1.02]") : "translate-x-0 scale-100"}`}
-          onError={(e) => { e.target.src = newsImg; }}
+          className={`nb-bg absolute inset-0 w-full h-full object-cover object-top z-0 transform transition-all duration-500 ease-linear
+            ${animating ? "opacity-0" : "opacity-100"}
+            ${animating ? (direction === "next" ? "translate-x-8 scale-[1.02]" : "-translate-x-8 scale-[1.02]") : "translate-x-0 scale-100"}`}
+          onError={(e) => { e.target.style.display = "none"; }}
         />
 
-        <div className="nb-gradient-overlay" />
+        {/* Gradient — pointerEvents none taaki click block na kare */}
+        <div className="nb-gradient-overlay" style={{ pointerEvents: "none" }} />
 
-        <div className={`nb-inner transform transition-all duration-500 delay-100 ease-linear ${animating ? "opacity-0 translate-y-[10px]" : "opacity-100 translate-y-0"}`}>
-
+        {/* Content */}
+        <div
+          className={`nb-inner transform transition-all duration-500 delay-100 ease-linear
+            ${animating ? "opacity-0 translate-y-[10px]" : "opacity-100 translate-y-0"}`}
+          style={{ position: "relative", zIndex: 2 }}
+        >
           <div className="nb-hero">
             <div className="nb-author-row">
               <div className="nb-redbar" />
               <span className="nb-author-name">{slide.author}</span>
             </div>
+
             <h1 className="nb-headline">{slide.title}</h1>
+
             <div className="nb-separator" />
+
             <div className="nb-actions">
-              <button className="nb-pill" onClick={() => { if (slide.slug) navigate(`/article/${slide.slug}`); }}>
+
+              {/* Read More */}
+              <button
+                className="nb-pill"
+                onClick={(e) => {
+                  e.stopPropagation(); // parent click rok do
+                  navigateToArticle(slide.slug);
+                }}
+              >
                 <ArrowCircleIcon /><span>Read More</span>
               </button>
-              <button className="nb-pill"><PlayCircleIcon /><span>Watch Video</span></button>
-              <button className="nb-pill" onClick={() => navigator.clipboard?.writeText(window.location.origin + `/article/${slide.slug}`)}>
+
+
+              {/* Share */}
+              <button
+                className="nb-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard?.writeText(
+                    window.location.origin + `/article/${slide.slug}`
+                  );
+                }}
+              >
                 <ShareCircleIcon /><span>Share</span>
               </button>
+
             </div>
           </div>
 
+          {/* Bottom News Cards */}
           <div className="nb-bottom">
             {bottomNews.map((item) => (
               <div
                 key={item.id}
                 className="nb-news-card"
                 style={{ cursor: item.slug ? "pointer" : "default" }}
-                onClick={() => { if (item.slug) navigate(`/article/${item.slug}`); }}
+                onClick={(e) => {
+                  e.stopPropagation(); // apna slug use karo
+                  navigateToArticle(item.slug);
+                }}
               >
                 <p className="nb-news-title" style={{ color: "#ffffff" }}>{item.title}</p>
                 <div className="nb-news-meta" style={{ color: "rgba(255,255,255,0.6)" }}>

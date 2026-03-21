@@ -19,6 +19,7 @@ import SixtySecondsPage from "./pages/SixtySecondsPage";
 
 import "../src/style.css";
 import CategoryPage from "./pages/Categorypage";
+import NewsletterAgent from "./pages/news4bharat-agent";
 
 function Layout() {
 
@@ -43,6 +44,7 @@ function Layout() {
         <Route path="/category/:slug" element={<CategoryPage />} />
          <Route path="/article/:slug" element={<ArticleDetails />} />
          <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
+          <Route path="/NewsletterAgent" element={<NewsletterAgent />} />
      
       </Routes>
 

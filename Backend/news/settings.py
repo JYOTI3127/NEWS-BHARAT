@@ -200,7 +200,7 @@ TEMPLATES[0]['OPTIONS']['context_processors'] += [
 
 GS_BUCKET_NAME = 'news4bharat-media-37'
 GS_PROJECT_ID = 'news4bharat-490809'
-GS_DEFAULT_ACL = None           # Uniform bucket — ACL set mat karo
+GS_DEFAULT_ACL = None         
 GS_QUERYSTRING_AUTH = False
 
 import json

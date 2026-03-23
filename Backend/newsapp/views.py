@@ -26,10 +26,11 @@ from django.core.mail import send_mail
 from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
 import os
-import anthropic
+import google.generativeai as genai
 from django.urls import reverse
 
 User = get_user_model()
+
 
 # ═══════════════════════════════════════════════════════
 # CATEGORY VIEWS
@@ -149,21 +150,18 @@ def _save_article_from_request(request, article=None):
     else:
         article.assigned_to = None
 
-    article.slug             = data.get('slug', '').strip()
-    article.canonical_url    = data.get('canonical_url', '').strip()
-    article.meta_description = data.get('meta_description', '').strip()
-    article.focus_keyword    = data.get('focus_keyword', '').strip()
+    article.slug               = data.get('slug', '').strip()
+    article.canonical_url      = data.get('canonical_url', '').strip()
+    article.meta_description   = data.get('meta_description', '').strip()
+    article.focus_keyword      = data.get('focus_keyword', '').strip()
     article.secondary_keywords = data.get('secondary_keywords', '').strip()
-    article.noindex          = data.get('noindex', 'false').lower() in ('true', '1', 'on')
-    article.nofollow         = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
-    article.in_sitemap       = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
+    article.noindex            = data.get('noindex', 'false').lower() in ('true', '1', 'on')
+    article.nofollow           = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
+    article.in_sitemap         = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
 
-    # FIX 1: Save image_alt and image_source from POST data
     article.image_alt    = data.get('image_alt', '').strip()
     article.image_source = data.get('image_source', '').strip()
-
-    # FIX 4: Save tags (comma-separated string from frontend)
-    article.tags = data.get('tags', '').strip()
+    article.tags         = data.get('tags', '').strip()
 
     article.author_display_name      = data.get('editor_name',      data.get('author_display_name', '')).strip()
     article.author_display_position  = data.get('editor_position',  data.get('author_display_position', '')).strip()
@@ -202,18 +200,12 @@ def _save_article_from_request(request, article=None):
     except Exception as e:
         return None, {'error': str(e)}
 
-    # FIX 3: Categories — JS sends comma-separated string in hidden input.
-    # We must handle BOTH cases:
-    #   a) Multiple form fields named 'categories' (getlist)
-    #   b) Single comma-separated string (from our JS hidden input)
-    category_ids_raw = data.get('categories', '')
-    category_list_raw = data.getlist('categories')  # handles multiple form fields
+    category_ids_raw  = data.get('categories', '')
+    category_list_raw = data.getlist('categories')
 
     cat_ids = []
     if len(category_list_raw) > 1:
-        # Multiple form fields — use getlist result directly
         for c in category_list_raw:
-            # Each item might itself be comma-separated, handle both
             for part in str(c).split(','):
                 part = part.strip()
                 if part:
@@ -222,7 +214,6 @@ def _save_article_from_request(request, article=None):
                     except (ValueError, TypeError):
                         pass
     elif category_ids_raw:
-        # Single value — might be comma-separated string like "1,2,3"
         for part in str(category_ids_raw).split(','):
             part = part.strip()
             if part:
@@ -238,16 +229,14 @@ def _save_article_from_request(request, article=None):
 
     return article, None
 
+
 @api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-
         articles = Article.objects.filter(status="published")
-
         if category:
-            articles = articles.filter(categories__slug=category).distinct()  
-
+            articles = articles.filter(categories__slug=category).distinct()
         serializer = ArticleSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -259,6 +248,7 @@ def article_list(request):
             return Response(error, status=400)
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data, status=201)
+
 
 @api_view(['GET'])
 def dashboard_articles(request):
@@ -426,7 +416,6 @@ def dashboard_view(request):
     except Exception:
         top_reporters = []
 
-    # ── Homepage Control ──
     try:
         hero_slot = HomepageSlot.objects.filter(slot_name='hero').select_related(
             'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
@@ -453,38 +442,37 @@ def dashboard_view(request):
     categories = Category.objects.filter(status='active').order_by('name')
 
     context = {
-        "total_articles":                 total_articles,
-        "published_articles":             published_articles,
-        "review_articles":                review_articles,
-        "fact_check_articles":            fact_check_articles,
-        "draft_articles":                 draft_articles,
-        "scheduled_articles":             scheduled_articles,
-        "archived_articles":              archived_articles,
-        "rejected_articles":              rejected_articles,
-        "paid_articles":                  paid_articles,
-        "overdue_articles":               overdue_articles,
-        "published_this_week":            published_this_week,
-        "published_this_month":           published_this_month,
-        "total_authors":                  total_authors,
-        "total_categories":               total_categories,
-        "recent_articles":                recent_articles,
-        "recent_logs":                    recent_logs,
-        "top_reporters":                  top_reporters,
-        "category_stats":                 category_stats,
-        "monthly_labels_json":            json.dumps(monthly_labels),
-        "monthly_pub_json":               json.dumps(monthly_pub),
-        "monthly_draft_json":             json.dumps(monthly_draft),
-        "donut_data_json":                json.dumps(donut_data),
-        "pending_fact_checks":            pending_fact_checks,
-        "verified_fact_checks":           verified_fact_checks,
-        "issues_fact_checks":             issues_fact_checks,
-        # Homepage Control
-        "hero_slot":                      hero_slot,
-        "latest_slot":                    latest_slot,
-        "ad_slot":                        ad_slot,
-        "published_articles_for_picker":  published_articles_for_picker,
-        "categories":                     categories,
-        "mp3_categories":                 categories,
+        "total_articles":                total_articles,
+        "published_articles":            published_articles,
+        "review_articles":               review_articles,
+        "fact_check_articles":           fact_check_articles,
+        "draft_articles":                draft_articles,
+        "scheduled_articles":            scheduled_articles,
+        "archived_articles":             archived_articles,
+        "rejected_articles":             rejected_articles,
+        "paid_articles":                 paid_articles,
+        "overdue_articles":              overdue_articles,
+        "published_this_week":           published_this_week,
+        "published_this_month":          published_this_month,
+        "total_authors":                 total_authors,
+        "total_categories":              total_categories,
+        "recent_articles":               recent_articles,
+        "recent_logs":                   recent_logs,
+        "top_reporters":                 top_reporters,
+        "category_stats":                category_stats,
+        "monthly_labels_json":           json.dumps(monthly_labels),
+        "monthly_pub_json":              json.dumps(monthly_pub),
+        "monthly_draft_json":            json.dumps(monthly_draft),
+        "donut_data_json":               json.dumps(donut_data),
+        "pending_fact_checks":           pending_fact_checks,
+        "verified_fact_checks":          verified_fact_checks,
+        "issues_fact_checks":            issues_fact_checks,
+        "hero_slot":                     hero_slot,
+        "latest_slot":                   latest_slot,
+        "ad_slot":                       ad_slot,
+        "published_articles_for_picker": published_articles_for_picker,
+        "categories":                    categories,
+        "mp3_categories":                categories,
     }
     return render(request, "admin/index.html", context)
 
@@ -573,8 +561,8 @@ def update_latest_news_slot(request):
 @staff_member_required
 @require_POST
 def update_ad_slot(request):
-    slot          = _get_or_create_slot('ad_banner')
-    slot.mode     = 'manual'
+    slot             = _get_or_create_slot('ad_banner')
+    slot.mode        = 'manual'
     slot.ad_link_url = request.POST.get('ad_link_url', '').strip()
     slot.is_active   = request.POST.get('is_active', 'true').lower() in ('true', '1', 'on')
 
@@ -691,7 +679,6 @@ def _format_article(article, request=None, highlight=None):
 
     first_cat = article.categories.first()
 
-    # FIX 2: Use display name in search results too
     author_name = ''
     if article.author_display_name and article.author_display_name.strip():
         author_name = article.author_display_name.strip()
@@ -705,18 +692,15 @@ def _format_article(article, request=None, highlight=None):
         "category":     first_cat.name if first_cat else None,
         "category_id":  first_cat.id   if first_cat else None,
         "categories":   list(article.categories.values('id', 'name')),
-        # FIX 2: author_name now uses display name
         "author":       author_name,
         "status":       article.status,
         "published_at": article.published_at.isoformat() if article.published_at else None,
         "created_at":   article.created_at.isoformat()   if article.created_at   else None,
         "image":        img_url,
-        # FIX 1: image_alt and image_source in search results
         "image_alt":    article.image_alt or '',
         "image_source": article.image_source or '',
         "excerpt":      highlight or excerpt,
         "is_paid":      getattr(article, 'is_paid', False),
-        # Tags as list in search results too
         "tags":         [t.strip() for t in article.tags.split(',') if t.strip()] if article.tags else [],
     }
 
@@ -991,77 +975,169 @@ def my_credentials(request):
 
 
 # ═══════════════════════════════════════════════════════
-# AI VIEWS
+# AI VIEWS  — Sabhi Google Gemini use karte hain (FREE)
 # ═══════════════════════════════════════════════════════
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+def _get_gemini_model(model_name="gemini-2.0-flash-lite"):
+    """Returns a configured Gemini GenerativeModel. Raises ValueError if key not set."""
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise ValueError("GEMINI_API_KEY not set in .env file")
+    genai.configure(api_key=key)
+    return genai.GenerativeModel(model_name)
+
+def _gemini_error_response(e):
+    """Converts Gemini exceptions to a JsonResponse."""
+    err = str(e).lower()
+    if "api_key" in err or "api key" in err or "authentication" in err:
+        return JsonResponse({"error": "Invalid Gemini API key. Check GEMINI_API_KEY in .env"}, status=401)
+    if "quota" in err or "rate" in err or "limit" in err:
+        return JsonResponse({"error": "Gemini rate limit exceeded. Please wait a moment and retry."}, status=429)
+    return JsonResponse({"error": f"Gemini error: {str(e)}"}, status=503)
 
 
 @staff_member_required
 @require_POST
 def ai_spell_check(request):
+    """Fix spelling errors only — Google Gemini 2.0 Flash (Free)"""
     try:
         data    = json.loads(request.body)
         content = data.get("content", "").strip()
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
-        message = client.messages.create(
-            model="claude-opus-4-6", max_tokens=4096,
-            messages=[{"role": "user", "content": f"""You are a professional news editor. Fix ALL spelling and grammar mistakes in the following article text.
 
-RULES:
-- Fix spelling errors, grammar mistakes, punctuation issues
-- Do NOT change the meaning, tone, or structure
-- Do NOT add or remove sentences
-- Return ONLY the corrected text, nothing else
-
-Article text:
-{content}"""}]
+        model  = _get_gemini_model()
+        prompt = (
+            "You are a professional news editor. "
+            "Fix ONLY spelling errors and typos in the given text.\n\n"
+            "STRICT RULES:\n"
+            "- Fix spelling errors and typos ONLY\n"
+            "- Do NOT fix grammar or sentence structure\n"
+            "- Do NOT change meaning, tone, or structure\n"
+            "- Do NOT add or remove sentences\n"
+            "- Return ONLY the corrected text, nothing else\n\n"
+            f"Article text:\n{content}"
         )
-        return JsonResponse({"corrected": message.content[0].text.strip()})
-    except anthropic.APIError as e:
-        return JsonResponse({"error": f"AI error: {str(e)}"}, status=503)
+        response  = model.generate_content(prompt)
+        corrected = response.text.strip()
+        return JsonResponse({"corrected": corrected})
+
+    except ValueError as e:
+        return JsonResponse({"error": str(e)}, status=503)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return _gemini_error_response(e)
+
+
+@staff_member_required
+@require_POST
+def ai_grammar_check(request):
+    """Fix grammar, punctuation, sentence structure — Google Gemini 2.0 Flash (Free)"""
+    try:
+        data    = json.loads(request.body)
+        content = data.get("content", "").strip()
+        if not content:
+            return JsonResponse({"error": "No content provided"}, status=400)
+
+        model  = _get_gemini_model()
+        prompt = (
+            "You are a professional news editor specializing in grammar correction. "
+            "The user will give you HTML article content. "
+            "Fix ALL grammar mistakes, punctuation errors, tense consistency, "
+            "subject-verb agreement, article usage (a/an/the), preposition usage, "
+            "and sentence clarity issues.\n\n"
+            "STRICT RULES:\n"
+            "- Preserve ALL HTML tags exactly as they are (do not add, remove, or modify tags)\n"
+            "- Fix ONLY grammar and punctuation, not spelling\n"
+            "- Do NOT change factual content, names, numbers, or dates\n"
+            "- Do NOT restructure paragraphs\n"
+            "- Return ONLY the corrected HTML, nothing else — no explanation, no preamble\n\n"
+            f"HTML article content:\n{content}"
+        )
+        response  = _get_gemini_model().generate_content(prompt)
+        corrected = response.text.strip()
+
+        if corrected.startswith("```"):
+            parts     = corrected.split("```")
+            corrected = parts[1] if len(parts) >= 2 else corrected.lstrip("`")
+            if corrected.startswith("html"):
+                corrected = corrected[4:]
+            corrected = corrected.strip()
+
+        return JsonResponse({"corrected": corrected})
+
+    except ValueError as e:
+        return JsonResponse({"error": str(e)}, status=503)
+    except Exception as e:
+        return _gemini_error_response(e)
+
+
+@staff_member_required
+@require_POST
+def ai_plagiarism_check(request):
+    """Plagiarism / originality check — Google Gemini 2.0 Flash (Free)"""
+    try:
+        data = json.loads(request.body)
+        text = data.get("text", "").strip()
+        if not text or len(text) < 30:
+            return JsonResponse({"error": "Content too short for plagiarism check"}, status=400)
+
+        model  = _get_gemini_model()
+        prompt = (
+            "You are a plagiarism detection assistant. "
+            "Analyze the text and estimate its originality/plagiarism score.\n"
+            "Respond ONLY in valid JSON (no markdown, no backticks, no extra text):\n"
+            '{"score":<0-100>,"level":"<low|medium|high>",'
+            '"label":"<Original|Mostly Original|Partially Copied|Likely Plagiarized>",'
+            '"analysis":"<2-3 lines>","tips":"<1 short tip>"}\n'
+            "Score guide: 0-20=low plagiarism (original), 21-60=medium, 61-100=high plagiarism.\n\n"
+            f"Text to check:\n{text[:3000]}"
+        )
+        response = model.generate_content(prompt)
+        raw      = response.text.strip()
+        raw      = raw.replace("```json", "").replace("```", "").strip()
+        result   = json.loads(raw)
+        return JsonResponse(result)
+
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"error": f"Could not parse AI response: {str(e)}"}, status=500)
+    except Exception as e:
+        return _gemini_error_response(e)
 
 
 @staff_member_required
 @require_POST
 def ai_seo_keywords(request):
+    """Suggest SEO keywords — Google Gemini 2.0 Flash (Free)"""
     try:
         data    = json.loads(request.body)
         title   = data.get("title", "").strip()
         content = data.get("content", "").strip()
         if not title and not content:
             return JsonResponse({"error": "No title or content provided"}, status=400)
-        message = client.messages.create(
-            model="claude-opus-4-6", max_tokens=512,
-            messages=[{"role": "user", "content": f"""You are an SEO expert for a news website (Indian news context).
-Analyze this article and suggest the 10 best SEO keywords/phrases.
 
-Article Title: {title}
-Article Content: {content[:1000]}
-
-RULES:
-- Return ONLY a JSON array of strings, nothing else
-- Mix short keywords (1-2 words) and long-tail phrases (3-4 words)
-- Focus on what Indian readers would search for
-- Include both English and relevant Hinglish terms if appropriate
-- Example format: ["keyword one", "keyword two", "long tail phrase here"]
-
-Return the JSON array now:"""}]
+        model  = _get_gemini_model()
+        prompt = (
+            "You are an SEO expert for an Indian news website.\n"
+            "Suggest 10 best SEO keywords for this article.\n"
+            "Mix short (1-2 words) and long-tail (3-4 words) phrases.\n"
+            "Focus on what Indian readers search for.\n"
+            "Return ONLY a valid JSON array of strings — no markdown, no explanation.\n"
+            'Example: ["keyword one", "keyword two", "long tail phrase here"]\n\n'
+            f"Title: {title}\n"
+            f"Content: {content[:1000]}"
         )
-        raw = message.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+        response = model.generate_content(prompt)
+        raw      = response.text.strip()
+        raw      = raw.replace("```json", "").replace("```", "").strip()
         keywords = json.loads(raw)
         if not isinstance(keywords, list):
             keywords = []
         return JsonResponse({"keywords": keywords[:12]})
+
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"keywords": [], "error": "Could not parse AI response"}, status=200)
-    except anthropic.APIError as e:
-        return JsonResponse({"error": f"AI error: {str(e)}"}, status=503)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return _gemini_error_response(e)
 
 
 # ═══════════════════════════════════════════════════════
@@ -1072,7 +1148,7 @@ Return the JSON array now:"""}]
 @require_POST
 def save_tag_creation_perm(request):
     try:
-        data = json.loads(request.body)
+        data       = json.loads(request.body)
         permission = data.get('permission', 'editor')
         if permission not in ('superuser', 'editor', 'reporter'):
             return JsonResponse({'error': 'Invalid permission value'}, status=400)
@@ -1132,9 +1208,9 @@ def inbox_view(request):
         'members', 'messages', 'messages__sender',
     ).order_by('-updated_at').distinct()
 
-    conv_id = request.GET.get("conv")
+    conv_id             = request.GET.get("conv")
     active_conversation = None
-    conv_messages = []
+    conv_messages       = []
 
     if conv_id:
         try:
@@ -1166,7 +1242,7 @@ def new_chat(request):
 @staff_member_required
 def start_conversation(request, user_id):
     other_user = get_object_or_404(User, id=user_id)
-    existing = Conversation.objects.filter(
+    existing   = Conversation.objects.filter(
         conv_type='private', conversationmember__user=request.user
     ).filter(conversationmember__user=other_user).first()
 
@@ -1273,7 +1349,7 @@ def notifications_view(request):
 def mark_notification_read(request, id):
     if request.method == "POST":
         try:
-            notif = Notification.objects.get(id=id, user=request.user)
+            notif         = Notification.objects.get(id=id, user=request.user)
             notif.is_read = True
             notif.save()
             return JsonResponse({"status": "read"})
@@ -1285,7 +1361,7 @@ def mark_notification_read(request, id):
 def archive_notification(request, id):
     if request.method == "POST":
         try:
-            notif = Notification.objects.get(id=id, user=request.user)
+            notif             = Notification.objects.get(id=id, user=request.user)
             notif.is_archived = True
             notif.is_read     = True
             notif.save()
@@ -1298,7 +1374,7 @@ def archive_notification(request, id):
 def unarchive_notification(request, id):
     if request.method == "POST":
         try:
-            notif = Notification.objects.get(id=id, user=request.user)
+            notif             = Notification.objects.get(id=id, user=request.user)
             notif.is_archived = False
             notif.save()
             return JsonResponse({"status": "restored"})
@@ -1309,7 +1385,7 @@ def unarchive_notification(request, id):
 @staff_member_required
 def online_status_view(request):
     users = User.objects.filter(is_staff=True).select_related('profile')
-    data = []
+    data  = []
     for u in users:
         try:
             online = u.profile.is_online()
@@ -1319,59 +1395,48 @@ def online_status_view(request):
     return JsonResponse(data, safe=False)
 
 
-from rest_framework.response import Response
-from django.conf import settings
-
+# ═══════════════════════════════════════════════════════
+# LIVE CRICKET
+# ═══════════════════════════════════════════════════════
 
 @api_view(['GET'])
 def live_cricket(request):
     try:
-
         if not settings.CRICKET_API_KEY:
             return Response({
                 "error": "Cricket API key not configured",
-                "live": [],
-                "upcoming": [],
-                "recent": []
+                "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        url = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
 
+        url      = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
         response = requests.get(url, timeout=10)
 
         if response.status_code != 200:
             return Response({
                 "error": f"Cricket API returned status {response.status_code}",
-                "live": [],
-                "upcoming": [],
-                "recent": []
+                "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        
+
         data = response.json()
 
         if data.get("status") != "success" or not data.get("data"):
             return Response({
                 "error": "Invalid response from Cricket API",
-                "live": [],
-                "upcoming": [],
-                "recent": []
+                "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        
-        matches = data.get("data", [])
-        live = []
+
+        matches  = data.get("data", [])
+        live     = []
         upcoming = []
-        recent = []
+        recent   = []
 
         for match in matches:
             match_status = str(match.get("status", "")).lower()
-            
-            # Categorize matches based on status
             if "match over" in match_status or "won" in match_status or "beat" in match_status:
                 recent.append(match)
             elif "upcoming" in match_status or "scheduled" in match_status:
                 upcoming.append(match)
             else:
-                # Includes live/in progress matches
                 live.append(match)
 
         return Response({
@@ -1379,25 +1444,19 @@ def live_cricket(request):
             "upcoming": upcoming[:3],
             "recent":   recent[:3]
         })
-        
+
     except requests.exceptions.Timeout:
         return Response({
             "error": "Cricket API request timed out",
-            "live": [],
-            "upcoming": [],
-            "recent": []
+            "live": [], "upcoming": [], "recent": []
         }, status=status.HTTP_504_GATEWAY_TIMEOUT)
     except requests.exceptions.RequestException as e:
         return Response({
             "error": f"Failed to fetch cricket data: {str(e)}",
-            "live": [],
-            "upcoming": [],
-            "recent": []
+            "live": [], "upcoming": [], "recent": []
         }, status=status.HTTP_502_BAD_GATEWAY)
     except Exception as e:
         return Response({
             "error": f"Unexpected error: {str(e)}",
-            "live": [],
-            "upcoming": [],
-            "recent": []
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            "live": [], "upcoming": [], "recent": []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

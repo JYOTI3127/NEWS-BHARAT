@@ -37,4 +37,5 @@ urlpatterns = [
     path('homepage/hero/',        views.update_hero_slot,        name='hp_hero'),
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
+    path('admin/media-library/', media_library_view, name='admin_media_library'),
 ]

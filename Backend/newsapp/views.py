@@ -1460,3 +1460,10 @@ def live_cricket(request):
             "error": f"Unexpected error: {str(e)}",
             "live": [], "upcoming": [], "recent": []
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@staff_member_required
+def media_library_view(request):
+    categories = Category.objects.filter(status='active').order_by('name')
+    return render(request, 'admin/media_library.html', {
+        'mp3_categories': categories,
+    })

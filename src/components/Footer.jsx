@@ -229,7 +229,7 @@ export default function Footer() {
       {/* COPYRIGHT */}
       <div className="ft-bottom">
         <p className="ft-copy">
-          © Copyright {year} <strong>News 4 Bharat</strong> - All Rights Reserved.
+          © Copyright {year} <strong>News4Bharat</strong> - All Rights Reserved.
         </p>
       </div>
 

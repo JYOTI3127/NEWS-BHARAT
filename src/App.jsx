@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
@@ -22,9 +21,7 @@ import CategoryPage from "./pages/Categorypage";
 import NewsletterAgent from "./pages/news4bharat-agent";
 
 function Layout() {
-
   const location = useLocation();
-
   const hideLayout = location.pathname === "/CommingSoon";
 
   return (
@@ -42,14 +39,17 @@ function Layout() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/CommingSoon" element={<CommingSoon />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
-         <Route path="/article/:slug" element={<ArticleDetails />} />
-         <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
-          <Route path="/NewsletterAgent" element={<NewsletterAgent />} />
-     
+        <Route path="/article/:slug" element={<ArticleDetails />} />
+        <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
+        <Route path="/NewsletterAgent" element={<NewsletterAgent />} />
       </Routes>
 
       {!hideLayout && <Footer />}
-      {!hideLayout && <BottomNav />}
+      {!hideLayout && (
+        <div className="block md:hidden">
+          <BottomNav />
+        </div>
+      )}
     </>
   );
 }

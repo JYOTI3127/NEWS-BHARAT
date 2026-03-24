@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Twitter, Facebook, Link2, ArrowLeft, Clock, User } from "lucide-react";
 
-const API_BASE = "https://api.news4bharat.com/api";
+const API_BASE = "https://news4bharat.cloud/api";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", {

@@ -5,7 +5,7 @@ import {
   Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
 
-const API_BASE = "https://api.news4bharat.com/api";
+const API_BASE = "https://news4bharat.cloud/api";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";

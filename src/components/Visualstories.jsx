@@ -7,7 +7,7 @@ import {
     FaCircle,
 } from "react-icons/fa6";
 
-const API_BASE = "https://api.news4bharat.com/api";
+const API_BASE = "https://news4bharat.cloud/api";
 const CATEGORY_SLUG = "bharat-economy"; // Bharat Economy & Business
 
 const tabs = ["Live", "Upcoming", "Recent"];
@@ -249,7 +249,7 @@ export default function VisualStoriesWithScore() {
     useEffect(() => {
         const fetchScores = async () => {
             try {
-                const res = await fetch("https://api.news4bharat.com/api/live-cricket/");
+                const res = await fetch("https://news4bharat.cloud/api/live-cricket/");
                 const json = await res.json();
                 setCricketData(json);
                 if (json.live?.length > 0) setActiveTab(0);

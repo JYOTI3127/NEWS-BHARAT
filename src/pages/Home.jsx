@@ -15,9 +15,8 @@ const Home = () => {
       {/* <VideoSection /> */}
       <VisualStoriesWithScore />
       <NewsPortalSection />
-      <Newsletter />
-
       <StateNews />
+       <Newsletter />
     </>
   )
 }

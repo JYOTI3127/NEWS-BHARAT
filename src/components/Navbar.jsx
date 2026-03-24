@@ -129,7 +129,7 @@ const Header = () => {
     });
     const fetchDate = async () => {
       try {
-        const res  = await fetch("http://localhost:8000/api/datetime/");
+        const res  = await fetch("https://news4bharat.cloud/api/datetime/");
         const data = await res.json();
         setDateTime({ date: data.date || data.formatted_date || getLocal().date, time: getLocal().time });
       } catch {
@@ -146,7 +146,7 @@ const Header = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res    = await fetch("https://api.news4bharat.com/api/categories/");
+        const res    = await fetch("https://news4bharat.cloud/api/categories/");
         const data   = await res.json();
         const active = data.filter(cat => cat.status === "active");
 
@@ -191,7 +191,7 @@ const Header = () => {
     if (!query.trim()) { setSearchResults([]); setShowResults(false); return; }
     setIsSearching(true);
     try {
-      const res     = await fetch(`http://localhost:8000/api/search/?q=${encodeURIComponent(query)}`);
+      const res     = await fetch(`https://news4bharat.cloud/api/search/?q=${encodeURIComponent(query)}`);
       const data    = await res.json();
       const results = Array.isArray(data) ? data : (data.results || data.articles || []);
       setSearchResults(results);
@@ -225,7 +225,7 @@ const Header = () => {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const r    = await fetch("http://127.0.0.1:8000/api/weather/?city=Delhi");
+        const r    = await fetch("https://news4bharat.cloud/api/weather/?city=Delhi");
         const data = await r.json();
         setWeather(data);
       } catch {}
@@ -238,7 +238,7 @@ const Header = () => {
   useEffect(() => {
     const fetchMetals = async () => {
       try {
-        const r    = await fetch("http://127.0.0.1:8000/api/metal-ticker/");
+        const r    = await fetch("https://news4bharat.cloud/api/metal-ticker/");
         const data = await r.json();
         setMetals(data);
       } catch {}
@@ -251,7 +251,7 @@ const Header = () => {
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
-        const r    = await fetch("http://127.0.0.1:8000/api/market-indices/");
+        const r    = await fetch("https://news4bharat.cloud/api/market-indices/");
         const data = await r.json();
         setMarkets(data);
       } catch {}
@@ -489,7 +489,7 @@ const Header = () => {
         <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
-            {["E-Paper", "Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
+            {[ "Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
@@ -519,8 +519,8 @@ const Header = () => {
               </svg>
               हिंदी
             </button>
-            <button className="btn-live"><Radio size={11} /> Live TV</button>
-            <button className="btn-epaper"><FileText size={11} /> E-Paper</button>
+            {/* <button className="btn-live"><Radio size={11} /> Live TV</button> */}
+            {/* <button className="btn-epaper"><FileText size={11} /> E-Paper</button> */}
           </div>
         </div>
 

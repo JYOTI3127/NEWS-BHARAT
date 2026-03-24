@@ -6,14 +6,18 @@ import {
   Instagram, Youtube, Linkedin,
 } from "lucide-react";
 
-const API_BASE = "https://api.news4bharat.com/api";
+const API_BASE = "https://news4bharat.cloud/api";
 
 const formatDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true, 
     })
     : "";
 
@@ -151,10 +155,10 @@ export default function ArticleDetails() {
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 text-[12.5px] text-gray-500 mb-5 pb-5 border-b border-gray-200">
             {article.display_author_name && (
-<span className="flex items-center gap-1.5 font-semibold text-gray-700">
-  <User size={13} />
-  {article.display_author_name || "News4Bharat"}
-</span>
+              <span className="flex items-center gap-1.5 font-semibold text-gray-700">
+                <User size={13} />
+                {article.display_author_name || "News4Bharat"}
+              </span>
             )}
             {date && (
               <span className="flex items-center gap-1.5">
@@ -176,20 +180,22 @@ export default function ArticleDetails() {
           )}
 
           {/* Content */}
-          <div
-            className="prose prose-lg max-w-none text-gray-700 leading-[1.9]
-                       [&_p]:mb-5 [&_p]:text-[16px] sm:[&_p]:text-[17px]
-                       [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-gray-900 [&_h2]:mt-8 [&_h2]:mb-3
-                       [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-gray-800 [&_h3]:mt-6 [&_h3]:mb-2
-                       [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
-                       [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
-                       [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-                       [&_li]:mb-1 [&_li]:text-[15px]
-                       [&_b]:text-gray-900 [&_strong]:text-gray-900
-                       [&_blockquote]:border-l-4 [&_blockquote]:border-red-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-600"
-            dangerouslySetInnerHTML={{ __html: article.content }}
-          />
+<div
+  className="prose prose-lg max-w-none text-gray-700 leading-[1.9]
 
+  text-left md:text-justify
+
+
+
+  [&_p]:mb-3
+
+  [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
+  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
+  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
+  [&_li]:mb-1
+"
+  dangerouslySetInnerHTML={{ __html: article.content }}
+/>
           {/* Share Bar */}
           <div className="mt-10 pt-6 border-t border-gray-200">
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">

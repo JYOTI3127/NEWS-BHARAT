@@ -15,13 +15,19 @@ export default function ArticleCard({ article }) {
   const imageUrl = image_url || null;
 
   const date = published_at || created_at;
-  const formattedDate = date
-    ? new Date(date).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
+
+const formattedDate = date
+
+  ? new Date(date).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    })
+  : "";
 
   // ✅ Sirf slug — ID hata diya
   const articlePath = `/article/${slug}`;

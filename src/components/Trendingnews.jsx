@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL        = "https://api.news4bharat.com/api/articles/";
-const CATEGORIES_URL = "https://api.news4bharat.com/api/categories/";
+const API_URL = "https://news4bharat.cloud/api/articles/";
+const CATEGORIES_URL = "https://news4bharat.cloud/api/categories/";
 
 // ── Helpers ───────────────────────────────────────────────────
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
@@ -11,9 +11,8 @@ const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const ArrowBtn = ({ direction, disabled, onClick }) => (
   <div
     onClick={disabled ? undefined : onClick}
-    className={`w-8 h-8 min-w-[32px] flex items-center justify-center select-none ${
-      disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
-    }`}
+    className={`w-8 h-8 min-w-[32px] flex items-center justify-center select-none ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+      }`}
   >
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#999999" strokeWidth="1" />
@@ -33,18 +32,18 @@ const FlameSvg = () => (
 
 if (typeof document !== "undefined" && !document.getElementById("poppins-font")) {
   const link = document.createElement("link");
-  link.id   = "poppins-font";
-  link.rel  = "stylesheet";
+  link.id = "poppins-font";
+  link.rel = "stylesheet";
   link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap";
   document.head.appendChild(link);
 }
 
 // ── API Hook ──────────────────────────────────────────────────
 function useArticles() {
-  const [articles,   setArticles]   = useState([]);
+  const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]); // [{ name, slug }]
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -56,16 +55,16 @@ function useArticles() {
         // ── Articles: newest first ──────────────────────────
         const published = Array.isArray(articleData)
           ? articleData
-              .filter((a) => a.status === "published" || a.image_url)
-              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .filter((a) => a.status === "published" || a.image_url)
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           : [];
         setArticles(published);
 
         // ── Categories: { name, slug } ──────────────────────
         const fromApi = Array.isArray(catData)
           ? catData
-              .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
-              .map((c) => ({ name: c.name || c.title, slug: c.slug }))
+            .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
+            .map((c) => ({ name: c.name || c.title, slug: c.slug }))
           : [];
 
         if (fromApi.length > 0) {
@@ -119,10 +118,10 @@ function SecHeader({ title }) {
 function TrendingBar({ categories }) {
   const navigate = useNavigate();
   const GAP = 8;
-  const [startIdx,   setStartIdx]   = useState(0);
+  const [startIdx, setStartIdx] = useState(0);
   const [translateX, setTranslateX] = useState(0);
-  const [canPrev,    setCanPrev]    = useState(false);
-  const [canNext,    setCanNext]    = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
   const itemRefs = useRef([]);
   const outerRef = useRef(null);
 
@@ -200,14 +199,14 @@ function LatestNews({ articles, loading }) {
       <div className="tn-latest-scroll">
         {loading
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
-                <Skeleton h="13px" w="90%" mb="6px" />
-                <Skeleton h="11px" w="70%" mb="0" />
-              </div>
-            ))
+            <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
+              <Skeleton h="13px" w="90%" mb="6px" />
+              <Skeleton h="11px" w="70%" mb="0" />
+            </div>
+          ))
           : articles.length === 0
-          ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
-          : articles.map((article) => {
+            ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+            : articles.map((article) => {
               const desc = article.subtitle
                 ? article.subtitle
                 : stripHtml(article.content);
@@ -235,9 +234,9 @@ function LatestNews({ articles, loading }) {
 // ── Feature Cards ─────────────────────────────────────────────
 // Card click → /article/:slug
 function FeatureCards({ articles, loading }) {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const withImage = articles.filter((a) => a.image_url);
-  const cards     = withImage.slice(0, 3);
+  const cards = withImage.slice(0, 3);
 
   if (loading) {
     return (
@@ -284,9 +283,9 @@ function FeatureCards({ articles, loading }) {
 // ── 60 Seconds ────────────────────────────────────────────────
 // Item click → /60-seconds/:slug
 function LiveUpdates({ articles, loading }) {
-  const navigate      = useNavigate();
-  const scrollRef     = useRef(null);
-  const animRef       = useRef(null);
+  const navigate = useNavigate();
+  const scrollRef = useRef(null);
+  const animRef = useRef(null);
   const autoScrollRef = useRef(true);
 
   // ── Filter: sirf 60-second-read category ─────────────────
@@ -324,16 +323,16 @@ function LiveUpdates({ articles, loading }) {
       >
         {loading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
-                <Skeleton h="11px" w="50px" mb="6px" />
-                <Skeleton h="11px" w="95%" mb="0" />
-              </div>
-            ))
+            <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
+              <Skeleton h="11px" w="50px" mb="6px" />
+              <Skeleton h="11px" w="95%" mb="0" />
+            </div>
+          ))
           : sixtyArticles.length === 0
-          ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
-          : sixtyArticles.map((item) => {
+            ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+            : sixtyArticles.map((item) => {
               const catName = item.category_details?.[0]?.name || "News";
-              const text    = item.subtitle ? item.subtitle : stripHtml(item.content);
+              const text = item.subtitle ? item.subtitle : stripHtml(item.content);
               return (
                 <div
                   key={item.id}
@@ -342,11 +341,28 @@ function LiveUpdates({ articles, loading }) {
                 >
                   <div className="tn-live-dot group-hover:bg-[#D80100] transition-colors duration-300" />
                   <div>
-                    <div className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300">
-                      {catName}
+                    <div
+                      className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {item.title}
                     </div>
-                    <div className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300">
-                      {text.slice(0, 100)}{text.length > 100 ? "..." : ""}
+                    <div
+                      className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      
+                      }}
+                    >
+                      {text}
                     </div>
                   </div>
                 </div>
@@ -383,7 +399,7 @@ const bannerSlides = [
 ];
 
 function Banner() {
-  const [cur, setCur]       = useState(0);
+  const [cur, setCur] = useState(0);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = "https://api.news4bharat.com/api";
+const API_BASE = "https://news4bharat.cloud/api";
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return "";

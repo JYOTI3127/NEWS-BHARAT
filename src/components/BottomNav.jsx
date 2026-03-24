@@ -57,7 +57,6 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ✅ FIX: sessionStorage se read karo — page change pe reset nahi hoga
   const [showBreaking, setShowBreaking] = useState(() => {
     return sessionStorage.getItem("breakingClosed") !== "true";
   });
@@ -78,16 +77,20 @@ export default function BottomNav() {
     <>
       <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div className="bottom-nav-wrapper fixed bottom-0 left-0 right-0 z-50 font-sans md:hidden">
+      {/* Sirf mobile + tablet tak dikhega (768px se neeche) */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 font-sans block md:hidden">
 
+        {/* Breaking News Bar */}
         {showBreaking && (
-          <div className="bg-red-800 px-3 py-2.5">
-            <div className="flex justify-between items-center mb-2">
-              <div className="bg-red-900 px-3.5 py-1 rounded text-yellow-300 font-black text-sm italic uppercase tracking-wide">
+          <div className="bg-red-800 px-2 py-2 xs:px-3 xs:py-2.5">
+            <div className="flex justify-between items-center mb-1.5 xs:mb-2">
+              <div className="bg-red-900 px-2 py-0.5 xs:px-3.5 xs:py-1 rounded text-yellow-300 font-black text-[10px] xs:text-sm italic uppercase tracking-wide">
                 BREAKING NEWS
               </div>
-              {/* ✅ handleCloseBreaking — sessionStorage mein save karega */}
-              <button onClick={handleCloseBreaking} className="bg-transparent border-none cursor-pointer flex items-center justify-center p-1">
+              <button
+                onClick={handleCloseBreaking}
+                className="bg-transparent border-none cursor-pointer flex items-center justify-center p-1"
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
                   <line x1="6" y1="6" x2="18" y2="18"/>
@@ -95,48 +98,91 @@ export default function BottomNav() {
               </button>
             </div>
 
-            <ul className="list-none m-0 p-0">
+            <ul className="list-none m-0 p-0 space-y-0.5">
               {breakingNewsItems.map((item, i) => (
-                <li key={i} className="text-white text-sm font-bold leading-[1.9] flex items-start gap-1.5">
-                  <span className="text-white text-lg leading-[1.6]">•</span> {item}
+                <li
+                  key={i}
+                  className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-start gap-1 xs:gap-1.5"
+                >
+                  <span className="text-white text-base xs:text-lg leading-[1.6]">•</span>
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <nav className="h-[65px] bg-white border-t border-slate-200 flex justify-around items-center shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+        {/* Bottom Nav Bar */}
+        <nav className="
+          h-[56px] xs:h-[60px] sm:h-[65px]
+          bg-white
+          border-t border-slate-200
+          flex justify-around items-center
+          shadow-[0_-2px_10px_rgba(0,0,0,0.08)]
+        ">
           {navItems.map(({ label, path, icon: Icon }) => {
             const active = location.pathname === path;
             return (
               <button
                 key={label}
                 onClick={() => navigate(path)}
-                className={`flex flex-col items-center justify-center gap-1 flex-1 h-full bg-transparent border-none cursor-pointer relative py-2 ${active ? "text-red-600" : "text-black"}`}
+                className={`
+                  flex flex-col items-center justify-center
+                  gap-0.5 xs:gap-1
+                  flex-1 h-full
+                  bg-transparent border-none cursor-pointer
+                  relative py-1.5 xs:py-2
+                  ${active ? "text-red-600" : "text-gray-700"}
+                `}
               >
-                <Icon active={active} />
-                <span className={`text-[11px] font-medium ${active ? "text-red-600" : "text-black"}`}>
+                <span className="w-5 h-5 xs:w-6 xs:h-6 flex items-center justify-center">
+                  <Icon active={active} />
+                </span>
+                <span className={`
+                  text-[9px] xs:text-[10px] sm:text-[11px]
+                  font-medium leading-none
+                  ${active ? "text-red-600" : "text-gray-700"}
+                `}>
                   {label}
                 </span>
-                {active && <span className="absolute bottom-0 left-[20%] right-[20%] h-1 bg-red-600 rounded-t" />}
+                {active && (
+                  <span className="absolute bottom-0 left-[20%] right-[20%] h-[3px] xs:h-1 bg-red-600 rounded-t" />
+                )}
               </button>
             );
           })}
 
+          {/* Menu Button */}
           <button
             onClick={() => setMenuOpen(true)}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full bg-transparent border-none cursor-pointer relative py-2 ${menuOpen ? "text-red-600" : "text-black"}`}
+            className={`
+              flex flex-col items-center justify-center
+              gap-0.5 xs:gap-1
+              flex-1 h-full
+              bg-transparent border-none cursor-pointer
+              relative py-1.5 xs:py-2
+              ${menuOpen ? "text-red-600" : "text-gray-700"}
+            `}
           >
-            <MenuIcon active={menuOpen} />
-            <span className={`text-[11px] font-medium ${menuOpen ? "text-red-600" : "text-black"}`}>
+            <span className="w-5 h-5 xs:w-6 xs:h-6 flex items-center justify-center">
+              <MenuIcon active={menuOpen} />
+            </span>
+            <span className={`
+              text-[9px] xs:text-[10px] sm:text-[11px]
+              font-medium leading-none
+              ${menuOpen ? "text-red-600" : "text-gray-700"}
+            `}>
               Menu
             </span>
-            {menuOpen && <span className="absolute bottom-0 left-[20%] right-[20%] h-1 bg-red-600 rounded-t" />}
+            {menuOpen && (
+              <span className="absolute bottom-0 left-[20%] right-[20%] h-[3px] xs:h-1 bg-red-600 rounded-t" />
+            )}
           </button>
         </nav>
       </div>
 
-      <div className={showBreaking ? "bottom-nav-spacer h-[175px]" : "bottom-nav-spacer h-[65px]"} />
+      {/* Spacer — sirf mobile pe */}
+      <div className={`block md:hidden ${showBreaking ? "h-[165px] xs:h-[175px]" : "h-[56px] xs:h-[60px] sm:h-[65px]"}`} />
     </>
   );
 }

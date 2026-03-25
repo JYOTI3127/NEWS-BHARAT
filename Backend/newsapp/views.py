@@ -252,9 +252,16 @@ def article_list(request):
 @api_view(['GET'])
 def articles_by_state(request):
     state = request.GET.get('state')
-    if not state:
-        return Response({"error": "state parameter required"}, status=400)
     
+    # State nahi di → states list return karo
+    if not state:
+        try:
+            category = Category.objects.get(slug='state-of-bharat')
+            return Response(category.sub_categories)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=404)
+    
+    # State di → us state ke articles
     articles = Article.objects.filter(
         status='published',
         categories__slug='state-of-bharat',
@@ -1486,3 +1493,5 @@ def media_library_view(request):
     return render(request, 'admin/media_library.html', {
         'mp3_categories': categories,
     })
+
+

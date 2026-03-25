@@ -34,6 +34,11 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://news4bharat.cloud',
+    'https://www.news4bharat.cloud',
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -90,10 +95,16 @@ WSGI_APPLICATION = 'news.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'news4bharat',
+        'USER': 'news4bharat_user',
+        'PASSWORD': 'News@4Bharat#2026',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
 
@@ -208,11 +219,14 @@ from google.oauth2 import service_account
 
 import os
 
-GCS_JSON = os.environ.get("GCS_CREDENTIALS")
-
+GCS_JSON = os.environ.get("GCS_CREDENTIALS", "")
 if GCS_JSON:
-    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
-        json.loads(GCS_JSON)
-    )
+    try:
+        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+            json.loads(GCS_JSON)
+        )
+    except Exception as e:
+        print(f"GCS credentials load failed: {e}")
+        GS_CREDENTIALS = None
 else:
     GS_CREDENTIALS = None

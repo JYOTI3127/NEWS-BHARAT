@@ -249,6 +249,25 @@ def article_list(request):
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data, status=201)
 
+@api_view(['GET'])
+def articles_by_state(request):
+    state = request.GET.get('state')
+    if not state:
+        return Response({"error": "state parameter required"}, status=400)
+    
+    articles = Article.objects.filter(
+        status='published',
+        categories__slug='state-of-bharat',
+    )
+    
+    filtered = [
+        a for a in articles
+        if state in (a.selected_subcategories or {}).get('subs', {}).get('3', [])
+    ]
+    
+    serializer = ArticleMinSerializer(filtered, many=True, context={'request': request})
+    return Response(serializer.data)
+
 
 @api_view(['GET'])
 def dashboard_articles(request):

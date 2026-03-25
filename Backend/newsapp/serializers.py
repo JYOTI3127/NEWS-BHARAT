@@ -30,7 +30,10 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count']
 
     def get_article_count(self, obj):
-        return obj.articles.filter(status='published').count()
+        try:
+          return obj.articles.filter(status='published').count()
+        except Exception:
+          return 0
 
     def get_sub_categories(self, obj):
         subs = obj.sub_categories
@@ -124,12 +127,10 @@ class ArticleSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                mtime = obj.image.storage.get_modified_time(obj.image.name)
-                return f"{base}?v={int(mtime.timestamp())}"
+               return request.build_absolute_uri(obj.image.url) if request else obj.image.url
             except Exception:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
-        return obj.image_url
+               return None
+        return obj.image_url if obj.image_url else None
 
     # FIX 4: tags stored as comma-separated string in DB, returned as list to frontend
     def get_tags_list(self, obj):

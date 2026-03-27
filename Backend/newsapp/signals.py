@@ -164,3 +164,14 @@ def new_user_notification(sender, instance, created, **kwargs):
             )
         except Exception:
             pass
+
+import requests
+
+def ping_google_sitemap():
+    sitemap_url = "https://news4bharat.com/sitemap.xml"
+    google_ping = f"https://www.google.com/ping?sitemap={sitemap_url}"
+
+    try:
+        requests.get(google_ping)
+    except Exception as e:
+        print("Ping failed:", e)

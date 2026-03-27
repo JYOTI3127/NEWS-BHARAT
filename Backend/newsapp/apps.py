@@ -7,5 +7,7 @@ class NewsappConfig(AppConfig):
 
     def ready(self):
         import newsapp.signals
+        from . import seo_signals
+        seo_signals.register()
 
     

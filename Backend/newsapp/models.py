@@ -138,48 +138,65 @@ class Article(models.Model):
                 if not profile.assigned_categories.filter(id=cat.id).exists():
                     pass  # raise ValidationError if needed
  
-    def save(self, *args, **kwargs):
-        is_update = self.pk is not None
- 
-        if is_update:
-            old_article = Article.objects.get(pk=self.pk)
- 
-            # Versioning Logic (Content Change)
-            if (
-                old_article.title    != self.title or
-                old_article.subtitle != self.subtitle or
-                old_article.content  != self.content
-            ):
-                last_version = self.versions.order_by('-version_number').first()
-                next_version_number = 1 if not last_version else last_version.version_number + 1
- 
-                ArticleVersion.objects.create(
-                    article=self,
-                    title=old_article.title,
-                    subtitle=old_article.subtitle,
-                    content=old_article.content,
-                    edited_by=self.author,
-                    version_number=next_version_number
-                )
- 
-            if old_article.status != self.status:
-                ArticleWorkflowLog.objects.create(
-                    article=self,
-                    old_status=old_article.status,
-                    new_status=self.status,
-                    changed_by=self.author,
-                    remarks=""
-                )
- 
-                if self.status == "published":
-                    self.published_at = timezone.now()
- 
-            if self.assigned_to and self.status != 'draft':
-                if self.assigned_to.profile.status == "suspended":
-                    raise ValidationError("This reporter is suspended.")
- 
-        self.full_clean()
-        super().save(*args, **kwargs)
+    from django.utils.text import slugify
+import uuid
+from django.utils import timezone
+
+def save(self, *args, **kwargs):
+    is_update = self.pk is not None
+
+    # ✅ SLUG AUTO GENERATE
+    if not self.slug:
+        self.slug = slugify(self.title) + "-" + str(uuid.uuid4())[:5]
+
+    if is_update:
+        old_article = Article.objects.get(pk=self.pk)
+
+        # Versioning Logic (Content Change)
+        if (
+            old_article.title    != self.title or
+            old_article.subtitle != self.subtitle or
+            old_article.content  != self.content
+        ):
+            last_version = self.versions.order_by('-version_number').first()
+            next_version_number = 1 if not last_version else last_version.version_number + 1
+
+            ArticleVersion.objects.create(
+                article=self,
+                title=old_article.title,
+                subtitle=old_article.subtitle,
+                content=old_article.content,
+                edited_by=self.author,
+                version_number=next_version_number
+            )
+
+        if old_article.status != self.status:
+            ArticleWorkflowLog.objects.create(
+                article=self,
+                old_status=old_article.status,
+                new_status=self.status,
+                changed_by=self.author,
+                remarks=""
+            )
+
+            # ✅ ENSURE published_at set
+            if self.status == "published" and not self.published_at:
+                self.published_at = timezone.now()
+
+                from newsapp.signals import ping_google_sitemap
+                ping_google_sitemap()
+
+        if self.assigned_to and self.status != 'draft':
+            if self.assigned_to.profile.status == "suspended":
+                raise ValidationError("This reporter is suspended.")
+
+    else:
+        # ✅ NEW OBJECT CASE
+        if self.status == "published" and not self.published_at:
+            self.published_at = timezone.now()
+
+    self.full_clean()
+    super().save(*args, **kwargs)
  
     def __str__(self):
         return self.title

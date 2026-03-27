@@ -339,6 +339,26 @@ def article_detail(request, pk):
         article.delete()
         return Response(status=204)
 
+from django.shortcuts import render, get_object_or_404
+from newsapp.models import Article
+from newsapp.seo_direct import MetaEngine, SchemaEngine
+
+def article_detail_page(request, slug):
+    article = get_object_or_404(Article, slug=slug, status="published")
+
+    meta = MetaEngine.for_article(article)
+    schemas = [
+        SchemaEngine.news_article(article),
+        SchemaEngine.breadcrumb(article),
+    ]
+
+    seo_head = MetaEngine.render_head(meta, schemas)
+
+    return render(request, 'article.html', {
+        'article': article,
+        'seo_head': seo_head
+    })
+
 
 # ═══════════════════════════════════════════════════════
 # DASHBOARD

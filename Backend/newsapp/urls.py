@@ -6,6 +6,7 @@ urlpatterns = [
     path('categories/', category_list),
     path('articles/', article_list),
     path('articles/<int:pk>/', views.article_detail),
+    path('article/<slug:slug>/', views.article_detail_page),
     path('articles/by-state/', views.articles_by_state),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),

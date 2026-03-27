@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'newsapp',
     'storages', 
+    'django.contrib.sitemaps',
     # 'django_crontab', 
 
 ]
@@ -102,7 +103,7 @@ DATABASES = {
         'NAME': 'news4bharat',
         'USER': 'news4bharat_user',
         'PASSWORD': 'News@4Bharat#2026',
-        'HOST': 'localhost',
+        'HOST': '187.127.135.32',
         'PORT': '5432',
     }
 }
@@ -230,3 +231,14 @@ if GCS_JSON:
         GS_CREDENTIALS = None
 else:
     GS_CREDENTIALS = None
+
+SEO_SITE_URL = "https://news4bharat.com"
+SEO_SITE_NAME = "news4bharat"
+
+SEO_INDEXNOW_KEY = "abc123xyz"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}

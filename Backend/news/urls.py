@@ -8,6 +8,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.sitemaps.views import sitemap
+from newsapp.sitemaps import ArticleSitemap
+
+sitemaps = {
+    'articles': ArticleSitemap,
+}
 
 urlpatterns = [
     path('', lambda request: redirect('admin/'), name='home'),
@@ -25,7 +31,18 @@ urlpatterns = [
 
     # ── REST API ─────────────────────────────────────────────
     path('api/', include('newsapp.urls')),
+
+    # ✅ SEO URLs — SABSE LAST ME ADD KARO
+    path('', include('newsapp.seo_urls')),
+
+    path(
+    'sitemap.xml',
+    sitemap,
+    {'sitemaps': sitemaps},
+    name='django.contrib.sitemaps.views.sitemap'
+    ),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

@@ -877,10 +877,19 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
+        original_get = request.GET.copy()
 
-        articles = Article.objects.prefetch_related('categories').select_related(
+        articles_qs = Article.objects.prefetch_related('categories').select_related(
             'author', 'assigned_to'
         ).order_by('-created_at')
+
+        article_paginator = Paginator(articles_qs, 10)
+        article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))
+
+        page_query_dict = original_get.copy()
+        if 'article_page' in page_query_dict:
+            del page_query_dict['article_page']
+        page_query = page_query_dict.urlencode()
 
         articles_with_images = (
             Article.objects.filter(image__isnull=False).exclude(image='')
@@ -892,13 +901,20 @@ class ArticleAdmin(admin.ModelAdmin):
         ).order_by('-changed_at')[:15]
 
         extra_context.update({
-            'articles':             articles,
+            'articles':             article_page_obj.object_list,
+            'article_page_obj':     article_page_obj,
+            'article_paginator':    article_paginator,
+            'page_query':           page_query,
             'articles_with_images': articles_with_images,
             'recent_activity':      recent_activity,
-            'total_articles':       articles.count(),
-            'published_articles':   articles.filter(status='published').count(),
-            'draft_articles':       articles.filter(status='draft').count(),
+            'total_articles':       articles_qs.count(),
+            'published_articles':   articles_qs.filter(status='published').count(),
+            'draft_articles':       articles_qs.filter(status='draft').count(),
         })
+        if 'article_page' in request.GET:
+            cleaned_get = request.GET.copy()
+            del cleaned_get['article_page']
+            request.GET = cleaned_get
         return super().changelist_view(request, extra_context=extra_context)
 
 

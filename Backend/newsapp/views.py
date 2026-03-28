@@ -28,6 +28,8 @@ from .models import UserProfile, LoginAttemptLog
 import os
 import google.generativeai as genai
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
+from django.core.cache import cache
 
 User = get_user_model()
 
@@ -136,10 +138,48 @@ def _save_article_from_request(request, article=None):
 
     deadline_val = data.get('deadline', '')
     if deadline_val:
-        from django.utils.dateparse import parse_datetime
         article.deadline = parse_datetime(deadline_val)
     else:
         article.deadline = None
+
+    scheduled_at_val = data.get('scheduled_at', '').strip()
+    if article.status == 'scheduled':
+        if not scheduled_at_val:
+            return None, {'error': 'Scheduled publish time is required for scheduled articles.'}
+
+        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        if parsed_scheduled_at is None:
+            return None, {'error': 'Invalid scheduled publish time.'}
+
+        if timezone.is_naive(parsed_scheduled_at):
+            parsed_scheduled_at = timezone.make_aware(
+                parsed_scheduled_at,
+                timezone.get_current_timezone(),
+            )
+
+        if parsed_scheduled_at <= timezone.now():
+            return None, {'error': 'Scheduled publish time must be in the future.'}
+
+        article.scheduled_at = parsed_scheduled_at
+        article.published_at = None
+    elif scheduled_at_val:
+        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        if parsed_scheduled_at is not None:
+            if timezone.is_naive(parsed_scheduled_at):
+                parsed_scheduled_at = timezone.make_aware(
+                    parsed_scheduled_at,
+                    timezone.get_current_timezone(),
+                )
+            article.scheduled_at = parsed_scheduled_at
+        else:
+            article.scheduled_at = None
+    else:
+        article.scheduled_at = None
+
+    if article.status == 'published':
+        article.scheduled_at = None
+        if not article.published_at:
+            article.published_at = timezone.now()
 
     assigned_id = data.get('assigned_to', '')
     if assigned_id:
@@ -1454,6 +1494,10 @@ def live_cricket(request):
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        cached_data = cache.get("cricket_live_data")
+        if cached_data is not None:
+            return Response(cached_data)
+
         url      = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
         response = requests.get(url, timeout=10)
 
@@ -1485,11 +1529,13 @@ def live_cricket(request):
             else:
                 live.append(match)
 
-        return Response({
+        result = {
             "live":     live[:1],
             "upcoming": upcoming[:3],
             "recent":   recent[:3]
-        })
+        }
+        cache.set("cricket_live_data", result, 300)
+        return Response(result)
 
     except requests.exceptions.Timeout:
         return Response({

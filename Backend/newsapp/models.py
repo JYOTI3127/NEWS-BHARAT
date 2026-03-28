@@ -120,6 +120,7 @@ class Article(models.Model):
     is_paid  = models.BooleanField(default=False)
  
     created_at   = models.DateTimeField(auto_now_add=True)
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
  
     assigned_to = models.ForeignKey(

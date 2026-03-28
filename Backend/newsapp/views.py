@@ -800,11 +800,12 @@ def _search_elasticsearch(query, status, limit, request=None):
     es_query = es_query.query(
         ESQ('bool', should=[
             ESQ('multi_match', query=query,
-                fields=['title^5', 'title.autocomplete^3', 'categories.name^3', 'author.username^2', 'content'],
+                fields=['title^5', 'slug^4', 'title.autocomplete^3', 'categories.name^3', 'author.username^2', 'content'],
                 type='best_fields', operator='or'),
             ESQ('multi_match', query=query,
-                fields=['title.fuzzy^3', 'content.fuzzy'], fuzziness='AUTO', prefix_length=1),
+                fields=['title.fuzzy^3', 'slug^3', 'content.fuzzy'], fuzziness='AUTO', prefix_length=1),
             ESQ('match', **{'title.autocomplete': {'query': query, 'boost': 2}}),
+            ESQ('match', **{'slug': {'query': query, 'boost': 3}}),
         ], minimum_should_match=1)
     )
     es_query = es_query.highlight('title', 'content', fragment_size=120,
@@ -830,6 +831,7 @@ def _search_elasticsearch(query, status, limit, request=None):
 def _search_django_orm(query, status, limit, request=None):
     qs = Article.objects.filter(
         Q(title__icontains=query) |
+        Q(slug__icontains=query) |
         Q(content__icontains=query) |
         Q(author__username__icontains=query) |
         Q(categories__name__icontains=query)
@@ -878,6 +880,34 @@ def search_api(request):
         "total":         len(articles_data) + len(categories_data),
         "articles":      articles_data,
         "categories":    categories_data,
+        "search_engine": search_engine,
+    })
+
+
+@require_GET
+def live_article_search_api(request):
+    query = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 20)
+
+    if len(query) < 2:
+        return JsonResponse({
+            "query": query,
+            "total": 0,
+            "articles": [],
+            "error": "Query must be at least 2 characters"
+        }, status=400)
+
+    try:
+        articles_data = _search_elasticsearch(query, 'published', limit, request)
+        search_engine = "elasticsearch"
+    except Exception:
+        articles_data = _search_django_orm(query, 'published', limit, request)
+        search_engine = "orm_fallback"
+
+    return JsonResponse({
+        "query": query,
+        "total": len(articles_data),
+        "articles": articles_data,
         "search_engine": search_engine,
     })
 

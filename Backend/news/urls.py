@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/inbox/send/',                     views.send_message,       name='send_message'),
     path('admin/inbox/create-group/',             views.create_group,       name='create_group'),
     path('admin/notifications/',                  views.notifications_view, name='admin_notifications'),
+    path('admin/newsletter/',                     views.newsletter_view,    name='admin_newsletter'),
 
     # ── Django Admin — BAAD MEIN ─────────────────────────────
     path('admin/', admin_site.urls),

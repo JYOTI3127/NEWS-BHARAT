@@ -482,6 +482,24 @@ class NewsAdminSite(AdminSite):
     index_title    = "Dashboard"
     login_template = 'admin/login.html'
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'newsletter/',
+                self.admin_view(self.newsletter_view),
+                name='newsletter',
+            ),
+        ]
+        return custom_urls + urls
+
+    def newsletter_view(self, request):
+        context = {
+            **self.each_context(request),
+            'title': 'Newsletter',
+        }
+        return TemplateResponse(request, 'admin/newsletter.html', context)
+
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout
         from django.shortcuts import redirect
@@ -955,3 +973,4 @@ admin_site.register(HomepageSlot,               HomepageSlotAdmin)
 admin_site.register(MetalRate)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
+admin.site.register(NewsletterLog)

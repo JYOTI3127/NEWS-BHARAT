@@ -1340,12 +1340,47 @@ def inbox_view(request):
     if active_conversation:
         conv_messages = active_conversation.messages.select_related("sender").order_by("created_at")
 
+    staff_users_data = [
+        {
+            'id': u.id,
+            'name': u.get_full_name() or u.username,
+            'role': 'Superuser' if u.is_superuser else 'Staff',
+            'color': '#6264a7',
+            'online': bool(getattr(u, 'online_status', False)),
+        }
+        for u in staff_users
+    ]
+
+    conversations_data = []
+    for conv in conversations:
+        member_ids = list(conv.members.values_list('id', flat=True))
+        other_member_ids = [member_id for member_id in member_ids if member_id != request.user.id]
+        messages_data = [
+            {
+                'from': msg.sender_id,
+                'text': msg.text or '',
+                'time': timezone.localtime(msg.created_at).strftime('%H:%M'),
+            }
+            for msg in conv.messages.all().order_by('created_at')
+        ]
+        conversations_data.append({
+            'id': conv.id,
+            'type': conv.conv_type,
+            'name': conv.name or '',
+            'userId': other_member_ids[0] if conv.conv_type == 'private' and other_member_ids else None,
+            'members': member_ids,
+            'unread': 0,
+            'messages': messages_data,
+        })
+
     return render(request, 'admin/inbox.html', {
         'title':               'Inbox',
         'staff_users':         staff_users,
         'conversations':       conversations,
         'active_conversation': active_conversation,
         'messages':            conv_messages,
+        'staff_users_json':    json.dumps(staff_users_data),
+        'conversations_json':  json.dumps(conversations_data),
     })
 
 
@@ -1363,7 +1398,7 @@ def start_conversation(request, user_id):
     ).filter(conversationmember__user=other_user).first()
 
     if existing:
-        return redirect(f'/inbox/?conv={existing.id}')
+        return redirect(f"{reverse('admin_inbox')}?conv={existing.id}")
 
     conv = Conversation.objects.create(conv_type='private')
     ConversationMember.objects.create(conversation=conv, user=request.user)
@@ -1591,3 +1626,148 @@ def media_library_view(request):
     })
 
 
+@staff_member_required
+def newsletter_view(request):
+    return render(request, 'admin/newsletter.html')
+
+
+import logging
+from django.core.mail import EmailMultiAlternatives
+from email.utils import formataddr
+from datetime import datetime
+ 
+logger = logging.getLogger(__name__)
+ 
+ 
+def _auth(request):
+    """Simple API key check"""
+    key = request.headers.get('X-API-Key') or request.GET.get('api_key')
+    expected = getattr(settings, 'NEWSLETTER_API_KEY', None)
+    if expected and key != expected:
+        return False
+    return True
+ 
+ 
+@csrf_exempt
+@require_POST
+def send_newsletter(request):
+    """
+    POST /api/newsletter/send/
+    Body:
+    {
+        "recipients": ["a@example.com", "b@example.com"],
+        "subject": "News4Bharat Weekly: ...",
+        "html": "<html>...</html>",
+        "chosen_articles": {"hero": "article-slug", "b1": "slug2"}
+    }
+    """
+    # Auth check (optional - settings mein NEWSLETTER_API_KEY set karo)
+    # if not _auth(request):
+    #     return JsonResponse({'error': 'Unauthorized'}, status=401)
+ 
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+ 
+    recipients = body.get('recipients', [])
+    subject = body.get('subject', 'News4Bharat Weekly Newsletter')
+    html_content = body.get('html', '')
+    chosen = body.get('chosen_articles', {})
+
+    if isinstance(recipients, str):
+        recipients = [recipients]
+    recipients = [
+        str(email).strip() for email in recipients
+        if str(email).strip()
+    ]
+    recipients = list(dict.fromkeys(recipients))
+
+    if not recipients:
+        return JsonResponse({'error': 'No recipients provided'}, status=400)
+ 
+    if not html_content:
+        return JsonResponse({'error': 'No HTML content provided'}, status=400)
+
+    sender_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+    if not sender_email:
+        return JsonResponse({'error': 'Email sender is not configured'}, status=500)
+    from_email = formataddr((
+        getattr(settings, 'NEWSLETTER_FROM_NAME', 'News4Bharat'),
+        sender_email,
+    ))
+ 
+    # Plain text fallback
+    plain_text = f"""
+News4Bharat Weekly Newsletter
+{datetime.now().strftime('%d %B %Y')}
+ 
+{subject}
+ 
+Please use an HTML-capable email client to read this newsletter.
+Website: https://news4bharat.com
+    """.strip()
+ 
+    success = []
+    failed = []
+ 
+    for email in recipients:
+        try:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_text,
+                from_email=from_email,
+                to=[email],
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=False)
+            success.append(email)
+            logger.info(f"Newsletter sent to {email}")
+        except Exception as e:
+            failed.append({'email': email, 'error': str(e)})
+            logger.error(f"Newsletter failed for {email}: {e}")
+ 
+    # History save karo (optional - model banao)
+    try:
+        _save_history(subject, recipients, chosen, len(success), len(failed))
+    except Exception as e:
+        logger.warning(f"Could not save newsletter history: {e}")
+ 
+    return JsonResponse({
+        'status': 'done',
+        'sent': len(success),
+        'failed': len(failed),
+        'success_emails': success,
+        'failed_emails': failed,
+    })
+ 
+ 
+def _save_history(subject, recipients, chosen, sent_count, failed_count):
+    """Newsletter history save karna — NewsletterLog model use karo"""
+    try:
+        from newsapp.models import NewsletterLog
+        NewsletterLog.objects.create(
+            subject=subject,
+            recipients=recipients,
+            chosen_articles=chosen,
+            sent_count=sent_count,
+            failed_count=failed_count,
+        )
+    except ImportError:
+        pass  # Model nahi bana toh skip
+ 
+ 
+@require_GET
+def newsletter_history(request):
+    """
+    GET /api/newsletter/history/
+    Last 20 sent newsletters
+    """
+    try:
+        from newsapp.models import NewsletterLog
+        logs = NewsletterLog.objects.order_by('-sent_at')[:20].values(
+            'id', 'subject', 'sent_count', 'failed_count', 'sent_at'
+        )
+        return JsonResponse({'history': list(logs)})
+    except Exception as e:
+        return JsonResponse({'history': [], 'note': str(e)})

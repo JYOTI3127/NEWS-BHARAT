@@ -251,39 +251,9 @@ var CU = {
   role:   "{% if request.user.is_superuser %}Superuser{% else %}Staff{% endif %}"
 };
 
-var USERS = [
-{% for u in staff_users %}
-{
-  id:     {{ u.id }},
-  name:   "{{ u.get_full_name|default:u.username|escapejs }}",
-  role:   "{% if u.is_superuser %}Superuser{% else %}Staff{% endif %}",
-  color:  "#6264a7",
-  online: {{ u.online_status|yesno:'true,false' }}
-}{% if not forloop.last %},{% endif %}
-{% endfor %}
-];
+var USERS = {{ staff_users_json|safe }};
 
-var CONVS = [
-{% for conv in conversations %}
-{
-  id:      {{ conv.id }},
-  type:    "{{ conv.conv_type }}",
-  name:    "{{ conv.name|default:''|escapejs }}",
-  userId:  {% with other=conv.members.all %}{% for m in other %}{% if m.id != request.user.id %}{{ m.id }}{% endif %}{% endfor %}{% endwith %},
-  members: [{% for m in conv.members.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}],
-  unread:  0,
-  messages:[
-  {% for msg in conv.messages.all|dictsort:"created_at" %}
-  {
-    from: {{ msg.sender.id }},
-    text: "{{ msg.text|default:''|escapejs }}",
-    time: "{{ msg.created_at|time:'H:i' }}"
-  }{% if not forloop.last %},{% endif %}
-  {% endfor %}
-  ]
-}{% if not forloop.last %},{% endif %}
-{% endfor %}
-];
+var CONVS = {{ conversations_json|safe }};
 
 // ── State ─────────────────────────────────────────────
 var curId = null, convSearch = '', curView = 'chat';
@@ -403,7 +373,7 @@ function renderPeople(search) {
 function startChatWith(uid) {
   // Find existing DM conv with this user
   var conv = CONVS.find(function(c){
-    return (c.type === 'direct' || c.type === 'dm') && c.userId === uid;
+    return (c.type === 'direct' || c.type === 'dm' || c.type === 'private') && c.userId === uid;
   });
   // Switch to chat view first
   switchView('chat', document.getElementById('rail-chat'));

@@ -200,6 +200,8 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'News4bharat11@gmail.com'
 EMAIL_HOST_PASSWORD = 'cmcm qzff rnab yidc'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+NEWSLETTER_FROM_NAME = 'News4Bharat'
 
 AUTHENTICATION_BACKENDS = [
     'newsapp.backends.StaffIDBackend',

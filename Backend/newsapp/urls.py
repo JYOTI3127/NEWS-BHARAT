@@ -41,4 +41,7 @@ urlpatterns = [
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
     path('admin/media-library/', media_library_view, name='admin_media_library'),
+
+    path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
+    path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
 ]

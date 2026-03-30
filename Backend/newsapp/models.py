@@ -681,3 +681,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+class NewsletterLog(models.Model):
+    """Newsletter send history track karta hai"""
+    subject       = models.CharField(max_length=300)
+    recipients    = models.JSONField(default=list)        # list of emails
+    chosen_articles = models.JSONField(default=dict)      # {"hero": "slug", ...}
+    sent_count    = models.IntegerField(default=0)
+    failed_count  = models.IntegerField(default=0)
+    sent_at       = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name = 'Newsletter Log'
+        verbose_name_plural = 'Newsletter Logs'
+ 
+    def __str__(self):
+        return f"{self.subject} — {self.sent_at.strftime('%d %b %Y %H:%M')} ({self.sent_count} sent)"

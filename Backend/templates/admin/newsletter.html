@@ -22,7 +22,7 @@
   --sidebar: #f4f3f0;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Poppins', sans-serif; background: #e8e6e0; display: flex; height: 100vh; overflow: hidden; }
+body { font-family: 'Poppins', sans-serif; background: #ffffff; display: flex; height: 100vh; overflow: hidden; }
 
 /* ── SIDEBAR ── */
 #sidebar {
@@ -350,20 +350,20 @@ body { font-family: 'Poppins', sans-serif; background: #e8e6e0; display: flex; h
     <div id="static-emails"></div>
     <div class="email-add-row">
       <input type="email" id="static-input" placeholder="email@example.com"/>
-      <button class="email-add-btn" onclick="addEmail('static')">Add</button>
+      <button type="button" class="email-add-btn" onclick="addEmail('static')">Add</button>
     </div>
 
     <div class="email-section-label" style="margin-top:20px;">Custom Recipients (For this send only)</div>
     <div id="custom-emails"></div>
     <div class="email-add-row">
       <input type="email" id="custom-input" placeholder="email@example.com"/>
-      <button class="email-add-btn" onclick="addEmail('custom')">Add</button>
+      <button type="button" class="email-add-btn" onclick="addEmail('custom')">Add</button>
     </div>
   </div>
 
   <div id="sb-bottom">
-    <button class="send-btn" onclick="sendNewsletter()">Send Newsletter</button>
-    <button class="copy-btn" onclick="downloadNewsletter()">Download Newsletter</button>
+    <button type="button" class="send-btn" onclick="sendNewsletter()">Send Newsletter</button>
+    <button type="button" class="copy-btn" onclick="downloadNewsletter()">Download Newsletter</button>
   </div>
 </div>
 
@@ -371,7 +371,7 @@ body { font-family: 'Poppins', sans-serif; background: #e8e6e0; display: flex; h
 <div id="article-panel">
   <div id="ap-header">
     <span id="ap-title">Choose Article</span>
-    <button id="ap-close" onclick="closePanel()">×</button>
+    <button type="button" id="ap-close" onclick="closePanel()">×</button>
   </div>
   <div id="ap-search">
     <input type="text" placeholder="Search by title or category..." oninput="filterArts(this.value)" id="search-inp"/>
@@ -490,6 +490,14 @@ const CAT_COLORS = {
   'Technology':'#d4910e','Business':'#0FBC87','World':'#1950DF','default':'#1950DF'
 };
 function cc(cat){ return CAT_COLORS[cat]||CAT_COLORS.default; }
+function escapeHTML(value){
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 let allArticles = [];
 let filteredArts = [];
@@ -826,233 +834,56 @@ function buildFinalHTML(){
   const heroA = chosen['hero'];
   const bKeys = ['b1','b2','b3','b4','b5'];
   const fKeys = ['f1','f2','f3'];
-  const sKeys = ['s1','s2','s3','s4'];
 
-  const heroHTML = heroA ? `
-    <div style="display:inline-flex;align-items:center;gap:7px;margin-bottom:16px">
-      <div style="width:7px;height:7px;background:#1950DF;border-radius:50%"></div>
-      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1950DF;font-family:Poppins,sans-serif">Cover Story</span>
-    </div>
-    ${heroA.image?`<img src="${heroA.image}" style="width:100%;height:280px;object-fit:cover;display:block;margin-bottom:20px;border-radius:2px"/>` :''}
-    <h1 style="font-family:Georgia,serif;font-size:28px;line-height:1.25;color:#0a0a0a;margin-bottom:12px">${heroA.title}</h1>
-    <p style="font-size:13px;color:#6b6b6b;line-height:1.8;margin-bottom:18px;font-family:Poppins,sans-serif">${heroA.excerpt||''}</p>
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:10px;color:#aaa;font-family:Poppins,sans-serif">News4Bharat Desk</span>
-      <a href="https://news4bharat.com/article/${heroA.slug}" style="display:inline-block;background:#1950DF;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 20px;text-decoration:none;border-radius:2px;font-family:Poppins,sans-serif">Read Full Story →</a>
-    </div>` : '';
-
-  const breakingHTML = bKeys.filter(k=>chosen[k]).map(k=>{
-    const a = chosen[k];
-    return `<div style="display:grid;grid-template-columns:72px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid #e5e3de;align-items:start">
-      ${a.image?`<img src="${a.image}" style="width:72px;height:54px;object-fit:cover;border-radius:2px"/>`:''}
-      <div>
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};margin-bottom:3px;font-family:Poppins,sans-serif">${a.category}</div>
-        <div style="font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.45;font-family:Poppins,sans-serif">${a.title}</div>
-        <a href="https://news4bharat.com/article/${a.slug}" style="font-size:9px;color:#1950DF;text-decoration:none;font-weight:600;font-family:Poppins,sans-serif">Read →</a>
-      </div>
-    </div>`;
-  }).join('');
-
-  const featuredHTML = fKeys.filter(k=>chosen[k]).map(k=>{
-    const a = chosen[k];
-    return `<div style="display:grid;grid-template-columns:190px 1fr;gap:20px;padding:20px 0;border-bottom:1px solid #e5e3de;align-items:start">
-      ${a.image?`<img src="${a.image}" style="width:190px;height:130px;object-fit:cover;border-radius:2px"/>` :''}
-      <div>
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};margin-bottom:6px;font-family:Poppins,sans-serif">${a.category}</div>
-        <div style="font-size:14px;font-weight:700;color:#1a1a1a;line-height:1.45;margin-bottom:6px;font-family:Poppins,sans-serif">${a.title}</div>
-        <div style="font-size:11px;color:#6b6b6b;line-height:1.7;margin-bottom:10px;font-family:Poppins,sans-serif">${(a.excerpt||'').substring(0,130)}...</div>
-        <a href="https://news4bharat.com/article/${a.slug}" style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-decoration:none;color:${cc(a.category)};font-family:Poppins,sans-serif">Read More →</a>
-      </div>
-    </div>`;
-  }).join('');
-
-  const makeSmall = k => {
-    const a = chosen[k];
-    if(!a) return '<div></div>';
-    return `<div>
-      ${a.image?`<img src="${a.image}" style="width:100%;height:108px;object-fit:cover;border-radius:2px;margin-bottom:10px;display:block"/>` :''}
-      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};margin-bottom:5px;font-family:Poppins,sans-serif">${a.category}</div>
-      <div style="font-size:12px;font-weight:700;color:#1a1a1a;line-height:1.45;margin-bottom:5px;font-family:Poppins,sans-serif">${a.title}</div>
-      <div style="font-size:10px;color:#6b6b6b;line-height:1.65;font-family:Poppins,sans-serif">${(a.excerpt||'').substring(0,80)}...</div>
-      <a href="https://news4bharat.com/article/${a.slug}" style="font-size:9px;color:#1950DF;text-decoration:none;font-weight:600;display:inline-block;margin-top:6px;font-family:Poppins,sans-serif">Read →</a>
-    </div>`;
+  const articleUrl = a => `https://news4bharat.com/article/${a.slug}`;
+  const safeText = value => escapeHTML(value || '');
+  const excerptText = (text, max) => {
+    const value = (text || '').trim();
+    if(!value) return '';
+    return value.length > max ? `${value.substring(0, max)}...` : value;
   };
+  const textLink = (href, text, style) => `<a href="${href}" target="_blank" style="${style}">${safeText(text)}</a>`;
 
-  const explainerArts = Object.values(chosen).filter(Boolean).slice(0,3);
-  const explainersHTML = explainerArts.map((a,i)=>`
-    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #1c1c1c">
-      <div style="font-size:11px;font-weight:800;color:#FEAD17;flex-shrink:0;width:22px;font-family:Poppins,sans-serif">0${i+1}</div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:#fff;line-height:1.45;margin-bottom:3px;font-family:Poppins,sans-serif">${a.title}</div>
-        <div style="font-size:10px;color:#555;line-height:1.6;font-family:Poppins,sans-serif">${(a.excerpt||'').substring(0,100)}...</div>
-        <a href="https://news4bharat.com/article/${a.slug}" style="display:inline-block;margin-top:6px;font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#0FBC87;border:1px solid #1e3d33;padding:2px 8px;border-radius:20px;text-decoration:none;font-family:Poppins,sans-serif">Read More</a>
-      </div>
-    </div>`).join('');
-
-  const dateStr = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News4Bharat Weekly Newsletter</title>
-</head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:Poppins,Arial,sans-serif">
-<div style="width:100%;background:#ffffff;padding:0">
-<div style="max-width:640px;width:100%;margin:0 auto;background:#ffffff">
-
-  <!-- Header -->
-  <div style="background:#ffffff;padding:28px 36px 0;border-bottom:1px solid #e5e3de">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div>
-        <img src="${NEWS_LOGO_URL}" alt="News4Bharat" style="width:220px;max-width:100%;height:auto;display:block">
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:9px;color:#6b6b6b;text-transform:uppercase;letter-spacing:1.5px">Weekly Digest</div>
-        <div style="font-size:11px;font-weight:600;color:#1a1a1a;margin-top:2px">${dateStr}</div>
-      </div>
-    </div>
-    <div style="display:flex;height:3px">
-      <div style="flex:1;background:#1950DF"></div>
-      <div style="flex:1;background:#FEAD17"></div>
-      <div style="flex:1;background:#FA2E1A"></div>
-      <div style="flex:1;background:#0FBC87"></div>
-      <div style="flex:1;background:#808080"></div>
-    </div>
-  </div>
-
-  <!-- Hero -->
-  <div style="padding:32px 36px;border-bottom:1px solid #e5e3de">${heroHTML}</div>
-
-  <!-- Breaking -->
-  <div style="padding:24px 36px 16px;display:flex;align-items:center;gap:12px">
-    <div style="width:24px;height:3px;background:#FA2E1A;border-radius:2px;flex-shrink:0"></div>
-    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b">Breaking News This Week</span>
-    <div style="flex:1;height:1px;background:#e5e3de"></div>
-  </div>
-  <div style="background:#F7F6F3;border-top:2px solid #FA2E1A;padding:0 36px 4px">
-    <div style="display:flex;align-items:center;gap:10px;padding:16px 0 14px;border-bottom:1px solid #e5e3de;margin-bottom:4px">
-      <span style="background:#FA2E1A;color:#fff;font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:2px">Breaking</span>
-      <span style="font-size:12px;font-weight:700;color:#1a1a1a">Stories This Week</span>
-    </div>
-    ${breakingHTML}
-  </div>
-
-  <!-- Top Stories -->
-  <div style="padding:24px 36px 16px;display:flex;align-items:center;gap:12px">
-    <div style="width:24px;height:3px;background:#1950DF;border-radius:2px;flex-shrink:0"></div>
-    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b">Top Stories</span>
-    <div style="flex:1;height:1px;background:#e5e3de"></div>
-  </div>
-  <div style="padding:0 36px 8px">${featuredHTML}</div>
-
-  <!-- More From Bharat -->
-  <div style="padding:24px 36px 16px;display:flex;align-items:center;gap:12px">
-    <div style="width:24px;height:3px;background:#FEAD17;border-radius:2px;flex-shrink:0"></div>
-    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b">More From Bharat</span>
-    <div style="flex:1;height:1px;background:#e5e3de"></div>
-  </div>
-  <div style="padding:0 36px 8px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 0;border-bottom:1px solid #e5e3de">
-      ${makeSmall('s1')}${makeSmall('s2')}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 0">
-      ${makeSmall('s3')}${makeSmall('s4')}
-    </div>
-  </div>
-
-  <!-- Explainers -->
-  <div style="background:#0a0a0a;padding:28px 36px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-      <span style="background:#FEAD17;color:#0a0a0a;font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px">Explainers</span>
-      <span style="font-size:10px;color:#555">Top picks from this week</span>
-    </div>
-    ${explainersHTML}
-  </div>
-
-  <!-- Footer -->
-  <div style="background:#F7F6F3;padding:28px 36px;border-top:1px solid #e5e3de;text-align:center">
-    <img src="${NEWS_LOGO_URL}" alt="News4Bharat" style="width:180px;max-width:100%;height:auto;display:block;margin:0 auto 14px">
-    <div style="margin-bottom:16px">
-      <a href="https://news4bharat.com" style="font-size:9px;color:#6b6b6b;text-decoration:none;text-transform:uppercase;letter-spacing:1px;margin:0 10px">Home</a>
-      <a href="https://news4bharat.com/category/politics" style="font-size:9px;color:#6b6b6b;text-decoration:none;text-transform:uppercase;letter-spacing:1px;margin:0 10px">Politics</a>
-      <a href="https://news4bharat.com/category/economy" style="font-size:9px;color:#6b6b6b;text-decoration:none;text-transform:uppercase;letter-spacing:1px;margin:0 10px">Economy</a>
-      <a href="https://news4bharat.com/category/sports" style="font-size:9px;color:#6b6b6b;text-decoration:none;text-transform:uppercase;letter-spacing:1px;margin:0 10px">Sports</a>
-    </div>
-    <div style="height:1px;background:#e5e3de;margin:16px 0"></div>
-    <div style="font-size:9px;color:#bbb;line-height:1.8">
-      &copy; 2026 News4Bharat Media Pvt. Ltd. All rights reserved.<br>
-      <a href="https://news4bharat.com" style="color:#aaa">news4bharat.com</a>
-    </div>
-  </div>
-
-</div>
-</div>
-</body>
-</html>`;
-}
-function buildFinalHTML(){
-  const heroA = chosen['hero'];
-  const bKeys = ['b1','b2','b3','b4','b5'];
-  const fKeys = ['f1','f2','f3'];
-  const sKeys = ['s1','s2','s3','s4'];
-  const dateStr = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
-  const truncate = (text, len) => {
-    const value = String(text || '').trim();
-    if (!value) return '';
-    return value.length > len ? value.substring(0, len).trim() + '...' : value;
-  };
-  const articleUrl = (a) => `https://news4bharat.com/article/${a.slug || ''}`;
-  const categoryName = (a) => (a && a.category) ? a.category : 'News';
-  const safeImage = (a, width) => a && a.image
-    ? `<img class="fluid-img" src="${a.image}" alt="${a.title || 'News4Bharat'}" width="${width}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;outline:none;text-decoration:none;">`
-    : '';
-  const sectionHeader = (accent, title) => `
-    <tr>
-      <td class="mobile-pad" style="padding:24px 36px 14px 36px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td width="24" style="width:24px;"><div style="width:24px;height:3px;background:${accent};font-size:0;line-height:0;">&nbsp;</div></td>
-            <td style="padding-left:12px;font-family:Arial,sans-serif;font-size:10px;line-height:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6b6b6b;">${title}</td>
-            <td style="border-bottom:1px solid #e5e3de;">&nbsp;</td>
-          </tr>
-        </table>
-      </td>
-    </tr>`;
-
-  const breakingHTML = bKeys.filter(k => chosen[k]).map((k, index, arr) => {
-    const a = chosen[k];
+  const heroHTML = heroA ? (() => {
+    const href = articleUrl(heroA);
     return `
       <tr>
-        <td style="padding:${index === 0 ? '16px' : '0'} 16px 16px 16px;border-bottom:${index === arr.length - 1 ? '0' : '1px solid #e5e3de'};">
+        <td style="padding:0 0 14px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1950DF;">Cover Story</td>
+      </tr>
+      ${heroA.image ? `<tr><td style="padding-bottom:18px;"><a href="${href}" target="_blank" style="text-decoration:none;"><img src="${heroA.image}" alt="${safeText(heroA.title)}" width="568" style="display:block;width:100%;max-width:568px;height:auto;border:0;"></a></td></tr>` : ''}
+      <tr>
+        <td class="hero-title" style="padding-bottom:12px;">${textLink(href, heroA.title, 'font-family:Georgia,serif;font-size:28px;line-height:1.22;color:#111111;font-weight:700;text-decoration:none;display:block;')}</td>
+      </tr>
+      <tr>
+        <td style="padding-bottom:18px;">${textLink(href, excerptText(heroA.excerpt, 220) || 'Read the full story on News4Bharat.', 'font-family:Arial,sans-serif;font-size:13px;line-height:1.8;color:#666666;text-decoration:none;display:block;')}</td>
+      </tr>
+      <tr>
+        <td>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td width="88" valign="top" style="width:88px;padding-right:14px;">${safeImage(a, 72)}</td>
-              <td valign="top" style="font-family:Arial,sans-serif;">
-                <div style="font-size:10px;line-height:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${cc(categoryName(a))};">${categoryName(a)}</div>
-                <div style="padding-top:4px;font-size:16px;line-height:22px;font-weight:700;color:#1a1a1a;">${a.title || ''}</div>
-                <div style="padding-top:8px;"><a href="${articleUrl(a)}" style="font-size:11px;line-height:15px;font-weight:700;color:#1950DF;text-decoration:none;">Read More →</a></div>
-              </td>
+              <td align="left" style="font-family:Arial,sans-serif;font-size:10px;color:#9a9a9a;">News4Bharat Desk</td>
+              <td align="right"><a href="${href}" target="_blank" style="display:inline-block;background:#1950DF;color:#ffffff;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 18px;text-decoration:none;">Read Full Story &rarr;</a></td>
             </tr>
           </table>
         </td>
       </tr>`;
-  }).join('');
+  })() : '';
 
-  const featuredHTML = fKeys.filter(k => chosen[k]).map((k, index, arr) => {
+  const breakingHTML = bKeys.filter(k => chosen[k]).map(k => {
     const a = chosen[k];
+    const href = articleUrl(a);
     return `
       <tr>
-        <td class="mobile-pad" style="padding:0 36px ${index === arr.length - 1 ? '8px' : '20px'} 36px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:${index === arr.length - 1 ? '0' : '1px solid #e5e3de'};">
+        <td style="padding:14px 0;border-bottom:1px solid #e5e3de;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td class="stack-col stack-image" width="240" valign="top" style="width:240px;padding:0 20px 20px 0;">${safeImage(a, 220)}</td>
-              <td class="stack-col" valign="top" style="padding-bottom:20px;font-family:Arial,sans-serif;">
-                <div style="font-size:10px;line-height:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${cc(categoryName(a))};">${categoryName(a)}</div>
-                <div class="feature-title" style="padding-top:6px;font-size:22px;line-height:30px;font-weight:700;color:#1a1a1a;">${a.title || ''}</div>
-                <div style="padding-top:10px;font-size:13px;line-height:21px;color:#6b6b6b;">${truncate(a.excerpt, 145)}</div>
-                <div style="padding-top:12px;"><a href="${articleUrl(a)}" style="font-size:11px;line-height:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${cc(categoryName(a))};text-decoration:none;">Read More →</a></div>
+              <td valign="top" width="88" style="width:88px;padding-right:14px;">
+                ${a.image ? `<a href="${href}" target="_blank" style="text-decoration:none;"><img src="${a.image}" alt="${safeText(a.title)}" width="72" style="display:block;width:72px;max-width:72px;height:auto;border:0;"></a>` : ''}
+              </td>
+              <td valign="top">
+                ${textLink(href, a.category, `font-family:Arial,sans-serif;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};text-decoration:none;display:block;margin-bottom:4px;`)}
+                ${textLink(href, a.title, 'font-family:Arial,sans-serif;font-size:12px;font-weight:700;line-height:1.45;color:#1a1a1a;text-decoration:none;display:block;margin-bottom:6px;')}
+                ${textLink(href, 'Read More &rarr;', 'font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#1950DF;text-decoration:none;display:inline-block;')}
               </td>
             </tr>
           </table>
@@ -1060,196 +891,193 @@ function buildFinalHTML(){
       </tr>`;
   }).join('');
 
-  const smallCard = (a) => {
-    if (!a) return '&nbsp;';
+  const featuredHTML = fKeys.filter(k => chosen[k]).map(k => {
+    const a = chosen[k];
+    const href = articleUrl(a);
     return `
+      <tr>
+        <td style="padding:20px 0;border-bottom:1px solid #e5e3de;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr class="stack-row">
+              <td valign="top" class="stack-col feature-media" width="208" style="width:208px;padding-right:20px;">
+                ${a.image ? `<a href="${href}" target="_blank" style="text-decoration:none;"><img class="feature-img" src="${a.image}" alt="${safeText(a.title)}" width="188" style="display:block;width:188px;max-width:188px;height:auto;border:0;"></a>` : ''}
+              </td>
+              <td valign="top" class="stack-col">
+                ${textLink(href, a.category, `font-family:Arial,sans-serif;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};text-decoration:none;display:block;margin-bottom:6px;`)}
+                ${textLink(href, a.title, 'font-family:Arial,sans-serif;font-size:20px;font-weight:700;line-height:1.35;color:#1a1a1a;text-decoration:none;display:block;margin-bottom:8px;')}
+                ${textLink(href, excerptText(a.excerpt, 160), 'font-family:Arial,sans-serif;font-size:12px;line-height:1.7;color:#666666;text-decoration:none;display:block;margin-bottom:10px;')}
+                ${textLink(href, 'Read More &rarr;', `font-family:Arial,sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${cc(a.category)};text-decoration:none;display:inline-block;`)}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const smallCell = (key, side) => {
+    const a = chosen[key];
+    if(!a) return `<td valign="top" class="stack-col small-col" width="274" style="width:274px;${side === 'left' ? 'padding-right:10px;' : 'padding-left:10px;'}"></td>`;
+    const href = articleUrl(a);
+    return `<td valign="top" class="stack-col small-col" width="274" style="width:274px;${side === 'left' ? 'padding-right:10px;' : 'padding-left:10px;'}">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        ${a.image ? `<tr><td style="padding-bottom:10px;">${safeImage(a, 254)}</td></tr>` : ''}
-        <tr><td style="font-family:Arial,sans-serif;font-size:10px;line-height:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${cc(categoryName(a))};">${categoryName(a)}</td></tr>
-        <tr><td style="padding-top:5px;font-family:Arial,sans-serif;font-size:16px;line-height:22px;font-weight:700;color:#1a1a1a;">${a.title || ''}</td></tr>
-        <tr><td style="padding-top:6px;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#6b6b6b;">${truncate(a.excerpt, 95)}</td></tr>
-        <tr><td style="padding-top:8px;"><a href="${articleUrl(a)}" style="font-family:Arial,sans-serif;font-size:11px;line-height:15px;font-weight:700;color:#1950DF;text-decoration:none;">Read More →</a></td></tr>
-      </table>`;
+        ${a.image ? `<tr><td style="padding-bottom:10px;"><a href="${href}" target="_blank" style="text-decoration:none;"><img class="small-img" src="${a.image}" alt="${safeText(a.title)}" width="254" style="display:block;width:100%;max-width:254px;height:auto;border:0;"></a></td></tr>` : ''}
+        <tr><td style="padding-bottom:5px;">${textLink(href, a.category, `font-family:Arial,sans-serif;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};text-decoration:none;display:block;`)}</td></tr>
+        <tr><td style="padding-bottom:6px;">${textLink(href, a.title, 'font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.45;color:#1a1a1a;text-decoration:none;display:block;')}</td></tr>
+        <tr><td>${textLink(href, excerptText(a.excerpt, 90), 'font-family:Arial,sans-serif;font-size:11px;line-height:1.65;color:#666666;text-decoration:none;display:block;')}</td></tr>
+      </table>
+    </td>`;
   };
 
-  const explainerArts = Object.values(chosen).filter(Boolean).slice(0, 3);
-  const explainersHTML = explainerArts.map((a, i) => `
+  const hasSmall = ['s1','s2','s3','s4'].some(k => chosen[k]);
+  const smallRows = hasSmall ? `
     <tr>
-      <td style="padding:${i === 0 ? '0' : '14px 0 0 0'} 0 14px 0;border-bottom:1px solid #1c1c1c;">
+      <td style="padding:20px 0;border-top:1px solid #e5e3de;border-bottom:1px solid #e5e3de;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td width="28" valign="top" style="width:28px;font-family:Arial,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#FEAD17;">0${i + 1}</td>
-            <td valign="top" style="font-family:Arial,sans-serif;">
-              <div style="font-size:16px;line-height:24px;font-weight:700;color:#ffffff;">${a.title || ''}</div>
-              <div style="padding-top:5px;font-size:13px;line-height:20px;color:#8b8b8b;">${truncate(a.excerpt, 120)}</div>
-              <div style="padding-top:8px;"><a href="${articleUrl(a)}" style="display:inline-block;font-size:10px;line-height:14px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#0FBC87;text-decoration:none;">Read More</a></div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>`).join('');
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>News4Bharat Weekly Newsletter</title>
-<style>
-body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
-table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
-img { -ms-interpolation-mode:bicubic; border:0; height:auto; line-height:100%; outline:none; text-decoration:none; }
-table { border-collapse:collapse !important; }
-body { margin:0 !important; padding:0 !important; width:100% !important; background:#ffffff; }
-@media screen and (max-width: 640px) {
-  .container { width:100% !important; }
-  .mobile-pad { padding-left:20px !important; padding-right:20px !important; }
-  .stack-col { display:block !important; width:100% !important; max-width:100% !important; padding-right:0 !important; padding-left:0 !important; }
-  .stack-image { width:100% !important; display:block !important; padding-right:0 !important; padding-bottom:14px !important; }
-  .fluid-img { width:100% !important; max-width:100% !important; height:auto !important; }
-  .hero-title { font-size:30px !important; line-height:38px !important; }
-  .feature-title { font-size:22px !important; line-height:30px !important; }
-  .logo-img { width:180px !important; }
-  .footer-logo { width:150px !important; }
-}
-</style>
-</head>
-<body>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">
-    <tr>
-      <td align="center">
-        <table role="presentation" class="container" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px;max-width:640px;background:#ffffff;">
-          <tr>
-            <td class="mobile-pad" style="padding:28px 36px 0 36px;border-bottom:1px solid #e5e3de;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td valign="top"><img class="logo-img" src="${NEWS_LOGO_URL}" alt="News4Bharat" width="220" style="display:block;width:220px;max-width:220px;height:auto;"></td>
-                  <td valign="top" align="right" style="font-family:Arial,sans-serif;">
-                    <div style="font-size:9px;line-height:13px;color:#6b6b6b;text-transform:uppercase;letter-spacing:1.5px;">Weekly Digest</div>
-                    <div style="padding-top:2px;font-size:11px;line-height:16px;font-weight:600;color:#1a1a1a;">${dateStr}</div>
-                  </td>
-                </tr>
-              </table>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
-                <tr>
-                  <td style="height:3px;background:#1950DF;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="height:3px;background:#FEAD17;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="height:3px;background:#FA2E1A;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="height:3px;background:#0FBC87;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="height:3px;background:#808080;font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          ${heroA ? `
-          <tr>
-            <td class="mobile-pad" style="padding:32px 36px;border-bottom:1px solid #e5e3de;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-bottom:16px;font-family:Arial,sans-serif;">
-                    <span style="display:inline-block;width:7px;height:7px;background:#1950DF;border-radius:50%;vertical-align:middle;"></span>
-                    <span style="padding-left:7px;font-size:10px;line-height:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1950DF;vertical-align:middle;">Cover Story</span>
-                  </td>
-                </tr>
-                ${heroA.image ? `<tr><td style="padding-bottom:20px;">${safeImage(heroA, 568)}</td></tr>` : ''}
-                <tr><td class="hero-title" style="font-family:Georgia,Times New Roman,serif;font-size:40px;line-height:48px;font-weight:700;color:#0a0a0a;">${heroA.title || ''}</td></tr>
-                <tr><td style="padding-top:12px;font-family:Arial,sans-serif;font-size:16px;line-height:26px;color:#6b6b6b;">${truncate(heroA.excerpt, 220)}</td></tr>
-                <tr>
-                  <td style="padding-top:18px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="font-family:Arial,sans-serif;font-size:11px;line-height:15px;color:#9a9a9a;">News4Bharat Desk</td>
-                        <td align="right"><a href="${articleUrl(heroA)}" style="display:inline-block;background:#1950DF;color:#ffffff;font-family:Arial,sans-serif;font-size:11px;line-height:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-decoration:none;padding:10px 18px;">Read Full Story</a></td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>` : ''}
-
-          ${breakingHTML ? sectionHeader('#FA2E1A', 'Breaking News This Week') : ''}
-          ${breakingHTML ? `
-          <tr>
-            <td class="mobile-pad" style="padding:0 36px 8px 36px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F6F3" style="border-top:2px solid #FA2E1A;">
-                <tr>
-                  <td style="padding:16px 16px 12px 16px;border-bottom:1px solid #e5e3de;font-family:Arial,sans-serif;">
-                    <span style="display:inline-block;background:#FA2E1A;color:#ffffff;font-size:9px;line-height:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;">Breaking</span>
-                    <span style="padding-left:10px;font-size:12px;line-height:18px;font-weight:700;color:#1a1a1a;">Stories This Week</span>
-                  </td>
-                </tr>
-                ${breakingHTML}
-              </table>
-            </td>
-          </tr>` : ''}
-
-          ${featuredHTML ? sectionHeader('#1950DF', 'Top Stories') : ''}
-          ${featuredHTML}
-
-          ${sKeys.some(k => chosen[k]) ? sectionHeader('#FEAD17', 'More From Bharat') : ''}
-          ${sKeys.some(k => chosen[k]) ? `
-          <tr>
-            <td class="mobile-pad" style="padding:0 36px 8px 36px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td class="stack-col" width="50%" valign="top" style="width:50%;padding:0 10px 20px 0;">${smallCard(chosen['s1'])}</td>
-                  <td class="stack-col" width="50%" valign="top" style="width:50%;padding:0 0 20px 10px;">${smallCard(chosen['s2'])}</td>
-                </tr>
-                <tr>
-                  <td class="stack-col" width="50%" valign="top" style="width:50%;padding:0 10px 0 0;">${smallCard(chosen['s3'])}</td>
-                  <td class="stack-col" width="50%" valign="top" style="width:50%;padding:0 0 0 10px;">${smallCard(chosen['s4'])}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>` : ''}
-
-          ${explainersHTML ? `
-          <tr>
-            <td class="mobile-pad" style="padding:28px 36px;background:#0a0a0a;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-bottom:20px;font-family:Arial,sans-serif;">
-                    <span style="display:inline-block;background:#FEAD17;color:#0a0a0a;font-size:9px;line-height:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;">Explainers</span>
-                    <span style="padding-left:10px;font-size:10px;line-height:14px;color:#6f6f6f;">Top picks from this week</span>
-                  </td>
-                </tr>
-                ${explainersHTML}
-              </table>
-            </td>
-          </tr>` : ''}
-
-          <tr>
-            <td class="mobile-pad" style="padding:28px 36px;background:#F7F6F3;border-top:1px solid #e5e3de;text-align:center;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr><td align="center"><img class="footer-logo" src="${NEWS_LOGO_URL}" alt="News4Bharat" width="180" style="display:block;width:180px;max-width:180px;height:auto;margin:0 auto 14px;"></td></tr>
-                <tr>
-                  <td align="center" style="padding-bottom:16px;font-family:Arial,sans-serif;font-size:10px;line-height:18px;text-transform:uppercase;letter-spacing:1px;">
-                    <a href="https://news4bharat.com" style="color:#6b6b6b;text-decoration:none;">Home</a>&nbsp;&nbsp;&nbsp;
-                    <a href="https://news4bharat.com/category/politics" style="color:#6b6b6b;text-decoration:none;">Politics</a>&nbsp;&nbsp;&nbsp;
-                    <a href="https://news4bharat.com/category/economy" style="color:#6b6b6b;text-decoration:none;">Economy</a>&nbsp;&nbsp;&nbsp;
-                    <a href="https://news4bharat.com/category/sports" style="color:#6b6b6b;text-decoration:none;">Sports</a>
-                  </td>
-                </tr>
-                <tr><td style="border-top:1px solid #e5e3de;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr>
-                  <td align="center" style="padding-top:16px;font-family:Arial,sans-serif;font-size:10px;line-height:18px;color:#8f8f8f;">
-                    &copy; 2026 News4Bharat Media Pvt. Ltd. All rights reserved.<br>
-                    <a href="https://news4bharat.com" style="color:#8f8f8f;text-decoration:none;">news4bharat.com</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
+          <tr class="stack-row">
+            ${smallCell('s1','left')}
+            <td class="hide-mobile-gap" width="20" style="width:20px;"></td>
+            ${smallCell('s2','right')}
           </tr>
         </table>
       </td>
     </tr>
-  </table>
+    <tr>
+      <td style="padding:20px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr class="stack-row">
+            ${smallCell('s3','left')}
+            <td class="hide-mobile-gap" width="20" style="width:20px;"></td>
+            ${smallCell('s4','right')}
+          </tr>
+        </table>
+      </td>
+    </tr>` : '';
+
+  const explainerArts = Object.values(chosen).filter(Boolean).slice(0,3);
+  const explainersHTML = explainerArts.map((a, i) => {
+    const href = articleUrl(a);
+    return `
+      <tr>
+        <td style="padding:14px 0;border-bottom:1px solid #1f1f1f;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td valign="top" width="28" style="width:28px;font-family:Arial,sans-serif;font-size:11px;font-weight:800;color:#FEAD17;">0${i+1}</td>
+              <td valign="top">
+                ${textLink(href, a.title, 'font-family:Arial,sans-serif;font-size:12px;font-weight:700;line-height:1.45;color:#ffffff;text-decoration:none;display:block;margin-bottom:4px;')}
+                ${textLink(href, excerptText(a.excerpt, 110), 'font-family:Arial,sans-serif;font-size:10px;line-height:1.6;color:#8b8b8b;text-decoration:none;display:block;')}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const dateStr = new Date().toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'});
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>News4Bharat Weekly Newsletter</title>
+<style>
+  :root { color-scheme: light only; supported-color-schemes: light only; }
+  body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
+  img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; display:block; }
+  table { border-collapse:collapse !important; }
+  body, .email-bg, .email-shell, .logo-bg, .force-white {
+    background-color:#ffffff !important;
+    background:#ffffff !important;
+    background-image:linear-gradient(#ffffff,#ffffff) !important;
+  }
+  [data-ogsc] body, [data-ogsc] .email-bg, [data-ogsc] .email-shell, [data-ogsc] .logo-bg, [data-ogsc] .force-white {
+    background-color:#ffffff !important;
+    background:#ffffff !important;
+    background-image:linear-gradient(#ffffff,#ffffff) !important;
+  }
+  @media only screen and (max-width: 640px) {
+    .wrap { width:100% !important; }
+    .mobile-pad { padding-left:18px !important; padding-right:18px !important; }
+    .stack-col { display:block !important; width:100% !important; max-width:100% !important; padding-left:0 !important; padding-right:0 !important; }
+    .stack-row { display:block !important; }
+    .feature-media { padding-right:0 !important; padding-bottom:14px !important; }
+    .feature-img, .small-img { width:100% !important; max-width:100% !important; height:auto !important; }
+    .small-col { padding-left:0 !important; padding-right:0 !important; padding-bottom:18px !important; }
+    .hide-mobile-gap { display:none !important; width:0 !important; }
+    .hero-title a, .hero-title { font-size:24px !important; }
+    .logo { width:170px !important; max-width:170px !important; }
+  }
+</style>
+</head>
+<body bgcolor="#ffffff" class="email-bg" style="margin:0;padding:0;background:#ffffff;background-color:#ffffff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" class="email-bg" style="background:#ffffff;background-color:#ffffff;">
+  <tr>
+    <td align="center" bgcolor="#ffffff" class="email-bg" style="padding:0;background:#ffffff;background-color:#ffffff;">
+      <table role="presentation" class="wrap email-shell" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:640px;max-width:640px;background:#ffffff;background-color:#ffffff;">
+        <tr>
+          <td class="mobile-pad logo-bg force-white" bgcolor="#ffffff" style="padding:28px 36px 0;border-bottom:1px solid #e5e3de;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr class="stack-row">
+                <td valign="middle" class="stack-col logo-bg force-white" bgcolor="#ffffff" style="padding-bottom:18px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);">
+                  <img class="logo" src="${NEWS_LOGO_URL}" alt="News4Bharat" width="220" style="display:block;width:220px;max-width:220px;height:auto;">
+                </td>
+                <td valign="middle" class="stack-col logo-bg force-white" align="right" bgcolor="#ffffff" style="padding-bottom:18px;font-family:Arial,sans-serif;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);">
+                  <div style="font-size:9px;color:#6b6b6b;text-transform:uppercase;letter-spacing:1.5px;">Weekly Digest</div>
+                  <div style="font-size:11px;font-weight:700;color:#1a1a1a;margin-top:3px;">${dateStr}</div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="height:3px;background:#1950DF;"></td>
+                      <td style="height:3px;background:#FEAD17;"></td>
+                      <td style="height:3px;background:#FA2E1A;"></td>
+                      <td style="height:3px;background:#0FBC87;"></td>
+                      <td style="height:3px;background:#808080;"></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        ${heroA ? `<tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:32px 36px;border-bottom:1px solid #e5e3de;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${heroHTML}</table></td></tr>` : ''}
+
+        ${breakingHTML ? `<tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:24px 36px 16px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" style="width:24px;border-top:3px solid #FA2E1A;font-size:0;line-height:0;">&nbsp;</td><td style="padding:0 12px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b;white-space:nowrap;">Breaking News This Week</td><td style="border-top:1px solid #e5e3de;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+        <tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:0 36px 4px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);border-top:2px solid #FA2E1A;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:16px 0 14px;border-bottom:1px solid #e5e3de;"><span style="display:inline-block;background:#FA2E1A;color:#ffffff;font-family:Arial,sans-serif;font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;">Breaking</span><span style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a1a;padding-left:10px;">Stories This Week</span></td></tr>${breakingHTML}</table></td></tr>` : ''}
+
+        ${featuredHTML ? `<tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:24px 36px 16px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" style="width:24px;border-top:3px solid #1950DF;font-size:0;line-height:0;">&nbsp;</td><td style="padding:0 12px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b;white-space:nowrap;">Top Stories</td><td style="border-top:1px solid #e5e3de;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+        <tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:0 36px 8px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${featuredHTML}</table></td></tr>` : ''}
+
+        ${hasSmall ? `<tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:24px 36px 16px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="24" style="width:24px;border-top:3px solid #FEAD17;font-size:0;line-height:0;">&nbsp;</td><td style="padding:0 12px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:#6b6b6b;white-space:nowrap;">More From Bharat</td><td style="border-top:1px solid #e5e3de;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+        <tr><td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:0 36px 8px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${smallRows}</table></td></tr>` : ''}
+
+        ${explainersHTML ? `<tr><td class="mobile-pad" style="padding:28px 36px;background:#0a0a0a;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-bottom:20px;"><span style="display:inline-block;background:#FEAD17;color:#0a0a0a;font-family:Arial,sans-serif;font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;">Explainers</span><span style="font-family:Arial,sans-serif;font-size:10px;color:#666666;padding-left:10px;">Top picks from this week</span></td></tr>${explainersHTML}</table></td></tr>` : ''}
+
+        <tr>
+          <td class="mobile-pad force-white" bgcolor="#ffffff" style="padding:28px 36px;background:#ffffff;background-color:#ffffff;background-image:linear-gradient(#ffffff,#ffffff);border-top:1px solid #e5e3de;text-align:center;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td align="center" style="padding-bottom:14px;"><img src="${NEWS_LOGO_URL}" alt="News4Bharat" width="180" style="display:block;width:180px;max-width:180px;height:auto;margin:0 auto;"></td></tr>
+              <tr><td align="center" style="padding-bottom:16px;font-family:Arial,sans-serif;font-size:9px;line-height:18px;text-transform:uppercase;letter-spacing:1px;"><a href="https://news4bharat.com" style="color:#6b6b6b;text-decoration:none;">Home</a>&nbsp;&nbsp;&nbsp;<a href="https://news4bharat.com/category/politics" style="color:#6b6b6b;text-decoration:none;">Politics</a>&nbsp;&nbsp;&nbsp;<a href="https://news4bharat.com/category/economy" style="color:#6b6b6b;text-decoration:none;">Economy</a>&nbsp;&nbsp;&nbsp;<a href="https://news4bharat.com/category/sports" style="color:#6b6b6b;text-decoration:none;">Sports</a></td></tr>
+              <tr><td style="border-top:1px solid #e5e3de;font-size:0;line-height:0;">&nbsp;</td></tr>
+              <tr><td align="center" style="padding-top:16px;font-family:Arial,sans-serif;font-size:9px;line-height:1.8;color:#aaaaaa;">&copy; 2026 News4Bharat Media Pvt. Ltd. All rights reserved.<br><a href="https://news4bharat.com" style="color:#aaaaaa;text-decoration:none;">news4bharat.com</a></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>`;
 }
 </script>
 </body>
 </html>
+
+

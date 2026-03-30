@@ -7,8 +7,19 @@ import {
 
 const API_BASE = "https://news4bharat.cloud/api";
 
+// ✅ AM/PM ke saath time
 const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  d
+    ? new Date(d).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).replace(/am|pm/i, (match) => match.toUpperCase())
+    : "";
+
 
 const formatViews = (v) => {
   if (!v) return "";
@@ -22,7 +33,6 @@ export default function CategoryPage() {
   const { slug } = useParams();
   const location = useLocation();
 
-  // URL se subcategory nikalo: /category/bharat-economy?subcategory=Banking
   const searchParams  = new URLSearchParams(location.search);
   const subFilter     = searchParams.get("subcategory") || "";
 
@@ -58,15 +68,12 @@ export default function CategoryPage() {
           )
         );
 
-        // ✅ Newest first — created_at se sort
         const sorted = filtered.sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         );
 
-        // ✅ Subcategory filter — ?subcategory=Banking
         const finalArticles = subFilter
           ? sorted.filter((a) => {
-              // selected_subcategories mein check karo
               const selectedSubs = a.selected_subcategories || {};
               const allSelected  = Object.values(selectedSubs).flat();
               if (allSelected.length > 0) {
@@ -74,7 +81,6 @@ export default function CategoryPage() {
                   (s) => s.toLowerCase() === subFilter.toLowerCase()
                 );
               }
-              // Fallback: title/content mein search
               const text = `${a.title} ${a.subtitle || ""} ${stripHtml(a.content || "")}`.toLowerCase();
               return text.includes(subFilter.toLowerCase());
             })
@@ -83,8 +89,10 @@ export default function CategoryPage() {
         const normalized = finalArticles.map((a) => ({
           ...a,
           image: a.image_url || a.image || null,
-          author: (typeof a.author === "object" ? a.author?.username : a.author) || "News4Bharat",
-          description: a.subtitle || (a.content ? a.content.slice(0, 150) : ""),
+          // ✅ display_author_name API se aata hai "News4Bharat"
+          // author: a.display_author_name || a.author_display_name || "News4Bharat",
+          author: "News4Bharat",
+          description: a.subtitle || (a.content ? stripHtml(a.content).slice(0, 150) : ""),
         }));
 
         setArticles(normalized);
@@ -136,7 +144,7 @@ export default function CategoryPage() {
         {/* LEFT MAIN CONTENT */}
         <div className="min-w-0">
 
-          {/* Hero Article — newest article */}
+          {/* Hero Article */}
           {heroArticle && (
             <Link
               to={`/article/${heroArticle.slug}`}
@@ -159,9 +167,11 @@ export default function CategoryPage() {
                   </h2>
                   <p className="text-[13.5px] text-[#555] mb-[14px] leading-[1.7]">{heroArticle.description}</p>
                   <div className="flex flex-wrap gap-3 sm:gap-4">
-                    <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
+                    {/* ✅ Author — News4Bharat dikhega */}
+                    <span className="inline-flex items-center text-[11.5px] text-[#D80100] font-semibold">
                       <User size={12} className="mr-1" />{heroArticle.author}
                     </span>
+                    {/* ✅ Time AM/PM ke saath */}
                     <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
                       <Clock size={12} className="mr-1" />{formatDate(heroArticle.published_at || heroArticle.created_at)}
                     </span>
@@ -215,8 +225,14 @@ export default function CategoryPage() {
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        <span className="flex items-center gap-1"><User size={11} />{article.author}</span>
-                        <span className="flex items-center gap-1"><Clock size={11} />{formatDate(article.published_at || article.created_at)}</span>
+                        {/* ✅ Author red color mein */}
+                        <span className="flex items-center gap-1 text-red-600 font-semibold">
+                          <User size={11} />{article.author}
+                        </span>
+                        {/* ✅ AM/PM time */}
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} />{formatDate(article.published_at || article.created_at)}
+                        </span>
                       </div>
                       {article.views && (
                         <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
@@ -245,7 +261,7 @@ export default function CategoryPage() {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="flex flex-col gap-5 order-first lg:order-last">
+       <aside className="flex flex-col gap-5 lg:order-last">
 
           {/* Trending */}
           <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">

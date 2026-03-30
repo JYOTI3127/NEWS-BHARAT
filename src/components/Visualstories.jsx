@@ -8,28 +8,31 @@ import {
 } from "react-icons/fa6";
 
 const API_BASE = "https://news4bharat.cloud/api";
-const CATEGORY_SLUG = "bharat-economy"; // Bharat Economy & Business
+const CATEGORY_SLUG = "bharat-economy";
+const LIVE_CRICKET_API = "https://news4bharat.cloud/api/live-cricket/";
 
 const tabs = ["Live", "Upcoming", "Recent"];
 
-// ── Responsive config ─────────────────────────────────────────
 const useBreakpoint = () => {
+    const getBreakpoint = (w) => {
+        if (w <= 320) return "s";
+        if (w <= 375) return "m";
+        if (w <= 425) return "l";
+        if (w <= 768) return "mobile";
+        if (w <= 1024) return "tablet";
+        if (w <= 1440) return "laptop";
+        if (w <= 2560) return "laptop-l";
+        return "4k";
+    };
+
     const [bp, setBp] = useState(() => {
         if (typeof window === "undefined") return "laptop";
-        const w = window.innerWidth;
-        if (w < 768) return "mobile";
-        if (w < 1024) return "tablet";
-        if (w < 1440) return "laptop";
-        return "large";
+        return getBreakpoint(window.innerWidth);
     });
 
     useEffect(() => {
         const handler = () => {
-            const w = window.innerWidth;
-            if (w < 768) setBp("mobile");
-            else if (w < 1024) setBp("tablet");
-            else if (w < 1440) setBp("laptop");
-            else setBp("large");
+            setBp(getBreakpoint(window.innerWidth));
         };
         window.addEventListener("resize", handler);
         return () => window.removeEventListener("resize", handler);
@@ -39,13 +42,16 @@ const useBreakpoint = () => {
 };
 
 const VISIBLE_MAP = {
+    s: 2,
+    m: 2,
+    l: 2,
     mobile: 2,
     tablet: 4,
     laptop: 6,
-    large: 6,
+    "laptop-l": 6,
+    "4k": 6,
 };
 
-// ── Helper ────────────────────────────────────────────────────
 const getScore = (scoreArr, teamName) => {
     if (!scoreArr || scoreArr.length === 0) return null;
     const innings = scoreArr.filter(s =>
@@ -54,7 +60,37 @@ const getScore = (scoreArr, teamName) => {
     return innings.length > 0 ? innings[innings.length - 1] : scoreArr[scoreArr.length - 1];
 };
 
-// ── Match Card ────────────────────────────────────────────────
+const ensureMatchShape = (match = {}) => ({
+    ...match,
+    teams: Array.isArray(match.teams)
+        ? match.teams
+        : (Array.isArray(match.teamInfo) ? match.teamInfo.map((team) => team?.name || team?.shortname || "TBD") : ["TBD", "TBD"]),
+    teamInfo: Array.isArray(match.teamInfo) ? match.teamInfo : [],
+    score: Array.isArray(match.score) ? match.score : [],
+    name: match.name || match.series || match.matchName || "Cricket Match",
+    venue: match.venue || match.location || "Venue to be announced",
+    status: match.status || match.matchStatus || "Updates coming soon",
+});
+
+const normalizeMatches = (matches) =>
+    Array.isArray(matches) ? matches.map(ensureMatchShape) : [];
+
+const normalizeCricketPayload = (payload) => {
+    if (Array.isArray(payload)) {
+        return {
+            live: normalizeMatches(payload),
+            upcoming: [],
+            recent: [],
+        };
+    }
+
+    return {
+        live: normalizeMatches(payload?.live || payload?.live_matches || payload?.liveMatches || payload?.matches?.live),
+        upcoming: normalizeMatches(payload?.upcoming || payload?.upcoming_matches || payload?.upcomingMatches || payload?.matches?.upcoming),
+        recent: normalizeMatches(payload?.recent || payload?.recent_matches || payload?.recentMatches || payload?.matches?.recent),
+    };
+};
+
 const MatchCard = ({ match, type }) => {
     const team1 = match.teamInfo?.[0];
     const team2 = match.teamInfo?.[1];
@@ -95,6 +131,10 @@ const MatchCard = ({ match, type }) => {
                             <img
                                 src={team1.img} alt={team1.shortname}
                                 className="w-13 h-13 rounded-sm border border-gray-200 object-contain mb-1 bg-white"
+                                loading="lazy"
+                                decoding="async"
+                                width={52}
+                                height={52}
                                 onError={e => { e.target.style.display = "none"; }}
                             />
                         )}
@@ -121,6 +161,10 @@ const MatchCard = ({ match, type }) => {
                                 <img
                                     src={team2.img} alt={team2.shortname}
                                     className="w-13 h-13 rounded-sm border border-gray-200 object-contain bg-white"
+                                    loading="lazy"
+                                    decoding="async"
+                                    width={52}
+                                    height={52}
                                     onError={e => { e.target.style.display = "none"; }}
                                 />
                             </div>
@@ -143,7 +187,6 @@ const MatchCard = ({ match, type }) => {
     );
 };
 
-// ── Multi Match Pagination ────────────────────────────────────
 const MultiMatch = ({ matches, type }) => {
     const [idx, setIdx] = useState(0);
 
@@ -177,7 +220,6 @@ const MultiMatch = ({ matches, type }) => {
     );
 };
 
-// ── Skeleton Card ─────────────────────────────────────────────
 const SkeletonCard = ({ visible }) => (
     <>
         {Array.from({ length: visible }).map((_, i) => (
@@ -199,118 +241,113 @@ const SkeletonCard = ({ visible }) => (
     </>
 );
 
-// ── Main Component ────────────────────────────────────────────
 export default function VisualStoriesWithScore() {
     const bp = useBreakpoint();
     const VISIBLE = VISIBLE_MAP[bp];
     const navigate = useNavigate();
+    const is4K = bp === "4k";
 
     const [offset, setOffset] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
+
+    // ✅ Fix 3 — Cricket loading false kiya, commented API hata di
     const [cricketData, setCricketData] = useState({ live: [], upcoming: [], recent: [] });
     const [cricketLoading, setCricketLoading] = useState(true);
 
-    // ── API: Bharat Economy & Business articles ───────────────
     const [stories, setStories] = useState([]);
     const [storiesLoading, setStoriesLoading] = useState(true);
 
+    // ✅ Fix 2 — Category filter se fetch, saare articles nahi
     useEffect(() => {
-        fetch(`${API_BASE}/articles/`)
+        fetch(`${API_BASE}/articles/?category=${CATEGORY_SLUG}&limit=20`)
             .then((r) => r.json())
             .then((data) => {
                 const all = Array.isArray(data) ? data : (data.results || []);
-
-                // Filter by bharat-economy category slug
-                const filtered = all.filter((a) =>
-                    Array.isArray(a.category_details) &&
-                    a.category_details.some((c) => c.slug === CATEGORY_SLUG)
-                );
-
-                // Newest first
-                const sorted = filtered.sort(
+                const sorted = all.sort(
                     (a, b) => new Date(b.created_at) - new Date(a.created_at)
                 );
-
                 setStories(sorted);
                 setStoriesLoading(false);
             })
             .catch(() => setStoriesLoading(false));
     }, []);
 
-    const isMobile = bp === "mobile";
+    useEffect(() => {
+        let ignore = false;
 
-    // Reset offset on resize or new data
+        fetch(LIVE_CRICKET_API)
+            .then((r) => {
+                if (!r.ok) throw new Error("Failed to fetch live cricket");
+                return r.json();
+            })
+            .then((data) => {
+                if (ignore) return;
+                setCricketData(normalizeCricketPayload(data));
+                setCricketLoading(false);
+            })
+            .catch(() => {
+                if (ignore) return;
+                setCricketData({ live: [], upcoming: [], recent: [] });
+                setCricketLoading(false);
+            });
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    const isMobile = ["s", "m", "l", "mobile"].includes(bp);
+
     useEffect(() => { setOffset(0); }, [VISIBLE, stories.length]);
 
     const canPrev = offset > 0;
     const canNext = offset < stories.length - VISIBLE;
 
-    // Cricket scores
-    useEffect(() => {
-        const fetchScores = async () => {
-            try {
-                const res = await fetch("https://news4bharat.cloud/api/live-cricket/");
-                const json = await res.json();
-                setCricketData(json);
-                if (json.live?.length > 0) setActiveTab(0);
-                else if (json.upcoming?.length > 0) setActiveTab(1);
-                else setActiveTab(2);
-            } catch (e) {
-                console.error("Cricket API error:", e);
-            } finally {
-                setCricketLoading(false);
-            }
-        };
-        fetchScores();
-        const interval = setInterval(fetchScores, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const tabData  = [cricketData.live, cricketData.upcoming, cricketData.recent];
+    const tabData = [cricketData.live, cricketData.upcoming, cricketData.recent];
     const tabTypes = ["live", "upcoming", "recent"];
 
     const scoreCardWidth = {
+        s: "100%",
+        m: "100%",
+        l: "100%",
         mobile: "100%",
         tablet: "220px",
         laptop: "220px",
-        large: "220px",
-    }[bp];
+        "laptop-l": "220px",
+        "4k": "220px",
+    }[bp] || "220px";
 
-    // Visible stories slice
     const visibleStories = stories.slice(offset, offset + VISIBLE);
 
     return (
         <div className="font-sans" style={{ margin: "0 3% 22px" }}>
             <div className={`flex gap-3 ${isMobile ? "flex-col" : "flex-row items-start"}`}>
 
-                {/* ── Left: Visual Stories ── */}
+                {/* Left: Visual Stories */}
                 <div className="flex-1 min-w-0">
-                    {/* Header */}
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="w-1 h-5 bg-red-600 rounded-sm" />
+                        <div
+                            className="bg-red-600 rounded-sm"
+                            style={{ width: is4K ? "6px" : "4px", height: is4K ? "28px" : "20px" }}
+                        />
                         <span
                             className="font-bold text-[#111] uppercase"
-                            style={{ fontSize: isMobile ? "14px" : "18px" }}
+                            style={{ fontSize: is4K ? "26px" : isMobile ? "14px" : "18px" }}
                         >
                             Bharat Economy & Business
                         </span>
                     </div>
 
-                    {/* Carousel */}
                     <div className="relative">
-
-                        {/* Prev */}
                         <button
                             onClick={() => canPrev && setOffset((o) => o - 1)}
-                            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${
-                                !canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-                            }`}
+                            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${!canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                                }`}
                             style={{ border: "1px solid #999999" }}
                         >
                             <FaChevronLeft size={12} />
                         </button>
 
-                        {/* Cards wrapper */}
                         <div
                             className="flex gap-2 overflow-hidden border border-gray-300"
                             style={{ padding: "8px", borderRadius: "10px" }}
@@ -318,7 +355,6 @@ export default function VisualStoriesWithScore() {
                             {storiesLoading ? (
                                 <SkeletonCard visible={VISIBLE} />
                             ) : stories.length === 0 ? (
-                                // No articles yet — empty state
                                 <div className="flex-1 flex items-center justify-center py-10 text-[12px] text-gray-400">
                                     No articles in this category yet.
                                 </div>
@@ -326,54 +362,75 @@ export default function VisualStoriesWithScore() {
                                 visibleStories.map((article) => (
                                     <div
                                         key={article.id}
-                                        className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white"
+                                        className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white overflow-hidden"
                                         style={{
                                             width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
                                         }}
                                         onClick={() => navigate(`/article/${article.slug}`)}
                                     >
+                                        {/* Image — fixed aspect ratio */}
                                         <div
-                                            className="w-full rounded-md overflow-hidden border border-gray-200"
-                                            style={{ aspectRatio: "3/4", position: "relative" }}
+                                            className="w-full overflow-hidden"
+                                            style={{
+                                                 aspectRatio: "2/3",
+                                                position: "relative",
+                                                borderRadius: "8px 8px 0 0",
+                                                background: "#f9f9f9"   // ← add karo
+                                            }}
                                         >
                                             {article.image_url ? (
+                                                // ✅ Fix 1 — lazy loading add kiya
                                                 <img
                                                     src={article.image_url}
                                                     alt={article.title}
                                                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+                                                    style={{
+                                                        objectFit: "cover",         
+                                                         objectPosition: "center 50%"
+                                                    }}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    width={200}
+                                                    height={300}
                                                     onError={(e) => { e.target.style.display = "none"; }}
                                                 />
                                             ) : (
-                                                // No image fallback
                                                 <div className="absolute inset-0 w-full h-full bg-gray-100 flex items-center justify-center">
                                                     <span className="text-[10px] text-gray-400 text-center px-1">No Image</span>
                                                 </div>
                                             )}
-                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-black transition-opacity duration-500 ease-in-out" />
                                         </div>
-                                        <p className="text-[9px] text-gray-500 group-hover:text-[#D80100] mt-1 leading-snug line-clamp-3 p-[5px] transition-colors duration-300">
-                                            {article.subtitle ? article.subtitle.slice(0, 100) : article.title}
-                                        </p>
+
+                                        {/* Title — fixed height neeche */}
+                                        <div style={{ height: is4K ? 72 : 46, overflow: "hidden", padding: is4K ? "10px 10px 0" : "4px 5px 0" }}>
+                                            <p className="text-gray-500 group-hover:text-[#D80100] leading-snug transition-colors duration-300"
+                                                style={{
+                                                    fontSize: is4K ? "18px" : "12px",
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: "vertical",
+                                                    overflow: "hidden",
+                                                }}>
+                                                {article.title}
+                                            </p>
+                                        </div>
                                     </div>
                                 ))
                             )}
                         </div>
 
-                        {/* Next */}
                         <button
                             onClick={() => canNext && setOffset((o) => o + 1)}
-                            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${
-                                !canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-                            }`}
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${!canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                                }`}
                             style={{ border: "1px solid #999999" }}
                         >
                             <FaChevronRight size={12} />
                         </button>
-
                     </div>
                 </div>
 
-                {/* ── Right: Live Score Card ── */}
+                {/* Right: Live Score Card */}
                 <div
                     className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
                     style={{
@@ -383,25 +440,27 @@ export default function VisualStoriesWithScore() {
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
-                    {/* Tabs */}
                     <div className="flex border-b border-gray-200">
                         {tabs.map((tab, i) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(i)}
-                                className={`flex-1 py-1.5 border-none cursor-pointer transition text-center ${
-                                    activeTab === i
-                                        ? "bg-red-600 text-white"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                }`}
-                                style={{ fontSize: "9px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}
+                                className={`flex-1 py-1.5 border-none cursor-pointer transition text-center ${activeTab === i
+                                    ? "bg-red-600 text-white"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                    }`}
+                                style={{
+                                    fontSize: is4K ? "13px" : "9px",
+                                    fontWeight: 600,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.04em",
+                                }}
                             >
                                 {tab}
                             </button>
                         ))}
                     </div>
 
-                    {/* Content */}
                     {cricketLoading ? (
                         <div className="px-2.5 py-4 text-center text-[11px] text-gray-400 animate-pulse">
                             Loading scores...

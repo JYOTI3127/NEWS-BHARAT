@@ -1,4 +1,4 @@
-import logo from "../assets/NEWS4BHARAT LOGO 01.png";
+import logo from "../assets/Logo 02.png";
 import "../Footer.css";
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Youtube, Linkedin, X, MessageCircle } from "lucide-react";
@@ -60,7 +60,7 @@ const policyLinks = [
   { label: "Contact Us", path: "/contact" },
   { label: "Privacy Policy", path: "/privacy-policy" },
   { label: "Terms & Conditions", path: "/terms-of-service" },
-  { label: "News Letter",   path: "/NewsletterAgent" },
+  { label: "Disclaimer",   path: "/disclaimer" },
 ];
 
 const AppleIcon = () => (
@@ -131,14 +131,14 @@ export default function Footer() {
           <div className="ft-follow-label">FOLLOW US</div>
 
           <div className="ft-social-row">
-            <a href="https://www.facebook.com/news4bharat" className="ft-soc"><Facebook size={18} /></a>
-            <a href="https://www.instagram.com/news4bharat" className="ft-soc"><Instagram size={18} /></a>
-            <a href="https://x.com/news4bharat" target="_blank" rel="noreferrer" className="ft-soc" title="X">
+            <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" className="ft-soc"><Facebook size={18} /></a>
+            <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" className="ft-soc"><Instagram size={18} /></a>
+            <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="ft-soc" title="X">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M18.244 2H21l-6.56 7.5L22 22h-6.828l-5.35-7.002L3.5 22H1l7.02-8.02L2 2h6.9l4.86 6.41L18.244 2zm-2.39 18h1.885L8.15 4H6.2l9.654 16z" />
               </svg>
             </a>
-            <a href="https://www.youtube.com/@news4bharat" className="ft-soc">
+            <a href="https://youtube.com/@news4bharat-p1w?si=IDAN0BepU_mRjB0w" className="ft-soc">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.7 31.7 0 000 12a31.7 31.7 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.7 31.7 0 0024 12a31.7 31.7 0 00-.5-5.8zM9.6 15.5v-7l6.2 3.5-6.2 3.5z" />
               </svg>
@@ -152,7 +152,7 @@ export default function Footer() {
           </div>
 
           {/* App buttons — side by side */}
-          <div className="ft-app-row">
+          {/* <div className="ft-app-row">
             <a href="#" className="ft-app-btn">
               <AppleIcon />
               <div className="ft-app-text">
@@ -167,7 +167,7 @@ export default function Footer() {
                 <span className="ft-app-big">Google Play</span>
               </div>
             </a>
-          </div>
+          </div> */}
 
         </div>
 

@@ -5,34 +5,36 @@ export default function ArticleCard({ article }) {
     title,
     subtitle,
     category_details,
-    author,
     published_at,
     created_at,
     image_url,
+    image,
     slug,
+    display_author_name,   // ✅ API mein yahi field hai
+    author_display_name,   // ✅ backup field
   } = article;
 
-  const imageUrl = image_url || null;
+  const imageUrl = image_url || image || null;
 
   const date = published_at || created_at;
 
-const formattedDate = date
+  // ✅ AM/PM ke saath time
+  const formattedDate = date
+    ? new Date(date).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "";
 
-  ? new Date(date).toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    })
-  : "";
-
-  // ✅ Sirf slug — ID hata diya
   const articlePath = `/article/${slug}`;
-
   const primaryCategory = category_details?.[0];
+
+  // ✅ Author: API se aaye toh wahi, warna News4Bharat
+  const authorName = display_author_name || author_display_name || "News4Bharat";
 
   return (
     <Link
@@ -74,9 +76,9 @@ const formattedDate = date
           )}
 
           <div className="mt-auto flex flex-wrap gap-3 text-xs text-slate-400">
-            {author?.username && (
-              <span className="font-medium text-slate-500">{author.username}</span>
-            )}
+            {/* ✅ Author name — API se aata hai "News4Bharat" */}
+            <span className="font-medium text-red-600">{authorName}</span>
+            {/* ✅ Date with AM/PM */}
             {formattedDate && <span>{formattedDate}</span>}
           </div>
         </div>

@@ -97,19 +97,19 @@ const icons = {
 
 /* ── TAB CHAPTERS ── */
 const chapters = [
-  { id: "terms",    label: "Terms & Conditions", icon: icons.scroll },
-  { id: "ethics",   label: "Code of Ethics",     icon: icons.star   },
-  { id: "disclaimer", label: "Disclaimer",        icon: icons.shield },
+  { id: "terms",      label: "Terms & Conditions", icon: icons.scroll },
+  { id: "ethics",     label: "Code of Ethics",     icon: icons.star   },
+  { id: "disclaimer", label: "Disclaimer",          icon: icons.shield },
 ];
 
 /* ── ETHICS DATA ── */
 const ethicsItems = [
-  { title: "Accuracy",           desc: "Every story is verified through credible sources before publication." },
-  { title: "Independence",       desc: "No political or corporate influence determines our editorial direction." },
-  { title: "Fairness",           desc: "We present multiple perspectives wherever possible." },
-  { title: "Transparency",       desc: "Errors are corrected publicly and promptly." },
-  { title: "Accountability",     desc: "We accept responsibility for all published content." },
-  { title: "No Paid News",       desc: "Sponsored content is clearly and prominently labeled." },
+  { title: "Accuracy",              desc: "Every story is verified through credible sources before publication." },
+  { title: "Independence",          desc: "No political or corporate influence determines our editorial direction." },
+  { title: "Fairness",              desc: "We present multiple perspectives wherever possible." },
+  { title: "Transparency",          desc: "Errors are corrected publicly and promptly." },
+  { title: "Accountability",        desc: "We accept responsibility for all published content." },
+  { title: "No Paid News",          desc: "Sponsored content is clearly and prominently labeled." },
   { title: "Respect & Sensitivity", desc: "Coverage avoids sensationalism, respects privacy, and follows ethical standards in reporting on vulnerable groups." },
 ];
 
@@ -119,6 +119,108 @@ const disclaimerCards = [
   { icon: icons.book,  text: "Views expressed in opinion articles belong to the authors." },
   { icon: icons.globe, text: "News4Bharat is not liable for losses resulting from reliance on published content." },
   { icon: icons.tag,   text: "Financial, legal, or health information should not be treated as professional advice." },
+];
+
+/* ── TERMS SECTIONS DATA ── */
+const termsSections = [
+  {
+    num: "01",
+    icon: "check",
+    title: "Use of Content",
+    intro: "All content published on News4Bharat—including articles, text, images, and graphics—is for informational purposes only.",
+    allowed: {
+      label: "You may:",
+      icon: "check",
+      items: ["Read and share content for personal use"],
+    },
+    notAllowed: {
+      label: "You may not:",
+      icon: "x",
+      items: [
+        "Copy, reproduce, or republish content without permission",
+        "Use content for commercial purposes without written consent",
+      ],
+    },
+  },
+  {
+    num: "02",
+    icon: "x",
+    title: "User Conduct",
+    intro: "By using our website, you agree:",
+    notAllowed: {
+      label: null,
+      icon: "x",
+      items: [
+        "Not to post harmful, abusive, or misleading content",
+        "Not to attempt unauthorized access to the website",
+        "Not to use the website for illegal purposes",
+      ],
+    },
+  },
+  {
+    num: "03",
+    icon: "alert",
+    title: "Accuracy of Information",
+    intro: "We strive to ensure all information is accurate and up to date. However:",
+    notAllowed: {
+      label: null,
+      icon: "alert",
+      items: [
+        "We do not guarantee completeness or accuracy at all times",
+        "News and information may change over time",
+      ],
+    },
+    footer: "Users are advised to verify information independently where necessary.",
+  },
+  {
+    num: "04",
+    icon: "globe",
+    title: "Third-Party Links",
+    intro: "Our website may include links to external websites. We:",
+    notAllowed: {
+      label: null,
+      icon: "x",
+      items: [
+        "Do not control these websites",
+        "Are not responsible for their content or policies",
+      ],
+    },
+  },
+  {
+    num: "05",
+    icon: "tag",
+    title: "Advertisement and Monetization",
+    intro: "News4Bharat may display advertisements through third-party services such as Google AdSense.",
+    notAllowed: {
+      label: null,
+      icon: "check",
+      items: [
+        "Ads are served based on user behavior and preferences",
+        "We do not control the nature of ads displayed",
+      ],
+    },
+  },
+  {
+    num: "06",
+    icon: "alert",
+    title: "Limitation of Liability",
+    intro: "News4Bharat shall not be held responsible for:",
+    notAllowed: {
+      label: null,
+      icon: "x",
+      items: [
+        "Any loss or damage resulting from use of the website",
+        "Errors or omissions in content",
+        "Temporary unavailability of the website",
+      ],
+    },
+  },
+  {
+    num: "07",
+    icon: "scroll",
+    title: "Changes to Terms",
+    intro: "We reserve the right to modify these Terms at any time. Continued use of the website implies acceptance of updated terms.",
+  },
 ];
 
 /* ── COMPONENT ── */
@@ -147,6 +249,8 @@ export default function TermsPage() {
     setActiveTab(id);
   };
 
+  const getIcon = (name) => icons[name] || icons.check;
+
   return (
     <div className="terms-page">
 
@@ -159,8 +263,6 @@ export default function TermsPage() {
         />
         <div className="terms-hero-overlay" />
         <div className="terms-hero-grid" />
-
-
         <div className="terms-hero-bottom-fade" />
 
         <div className="terms-hero-content">
@@ -168,16 +270,13 @@ export default function TermsPage() {
             <div className="terms-hero-eyebrow-line" />
             <span className="terms-hero-eyebrow-text">Legal · Ethics · Disclaimer</span>
           </div>
-
           <h1 className="terms-hero-title">Terms & </h1>
           <span className="terms-hero-title-sub"> Conditions</span>
-
           <p className="terms-hero-desc">
-By accessing News4Bharat, you agree to the following:
+            By accessing News4Bharat, you agree to the following terms. If you do not agree, please discontinue use of the website.
           </p>
-
           <div className="terms-hero-pills">
-            {["Effective: March 2026"].map((t, i) => (
+            {["Last Updated: 30th March 2026"].map((t, i) => (
               <div key={i} className="terms-hero-pill">
                 <div className="terms-hero-pill-dot" />
                 {t}
@@ -219,103 +318,63 @@ By accessing News4Bharat, you agree to the following:
           </FadeIn>
 
           <div className="terms-grid">
+            {termsSections.map((sec, i) => (
+              <FadeIn key={i} delay={i * 0.05}>
+                <div className={sec.num === "07" ? "terms-block-full" : "terms-block"}>
 
-            {/* Use of Content */}
-            <FadeIn delay={0.05}>
-              <div className="terms-block">
-                <div className="terms-block-title">
-                  <span className="terms-block-title-icon">{icons.check}</span>
-                  Use of Content
+                  {/* Title */}
+                  <div className="terms-block-title">
+                    <span className="terms-block-title-icon">{getIcon(sec.icon)}</span>
+                    {sec.num}. {sec.title}
+                  </div>
+
+                  {/* Intro text */}
+                  {sec.intro && (
+                    <p className="terms-block-intro">{sec.intro}</p>
+                  )}
+
+                  {/* Allowed items */}
+                  {sec.allowed && (
+                    <>
+                      {sec.allowed.label && (
+                        <p className="terms-block-sub-label terms-allowed-label">{sec.allowed.label}</p>
+                      )}
+                      <ul className="terms-block-list">
+                        {sec.allowed.items.map((item, j) => (
+                          <li key={j} className="terms-block-list-item terms-item-allowed">
+                            <span className="terms-block-list-icon">{icons.check}</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {/* Not allowed / other items */}
+                  {sec.notAllowed && (
+                    <>
+                      {sec.notAllowed.label && (
+                        <p className="terms-block-sub-label terms-notallowed-label">{sec.notAllowed.label}</p>
+                      )}
+                      <ul className="terms-block-list">
+                        {sec.notAllowed.items.map((item, j) => (
+                          <li key={j} className="terms-block-list-item">
+                            <span className="terms-block-list-icon">{getIcon(sec.notAllowed.icon)}</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {/* Footer note */}
+                  {sec.footer && (
+                    <p className="terms-block-footer">{sec.footer}</p>
+                  )}
+
                 </div>
-                <ul className="terms-block-list">
-                  {[
-                    "Content is for personal, non-commercial use only.",
-                    "Reproduction requires written permission.",
-                    "Republishing without attribution is prohibited.",
-                  ].map((item, i) => (
-                    <li key={i} className="terms-block-list-item">
-                      <span className="terms-block-list-icon">{icons.check}</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </FadeIn>
-
-            {/* User Conduct */}
-            <FadeIn delay={0.1}>
-              <div className="terms-block">
-                <div className="terms-block-title">
-                  <span className="terms-block-title-icon">{icons.x}</span>
-                  User Conduct — Users must not:
-                </div>
-                <ul className="terms-block-list">
-                  {[
-                    "Post defamatory or harmful content.",
-                    "Engage in hate speech of any kind.",
-                    "Attempt hacking or platform disruption.",
-                    "Use automated scraping tools without permission.",
-                  ].map((item, i) => (
-                    <li key={i} className="terms-block-list-item">
-                      <span className="terms-block-list-icon">{icons.x}</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </FadeIn>
-
-            {/* Intellectual Property */}
-            <FadeIn delay={0.1}>
-              <div className="terms-block">
-                <div className="terms-block-title">
-                  <span className="terms-block-title-icon">{icons.tag}</span>
-                  Intellectual Property
-                </div>
-                <ul className="terms-block-list">
-                  <li className="terms-block-list-item">
-                    <span className="terms-block-list-icon">{icons.check}</span>
-                    All content, design, logo, and branding are the property of News4Bharat unless otherwise stated.
-                  </li>
-                </ul>
-              </div>
-            </FadeIn>
-
-            {/* Limitation of Liability */}
-            <FadeIn delay={0.15}>
-              <div className="terms-block">
-                <div className="terms-block-title">
-                  <span className="terms-block-title-icon">{icons.alert}</span>
-                  Limitation of Liability
-                </div>
-                <ul className="terms-block-list">
-                  {[
-                    "Service interruptions",
-                    "Technical errors",
-                    "Third-party content",
-                  ].map((item, i) => (
-                    <li key={i} className="terms-block-list-item">
-                      <span className="terms-block-list-icon">{icons.check}</span>
-                      We are not responsible for: {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </FadeIn>
-
-            {/* Governing Law — full width */}
-            <FadeIn delay={0.2}>
-              <div className="terms-block-full">
-                <div className="terms-block-title mb-2">
-                  <span className="terms-block-title-icon">{icons.globe}</span>
-                  Governing Law
-                </div>
-                <p className="terms-block-full-text">
-                  These terms are governed by the laws of India.
-                </p>
-              </div>
-            </FadeIn>
-
+              </FadeIn>
+            ))}
           </div>
         </section>
 
@@ -331,9 +390,9 @@ By accessing News4Bharat, you agree to the following:
             </div>
           </FadeIn>
 
-                    <FadeIn delay={0.05}>
+          <FadeIn delay={0.05}>
             <p className="text-[0.95rem] text-[#555] leading-[1.8] mb-[1.5rem]">
-News4Bharat adheres to the following principles:
+              News4Bharat adheres to the following principles:
             </p>
           </FadeIn>
 
@@ -385,12 +444,12 @@ News4Bharat adheres to the following principles:
             <div className="disclaimer-trademark">
               <div className="disclaimer-trademark-icon">{icons.tag}</div>
               <p className="disclaimer-trademark-text">
-All trademarks and logos belong to their respective owners.
-
+                All trademarks and logos belong to their respective owners.
               </p>
             </div>
           </FadeIn>
         </section>
+
       </div>
     </div>
   );

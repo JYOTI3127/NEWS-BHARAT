@@ -3,23 +3,20 @@ import { useNavigate } from "react-router-dom";
 
 const API_BASE = "https://news4bharat.cloud/api";
 
-// ── API Hook ──────────────────────────────────────────────────
+// ✅ Fix 1 — Category slug se seedha fetch, saare articles nahi
 function useCategoryArticles(slug) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/articles/`)
+    fetch(`${API_BASE}/articles/?category=${slug}&limit=10`)
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
-        const filtered = all
-          .filter((a) =>
-            Array.isArray(a.category_details) &&
-            a.category_details.some((c) => c.slug === slug)
-          )
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setArticles(filtered);
+        const sorted = all.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        setArticles(sorted);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -30,9 +27,31 @@ function useCategoryArticles(slug) {
 
 // ── Helpers ───────────────────────────────────────────────────
 const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  d
+    ? new Date(d).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).replace(/am|pm/i, (match) => match.toUpperCase())
+    : "";
 
 const imgSrc = (a) => a?.image_url || a?.image || null;
+
+const useIs4K = () => {
+  const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
+  const [is4K, setIs4K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs4K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is4K;
+};
 
 // ── Section Header ─────────────────────────────────────────────
 function SectionHeader({ title, slug }) {
@@ -73,8 +92,8 @@ function Sk({ h = "14px", w = "100%", mb = "6px", radius = "4px" }) {
   );
 }
 
-// ── Image with fallback ───────────────────────────────────────
-function ArticleImg({ src, alt, className, style }) {
+// ✅ Fix 2 — ArticleImg mein lazy loading add kiya
+function ArticleImg({ src, alt, className, style, priority = false }) {
   const [err, setErr] = useState(false);
   if (!src || err) {
     return (
@@ -86,27 +105,34 @@ function ArticleImg({ src, alt, className, style }) {
       </div>
     );
   }
-  return <img src={src} alt={alt} className={className} style={style} onError={() => setErr(true)} />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      style={style}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      onError={() => setErr(true)}
+    />
+  );
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────
 export function EntertainmentSection() {
   const navigate = useNavigate();
+  const is4K = useIs4K();
 
-  // Bharat Explainers — main left section
   const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers");
-
-  // Bharat in Numbers — sidebar
   const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-numbers");
 
-  // Derived data
-  const featured   = explainers[0] || null;
-  const smallCard  = explainers[1] || null;
-  const midCards   = explainers.slice(2, 5);
+  const featured     = explainers[0] || null;
+  const smallCard    = explainers[1] || null;
+  const midCards     = explainers.slice(2, 6);
   const sidebarItems = numbers.slice(0, 5);
 
   return (
-    <div className="nps-entertainment">
+    <div className={`nps-entertainment${is4K ? " nps-4k" : ""}`}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -121,7 +147,7 @@ export function EntertainmentSection() {
         {/* ── LEFT + MIDDLE ── */}
         <div className="nps-ent-left-mid">
 
-          {/* Featured big card */}
+          {/* Featured big card — priority load */}
           {explainersLoading ? (
             <div className="hs-featured-card">
               <div className="hs-featured-img-wrap" style={{ background: "#f0ece8" }}>
@@ -140,6 +166,7 @@ export function EntertainmentSection() {
                   alt={featured.title}
                   className="w-full h-full object-cover"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  priority={true}
                 />
                 <div className="hs-featured-overlay">
                   <CategoryTag label={featured.category_details?.[0]?.name || "EXPLAINER"} />
@@ -156,7 +183,7 @@ export function EntertainmentSection() {
             </div>
           )}
 
-          {/* Small card below featured */}
+          {/* Small card — lazy load */}
           {explainersLoading ? (
             <div className="hs-small-card">
               <div className="hs-small-img" style={{ background: "#f0ece8" }} />
@@ -188,10 +215,10 @@ export function EntertainmentSection() {
             </div>
           ) : null}
 
-          {/* Middle: 3 horizontal cards */}
+          {/* Middle: 4 horizontal cards — lazy load */}
           <div className="hs-mid-col">
             {explainersLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
+              ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="hs-mid-card">
                     <div className="hs-mid-img" style={{ background: "#f0ece8" }} />
                     <div className="hs-mid-text">

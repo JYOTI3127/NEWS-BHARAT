@@ -51,6 +51,50 @@ const getFinalSlug = (slug, label) => {
   return SLUG_OVERRIDES[s] || s;
 };
 
+const getSearchResultHref = (item) => {
+  if (item?.url) return item.url;
+  if (item?.link) return item.link;
+  if (item?.slug) return `/article/${item.slug}`;
+  if (item?.id) return `/article/${item.id}`;
+  return "#";
+};
+
+const stripHtml = (value) => {
+  if (typeof value !== "string") return "";
+  let cleaned = value
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Handle escaped/truncated HTML fragments that survive the first pass.
+  cleaned = cleaned
+    .replace(/<\/?[^>]*$/g, "")
+    .replace(/^[a-z0-9-]+\s*=\s*["'][^"']*["']\s*/gi, "")
+    .replace(/\b(?:style|class|id|data-[a-z0-9-]+|dir|face|size)\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/^[^a-zA-Z0-9\u0900-\u097F]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned;
+};
+
+const getSearchPreview = (item) => {
+  const raw = item?.description || item?.summary || item?.excerpt || "";
+  const cleaned = stripHtml(raw);
+  if (!cleaned) return "";
+
+  const trimmed = cleaned.slice(0, 110).trim();
+  return cleaned.length > 110 ? `${trimmed}...` : trimmed;
+};
+
 const NAV_SECTIONS = [
   {
     label: "Bharat Economy & Business",
@@ -114,7 +158,9 @@ const Header = () => {
   const [showResults, setShowResults]     = useState(false);
   const searchRef         = useRef(null);
   const searchDebounceRef = useRef(null);
+  const headerRef         = useRef(null);
   const navigate          = useNavigate();
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -187,16 +233,22 @@ const Header = () => {
     fetchCategories();
   }, []);
 
+  // ✅ UPDATED: /api/search/articles/ + fixed showResults logic + debug logs
   const fetchSearchResults = async (query) => {
     if (!query.trim()) { setSearchResults([]); setShowResults(false); return; }
     setIsSearching(true);
+    setShowResults(true); // show dropdown immediately with "Searching..."
     try {
-      const res     = await fetch(`https://news4bharat.cloud/api/search/?q=${encodeURIComponent(query)}`);
-      const data    = await res.json();
-      const results = Array.isArray(data) ? data : (data.results || data.articles || []);
+      const res  = await fetch(`https://news4bharat.cloud/api/search/articles/?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      console.log("🔍 Search API raw response:", data); // DEBUG — hata dena baad mein
+      const results = Array.isArray(data)
+        ? data
+        : (data.results || data.articles || data.data || data.items || []);
+      console.log("🔍 Parsed results:", results.length, "items"); // DEBUG
       setSearchResults(results);
-      setShowResults(true);
-    } catch {
+    } catch (err) {
+      console.error("Search API error:", err);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -266,13 +318,42 @@ const Header = () => {
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => { setIsScrolled(window.scrollY > 10); ticking = false; });
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 10);
+          ticking = false;
+        });
         ticking = true;
       }
     };
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };    
+
+    updateHeaderHeight();
+    const raf = window.requestAnimationFrame(updateHeaderHeight);
+    window.addEventListener("resize", updateHeaderHeight);
+    const observer = typeof ResizeObserver !== "undefined" && headerRef.current
+      ? new ResizeObserver(updateHeaderHeight)
+      : null;
+
+    if (observer && headerRef.current) {
+      observer.observe(headerRef.current);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", updateHeaderHeight);
+      observer?.disconnect();
+    };
+  }, [isScrolled, isMobile, isOpen, showResults, searchResults.length, searchQuery]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -314,7 +395,7 @@ const Header = () => {
 
   const topBarClasses = isMobile
     ? "hidden"
-    : `overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
+    : `${showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
 
   const TickerContent = () => (
     <>
@@ -372,6 +453,7 @@ const Header = () => {
 
   return (
     <>
+      <div aria-hidden="true" style={{ height: `${headerHeight}px` }} />
       <div className={`drawer-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)} />
 
       {/* ══ DRAWER ══ */}
@@ -497,7 +579,7 @@ const Header = () => {
       </aside>
 
       {/* ══ HEADER ══ */}
-      <header className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
+      <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
         <div className={tickerBarClasses}>
           <div className="ticker-left">
@@ -509,8 +591,8 @@ const Header = () => {
               <TickerContent />
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-nowrap flex-shrink-0 hidden md:flex">
-            <button className="btn-flag">
+          <div className="ticker-actions flex items-center gap-2 flex-nowrap flex-shrink-0 hidden md:flex">
+            <button className="btn-flag topbar-hindi-btn">
               <svg width="16" height="11" viewBox="0 0 16 11">
                 <rect width="16" height="3.67" fill="#FF9933" />
                 <rect y="3.67" width="16" height="3.67" fill="white" />
@@ -519,14 +601,12 @@ const Header = () => {
               </svg>
               हिंदी
             </button>
-            {/* <button className="btn-live"><Radio size={11} /> Live TV</button> */}
-            {/* <button className="btn-epaper"><FileText size={11} /> E-Paper</button> */}
           </div>
         </div>
 
         <div className={topBarClasses}>
           <div className="search-row">
-            <div className="search-box relative" ref={searchRef}>
+            <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
               <Search size={14} className="search-icon" />
               <input
                 type="text"
@@ -539,16 +619,16 @@ const Header = () => {
               />
               <Mic size={14} className="mic-icon" />
               {showResults && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] z-50 max-h-[360px] overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
                   {isSearching ? (
                     <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
                   ) : searchResults.length === 0 ? (
                     <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
                   ) : (
                     searchResults.map((item, idx) => (
-                      <a
+                      <Link
                         key={idx}
-                        href={item.url || item.link || "#"}
+                        to={getSearchResultHref(item)}
                         className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
                         onClick={() => setShowResults(false)}
                       >
@@ -558,10 +638,12 @@ const Header = () => {
                           </span>
                         )}
                         <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
-                        {(item.description || item.summary || item.excerpt) && (
-                          <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{(item.description || item.summary || item.excerpt).slice(0, 100)}...</span>
+                        {getSearchPreview(item) && (
+                          <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">
+                            {getSearchPreview(item)}
+                          </span>
                         )}
-                      </a>
+                      </Link>
                     ))
                   )}
                 </div>
@@ -589,7 +671,7 @@ const Header = () => {
           </ul>
 
           <div className="mobile-nav-actions">
-            <button className="btn-flag">
+            <button className="btn-flag navbar-hindi-btn">
               <svg width="14" height="10" viewBox="0 0 16 11">
                 <rect width="16" height="3.67" fill="#FF9933" />
                 <rect y="3.67" width="16" height="3.67" fill="white" />
@@ -598,9 +680,6 @@ const Header = () => {
               </svg>
               हिंदी
             </button>
-            <button className="btn-live"><Radio size={11} /> Live TV</button>
-            <button className="btn-epaper"><FileText size={11} /> E-Paper</button>
-            <button className="btn-signin">Sign In</button>
           </div>
         </nav>
 

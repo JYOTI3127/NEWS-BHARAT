@@ -12,15 +12,15 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="w-full bg-white flex items-center justify-center px-4 py-6 sm:px-6 lg:px-8 font-[Poppins,sans-serif]">
+    <section className="w-full bg-white flex items-center justify-center px-4 py-6 max-[425px]:px-3 max-[375px]:px-2.5 max-[320px]:px-2 py-6 font-[Poppins,sans-serif]">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
 
-      <div className="w-full max-w-[1400px] bg-[#002765] rounded-2xl px-6 py-8 sm:px-10 sm:py-10 lg:px-16 lg:py-12 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
+      <div className="w-full max-w-[1400px] bg-[#002765] rounded-2xl px-6 py-8 max-[768px]:px-5 max-[768px]:py-7 max-[425px]:px-4 max-[425px]:py-6 max-[375px]:px-3.5 max-[320px]:px-3 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
 
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
+        <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-between gap-8 min-[1025px]:gap-12">
 
           {/* LEFT — Icon + Text */}
-          <div className="flex flex-col items-start text-left gap-3 lg:max-w-[55%]">
+          <div className="flex flex-col items-start text-left gap-3 min-[1025px]:max-w-[55%]">
 
             {/* Icon */}
             <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-xl flex items-center justify-center text-white self-start">
@@ -28,25 +28,25 @@ export default function Newsletter() {
             </div>
 
             {/* Label */}
-            <p className="text-white text-xs sm:text-sm font-medium tracking-widest uppercase self-start m-0">
+            <p className="text-white text-xs min-[426px]:text-sm font-medium tracking-widest uppercase self-start m-0">
               Our Newsletter
             </p>
 
             {/* Title */}
-            <h2 className="text-white font-bold text-xl xs:text-2xl sm:text-3xl lg:text-4xl leading-tight m-0 self-start">
+            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-4xl leading-tight m-0 self-start">
               Subscribe To Our Newsletter!
             </h2>
 
             {/* Subtitle */}
-            <p className="text-white/55 text-xs xs:text-sm sm:text-base leading-relaxed m-0 self-start">
+            <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base leading-relaxed m-0 self-start">
               Sign up for our weekly newsletter to stay informed about exciting offers, our latest products, and industry updates.
             </p>
           </div>
 
           {/* RIGHT — Input + Button */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 lg:min-w-[380px] xl:min-w-[440px]">
+          <div className="flex flex-col min-[426px]:flex-row items-stretch min-[426px]:items-center gap-3 min-[1025px]:min-w-[380px] min-[1441px]:min-w-[440px]">
             {submitted ? (
-              <p className="text-[#7dd3a8] text-sm sm:text-base font-medium m-0">
+              <p className="text-[#7dd3a8] text-sm min-[769px]:text-base font-medium m-0">
                 Thank you for subscribing!
               </p>
             ) : (
@@ -58,7 +58,7 @@ export default function Newsletter() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="
                     flex-1 bg-white/10 border border-white
-                    rounded-full px-5 py-3 sm:py-3.5
+                    rounded-full px-5 py-3 min-[769px]:py-3.5 max-[425px]:px-4
                     text-white text-sm placeholder:text-white/40
                     outline-none font-[Poppins,sans-serif]
                     focus:border-blue-400 transition-colors duration-200
@@ -69,7 +69,7 @@ export default function Newsletter() {
                   className="
                     bg-blue-500 hover:bg-blue-600 active:scale-95
                     text-white font-semibold text-sm
-                    rounded-full px-7 py-3 sm:py-3.5
+                    rounded-full px-7 py-3 min-[769px]:py-3.5 max-[425px]:px-5
                     whitespace-nowrap cursor-pointer border-none
                     transition-all duration-200
                     font-[Poppins,sans-serif]

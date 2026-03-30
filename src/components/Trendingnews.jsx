@@ -1,11 +1,24 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const API_URL = "https://news4bharat.cloud/api/articles/";
 const CATEGORIES_URL = "https://news4bharat.cloud/api/categories/";
 
 // ── Helpers ───────────────────────────────────────────────────
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
+
+const useIs4K = () => {
+  const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
+  const [is4K, setIs4K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs4K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is4K;
+};
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrowBtn = ({ direction, disabled, onClick }) => (
@@ -41,7 +54,7 @@ if (typeof document !== "undefined" && !document.getElementById("poppins-font"))
 // ── API Hook ──────────────────────────────────────────────────
 function useArticles() {
   const [articles, setArticles] = useState([]);
-  const [categories, setCategories] = useState([]); // [{ name, slug }]
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -51,16 +64,14 @@ function useArticles() {
       fetch(CATEGORIES_URL).then((r) => r.ok ? r.json() : []).catch(() => []),
     ])
       .then(([articleData, catData]) => {
-
-        // ── Articles: newest first ──────────────────────────
         const published = Array.isArray(articleData)
           ? articleData
             .filter((a) => a.status === "published" || a.image_url)
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           : [];
+
         setArticles(published);
 
-        // ── Categories: { name, slug } ──────────────────────
         const fromApi = Array.isArray(catData)
           ? catData
             .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
@@ -70,7 +81,6 @@ function useArticles() {
         if (fromApi.length > 0) {
           setCategories(fromApi);
         } else {
-          // Fallback: articles ke category_details se nikalo
           const seen = new Set();
           const fromArticles = [];
           published.forEach((a) => {
@@ -114,7 +124,6 @@ function SecHeader({ title }) {
 }
 
 // ── Trending Bar ──────────────────────────────────────────────
-// Category button click → /category/:slug
 function TrendingBar({ categories }) {
   const navigate = useNavigate();
   const GAP = 8;
@@ -189,54 +198,183 @@ function TrendingBar({ categories }) {
 }
 
 // ── Latest News ───────────────────────────────────────────────
-// Article click → /article/:slug
 function LatestNews({ articles, loading }) {
-  const navigate = useNavigate();
+  const [startIdx, setStartIdx] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [exitIdx, setExitIdx] = useState(null);
+  const [tick, setTick] = useState(0);
+  const pausedRef = useRef(false);
+  const timerRef = useRef(null);
+
+  const VISIBLE = 3;
+
+  const getVisible = (from) => {
+    if (articles.length === 0) return [];
+    return Array.from({ length: VISIBLE }, (_, i) => articles[(from + i) % articles.length]);
+  };
+
+  const visibleArticles = getVisible(startIdx);
+
+  useEffect(() => {
+    if (loading || articles.length <= VISIBLE) return;
+    const schedule = () => {
+      timerRef.current = setTimeout(() => {
+        if (pausedRef.current) { schedule(); return; }
+        setExitIdx(0);
+        setAnimating(true);
+        setTimeout(() => {
+          setStartIdx((prev) => (prev + 1) % articles.length);
+          setTick((t) => t + 1);
+          setExitIdx(null);
+          setAnimating(false);
+          schedule();
+        }, 500);
+      }, 3000);
+    };
+    schedule();
+    return () => clearTimeout(timerRef.current);
+  }, [loading, articles.length]);
 
   return (
     <div className="tn-latest-news">
       <SecHeader title="LATEST NEWS" />
-      <div className="tn-latest-scroll">
-        {loading
-          ? Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} style={{ padding: "10px 12px", borderBottom: "1px solid #eee" }}>
-              <Skeleton h="13px" w="90%" mb="6px" />
-              <Skeleton h="11px" w="70%" mb="0" />
+      <style>{`
+        @keyframes slideOutUp {
+          from { opacity: 1; transform: translateY(0); max-height: 120px; }
+          to   { opacity: 0; transform: translateY(-20px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+        }
+        @keyframes slideInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes leftLineGrow {
+          from { height: 0%; }
+          to   { height: 100%; }
+        }
+        .news-item-exit { animation: slideOutUp 0.45s ease forwards; overflow: hidden; }
+        .news-item-enter { animation: slideInUp 0.45s ease forwards; }
+        .news-ticker-item:hover .news-ticker-title { color: #D80100 !important; }
+        .news-ticker-title { transition: color 0.2s ease; }
+        .tn-article-link {
+          text-decoration: none;
+          color: inherit;
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          width: 100%;
+        }
+      `}</style>
+
+      {loading ? (
+        <div className="tn-latest-scroll">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} style={{ padding: "12px 14px", borderBottom: "1px solid #f0f0f0" }}>
+              <Skeleton h="13px" w="85%" mb="7px" />
+              <Skeleton h="11px" w="65%" mb="0" />
             </div>
-          ))
-          : articles.length === 0
-            ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
-            : articles.map((article) => {
-              const desc = article.subtitle
-                ? article.subtitle
-                : stripHtml(article.content);
-              return (
-                <div
-                  key={article.id}
-                  className="tn-latest-item"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/article/${article.slug}`)}
-                >
-                  <div className="tn-latest-item-title">
+          ))}
+        </div>
+      ) : articles.length === 0 ? (
+        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+      ) : (
+        <div
+          className="tn-latest-scroll"
+          style={{ overflowY: "auto", position: "relative" }}
+          onMouseEnter={() => { pausedRef.current = true; }}
+          onMouseLeave={() => { pausedRef.current = false; }}
+        >
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#f0f0f0", zIndex: 1 }}>
+            <div key={tick} style={{ width: "100%", background: "#D80100", animation: "leftLineGrow 3s linear forwards" }} />
+          </div>
+
+          {visibleArticles.map((article, i) => {
+            const desc = article.subtitle ? article.subtitle : stripHtml(article.content);
+            const isTop = i === 0;
+            const isExiting = animating && i === exitIdx;
+            const isEntering = animating && i === VISIBLE - 1;
+            const hasImage = !!article.image_url;
+
+            // ✅ Link component — same tab click + right click "Open in new tab" + Ctrl+Click dono
+            const Wrapper = hasImage
+              ? ({ children }) => (
+                  <Link
+                    to={`/article/${article.slug}`}
+                    className={`tn-article-link news-ticker-item${isExiting ? " news-item-exit" : isEntering ? " news-item-enter" : ""}`}
+                    style={{
+                      padding: "11px 14px 11px 18px",
+                      borderBottom: i < VISIBLE - 1 ? "1px solid #f0f0f0" : "none",
+                      background: isTop ? "#fff8f8" : "#fff",
+                    }}
+                  >
+                    {children}
+                  </Link>
+                )
+              : ({ children }) => (
+                  <div
+                    className={`news-ticker-item${isExiting ? " news-item-exit" : isEntering ? " news-item-enter" : ""}`}
+                    style={{
+                      padding: "11px 14px 11px 18px",
+                      borderBottom: i < VISIBLE - 1 ? "1px solid #f0f0f0" : "none",
+                      display: "flex", gap: 12, alignItems: "flex-start",
+                      background: isTop ? "#fff8f8" : "#fff",
+                      cursor: "default",
+                    }}
+                  >
+                    {children}
+                  </div>
+                );
+
+            return (
+              <Wrapper key={`${article.id}-${startIdx}-${i}`}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#D80100", fontFamily: "Poppins, sans-serif", lineHeight: "1.4", flexShrink: 0, marginTop: 1 }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: isTop ? 700 : 600, color: isTop ? "#111" : "#222", lineHeight: "1.4" }}>
                     {article.title || "Untitled"}
                   </div>
-                  <div className="tn-latest-item-desc">
-                    {desc.slice(0, 160)}{desc.length > 160 ? "..." : ""}
+                  <div className="tn-latest-item-desc" style={{ marginTop: 4, lineHeight: "1.5" }}>
+                    {desc.slice(0, 120)}{desc.length > 120 ? "..." : ""}
                   </div>
                 </div>
-              );
-            })}
-      </div>
+              </Wrapper>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Feature Cards ─────────────────────────────────────────────
-// Card click → /article/:slug
 function FeatureCards({ articles, loading }) {
-  const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const [animDir, setAnimDir] = useState(null);
+  const timerRef = useRef(null);
+
   const withImage = articles.filter((a) => a.image_url);
-  const cards = withImage.slice(0, 3);
+  const totalPages = Math.ceil(withImage.length / 3);
+
+  useEffect(() => {
+    if (loading || withImage.length === 0) return;
+    timerRef.current = setInterval(() => {
+      setPage((prev) => {
+        const next = (prev + 1) % totalPages;
+        setAnimDir("out");
+        setTimeout(() => { setPage(next); setAnimDir("in"); setTimeout(() => setAnimDir(null), 400); }, 300);
+        return prev;
+      });
+    }, 4000);
+    return () => clearInterval(timerRef.current);
+  }, [loading, withImage.length, totalPages]);
+
+  const cards = withImage.slice(page * 3, page * 3 + 3);
+
+  const transitionStyle = {
+    opacity: animDir === "out" ? 0 : 1,
+    transform: animDir === "out" ? "translateY(10px)" : "translateY(0px)",
+    transition: "opacity 0.35s ease, transform 0.35s ease",
+  };
 
   if (loading) {
     return (
@@ -255,40 +393,40 @@ function FeatureCards({ articles, loading }) {
   }
 
   return (
-    <div className="tn-feature-cards">
-      {cards.map((card) => (
-        <div
-          key={card.id}
-          className="tn-feature-card"
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate(`/article/${card.slug}`)}
-        >
-          <div className="tn-feature-card-img-wrap">
-            <img
-              src={card.image_url}
-              alt={card.title}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          </div>
-          <div className="tn-feature-card-body">
-            <div className="tn-feature-card-title">{card.title}</div>
-          </div>
-        </div>
-      ))}
+    <div>
+      <div className="tn-feature-cards" style={transitionStyle}>
+        {cards.map((card) => (
+          // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
+          <Link
+            key={card.id}
+            to={`/article/${card.slug}`}
+            className="tn-feature-card"
+            style={{ textDecoration: "none", color: "inherit", display: "block", cursor: "pointer" }}
+          >
+            <div className="tn-feature-card-img-wrap">
+              <img
+                src={card.image_url}
+                alt={card.title}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            </div>
+            <div className="tn-feature-card-body">
+              <div className="tn-feature-card-title">{card.title}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ── 60 Seconds ────────────────────────────────────────────────
-// Item click → /60-seconds/:slug
 function LiveUpdates({ articles, loading }) {
-  const navigate = useNavigate();
   const scrollRef = useRef(null);
   const animRef = useRef(null);
   const autoScrollRef = useRef(true);
 
-  // ── Filter: sirf 60-second-read category ─────────────────
   const sixtyArticles = articles.filter((a) =>
     Array.isArray(a.category_details) &&
     a.category_details.some((c) => c.slug === "60-second-read")
@@ -331,37 +469,38 @@ function LiveUpdates({ articles, loading }) {
           : sixtyArticles.length === 0
             ? <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
             : sixtyArticles.map((item) => {
-              const catName = item.category_details?.[0]?.name || "News";
               const text = item.subtitle ? item.subtitle : stripHtml(item.content);
-              return (
-                <div
+              const hasImage = !!item.image_url;
+              return hasImage ? (
+                // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
+                <Link
                   key={item.id}
+                  to={`/article/${item.slug}`}
                   className="tn-live-item group cursor-pointer"
-                  onClick={() => navigate(`/article/${item.slug}`)}
+                  style={{ textDecoration: "none", color: "inherit", display: "flex" }}
                 >
                   <div className="tn-live-dot group-hover:bg-[#D80100] transition-colors duration-300" />
                   <div>
-                    <div
-                      className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300"
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
+                    <div className="tn-live-item-title group-hover:text-[#D80100] transition-colors duration-300"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                       {item.title}
                     </div>
-                    <div
-                      className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300"
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      
-                      }}
-                    >
+                    <div className="tn-live-item-text group-hover:text-[#D80100] transition-colors duration-300"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {text}
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div key={item.id} className="tn-live-item group cursor-default">
+                  <div className="tn-live-dot" />
+                  <div>
+                    <div className="tn-live-item-title"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {item.title}
+                    </div>
+                    <div className="tn-live-item-text"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                       {text}
                     </div>
                   </div>
@@ -406,7 +545,7 @@ function Banner() {
     const t = setInterval(() => {
       setFading(true);
       setTimeout(() => { setCur((c) => (c + 1) % bannerSlides.length); setFading(false); }, 350);
-    }, 4000);
+    }, 3000);
     return () => clearInterval(t);
   }, []);
 
@@ -451,9 +590,10 @@ function Banner() {
 // ── MAIN ──────────────────────────────────────────────────────
 export default function TrendingNews() {
   const { articles, categories, loading, error } = useArticles();
+  const is4K = useIs4K();
 
   return (
-    <div className="tn-page">
+    <div className={`tn-page${is4K ? " tn-page-4k" : ""}`}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }

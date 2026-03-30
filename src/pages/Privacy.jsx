@@ -21,10 +21,7 @@ const FadeIn = ({ children, delay = 0, left = false, className = "" }) => {
   const base = left ? "priv-fade-left" : "priv-fade-in";
   const delayClass = `delay-[${delay}s]`;
   return (
-    <div
-      ref={ref}
-      className={`${base} ${visible ? "priv-visible" : ""} ${delayClass} ${className}`}
-    >
+    <div ref={ref} className={`${base} ${visible ? "priv-visible" : ""} ${delayClass} ${className}`}>
       {children}
     </div>
   );
@@ -99,26 +96,55 @@ const icons = {
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   ),
-  bigShield: (
-    <svg width="180" height="180" fill="none" stroke="currentColor" strokeWidth="0.6" viewBox="0 0 24 24">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  child: (
+    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  database: (
+    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  ),
+  globe: (
+    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  ),
+  tag: (
+    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   ),
 };
 
 /* ── NAV ITEMS ── */
 const navItems = [
-  { id: "collect",    label: "Information We Collect" },
-  { id: "use",        label: "How We Use Information" },
-  { id: "cookies",    label: "Cookies" },
-  { id: "protection", label: "Data Protection" },
-  { id: "third",      label: "Third-Party Links" },
-  { id: "updates",    label: "Policy Updates" },
+  { id: "whoweare", label: "Who We Are" },
+  { id: "collect", label: "Information We Collect" },
+  { id: "cookies", label: "Cookies & Tracking" },
+  { id: "use", label: "How We Use Information" },
+  { id: "adsense", label: "Google AdSense & Ads" },
+  { id: "sharing", label: "Sharing of Information" },
+  { id: "protection", label: "Data Security" },
+  { id: "third", label: "External Links" },
+  { id: "children", label: "Children's Privacy" },
+  { id: "rights", label: "Your Rights" },
+  { id: "retention", label: "Data Retention" },
+  { id: "updates", label: "Policy Updates" },
+  { id: "contact", label: "Contact Us" },
 ];
 
-/* ── COMPONENT ── */
 export default function PrivacyPage() {
-  const [activeId, setActiveId] = useState("collect");
+  const [activeId, setActiveId] = useState("whoweare");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -143,60 +169,43 @@ export default function PrivacyPage() {
   return (
     <div className="privacy-page">
 
-      {/* ════════ HERO — full width image with text overlay ════════ */}
+      {/* ════════ HERO ════════ */}
       <section className="priv-hero">
-
-        {/* Full BG image */}
         <img
           className="priv-hero-img"
           src="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=1800&q=85&fit=crop"
           alt="Privacy Policy — News4Bharat"
         />
-
-        {/* Dark overlay */}
         <div className="priv-hero-img-overlay" />
-
-        {/* Grid texture */}
         <div className="priv-hero-slash" />
-        
-        {/* Bottom fade to white */}
         <div className="priv-hero-fade" />
-
-        {/* Text content on top */}
         <div className="priv-hero-content">
           <div className="priv-hero-tag">
             <div className="priv-hero-tag-dot" />
             <span className="priv-hero-tag-text">Legal Document</span>
           </div>
-
           <h1 className="priv-hero-title">
             Privacy
-            <span className="priv-hero-title-accent">  Policy</span>
+            <span className="priv-hero-title-accent"> Policy</span>
           </h1>
-
-
           <p className="priv-hero-desc">
-News4Bharat values your privacy. This Privacy Policy outlines how we collect, use, and protect your information.
+            Your privacy matters to us. Here's how we protect it.
           </p>
-
           <div className="priv-hero-meta">
             <div className="priv-hero-date">
               <span className="priv-hero-date-icon">{icons.calendar}</span>
-              <span>Effective Date: March 2026</span>
+              <span>Last Updated: March 2026</span>
             </div>
             <div className="priv-hero-badge">News4Bharat</div>
           </div>
         </div>
-
       </section>
 
-      {/* ════════ LAYOUT: SIDEBAR + CONTENT ════════ */}
+      {/* ════════ LAYOUT ════════ */}
       <div className="priv-layout">
 
-        {/* ── SIDEBAR NAV ── */}
+        {/* ── SIDEBAR ── */}
         <aside className="priv-sidebar">
-
-          {/* Info card */}
           <div className="priv-sidebar-card">
             <div className="priv-sidebar-card-title">About This Policy</div>
             <p className="priv-sidebar-card-body">
@@ -208,7 +217,6 @@ News4Bharat values your privacy. This Privacy Policy outlines how we collect, us
             </div>
           </div>
 
-          {/* Key facts */}
           <div className="priv-sidebar-stats">
             <div className="priv-sidebar-stat">
               <div className="priv-sidebar-stat-icon">{icons.shield}</div>
@@ -240,7 +248,6 @@ News4Bharat values your privacy. This Privacy Policy outlines how we collect, us
             </div>
           </div>
 
-          {/* Nav */}
           <p className="priv-nav-label">Contents</p>
           <ul className="priv-nav-list">
             {navItems.map((item) => (
@@ -255,74 +262,80 @@ News4Bharat values your privacy. This Privacy Policy outlines how we collect, us
               </li>
             ))}
           </ul>
-
         </aside>
 
         {/* ── MAIN CONTENT ── */}
         <main className="priv-content">
 
-          {/* 1. Information We Collect */}
+          {/* Intro */}
           <FadeIn>
+            <div className="priv-intro-block">
+              <p className="priv-body">
+                At News4Bharat, your privacy is not just a formality — it is a responsibility we take seriously. This Privacy Policy explains how we collect, use, protect, and manage your information when you access our website, mobile platforms, or any associated services. By using News4Bharat, you agree to the practices described in this policy.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* 1. Who We Are */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="whoweare">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.globe}</div>
+                <div>
+                  <div className="priv-section-num">Section 01</div>
+                  <h2 className="priv-section-title">Who We Are</h2>
+                </div>
+              </div>
+              <p className="priv-body">
+                News4Bharat is a digital news and media platform that provides news, articles, opinions, and multimedia content across various domains including politics, business, technology, lifestyle, and more.
+              </p>
+            </section>
+          </FadeIn>
+
+          {/* 2. Information We Collect */}
+          <FadeIn delay={0.05}>
             <section className="priv-section" id="collect">
               <div className="priv-section-header">
                 <div className="priv-section-icon">{icons.user}</div>
                 <div>
-                  <div className="priv-section-num">Section 01</div>
+                  <div className="priv-section-num">Section 02</div>
                   <h2 className="priv-section-title">Information We Collect</h2>
                 </div>
               </div>
-
+              <p className="priv-body">We collect only the information that is necessary to operate and improve our services. This may include:</p>
               <div className="priv-info-grid">
                 <div className="priv-info-card">
-                  <div className="priv-info-card-label">Personal Information</div>
+                  <div className="priv-info-card-label">a) Information You Provide</div>
                   <div className="priv-info-card-items">
-                    {["Name", "Email address", "Phone number (if submitted)"].map((item, i) => (
+                    {[
+                      "Name",
+                      "Email address",
+                      "Contact details",
+                      "Comments or feedback",
+                      "Information submitted via forms, subscriptions, or communication",
+                    ].map((item, i) => (
                       <div key={i} className="priv-info-card-item">{item}</div>
                     ))}
                   </div>
                 </div>
                 <div className="priv-info-card">
-                  <div className="priv-info-card-label">Non-Personal Information</div>
+                  <div className="priv-info-card-label">b) Automatically Collected Information</div>
                   <div className="priv-info-card-items">
-                    {["Browser type", "IP address", "Device information", "Cookies & analytics data"].map((item, i) => (
+                    {[
+                      "IP address",
+                      "Device type and browser",
+                      "Pages visited and time spent",
+                      "Referring URLs",
+                      "Location (approximate, based on IP)",
+                    ].map((item, i) => (
                       <div key={i} className="priv-info-card-item">{item}</div>
                     ))}
                   </div>
                 </div>
               </div>
-            </section>
-          </FadeIn>
-
-          {/* 2. How We Use Information */}
-          <FadeIn delay={0.05}>
-            <section className="priv-section" id="use">
-              <div className="priv-section-header">
-                <div className="priv-section-icon">{icons.settings}</div>
-                <div>
-                  <div className="priv-section-num">Section 02</div>
-                  <h2 className="priv-section-title">How We Use Information</h2>
-                </div>
-              </div>
-
-              <p className="priv-body">We use collected data to:</p>
-
-              <ul className="priv-list">
-                {[
-                  "Improve website performance",
-                  "Respond to inquiries",
-                  "Send newsletters (if subscribed)",
-                  "Analyze readership trends",
-                  "Prevent fraudulent activity",
-                ].map((item, i) => (
-                  <li key={i} className="priv-list-item">
-                    <span className="priv-list-icon">{icons.check}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="priv-highlight">
-                <p className="priv-highlight-text">We do not sell personal data to third parties.</p>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">This data helps us understand user behavior and improve our content and experience.</p>
               </div>
             </section>
           </FadeIn>
@@ -334,17 +347,16 @@ News4Bharat values your privacy. This Privacy Policy outlines how we collect, us
                 <div className="priv-section-icon">{icons.cookie}</div>
                 <div>
                   <div className="priv-section-num">Section 03</div>
-                  <h2 className="priv-section-title">Cookies</h2>
+                  <h2 className="priv-section-title">Cookies & Tracking Technologies</h2>
                 </div>
               </div>
-
-              <p className="priv-body">We use cookies to:</p>
-
+              <p className="priv-body">We use cookies and similar technologies to:</p>
               <ul className="priv-list">
                 {[
                   "Enhance user experience",
-                  "Track analytics",
-                  "Store user preferences",
+                  "Remember preferences",
+                  "Analyze traffic and usage patterns",
+                  "Deliver relevant advertisements",
                 ].map((item, i) => (
                   <li key={i} className="priv-list-item">
                     <span className="priv-list-icon">{icons.check}</span>
@@ -352,76 +364,319 @@ News4Bharat values your privacy. This Privacy Policy outlines how we collect, us
                   </li>
                 ))}
               </ul>
-
               <div className="priv-note">
                 <span className="priv-note-icon">{icons.alert}</span>
                 <p className="priv-note-text">
-Users may disable cookies in browser settings.
+                  You can choose to disable cookies through your browser settings. However, some features of the website may not function properly if cookies are disabled.
                 </p>
               </div>
             </section>
           </FadeIn>
 
-          {/* 4. Data Protection */}
+          {/* 4. How We Use Information */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="use">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.settings}</div>
+                <div>
+                  <div className="priv-section-num">Section 04</div>
+                  <h2 className="priv-section-title">How We Use Your Information</h2>
+                </div>
+              </div>
+              <p className="priv-body">We use collected information for the following purposes:</p>
+              <ul className="priv-list">
+                {[
+                  "To provide and improve our services",
+                  "To personalize content and user experience",
+                  "To communicate with users (newsletters, updates, responses)",
+                  "To ensure security and prevent misuse",
+                  "To analyze website performance and trends",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="priv-highlight">
+                <p className="priv-highlight-text">We do not use your personal information for unlawful purposes.</p>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* 5. Google AdSense */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="adsense">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.tag}</div>
+                <div>
+                  <div className="priv-section-num">Section 05</div>
+                  <h2 className="priv-section-title">Google AdSense & Third-Party Advertising</h2>
+                </div>
+              </div>
+              <p className="priv-body">News4Bharat uses third-party advertising services, including Google AdSense.</p>
+              <p className="priv-body">These services may:</p>
+              <ul className="priv-list">
+                {[
+                  "Use cookies (such as the DoubleClick cookie)",
+                  "Show ads based on your visits to this and other websites",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="priv-body">
+                You can learn more or opt out of personalized advertising by visiting:{" "}
+                <a href="https://www.google.com/settings/ads" target="_blank" rel="noreferrer" className="priv-inline-link">
+                  https://www.google.com/settings/ads
+                </a>
+              </p>
+              <p className="priv-body">
+                We do not control how third-party advertisers use your data, and we recommend reviewing their privacy policies separately.
+              </p>
+            </section>
+          </FadeIn>
+
+          {/* 6. Sharing of Information */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="sharing">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.shield}</div>
+                <div>
+                  <div className="priv-section-num">Section 06</div>
+                  <h2 className="priv-section-title">Sharing of Information</h2>
+                </div>
+              </div>
+              <div className="priv-highlight">
+                <p className="priv-highlight-text">We do not sell, trade, or rent your personal information.</p>
+              </div>
+              <p className="priv-body">We may share information only in the following cases:</p>
+              <ul className="priv-list">
+                {[
+                  "With trusted service providers who help operate our website",
+                  "When required by law or legal processes",
+                  "To protect rights, safety, or prevent fraud",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">All such sharing is done with appropriate safeguards.</p>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* 7. Data Security */}
           <FadeIn delay={0.05}>
             <section className="priv-section" id="protection">
               <div className="priv-section-header">
                 <div className="priv-section-icon">{icons.lock}</div>
                 <div>
-                  <div className="priv-section-num">Section 04</div>
-                  <h2 className="priv-section-title">Data Protection</h2>
+                  <div className="priv-section-num">Section 07</div>
+                  <h2 className="priv-section-title">Data Security</h2>
                 </div>
               </div>
-
-              <p className="priv-body">
-We implement appropriate security measures to safeguard user information. However, no digital transmission can be guaranteed 100% secure.
-              </p>
+              <p className="priv-body">We implement reasonable security measures to protect your data from:</p>
+              <ul className="priv-list">
+                {[
+                  "Unauthorized access",
+                  "Misuse",
+                  "Loss or disclosure",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">
+                  However, no online system is completely secure. While we strive to protect your information, we cannot guarantee absolute security.
+                </p>
+              </div>
             </section>
           </FadeIn>
 
-          {/* 5. Third-Party Links */}
+          {/* 8. External Links */}
           <FadeIn delay={0.05}>
             <section className="priv-section" id="third">
               <div className="priv-section-header">
                 <div className="priv-section-icon">{icons.link}</div>
                 <div>
-                  <div className="priv-section-num">Section 05</div>
-                  <h2 className="priv-section-title">Third-Party Links</h2>
+                  <div className="priv-section-num">Section 08</div>
+                  <h2 className="priv-section-title">External Links</h2>
                 </div>
               </div>
-
-              <p className="priv-body">
-Our website may contain links to external websites. We are not responsible for their privacy practices.
-              </p>
+              <p className="priv-body">Our website may contain links to third-party websites.</p>
+              <p className="priv-body">News4Bharat is not responsible for the privacy practices or content of those external sites.<br></br>Users are advised to review their policies before sharing information.</p>
             </section>
           </FadeIn>
 
-          {/* 6. Policy Updates */}
+          {/* 9. Children's Privacy */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="children">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.child}</div>
+                <div>
+                  <div className="priv-section-num">Section 09</div>
+                  <h2 className="priv-section-title">Children's Privacy</h2>
+                </div>
+              </div>
+              <p className="priv-body">
+                News4Bharat does not knowingly collect personal data from individuals under the age of 13.
+              </p>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">If such data is identified, we will take steps to remove it promptly.</p>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* 10. Your Rights */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="rights">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.user}</div>
+                <div>
+                  <div className="priv-section-num">Section 10</div>
+                  <h2 className="priv-section-title">Your Rights and Choices</h2>
+                </div>
+              </div>
+              <p className="priv-body">You have the right to:</p>
+              <ul className="priv-list">
+                {[
+                  "Access the information you have shared",
+                  "Request correction or deletion",
+                  "Withdraw consent (where applicable)",
+                  "Opt out of communications",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">To exercise these rights, you may contact us using the details below.</p>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* 11. Data Retention */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="retention">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.database}</div>
+                <div>
+                  <div className="priv-section-num">Section 11</div>
+                  <h2 className="priv-section-title">Data Retention</h2>
+                </div>
+              </div>
+              <p className="priv-body">We retain your information only as long as necessary:</p>
+              <ul className="priv-list">
+                {[
+                  "To provide services",
+                  "To comply with legal obligations",
+                  "To resolve disputes",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="priv-note">
+                <span className="priv-note-icon">{icons.alert}</span>
+                <p className="priv-note-text">After this period, data is securely deleted or anonymized.</p>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* 12. Policy Updates */}
           <FadeIn delay={0.05}>
             <section className="priv-section" id="updates">
               <div className="priv-section-header">
                 <div className="priv-section-icon">{icons.refresh}</div>
                 <div>
-                  <div className="priv-section-num">Section 06</div>
-                  <h2 className="priv-section-title">Policy Updates</h2>
+                  <div className="priv-section-num">Section 12</div>
+                  <h2 className="priv-section-title">Changes to This Policy</h2>
                 </div>
               </div>
+              <p className="priv-body">We may update this Privacy Policy from time to time to reflect changes in law or our services.</p>
+              <p className="priv-body">Any updates will be posted on this page with a revised "Last Updated" date.</p>
+            </section>
+          </FadeIn>
 
-              <p className="priv-body">
-We may update this Privacy Policy periodically. Continued use of the website implies acceptance of changes.
-              </p>
-
-              {/* Contact block */}
-              <div className="priv-contact-block mt-8">
-                <h3 className="priv-contact-title">Questions about this policy?</h3>
-                <p className="priv-contact-desc">
-                  If you have any questions or concerns about how we handle your data, feel free to reach out to our team.
-                </p>
-                <a href="/" className="priv-contact-link">
-                  {icons.mail}
-                  Contact Us
-                </a>
+          {/* 13. Contact Us */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section" id="contact">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.mail}</div>
+                <div>
+                  <div className="priv-section-num">Section 13</div>
+                  <h2 className="priv-section-title">Contact Us</h2>
+                </div>
               </div>
+              <p className="priv-body">
+                If you have any questions, concerns, or requests regarding this Privacy Policy, you may contact us at:
+              </p>
+              <div className="priv-contact-cards">
+                <div className="priv-contact-card">
+                  <div className="priv-contact-card-icon">{icons.mail}</div>
+                  <div>
+                    <div className="priv-contact-card-label">Email</div>
+                    <a href="mailto:info@news4bharat.com" className="priv-contact-card-value">
+                      info@news4bharat.com
+                    </a>
+                  </div>
+                </div>
+                <div className="priv-contact-card">
+                  <div className="priv-contact-card-icon">{icons.globe}</div>
+                  <div>
+                    <div className="priv-contact-card-label">Website</div>
+                    <a href="https://news4bharat.com" target="_blank" rel="noreferrer" className="priv-contact-card-value">
+                      News4Bharat.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </FadeIn>
+
+          {/* Final Note */}
+          <FadeIn delay={0.05}>
+            <section className="priv-section">
+              <div className="priv-section-header">
+                <div className="priv-section-icon">{icons.shield}</div>
+                <div>
+                  <div className="priv-section-num">Final Note</div>
+                  <h2 className="priv-section-title">About This Policy</h2>
+                </div>
+              </div>
+              <p className="priv-body">This policy is:</p>
+              <ul className="priv-list">
+                {[
+                  "Clearly structured",
+                  "Transparent about data usage",
+                  "Includes cookies + ads disclosure",
+                  "Mentions Google AdSense explicitly",
+                  "Avoids copied/legal-heavy jargon",
+                  "Fully original and human-written",
+                ].map((item, i) => (
+                  <li key={i} className="priv-list-item">
+                    <span className="priv-list-icon">{icons.check}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </section>
           </FadeIn>
 

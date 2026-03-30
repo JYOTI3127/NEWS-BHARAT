@@ -47,23 +47,23 @@ const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
 /* ── DATA ── */
 const offices = [
   { city: "Noida", address: "B-904, iThum Tower, Block B, Sector 62, Noida, Uttar Pradesh" },
-  { city: "Agra",  address: "405, 4th Floor, Maruti Plaza, Sanjay Place, Agra, Uttar Pradesh" },
+  { city: "Agra", address: "405, 4th Floor, Maruti Plaza, Sanjay Place, Agra, Uttar Pradesh" },
 ];
 
 const socialLinks = [
-  { icon: <Linkedin  size={18} />, label: "LinkedIn",  href: "#" },
-  { icon: <Twitter   size={18} />, label: "Twitter",   href: "#" },
+  { icon: <Linkedin size={18} />, label: "LinkedIn", href: "#" },
+  { icon: <Twitter size={18} />, label: "Twitter", href: "#" },
   { icon: <Instagram size={18} />, label: "Instagram", href: "#" },
-  { icon: <Facebook  size={18} />, label: "Facebook",  href: "#" },
+  { icon: <Facebook size={18} />, label: "Facebook", href: "#" },
 ];
 
 const adOpportunities = [
-  { icon: <Monitor  size={18} />, title: "Display Ads" },
+  { icon: <Monitor size={18} />, title: "Display Ads" },
   { icon: <FileText size={18} />, title: "Sponsored Articles (Clearly Labeled)" },
-  { icon: <Star     size={18} />, title: "Brand Features" },
+  { icon: <Star size={18} />, title: "Brand Features" },
   { icon: <BookOpen size={18} />, title: "Newsletter Sponsorships" },
-  { icon: <Users    size={18} />, title: "Event Partnerships" },
-  { icon: <Zap      size={18} />, title: "Custom Content Campaigns" },
+  { icon: <Users size={18} />, title: "Event Partnerships" },
+  { icon: <Zap size={18} />, title: "Custom Content Campaigns" },
 ];
 
 const whyPartner = [
@@ -81,7 +81,7 @@ function ContactForm() {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())    e.name    = "Name is required";
+    if (!form.name.trim()) e.name = "Name is required";
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = "Valid email required";
     if (!form.subject.trim()) e.subject = "Subject is required";
     if (!form.message.trim()) e.message = "Message is required";
@@ -122,24 +122,22 @@ function ContactForm() {
         </div>
       </div>
       <div className="ct-form-row">
-      <div className="ct-form-group">
-        <label className="ct-form-label">Subject *</label>
-        <input className={`ct-form-input${errors.subject ? " ct-err" : ""}`} placeholder="How can we help?" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
-        {errors.subject && <span className="ct-error-msg">{errors.subject}</span>}
-      </div>
-<div className="ct-form-group">
-  <label className="ct-form-label">Number *</label>
-
-  <PhoneInput
-    country={"in"}
-    value={form.phone}
-    onChange={(phone) => setForm({ ...form, phone })}
-    inputClass="ct-form-input"
-    containerClass="ct-phone-container"
-  />
-
-  {errors.phone && <span className="ct-error-msg">{errors.phone}</span>}
-</div>
+        <div className="ct-form-group">
+          <label className="ct-form-label">Subject *</label>
+          <input className={`ct-form-input${errors.subject ? " ct-err" : ""}`} placeholder="How can we help?" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+          {errors.subject && <span className="ct-error-msg">{errors.subject}</span>}
+        </div>
+        <div className="ct-form-group">
+          <label className="ct-form-label">Number *</label>
+          <PhoneInput
+            country={"in"}
+            value={form.phone}
+            onChange={(phone) => setForm({ ...form, phone })}
+            inputClass="ct-form-input"
+            containerClass="ct-phone-container"
+          />
+          {errors.phone && <span className="ct-error-msg">{errors.phone}</span>}
+        </div>
       </div>
       <div className="ct-form-group">
         <label className="ct-form-label">Message * <span className="ct-char-count">({form.message.length}/600)</span></label>
@@ -188,13 +186,42 @@ export default function ContactPage() {
             {/* LEFT — contact info */}
             <div className="ct-split-left">
 
-              {/* General Inquiries */}
+              {/* Contact Emails */}
               <FadeIn direction="left" delay={0.05}>
                 <div className="ct-info-block">
-                  <span className="ct-label">General Inquiries</span>
-                  <a href="mailto:info@news4bharat.com" className="ct-email-link">
-                    <Mail size={16} /> info@news4bharat.com
-                  </a>
+                  <span className="ct-label">Contact Us</span>
+                  {/* <p className="ct-contact-desc">
+                    If you have any questions, feedback, business inquiries, or concerns regarding content, you can contact us using the details below:
+                  </p> */}
+                  <p className="ct-contact-desc">
+                    We'd be glad to hear from you. We aim to respond to all queries within 24–48 hours.
+                  </p>
+                  <div className="ct-email-list">
+                    <div className="ct-email-row">
+                      <span className="ct-email-tag">Editorial Queries</span>
+                      <a href="mailto:editorial@news4bharat.com" className="ct-email-link">
+                        <Mail size={14} /> editorial@news4bharat.com
+                      </a>
+                    </div>
+                    <div className="ct-email-row">
+                      <span className="ct-email-tag">PR & Communications</span>
+                      <a href="mailto:press@news4bharat.com" className="ct-email-link">
+                        <Mail size={14} /> press@news4bharat.com
+                      </a>
+                    </div>
+                    <div className="ct-email-row">
+                      <span className="ct-email-tag">Advertisements</span>
+                      <a href="mailto:advertisement@news4bharat.com" className="ct-email-link">
+                        <Mail size={14} /> advertisement@news4bharat.com
+                      </a>
+                    </div>
+                    <div className="ct-email-row">
+                      <span className="ct-email-tag">General Queries</span>
+                      <a href="mailto:info@news4bharat.com" className="ct-email-link">
+                        <Mail size={14} /> info@news4bharat.com
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </FadeIn>
 

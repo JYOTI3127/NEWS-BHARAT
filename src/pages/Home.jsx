@@ -6,6 +6,8 @@ import NewsPortalSection from '../components/Newsportalsection'
 import StateNews from '../components/Statenews'
 import Newsletter from "../components/Newsletter";
 import VisualStoriesWithScore from '../components/Visualstories'
+import HomeCategorySections from '../components/HomeCategorySections';
+import MoreStoriesSection from '../components/MoreStoriesSection';
 
 const Home = () => {
   return (
@@ -16,7 +18,10 @@ const Home = () => {
       <VisualStoriesWithScore />
       <NewsPortalSection />
       <StateNews />
-       <Newsletter />
+      <HomeCategorySections />
+      <MoreStoriesSection />
+      
+       {/* <Newsletter /> */}
     </>
   )
 }

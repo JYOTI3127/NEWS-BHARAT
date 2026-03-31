@@ -1665,7 +1665,7 @@ def newsletter_view(request):
 
 
 import logging
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from email.utils import formataddr
 from datetime import datetime
 from urllib.parse import quote
@@ -1717,8 +1717,12 @@ def _normalize_subscription_email(email):
 
 
 def _get_newsletter_subscribe_base_url():
-    site_url = str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
-    return f"{site_url}{reverse('newsletter_subscribe')}"
+    api_base_url = str(
+        getattr(settings, 'NEWSLETTER_API_BASE_URL', '')
+        or getattr(settings, 'NEWSLETTER_SUBSCRIBE_BASE_URL', '')
+        or 'https://news4bharat.cloud'
+    ).rstrip('/')
+    return f"{api_base_url}{reverse('newsletter_subscribe')}"
 
 
 def _get_newsletter_site_home_url():
@@ -1895,30 +1899,39 @@ Website: https://news4bharat.com
  
     success = []
     failed = []
- 
-    for email in recipients:
+    connection = get_connection(fail_silently=False)
+
+    try:
+        connection.open()
+        for email in recipients:
+            try:
+                personalized_html = html_content.replace(
+                    NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                    _build_subscribe_url(request, email),
+                )
+                personalized_html = personalized_html.replace(
+                    NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                    _get_newsletter_subscribe_base_url(),
+                )
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=plain_text,
+                    from_email=from_email,
+                    to=[email],
+                    connection=connection,
+                )
+                msg.attach_alternative(personalized_html, "text/html")
+                msg.send(fail_silently=False)
+                success.append(email)
+                logger.info(f"Newsletter sent to {email}")
+            except Exception as e:
+                failed.append({'email': email, 'error': str(e)})
+                logger.error(f"Newsletter failed for {email}: {e}")
+    finally:
         try:
-            personalized_html = html_content.replace(
-                NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                _build_subscribe_url(request, email),
-            )
-            personalized_html = personalized_html.replace(
-                NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                _get_newsletter_subscribe_base_url(),
-            )
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=plain_text,
-                from_email=from_email,
-                to=[email],
-            )
-            msg.attach_alternative(personalized_html, "text/html")
-            msg.send(fail_silently=False)
-            success.append(email)
-            logger.info(f"Newsletter sent to {email}")
-        except Exception as e:
-            failed.append({'email': email, 'error': str(e)})
-            logger.error(f"Newsletter failed for {email}: {e}")
+            connection.close()
+        except Exception:
+            pass
  
     # History save karo (optional - model banao)
     try:

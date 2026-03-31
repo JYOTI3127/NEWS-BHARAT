@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
@@ -30,6 +30,8 @@ import google.generativeai as genai
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -1635,8 +1637,15 @@ import logging
 from django.core.mail import EmailMultiAlternatives
 from email.utils import formataddr
 from datetime import datetime
+from urllib.parse import quote
+from django.core import signing
+from django.urls import reverse
  
 logger = logging.getLogger(__name__)
+
+NEWSLETTER_SUBSCRIBE_SALT = 'news4bharat.newsletter.subscribe'
+NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_URL__'
+NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_FORM_URL__'
  
  
 def _auth(request):
@@ -1646,6 +1655,148 @@ def _auth(request):
     if expected and key != expected:
         return False
     return True
+
+
+def _normalize_emails(emails):
+    if isinstance(emails, str):
+        emails = [emails]
+    return list(dict.fromkeys([
+        str(email).strip().lower()
+        for email in (emails or [])
+        if str(email).strip()
+    ]))
+
+
+def _build_subscribe_token(email):
+    return signing.dumps({'email': str(email).strip().lower()}, salt=NEWSLETTER_SUBSCRIBE_SALT)
+
+
+def _build_subscribe_url(request, email):
+    token = _build_subscribe_token(email)
+    base_url = _get_newsletter_subscribe_base_url()
+    return f"{base_url}?token={quote(token)}"
+
+
+def _normalize_subscription_email(email):
+    normalized = str(email or '').strip().lower()
+    if not normalized:
+        return ''
+    validate_email(normalized)
+    return normalized
+
+
+def _get_newsletter_subscribe_base_url():
+    site_url = str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
+    return f"{site_url}{reverse('newsletter_subscribe')}"
+
+
+def _get_newsletter_site_home_url():
+    return str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
+
+
+def _render_subscribe_form_html(request, email='', error=''):
+    safe_email = str(email or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+    safe_error = str(error or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    form_action = _get_newsletter_subscribe_base_url()
+    error_html = ''
+    if safe_error:
+        error_html = f'<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#dc2626;">{safe_error}</p>'
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscribe | News4Bharat</title>
+</head>
+<body style="margin:0;padding:32px;background:#f5f7fb;font-family:Arial,sans-serif;color:#111827;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:32px;">
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1950DF;margin-bottom:12px;">News4Bharat Newsletter</div>
+    <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;color:#111827;">Subscribe To Our Newsletter</h1>
+    <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#4b5563;">Enter your email address below and we'll save it for future News4Bharat newsletters.</p>
+    {error_html}
+    <form action="{form_action}" method="get" style="margin:0;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <input type="email" name="email" value="{safe_email}" placeholder="Enter your email address" required style="flex:1;min-width:240px;padding:14px 18px;border:1px solid #bfdbfe;border-radius:999px;font-size:15px;color:#111827;background:#eff6ff;outline:none;box-sizing:border-box;">
+        <button type="submit" style="border:none;border-radius:999px;background:#3b82f6;color:#ffffff;font-size:15px;font-weight:700;padding:14px 24px;cursor:pointer;">Subscribe</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>"""
+
+
+def _is_ajax_subscribe_request(request):
+    return (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or str(request.GET.get('ajax') or '').strip() == '1'
+    )
+
+
+def _render_subscribe_success_html(email):
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscribed | News4Bharat</title>
+</head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f5f7fb;font-family:Arial,sans-serif;color:#111827;">
+  <div style="max-width:480px;width:100%;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:36px 28px;text-align:center;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:#16a34a;color:#ffffff;font-size:30px;font-weight:700;line-height:1;margin-bottom:18px;">✓</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1950DF;margin-bottom:10px;">News4Bharat Newsletter</div>
+    <h1 style="margin:0 0 8px;font-size:30px;line-height:1.2;color:#15803d;">Subscribed</h1>
+    <p style="margin:0;font-size:16px;line-height:1.7;color:#4b5563;">You have successfully subscribed to our newsletter.</p>
+  </div>
+</body>
+</html>"""
+
+
+@require_GET
+def subscribe_newsletter(request):
+    token = (request.GET.get('token') or '').strip()
+    manual_email = str(request.GET.get('email') or '').strip().lower()
+    wants_json = _is_ajax_subscribe_request(request)
+
+    if not token and not manual_email:
+        return HttpResponse(_render_subscribe_form_html(request))
+
+    if token:
+        try:
+            payload = signing.loads(token, salt=NEWSLETTER_SUBSCRIBE_SALT, max_age=60 * 60 * 24 * 365 * 5)
+        except signing.BadSignature:
+            return HttpResponse('Invalid or expired subscription link.', status=400)
+        email = str(payload.get('email') or '').strip().lower()
+    else:
+        email = manual_email
+
+    try:
+        email = _normalize_subscription_email(email)
+    except ValidationError:
+        if wants_json:
+            return JsonResponse({'ok': False, 'error': 'Please enter a valid email address.'}, status=400)
+        return HttpResponse(
+            _render_subscribe_form_html(
+                request,
+                email=manual_email,
+                error='Please enter a valid email address.',
+            ),
+            status=400,
+        )
+
+    Newsletter.objects.update_or_create(
+        email=email,
+        defaults={
+            'is_active': True,
+            'source': 'manual_form' if manual_email and not token else 'email_cta',
+        },
+    )
+    if wants_json:
+        return JsonResponse({
+            'ok': True,
+            'message': 'You have successfully subscribed to our newsletter',
+            'email': email,
+        })
+    return redirect(_get_newsletter_site_home_url())
  
  
 @csrf_exempt
@@ -1671,17 +1822,20 @@ def send_newsletter(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
  
     recipients = body.get('recipients', [])
-    subject = body.get('subject', 'News4Bharat Weekly Newsletter')
+    is_test = bool(body.get('is_test'))
+    subject = str(body.get('subject') or body.get('email_subject') or '').replace('\r', ' ').replace('\n', ' ').strip()
+    if not subject:
+        subject = 'News4Bharat Weekly Newsletter'
     html_content = body.get('html', '')
     chosen = body.get('chosen_articles', {})
+    recipients = _normalize_emails(recipients)
 
-    if isinstance(recipients, str):
-        recipients = [recipients]
-    recipients = [
-        str(email).strip() for email in recipients
-        if str(email).strip()
-    ]
-    recipients = list(dict.fromkeys(recipients))
+    if not is_test:
+        subscriber_emails = list(
+            Newsletter.objects.filter(is_active=True)
+            .values_list('email', flat=True)
+        )
+        recipients = _normalize_emails([*recipients, *subscriber_emails])
 
     if not recipients:
         return JsonResponse({'error': 'No recipients provided'}, status=400)
@@ -1713,13 +1867,21 @@ Website: https://news4bharat.com
  
     for email in recipients:
         try:
+            personalized_html = html_content.replace(
+                NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                _build_subscribe_url(request, email),
+            )
+            personalized_html = personalized_html.replace(
+                NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                _get_newsletter_subscribe_base_url(),
+            )
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,
                 from_email=from_email,
                 to=[email],
             )
-            msg.attach_alternative(html_content, "text/html")
+            msg.attach_alternative(personalized_html, "text/html")
             msg.send(fail_silently=False)
             success.append(email)
             logger.info(f"Newsletter sent to {email}")

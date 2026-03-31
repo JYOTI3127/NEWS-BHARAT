@@ -43,5 +43,6 @@ urlpatterns = [
     path('admin/media-library/', media_library_view, name='admin_media_library'),
 
     path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
+    path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
     path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
 ]

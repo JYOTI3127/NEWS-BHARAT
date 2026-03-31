@@ -125,6 +125,27 @@
           <div class="sec-chosen" id="ch-s4"></div>
         </div>
       </div>
+      <div class="section-group">
+        <div class="section-group-label">Explainers</div>
+        <div class="sec-card" data-sec="e1" onclick="openPanel(this)">
+          <div class="sec-card-top"><span class="sec-name">Explainer #1</span><span class="sec-type">Dark list</span>
+          </div>
+          <div class="sec-empty">Click to choose</div>
+          <div class="sec-chosen" id="ch-e1"></div>
+        </div>
+        <div class="sec-card" data-sec="e2" onclick="openPanel(this)">
+          <div class="sec-card-top"><span class="sec-name">Explainer #2</span><span class="sec-type">Dark list</span>
+          </div>
+          <div class="sec-empty">Click to choose</div>
+          <div class="sec-chosen" id="ch-e2"></div>
+        </div>
+        <div class="sec-card" data-sec="e3" onclick="openPanel(this)">
+          <div class="sec-card-top"><span class="sec-name">Explainer #3</span><span class="sec-type">Dark list</span>
+          </div>
+          <div class="sec-empty">Click to choose</div>
+          <div class="sec-chosen" id="ch-e3"></div>
+        </div>
+      </div>
       <div class="newsletter-spacer"></div>
     </div>
 
@@ -438,9 +459,15 @@
       document.getElementById('prev-small').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 0;border-bottom:1px solid #e5e3de">${mc('s1')}${mc('s2')}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 0">${mc('s3')}${mc('s4')}</div>`;
     }
     function renderExplainersPrev() {
-      const wrap = document.getElementById('prev-explainers'), arts = Object.values(chosen).filter(Boolean).slice(0, 3);
-      if (!arts.length) { wrap.innerHTML = '<div style="color:#444;font-size:12px;text-align:center;padding:16px 0">Choose articles — explainers will auto-fill here</div>'; return; }
-      wrap.innerHTML = arts.map((a, i) => `<div onclick="window.open('https://news4bharat.com/article/${a.slug}','_blank')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #1c1c1c;cursor:pointer"><div style="font-size:11px;font-weight:800;color:#FEAD17;flex-shrink:0;width:22px;padding-top:2px">0${i + 1}</div><div><div style="font-size:12px;font-weight:600;color:#fff;line-height:1.45;margin-bottom:3px">${a.title}</div><div style="font-size:10px;color:#555;line-height:1.6">${(a.excerpt || 'Read the full story.').substring(0, 100)}...</div><a href="https://news4bharat.com/article/${a.slug}" style="display:inline-block;margin-top:6px;font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#ffffff;border:1px solid #cfcfcf;padding:2px 8px;border-radius:20px;text-decoration:none">Read More</a></div></div>`).join('');
+      const wrap = document.getElementById('prev-explainers');
+      const keys = ['e1', 'e2', 'e3'];
+      const arts = keys.map(k => chosen[k]).filter(Boolean);
+      if (!arts.length) { wrap.innerHTML = keys.map(k => `<div class="ph-box" onclick="openPanel(document.querySelector('[data-sec=${k}]'))"><span>+ Choose an explainer story</span></div>`).join(''); return; }
+      wrap.innerHTML = keys.map((k, i) => {
+        const a = chosen[k];
+        if (!a) return `<div class="ph-box" onclick="openPanel(document.querySelector('[data-sec=${k}]'))"><span>+ Choose an explainer story</span></div>`;
+        return `<div onclick="window.open('https://news4bharat.com/article/${a.slug}','_blank')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #1c1c1c;cursor:pointer"><div style="font-size:11px;font-weight:800;color:#FEAD17;flex-shrink:0;width:22px;padding-top:2px">0${i + 1}</div><div><div style="font-size:12px;font-weight:600;color:#fff;line-height:1.45;margin-bottom:3px">${a.title}</div><div style="font-size:10px;color:#555;line-height:1.6">${(a.excerpt || 'Read the full story.').substring(0, 100)}...</div><a href="https://news4bharat.com/article/${a.slug}" style="display:inline-block;margin-top:6px;font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#ffffff;border:1px solid #cfcfcf;padding:2px 8px;border-radius:20px;text-decoration:none">Read More</a></div></div>`;
+      }).join('');
     }
 
     function renderEmailLists() {
@@ -628,7 +655,7 @@
       const hasSmall = ['s1', 's2', 's3', 's4'].some(k => chosen[k]);
       const smallRows = hasSmall ? `<tr><td style="padding:20px 0;border-top:1px solid #e5e3de;border-bottom:1px solid #e5e3de;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr class="stack-row">${sc('s1', 'left')}<td class="hide-mobile-gap" width="20"></td>${sc('s2', 'right')}</tr></table></td></tr><tr><td style="padding:20px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr class="stack-row">${sc('s3', 'left')}<td class="hide-mobile-gap" width="20"></td>${sc('s4', 'right')}</tr></table></td></tr>` : ''
 
-      const expArts = Object.values(chosen).filter(Boolean).slice(0, 3);
+      const expArts = ['e1', 'e2', 'e3'].map(k => chosen[k]).filter(Boolean);
       const explainersHTML = expArts.map((a, i) => { const href = articleUrl(a); return `<tr><td style="padding:14px 0;border-bottom:1px solid #1c1c1c;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" width="28" style="width:28px;font-family:Arial,sans-serif;font-size:11px;font-weight:800;color:#FEAD17;">0${i + 1}</td><td valign="top">${tl(href, a.title, 'font-family:Arial,sans-serif;font-size:12px;font-weight:700;line-height:1.45;color:#ffffff;text-decoration:none;display:block;margin-bottom:4px;')}${tl(href, `${exc(a.excerpt, 100) || 'Read the full story.'}...`, 'font-family:Arial,sans-serif;font-size:10px;line-height:1.6;color:#555555;text-decoration:none;display:block;')}${tl(href, 'Read More', 'display:inline-block;margin-top:6px;font-family:Arial,sans-serif;font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#ffffff;border:1px solid #cfcfcf;padding:2px 8px;border-radius:20px;text-decoration:none;')}</td></tr></table></td></tr>`; }).join('');
 
       const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });

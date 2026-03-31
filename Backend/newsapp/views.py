@@ -222,9 +222,40 @@ def _save_article_from_request(request, article=None):
     except (ValueError, TypeError):
         article.author_display_articles_count = 0
 
+    # ── IMAGE UPLOAD + COMPRESS ──
     if 'image' in files and files['image']:
-        article.image     = files['image']
-        article.image_url = ''
+        uploaded_file = files['image']
+        try:
+            from PIL import Image as PILImage
+            import io
+            from django.core.files.base import ContentFile
+
+            img = PILImage.open(uploaded_file)
+
+            # RGB mein convert karo (WebP ke liye)
+            if img.mode in ("RGBA", "P", "LA"):
+                img = img.convert("RGB")
+
+            # 1200px se bada hai toh resize karo
+            if img.width > 1200:
+                ratio = 1200 / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((1200, new_height), PILImage.LANCZOS)
+
+            # WebP mein compress karo
+            output = io.BytesIO()
+            img.save(output, format='WEBP', quality=75, optimize=True)
+            output.seek(0)
+
+            # .webp extension ke saath save karo
+            original_name = uploaded_file.name.rsplit('.', 1)[0] + '.webp'
+            article.image     = ContentFile(output.read(), name=original_name)
+            article.image_url = ''
+
+        except Exception:
+            # Compress fail ho toh original file save karo
+            article.image     = uploaded_file
+            article.image_url = ''
     else:
         url_val = data.get('image_url', '').strip()
         if url_val and not url_val.startswith('blob:'):

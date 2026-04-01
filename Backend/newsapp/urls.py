@@ -46,3 +46,4 @@ urlpatterns = [
     path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
     path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
 ]
+

@@ -725,6 +725,10 @@ def weather_api(request):
 
 @api_view(['GET'])
 def metal_ticker(request):
+    try:
+        fetch_and_store_metal_rates()
+    except Exception:
+        pass
     gold   = MetalRate.objects.filter(metal_type="gold").order_by('-created_at').first()
     silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
     return Response({
@@ -748,14 +752,24 @@ from .utils import fetch_and_store_metal_rates, fetch_index_data
 
 @api_view(['GET'])
 def update_metal_rates(request):
-    fetch_and_store_metal_rates()
+    fetch_and_store_metal_rates(force_refresh=True)
     return Response({"message": "Rates updated successfully"})
 
 
 @api_view(['GET'])
 def market_indices(request):
-    nifty  = fetch_index_data("^NSEI")
-    sensex = fetch_index_data("^BSESN")
+    nifty_symbols = getattr(settings, 'ALPHA_VANTAGE_NIFTY_SYMBOLS', ['NIFTYBEES.BSE', 'NIFTYBEES.NSE'])
+    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXETF.BSE', 'SENSEXETF.NSE'])
+    try:
+        nifty = fetch_index_data(nifty_symbols, cache_prefix='market_index:nifty')
+    except Exception as exc:
+        nifty = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+
+    try:
+        sensex = fetch_index_data(sensex_symbols, cache_prefix='market_index:sensex')
+    except Exception as exc:
+        sensex = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+
     return Response({"nifty": nifty, "sensex": sensex})
 
 
@@ -1596,16 +1610,28 @@ def live_cricket(request):
         if cached_data is not None:
             return Response(cached_data)
 
-        url      = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
-        response = requests.get(url, timeout=10)
+        urls = [
+            f"https://api.cricapi.com/v1/cricScore?apikey={settings.CRICKET_API_KEY}",
+            f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0",
+        ]
 
-        if response.status_code != 200:
+        data = None
+        last_status_code = None
+        for url in urls:
+            response = requests.get(url, timeout=15)
+            last_status_code = response.status_code
+            if response.status_code != 200:
+                continue
+            candidate = response.json()
+            if candidate.get("status") == "success" and candidate.get("data"):
+                data = candidate
+                break
+
+        if data is None:
             return Response({
-                "error": f"Cricket API returned status {response.status_code}",
+                "error": f"Cricket API returned status {last_status_code}",
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        data = response.json()
 
         if data.get("status") != "success" or not data.get("data"):
             return Response({
@@ -1619,20 +1645,31 @@ def live_cricket(request):
         recent   = []
 
         for match in matches:
-            match_status = str(match.get("status", "")).lower()
-            if "match over" in match_status or "won" in match_status or "beat" in match_status:
+            match_status = str(match.get("status", "") or match.get("matchStatus", "") or "").lower()
+            series_name = str(match.get("series", "") or match.get("series_name", "") or "").lower()
+            match_name = str(match.get("name", "") or match.get("title", "") or "").lower()
+
+            # Prefer IPL matches when available in the feed.
+            is_ipl = "ipl" in series_name or "indian premier league" in series_name or "ipl" in match_name
+
+            if "match over" in match_status or "won" in match_status or "beat" in match_status or "result" in match_status or "completed" in match_status:
                 recent.append(match)
-            elif "upcoming" in match_status or "scheduled" in match_status:
+            elif "upcoming" in match_status or "scheduled" in match_status or "preview" in match_status:
                 upcoming.append(match)
             else:
                 live.append(match)
 
+            match["_is_ipl"] = is_ipl
+
+        def prioritize_ipl(items):
+            return sorted(items, key=lambda item: 0 if item.get("_is_ipl") else 1)
+
         result = {
-            "live":     live[:1],
-            "upcoming": upcoming[:3],
-            "recent":   recent[:3]
+            "live":     prioritize_ipl(live)[:1],
+            "upcoming": prioritize_ipl(upcoming)[:3],
+            "recent":   prioritize_ipl(recent)[:3]
         }
-        cache.set("cricket_live_data", result, 300)
+        cache.set("cricket_live_data", result, 1800)
         return Response(result)
 
     except requests.exceptions.Timeout:

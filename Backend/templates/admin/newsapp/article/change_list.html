@@ -178,6 +178,33 @@
 </div>
 
 <!-- ── BOTTOM TWO COLUMNS ─────────────────────────── -->
+{% if article_page_obj and article_page_obj.paginator.count > 0 %}
+<div class="um-pagination">
+  <div class="pagination-info">
+    Showing {{ article_page_obj.start_index }}-{{ article_page_obj.end_index }} of {{ article_page_obj.paginator.count }} articles
+  </div>
+  <div class="pagination-btns">
+    {% if article_page_obj.has_previous %}
+      <a class="pg-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}article_page={{ article_page_obj.previous_page_number }}">&lsaquo;</a>
+    {% else %}
+      <span class="pg-btn" style="opacity:.45;pointer-events:none;">&lsaquo;</span>
+    {% endif %}
+    {% for num in article_page_obj.paginator.page_range %}
+      {% if num == article_page_obj.number %}
+        <span class="pg-btn active">{{ num }}</span>
+      {% elif num >= article_page_obj.number|add:'-2' and num <= article_page_obj.number|add:'2' %}
+        <a class="pg-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}article_page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if article_page_obj.has_next %}
+      <a class="pg-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}article_page={{ article_page_obj.next_page_number }}">&rsaquo;</a>
+    {% else %}
+      <span class="pg-btn" style="opacity:.45;pointer-events:none;">&rsaquo;</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="art-bottom-grid">
 
   <!-- LEFT: POSTED IMAGES -->

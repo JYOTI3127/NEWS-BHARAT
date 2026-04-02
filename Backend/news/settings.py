@@ -34,6 +34,11 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://news4bharat.cloud',
+    'https://www.news4bharat.cloud',
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -47,6 +52,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'newsapp',
     'storages', 
+    'django.contrib.sitemaps',
     # 'django_crontab', 
 
 ]
@@ -90,10 +96,16 @@ WSGI_APPLICATION = 'news.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'news4bharat',
+        'USER': 'news4bharat_user',
+        'PASSWORD': 'News@4Bharat#2026',
+        'HOST': '187.127.135.32',
+        'PORT': '5432',
+    }
 }
 
 
@@ -152,9 +164,15 @@ STATICFILES_DIRS = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-OPENWEATHER_API_KEY = "bad03cf01c063dcee90194478cda4bff"
-METAL_API_KEY = "776f81dc7c1d552466ac6d57852228ea"
-TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
+METAL_API_KEY = os.environ.get("METAL_API_KEY", "")
+TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
+ALPHA_VANTAGE_API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+TWELVE_DATA_GOLD_SYMBOLS = ["XAU/USD", "XAUUSD"]
+TWELVE_DATA_SILVER_SYMBOLS = ["XAG/USD", "XAGUSD"]
+TWELVE_DATA_USDINR_SYMBOLS = ["USD/INR", "USDINR"]
+ALPHA_VANTAGE_NIFTY_SYMBOLS = ["NIFTYBEES.BSE", "NIFTYBEES.NSE"]
+ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXETF.BSE", "SENSEXETF.NSE"]
 CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
 # CRONJOBS = [
@@ -183,11 +201,13 @@ LOGIN_URL = '/admin/login/'
 
 # Production mein — real email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'News4bharat11@gmail.com'
-EMAIL_HOST_PASSWORD = 'cmcm qzff rnab yidc'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
+NEWSLETTER_FROM_NAME = os.environ.get('NEWSLETTER_FROM_NAME', 'News4Bharat')
 
 AUTHENTICATION_BACKENDS = [
     'newsapp.backends.StaffIDBackend',
@@ -208,11 +228,25 @@ from google.oauth2 import service_account
 
 import os
 
-GCS_JSON = os.environ.get("GCS_CREDENTIALS")
-
+GCS_JSON = os.environ.get("GCS_CREDENTIALS", "")
 if GCS_JSON:
-    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
-        json.loads(GCS_JSON)
-    )
+    try:
+        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+            json.loads(GCS_JSON)
+        )
+    except Exception as e:
+        print(f"GCS credentials load failed: {e}")
+        GS_CREDENTIALS = None
 else:
     GS_CREDENTIALS = None
+
+SEO_SITE_URL = "https://news4bharat.com"
+SEO_SITE_NAME = "news4bharat"
+
+SEO_INDEXNOW_KEY = "abc123xyz"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}

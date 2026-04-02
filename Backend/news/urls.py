@@ -8,6 +8,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.sitemaps.views import sitemap
+from newsapp.sitemaps import ArticleSitemap
+
+sitemaps = {
+    'articles': ArticleSitemap,
+}
 
 urlpatterns = [
     path('', lambda request: redirect('admin/'), name='home'),
@@ -19,13 +25,25 @@ urlpatterns = [
     path('admin/inbox/send/',                     views.send_message,       name='send_message'),
     path('admin/inbox/create-group/',             views.create_group,       name='create_group'),
     path('admin/notifications/',                  views.notifications_view, name='admin_notifications'),
+    path('admin/newsletter/',                     views.newsletter_view,    name='admin_newsletter'),
 
     # ── Django Admin — BAAD MEIN ─────────────────────────────
     path('admin/', admin_site.urls),
 
     # ── REST API ─────────────────────────────────────────────
     path('api/', include('newsapp.urls')),
+
+    # ✅ SEO URLs — SABSE LAST ME ADD KARO
+    path('', include('newsapp.seo_urls')),
+
+    path(
+    'sitemap.xml',
+    sitemap,
+    {'sitemaps': sitemaps},
+    name='django.contrib.sitemaps.views.sitemap'
+    ),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

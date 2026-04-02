@@ -6,12 +6,15 @@ urlpatterns = [
     path('categories/', category_list),
     path('articles/', article_list),
     path('articles/<int:pk>/', views.article_detail),
+    path('article/<slug:slug>/', views.article_detail_page),
+    path('articles/by-state/', views.articles_by_state),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),
     path('update-metal/', update_metal_rates),
     path('market-indices/', market_indices),
     path('datetime/', datetime_api, name='api-datetime'),
     path('search/', search_api, name='api-search'),
+    path('search/articles/', live_article_search_api, name='api-live-article-search'),
     path('login/',          views.secure_login_view,  name='login'),
     path('logout/',         views.secure_logout_view, name='logout'),
     path('my-credentials/', views.my_credentials,     name='my_credentials'),
@@ -37,4 +40,10 @@ urlpatterns = [
     path('homepage/hero/',        views.update_hero_slot,        name='hp_hero'),
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
+    path('admin/media-library/', media_library_view, name='admin_media_library'),
+
+    path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
+    path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
+    path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
 ]
+

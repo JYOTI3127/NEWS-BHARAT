@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
@@ -28,6 +28,10 @@ from .models import UserProfile, LoginAttemptLog
 import os
 import google.generativeai as genai
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
+from django.core.cache import cache
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -136,10 +140,48 @@ def _save_article_from_request(request, article=None):
 
     deadline_val = data.get('deadline', '')
     if deadline_val:
-        from django.utils.dateparse import parse_datetime
         article.deadline = parse_datetime(deadline_val)
     else:
         article.deadline = None
+
+    scheduled_at_val = data.get('scheduled_at', '').strip()
+    if article.status == 'scheduled':
+        if not scheduled_at_val:
+            return None, {'error': 'Scheduled publish time is required for scheduled articles.'}
+
+        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        if parsed_scheduled_at is None:
+            return None, {'error': 'Invalid scheduled publish time.'}
+
+        if timezone.is_naive(parsed_scheduled_at):
+            parsed_scheduled_at = timezone.make_aware(
+                parsed_scheduled_at,
+                timezone.get_current_timezone(),
+            )
+
+        if parsed_scheduled_at <= timezone.now():
+            return None, {'error': 'Scheduled publish time must be in the future.'}
+
+        article.scheduled_at = parsed_scheduled_at
+        article.published_at = None
+    elif scheduled_at_val:
+        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        if parsed_scheduled_at is not None:
+            if timezone.is_naive(parsed_scheduled_at):
+                parsed_scheduled_at = timezone.make_aware(
+                    parsed_scheduled_at,
+                    timezone.get_current_timezone(),
+                )
+            article.scheduled_at = parsed_scheduled_at
+        else:
+            article.scheduled_at = None
+    else:
+        article.scheduled_at = None
+
+    if article.status == 'published':
+        article.scheduled_at = None
+        if not article.published_at:
+            article.published_at = timezone.now()
 
     assigned_id = data.get('assigned_to', '')
     if assigned_id:
@@ -180,9 +222,40 @@ def _save_article_from_request(request, article=None):
     except (ValueError, TypeError):
         article.author_display_articles_count = 0
 
+    # ── IMAGE UPLOAD + COMPRESS ──
     if 'image' in files and files['image']:
-        article.image     = files['image']
-        article.image_url = ''
+        uploaded_file = files['image']
+        try:
+            from PIL import Image as PILImage
+            import io
+            from django.core.files.base import ContentFile
+
+            img = PILImage.open(uploaded_file)
+
+            # RGB mein convert karo (WebP ke liye)
+            if img.mode in ("RGBA", "P", "LA"):
+                img = img.convert("RGB")
+
+            # 1200px se bada hai toh resize karo
+            if img.width > 1200:
+                ratio = 1200 / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((1200, new_height), PILImage.LANCZOS)
+
+            # WebP mein compress karo
+            output = io.BytesIO()
+            img.save(output, format='WEBP', quality=75, optimize=True)
+            output.seek(0)
+
+            # .webp extension ke saath save karo
+            original_name = uploaded_file.name.rsplit('.', 1)[0] + '.webp'
+            article.image     = ContentFile(output.read(), name=original_name)
+            article.image_url = ''
+
+        except Exception:
+            # Compress fail ho toh original file save karo
+            article.image     = uploaded_file
+            article.image_url = ''
     else:
         url_val = data.get('image_url', '').strip()
         if url_val and not url_val.startswith('blob:'):
@@ -249,6 +322,32 @@ def article_list(request):
         serializer = ArticleSerializer(article, context={'request': request})
         return Response(serializer.data, status=201)
 
+@api_view(['GET'])
+def articles_by_state(request):
+    state = request.GET.get('state')
+    
+    # State nahi di → states list return karo
+    if not state:
+        try:
+            category = Category.objects.get(slug='state-of-bharat')
+            return Response(category.sub_categories)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=404)
+    
+    # State di → us state ke articles
+    articles = Article.objects.filter(
+        status='published',
+        categories__slug='state-of-bharat',
+    )
+    
+    filtered = [
+        a for a in articles
+        if state in (a.selected_subcategories or {}).get('subs', {}).get('3', [])
+    ]
+    
+    serializer = ArticleMinSerializer(filtered, many=True, context={'request': request})
+    return Response(serializer.data)
+
 
 @api_view(['GET'])
 def dashboard_articles(request):
@@ -312,6 +411,26 @@ def article_detail(request, pk):
     elif request.method == "DELETE":
         article.delete()
         return Response(status=204)
+
+from django.shortcuts import render, get_object_or_404
+from newsapp.models import Article
+from newsapp.seo_direct import MetaEngine, SchemaEngine
+
+def article_detail_page(request, slug):
+    article = get_object_or_404(Article, slug=slug, status="published")
+
+    meta = MetaEngine.for_article(article)
+    schemas = [
+        SchemaEngine.news_article(article),
+        SchemaEngine.breadcrumb(article),
+    ]
+
+    seo_head = MetaEngine.render_head(meta, schemas)
+
+    return render(request, 'article.html', {
+        'article': article,
+        'seo_head': seo_head
+    })
 
 
 # ═══════════════════════════════════════════════════════
@@ -606,6 +725,10 @@ def weather_api(request):
 
 @api_view(['GET'])
 def metal_ticker(request):
+    try:
+        fetch_and_store_metal_rates()
+    except Exception:
+        pass
     gold   = MetalRate.objects.filter(metal_type="gold").order_by('-created_at').first()
     silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
     return Response({
@@ -629,14 +752,24 @@ from .utils import fetch_and_store_metal_rates, fetch_index_data
 
 @api_view(['GET'])
 def update_metal_rates(request):
-    fetch_and_store_metal_rates()
+    fetch_and_store_metal_rates(force_refresh=True)
     return Response({"message": "Rates updated successfully"})
 
 
 @api_view(['GET'])
 def market_indices(request):
-    nifty  = fetch_index_data("^NSEI")
-    sensex = fetch_index_data("^BSESN")
+    nifty_symbols = getattr(settings, 'ALPHA_VANTAGE_NIFTY_SYMBOLS', ['NIFTYBEES.BSE', 'NIFTYBEES.NSE'])
+    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXETF.BSE', 'SENSEXETF.NSE'])
+    try:
+        nifty = fetch_index_data(nifty_symbols, cache_prefix='market_index:nifty')
+    except Exception as exc:
+        nifty = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+
+    try:
+        sensex = fetch_index_data(sensex_symbols, cache_prefix='market_index:sensex')
+    except Exception as exc:
+        sensex = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+
     return Response({"nifty": nifty, "sensex": sensex})
 
 
@@ -714,11 +847,12 @@ def _search_elasticsearch(query, status, limit, request=None):
     es_query = es_query.query(
         ESQ('bool', should=[
             ESQ('multi_match', query=query,
-                fields=['title^5', 'title.autocomplete^3', 'categories.name^3', 'author.username^2', 'content'],
+                fields=['title^5', 'slug^4', 'title.autocomplete^3', 'categories.name^3', 'author.username^2', 'content'],
                 type='best_fields', operator='or'),
             ESQ('multi_match', query=query,
-                fields=['title.fuzzy^3', 'content.fuzzy'], fuzziness='AUTO', prefix_length=1),
+                fields=['title.fuzzy^3', 'slug^3', 'content.fuzzy'], fuzziness='AUTO', prefix_length=1),
             ESQ('match', **{'title.autocomplete': {'query': query, 'boost': 2}}),
+            ESQ('match', **{'slug': {'query': query, 'boost': 3}}),
         ], minimum_should_match=1)
     )
     es_query = es_query.highlight('title', 'content', fragment_size=120,
@@ -744,6 +878,7 @@ def _search_elasticsearch(query, status, limit, request=None):
 def _search_django_orm(query, status, limit, request=None):
     qs = Article.objects.filter(
         Q(title__icontains=query) |
+        Q(slug__icontains=query) |
         Q(content__icontains=query) |
         Q(author__username__icontains=query) |
         Q(categories__name__icontains=query)
@@ -792,6 +927,34 @@ def search_api(request):
         "total":         len(articles_data) + len(categories_data),
         "articles":      articles_data,
         "categories":    categories_data,
+        "search_engine": search_engine,
+    })
+
+
+@require_GET
+def live_article_search_api(request):
+    query = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 20)
+
+    if len(query) < 2:
+        return JsonResponse({
+            "query": query,
+            "total": 0,
+            "articles": [],
+            "error": "Query must be at least 2 characters"
+        }, status=400)
+
+    try:
+        articles_data = _search_elasticsearch(query, 'published', limit, request)
+        search_engine = "elasticsearch"
+    except Exception:
+        articles_data = _search_django_orm(query, 'published', limit, request)
+        search_engine = "orm_fallback"
+
+    return JsonResponse({
+        "query": query,
+        "total": len(articles_data),
+        "articles": articles_data,
         "search_engine": search_engine,
     })
 
@@ -1224,12 +1387,47 @@ def inbox_view(request):
     if active_conversation:
         conv_messages = active_conversation.messages.select_related("sender").order_by("created_at")
 
+    staff_users_data = [
+        {
+            'id': u.id,
+            'name': u.get_full_name() or u.username,
+            'role': 'Superuser' if u.is_superuser else 'Staff',
+            'color': '#6264a7',
+            'online': bool(getattr(u, 'online_status', False)),
+        }
+        for u in staff_users
+    ]
+
+    conversations_data = []
+    for conv in conversations:
+        member_ids = list(conv.members.values_list('id', flat=True))
+        other_member_ids = [member_id for member_id in member_ids if member_id != request.user.id]
+        messages_data = [
+            {
+                'from': msg.sender_id,
+                'text': msg.text or '',
+                'time': timezone.localtime(msg.created_at).strftime('%H:%M'),
+            }
+            for msg in conv.messages.all().order_by('created_at')
+        ]
+        conversations_data.append({
+            'id': conv.id,
+            'type': conv.conv_type,
+            'name': conv.name or '',
+            'userId': other_member_ids[0] if conv.conv_type == 'private' and other_member_ids else None,
+            'members': member_ids,
+            'unread': 0,
+            'messages': messages_data,
+        })
+
     return render(request, 'admin/inbox.html', {
         'title':               'Inbox',
         'staff_users':         staff_users,
         'conversations':       conversations,
         'active_conversation': active_conversation,
         'messages':            conv_messages,
+        'staff_users_json':    json.dumps(staff_users_data),
+        'conversations_json':  json.dumps(conversations_data),
     })
 
 
@@ -1247,7 +1445,7 @@ def start_conversation(request, user_id):
     ).filter(conversationmember__user=other_user).first()
 
     if existing:
-        return redirect(f'/inbox/?conv={existing.id}')
+        return redirect(f"{reverse('admin_inbox')}?conv={existing.id}")
 
     conv = Conversation.objects.create(conv_type='private')
     ConversationMember.objects.create(conversation=conv, user=request.user)
@@ -1408,16 +1606,32 @@ def live_cricket(request):
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        url      = f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0"
-        response = requests.get(url, timeout=10)
+        cached_data = cache.get("cricket_live_data")
+        if cached_data is not None:
+            return Response(cached_data)
 
-        if response.status_code != 200:
+        urls = [
+            f"https://api.cricapi.com/v1/cricScore?apikey={settings.CRICKET_API_KEY}",
+            f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0",
+        ]
+
+        data = None
+        last_status_code = None
+        for url in urls:
+            response = requests.get(url, timeout=15)
+            last_status_code = response.status_code
+            if response.status_code != 200:
+                continue
+            candidate = response.json()
+            if candidate.get("status") == "success" and candidate.get("data"):
+                data = candidate
+                break
+
+        if data is None:
             return Response({
-                "error": f"Cricket API returned status {response.status_code}",
+                "error": f"Cricket API returned status {last_status_code}",
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        data = response.json()
 
         if data.get("status") != "success" or not data.get("data"):
             return Response({
@@ -1431,19 +1645,32 @@ def live_cricket(request):
         recent   = []
 
         for match in matches:
-            match_status = str(match.get("status", "")).lower()
-            if "match over" in match_status or "won" in match_status or "beat" in match_status:
+            match_status = str(match.get("status", "") or match.get("matchStatus", "") or "").lower()
+            series_name = str(match.get("series", "") or match.get("series_name", "") or "").lower()
+            match_name = str(match.get("name", "") or match.get("title", "") or "").lower()
+
+            # Prefer IPL matches when available in the feed.
+            is_ipl = "ipl" in series_name or "indian premier league" in series_name or "ipl" in match_name
+
+            if "match over" in match_status or "won" in match_status or "beat" in match_status or "result" in match_status or "completed" in match_status:
                 recent.append(match)
-            elif "upcoming" in match_status or "scheduled" in match_status:
+            elif "upcoming" in match_status or "scheduled" in match_status or "preview" in match_status:
                 upcoming.append(match)
             else:
                 live.append(match)
 
-        return Response({
-            "live":     live[:1],
-            "upcoming": upcoming[:3],
-            "recent":   recent[:3]
-        })
+            match["_is_ipl"] = is_ipl
+
+        def prioritize_ipl(items):
+            return sorted(items, key=lambda item: 0 if item.get("_is_ipl") else 1)
+
+        result = {
+            "live":     prioritize_ipl(live)[:1],
+            "upcoming": prioritize_ipl(upcoming)[:3],
+            "recent":   prioritize_ipl(recent)[:3]
+        }
+        cache.set("cricket_live_data", result, 1800)
+        return Response(result)
 
     except requests.exceptions.Timeout:
         return Response({
@@ -1460,3 +1687,330 @@ def live_cricket(request):
             "error": f"Unexpected error: {str(e)}",
             "live": [], "upcoming": [], "recent": []
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@staff_member_required
+def media_library_view(request):
+    categories = Category.objects.filter(status='active').order_by('name')
+    return render(request, 'admin/media_library.html', {
+        'mp3_categories': categories,
+    })
+
+
+@staff_member_required
+def newsletter_view(request):
+    return render(request, 'admin/newsletter.html')
+
+
+import logging
+from django.core.mail import EmailMultiAlternatives, get_connection
+from email.utils import formataddr
+from datetime import datetime
+from urllib.parse import quote
+from django.core import signing
+from django.urls import reverse
+ 
+logger = logging.getLogger(__name__)
+
+NEWSLETTER_SUBSCRIBE_SALT = 'news4bharat.newsletter.subscribe'
+NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_URL__'
+NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_FORM_URL__'
+ 
+ 
+def _auth(request):
+    """Simple API key check"""
+    key = request.headers.get('X-API-Key') or request.GET.get('api_key')
+    expected = getattr(settings, 'NEWSLETTER_API_KEY', None)
+    if expected and key != expected:
+        return False
+    return True
+
+
+def _normalize_emails(emails):
+    if isinstance(emails, str):
+        emails = [emails]
+    return list(dict.fromkeys([
+        str(email).strip().lower()
+        for email in (emails or [])
+        if str(email).strip()
+    ]))
+
+
+def _build_subscribe_token(email):
+    return signing.dumps({'email': str(email).strip().lower()}, salt=NEWSLETTER_SUBSCRIBE_SALT)
+
+
+def _build_subscribe_url(request, email):
+    token = _build_subscribe_token(email)
+    base_url = _get_newsletter_subscribe_base_url()
+    return f"{base_url}?token={quote(token)}"
+
+
+def _normalize_subscription_email(email):
+    normalized = str(email or '').strip().lower()
+    if not normalized:
+        return ''
+    validate_email(normalized)
+    return normalized
+
+
+def _get_newsletter_subscribe_base_url():
+    api_base_url = str(
+        getattr(settings, 'NEWSLETTER_API_BASE_URL', '')
+        or getattr(settings, 'NEWSLETTER_SUBSCRIBE_BASE_URL', '')
+        or 'https://news4bharat.cloud'
+    ).rstrip('/')
+    return f"{api_base_url}{reverse('newsletter_subscribe')}"
+
+
+def _get_newsletter_site_home_url():
+    return str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
+
+
+def _render_subscribe_form_html(request, email='', error=''):
+    safe_email = str(email or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+    safe_error = str(error or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    form_action = _get_newsletter_subscribe_base_url()
+    error_html = ''
+    if safe_error:
+        error_html = f'<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#dc2626;">{safe_error}</p>'
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscribe | News4Bharat</title>
+</head>
+<body style="margin:0;padding:32px;background:#f5f7fb;font-family:Arial,sans-serif;color:#111827;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:32px;">
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1950DF;margin-bottom:12px;">News4Bharat Newsletter</div>
+    <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;color:#111827;">Subscribe To Our Newsletter</h1>
+    <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#4b5563;">Enter your email address below and we'll save it for future News4Bharat newsletters.</p>
+    {error_html}
+    <form action="{form_action}" method="get" style="margin:0;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <input type="email" name="email" value="{safe_email}" placeholder="Enter your email address" required style="flex:1;min-width:240px;padding:14px 18px;border:1px solid #bfdbfe;border-radius:999px;font-size:15px;color:#111827;background:#eff6ff;outline:none;box-sizing:border-box;">
+        <button type="submit" style="border:none;border-radius:999px;background:#3b82f6;color:#ffffff;font-size:15px;font-weight:700;padding:14px 24px;cursor:pointer;">Subscribe</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>"""
+
+
+def _is_ajax_subscribe_request(request):
+    return (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or str(request.GET.get('ajax') or '').strip() == '1'
+    )
+
+
+def _render_subscribe_success_html(email):
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscribed | News4Bharat</title>
+</head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f5f7fb;font-family:Arial,sans-serif;color:#111827;">
+  <div style="max-width:480px;width:100%;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:36px 28px;text-align:center;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:#16a34a;color:#ffffff;font-size:30px;font-weight:700;line-height:1;margin-bottom:18px;">✓</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1950DF;margin-bottom:10px;">News4Bharat Newsletter</div>
+    <h1 style="margin:0 0 8px;font-size:30px;line-height:1.2;color:#15803d;">Subscribed</h1>
+    <p style="margin:0;font-size:16px;line-height:1.7;color:#4b5563;">You have successfully subscribed to our newsletter.</p>
+  </div>
+</body>
+</html>"""
+
+
+@require_GET
+def subscribe_newsletter(request):
+    token = (request.GET.get('token') or '').strip()
+    manual_email = str(request.GET.get('email') or '').strip().lower()
+    wants_json = _is_ajax_subscribe_request(request)
+
+    if not token and not manual_email:
+        return HttpResponse(_render_subscribe_form_html(request))
+
+    if token:
+        try:
+            payload = signing.loads(token, salt=NEWSLETTER_SUBSCRIBE_SALT, max_age=60 * 60 * 24 * 365 * 5)
+        except signing.BadSignature:
+            return HttpResponse('Invalid or expired subscription link.', status=400)
+        email = str(payload.get('email') or '').strip().lower()
+    else:
+        email = manual_email
+
+    try:
+        email = _normalize_subscription_email(email)
+    except ValidationError:
+        if wants_json:
+            return JsonResponse({'ok': False, 'error': 'Please enter a valid email address.'}, status=400)
+        return HttpResponse(
+            _render_subscribe_form_html(
+                request,
+                email=manual_email,
+                error='Please enter a valid email address.',
+            ),
+            status=400,
+        )
+
+    Newsletter.objects.update_or_create(
+        email=email,
+        defaults={
+            'is_active': True,
+            'source': 'manual_form' if manual_email and not token else 'email_cta',
+        },
+    )
+    if wants_json:
+        return JsonResponse({
+            'ok': True,
+            'message': 'You have successfully subscribed to our newsletter',
+            'email': email,
+        })
+    return redirect(_get_newsletter_site_home_url())
+ 
+ 
+@csrf_exempt
+@require_POST
+def send_newsletter(request):
+    """
+    POST /api/newsletter/send/
+    Body:
+    {
+        "recipients": ["a@example.com", "b@example.com"],
+        "subject": "News4Bharat Weekly: ...",
+        "html": "<html>...</html>",
+        "chosen_articles": {"hero": "article-slug", "b1": "slug2"}
+    }
+    """
+    # Auth check (optional - settings mein NEWSLETTER_API_KEY set karo)
+    # if not _auth(request):
+    #     return JsonResponse({'error': 'Unauthorized'}, status=401)
+ 
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+ 
+    recipients = body.get('recipients', [])
+    is_test = bool(body.get('is_test'))
+    subject = str(body.get('subject') or body.get('email_subject') or '').replace('\r', ' ').replace('\n', ' ').strip()
+    if not subject:
+        subject = 'News4Bharat Weekly Newsletter'
+    html_content = body.get('html', '')
+    chosen = body.get('chosen_articles', {})
+    recipients = _normalize_emails(recipients)
+
+    if not is_test:
+        subscriber_emails = list(
+            Newsletter.objects.filter(is_active=True)
+            .values_list('email', flat=True)
+        )
+        recipients = _normalize_emails([*recipients, *subscriber_emails])
+
+    if not recipients:
+        return JsonResponse({'error': 'No recipients provided'}, status=400)
+ 
+    if not html_content:
+        return JsonResponse({'error': 'No HTML content provided'}, status=400)
+
+    sender_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+    if not sender_email:
+        return JsonResponse({'error': 'Email sender is not configured'}, status=500)
+    from_email = formataddr((
+        getattr(settings, 'NEWSLETTER_FROM_NAME', 'News4Bharat'),
+        sender_email,
+    ))
+ 
+    # Plain text fallback
+    plain_text = f"""
+News4Bharat Weekly Newsletter
+{datetime.now().strftime('%d %B %Y')}
+ 
+{subject}
+ 
+Please use an HTML-capable email client to read this newsletter.
+Website: https://news4bharat.com
+    """.strip()
+ 
+    success = []
+    failed = []
+    connection = get_connection(fail_silently=False)
+
+    try:
+        connection.open()
+        for email in recipients:
+            try:
+                personalized_html = html_content.replace(
+                    NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                    _build_subscribe_url(request, email),
+                )
+                personalized_html = personalized_html.replace(
+                    NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                    _get_newsletter_subscribe_base_url(),
+                )
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=plain_text,
+                    from_email=from_email,
+                    to=[email],
+                    connection=connection,
+                )
+                msg.attach_alternative(personalized_html, "text/html")
+                msg.send(fail_silently=False)
+                success.append(email)
+                logger.info(f"Newsletter sent to {email}")
+            except Exception as e:
+                failed.append({'email': email, 'error': str(e)})
+                logger.error(f"Newsletter failed for {email}: {e}")
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+ 
+    # History save karo (optional - model banao)
+    try:
+        _save_history(subject, recipients, chosen, len(success), len(failed))
+    except Exception as e:
+        logger.warning(f"Could not save newsletter history: {e}")
+ 
+    return JsonResponse({
+        'status': 'done',
+        'sent': len(success),
+        'failed': len(failed),
+        'success_emails': success,
+        'failed_emails': failed,
+    })
+ 
+ 
+def _save_history(subject, recipients, chosen, sent_count, failed_count):
+    """Newsletter history save karna — NewsletterLog model use karo"""
+    try:
+        from newsapp.models import NewsletterLog
+        NewsletterLog.objects.create(
+            subject=subject,
+            recipients=recipients,
+            chosen_articles=chosen,
+            sent_count=sent_count,
+            failed_count=failed_count,
+        )
+    except ImportError:
+        pass  # Model nahi bana toh skip
+ 
+ 
+@require_GET
+def newsletter_history(request):
+    """
+    GET /api/newsletter/history/
+    Last 20 sent newsletters
+    """
+    try:
+        from newsapp.models import NewsletterLog
+        logs = NewsletterLog.objects.order_by('-sent_at')[:20].values(
+            'id', 'subject', 'sent_count', 'failed_count', 'sent_at'
+        )
+        return JsonResponse({'history': list(logs)})
+    except Exception as e:
+        return JsonResponse({'history': [], 'note': str(e)})

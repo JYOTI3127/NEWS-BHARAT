@@ -325,7 +325,7 @@ label.image-drop {
   <div class="nb-it-color" title="Highlight Color" style="margin-left:2px;">
     <span style="font-size:9px;font-weight:700;color:#e2e8f0;pointer-events:none;line-height:1">BG</span>
     <span class="nb-it-color-swatch" id="nb_it_bg_swatch" style="background:#fbbf24;position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:14px;height:3px;"></span>
-    <input type="color" id="nb_it_bg_color" value="#ffff00" oninput="nbApplyBgColor(this.value);document.getElementById('nb_it_bg_swatch').style.background=this.value" onchange="nbApplyBgColor(this.value)" onclick="event.stopPropagation()">
+    <input type="color" id="nb_it_bg_color" value="#ffff00" oninput="nbApplyBgColor(this.value)" onchange="nbApplyBgColor(this.value)" onclick="event.stopPropagation()" onmousedown="nbItSaveSelection();nbStoreColorSelection()">
   </div>
   <div class="nb-it-sep"></div>
   <button onclick="fmt('removeFormat')" title="Clear Formatting">&#x2715;</button>
@@ -442,14 +442,14 @@ label.image-drop {
         <button onclick="fmt('superscript')" title="Superscript" style="font-size:11px;">X&#x00B2;</button>
         <button onclick="fmt('subscript')" title="Subscript" style="font-size:11px;">X&#x2082;</button>
         <div class="sep"></div>
-        <button class="nb-color-btn" title="Text Color" onclick="document.getElementById('nb_textColorPicker').click()">
+        <button class="nb-color-btn" title="Text Color" onclick="nbStoreColorSelection();document.getElementById('nb_textColorPicker').click()">
           A<span class="nb-color-swatch" id="nb_textColorSwatch" style="background:#000;"></span>
-          <input type="color" id="nb_textColorPicker" value="#000000" oninput="nbApplyTextColor(this.value)" onchange="nbApplyTextColor(this.value)" onclick="event.stopPropagation()">
+          <input type="color" id="nb_textColorPicker" value="#000000" oninput="nbApplyTextColor(this.value)" onchange="nbApplyTextColor(this.value)" onclick="event.stopPropagation()" onmousedown="nbStoreColorSelection()">
         </button>
-        <button class="nb-color-btn" title="Highlight Color" onclick="document.getElementById('nb_bgColorPicker').click()" style="margin-left:3px;">
+        <button class="nb-color-btn" title="Highlight Color" onclick="nbStoreColorSelection();document.getElementById('nb_bgColorPicker').click()" style="margin-left:3px;">
           <span style="font-size:11px;pointer-events:none;">BG</span>
           <span class="nb-color-swatch" id="nb_bgColorSwatch" style="background:#ffff00;"></span>
-          <input type="color" id="nb_bgColorPicker" value="#ffff00" oninput="nbApplyBgColor(this.value)" onchange="nbApplyBgColor(this.value)" onclick="event.stopPropagation()">
+          <input type="color" id="nb_bgColorPicker" value="#ffff00" oninput="nbApplyBgColor(this.value)" onchange="nbApplyBgColor(this.value)" onclick="event.stopPropagation()" onmousedown="nbStoreColorSelection()">
         </button>
         <div class="sep"></div>
         <button onclick="fmt('justifyLeft')" title="Align Left">&#8676;</button>
@@ -886,7 +886,6 @@ label.image-drop {
   </div>
 </div>
 
-
 <!-- EDITOR PANEL -->
 <div class="editor-panel">
   <div class="editor-panel-header">
@@ -1075,16 +1074,25 @@ function handleSecKwKeydown(e){if(e.key==='Enter'||e.key===','){e.preventDefault
 var _asLastSavedHash='',_asCountdown=null,_asIntervalSec=30,_asSecsLeft=30,_asIsSaving=false;
 var _asPublished=false;
 var _asStopStatuses=['published','scheduled','archived'];
-function _asGetHash(){return((document.getElementById('ui_title')?document.getElementById('ui_title').value:'')+(document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'')+(document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'')).length.toString();}
+var _articleId='{{ original.pk|default:"" }}';
+function _articleStorageKey(){return 'nb_autosave_'+(_articleId||'new');}
+function _setArticleId(id){
+  if(!id)return;
+  _articleId=String(id);
+  if(window.location.pathname.indexOf('/admin/newsapp/article/add/')===0){
+    window.history.replaceState(null,'','/admin/newsapp/article/'+_articleId+'/change/');
+  }
+}
+function _asGetHash(){return((document.getElementById('ui_title')?document.getElementById('ui_title').value:'')+(document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'')+(document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'')+(document.getElementById('ui_image_alt')?document.getElementById('ui_image_alt').value:'')+(document.getElementById('ui_image_source')?document.getElementById('ui_image_source').value:'')).length.toString();}
 function _asShowBadge(state,msg,timer){var badge=document.getElementById('nb_autosave_badge'),dot=document.getElementById('nb_as_dot'),text=document.getElementById('nb_as_text'),timerEl=document.getElementById('nb_as_timer');if(!badge)return;badge.className='show '+(state||'');if(dot)dot.className='autosave-dot'+(state==='saving'?' pulse':'');if(text)text.textContent=msg||'';if(timerEl)timerEl.textContent=timer||'';}
 function _asHideBadge(){var badge=document.getElementById('nb_autosave_badge');if(badge)badge.className='';}
-function _asClearLocalDraft(){try{var key='nb_autosave_{{ original.pk|default:"new" }}';localStorage.removeItem(key);}catch(e){}}
-function _asSaveToLocalStorage(){try{var key='nb_autosave_{{ original.pk|default:"new" }}',data={title:document.getElementById('ui_title')?document.getElementById('ui_title').value:'',subtitle:document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'',content:document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'',meta:document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'',slug:document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'',focus_kw:document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'',sec_kws:secondaryKws.join(','),tags:articleTags.join(','),ts:new Date().toISOString()};localStorage.setItem(key,JSON.stringify(data));}catch(e){}}
-async function _asAutoSave(){if(_asPublished)return;if(_asIsSaving)return;var currentStatus=document.getElementById('ui_status')?document.getElementById('ui_status').value:'';if(_asStopStatuses.indexOf(currentStatus)!==-1)return;var currentHash=_asGetHash();if(currentHash===_asLastSavedHash)return;var title=document.getElementById('ui_title')?document.getElementById('ui_title').value.trim():'',content=document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML.trim():'';if(!title&&!content)return;_asIsSaving=true;_asShowBadge('saving','Auto-saving draft…','');_asSaveToLocalStorage();try{var formData=new FormData();formData.append('title',title||'Untitled Draft');formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');formData.append('content',content);formData.append('status','draft');formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');formData.append('secondary_keywords',secondaryKws.join(','));var articleId='{{ original.pk|default:"" }}',url=articleId?('/api/articles/'+articleId+'/'):'/api/articles/',method=articleId?'PUT':'POST';var res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});if(res.ok){_asLastSavedHash=currentHash;var now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});_asShowBadge('saved','✓ Draft saved',now);setTimeout(_asHideBadge,3000);}else{_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}}catch(e){_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}
+function _asClearLocalDraft(){try{localStorage.removeItem(_articleStorageKey());}catch(e){}}
+function _asSaveToLocalStorage(){try{var key=_articleStorageKey(),data={title:document.getElementById('ui_title')?document.getElementById('ui_title').value:'',subtitle:document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'',content:document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'',meta:document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'',slug:document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'',focus_kw:document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'',image_alt:document.getElementById('ui_image_alt')?document.getElementById('ui_image_alt').value:'',image_source:document.getElementById('ui_image_source')?document.getElementById('ui_image_source').value:'',sec_kws:secondaryKws.join(','),tags:articleTags.join(','),ts:new Date().toISOString()};localStorage.setItem(key,JSON.stringify(data));}catch(e){}}
+async function _asAutoSave(){if(_asPublished)return;if(_asIsSaving)return;var currentStatus=document.getElementById('ui_status')?document.getElementById('ui_status').value:'';if(_asStopStatuses.indexOf(currentStatus)!==-1)return;var currentHash=_asGetHash();if(currentHash===_asLastSavedHash)return;var title=document.getElementById('ui_title')?document.getElementById('ui_title').value.trim():'',content=document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML.trim():'';if(!title&&!content)return;_asIsSaving=true;_asShowBadge('saving','Auto-saving draft…','');_asSaveToLocalStorage();try{var formData=new FormData();formData.append('title',title||'Untitled Draft');formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');formData.append('content',content);formData.append('status','draft');formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');formData.append('image_alt',document.getElementById('ui_image_alt')?document.getElementById('ui_image_alt').value.trim():'');formData.append('image_source',document.getElementById('ui_image_source')?document.getElementById('ui_image_source').value.trim():'');formData.append('secondary_keywords',secondaryKws.join(','));var url=_articleId?('/api/articles/'+_articleId+'/'):'/api/articles/',method=_articleId?'PUT':'POST';var res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});if(res.ok){var payload=await res.json();if(payload&&payload.id)_setArticleId(payload.id);_asLastSavedHash=currentHash;var now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});_asShowBadge('saved','✓ Draft saved',now);setTimeout(_asHideBadge,3000);}else{_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}}catch(e){_asShowBadge('','⚠ Saved locally','');setTimeout(_asHideBadge,3000);}
 _asIsSaving=false;}
 function _asStartCountdown(){clearInterval(_asCountdown);_asSecsLeft=_asIntervalSec;_asCountdown=setInterval(function(){if(_asPublished)return;_asSecsLeft--;if(_asSecsLeft<=0){_asSecsLeft=_asIntervalSec;_asAutoSave();}},1000);}
 _asStartCountdown();
-['ui_title','ui_subtitle','ui_meta_desc','ui_focus_kw','ui_slug'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('input',function(){_asSecsLeft=_asIntervalSec;});});
+['ui_title','ui_subtitle','ui_meta_desc','ui_focus_kw','ui_slug','ui_image_alt','ui_image_source'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('input',function(){_asSecsLeft=_asIntervalSec;});});
 if(document.getElementById('ui_content'))document.getElementById('ui_content').addEventListener('input',function(){_asSecsLeft=_asIntervalSec;});
 window.addEventListener('beforeunload',function(){if(_asPublished)return;var hash=_asGetHash();if(hash!==_asLastSavedHash&&hash!=='0')_asSaveToLocalStorage();});
  
@@ -1144,7 +1152,29 @@ function nbSetFontFamily(family){if(!family)return;nbSaveHistory();nbEditor.focu
 function nbSetLineHeight(value){if(!value)return;nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const BLOCK_TAGS=['p','div','h1','h2','h3','h4','h5','h6','li','blockquote','td','th'];const allNodes=nbEditor.querySelectorAll(BLOCK_TAGS.join(','));let applied=false;allNodes.forEach(function(node){const nodeRange=document.createRange();nodeRange.selectNodeContents(node);if(range.compareBoundaryPoints(Range.END_TO_START,nodeRange)<0&&range.compareBoundaryPoints(Range.START_TO_END,nodeRange)>0){node.style.lineHeight=value;applied=true;}});if(!applied){let node=range.commonAncestorContainer;while(node&&node!==nbEditor){if(node.nodeType===1){const tag=node.tagName.toLowerCase();if(BLOCK_TAGS.includes(tag)){node.style.lineHeight=value;break;}}node=node.parentNode;}if(!node||node===nbEditor){const wrapper=document.createElement('div');wrapper.style.lineHeight=value;try{const extracted=range.extractContents();wrapper.appendChild(extracted);range.insertNode(wrapper);range.setStartAfter(wrapper);range.collapse(true);sel.removeAllRanges();sel.addRange(range);}catch(e){}}}setTimeout(nbSaveHistory,50);}
 nbEditor.addEventListener('paste',function(e){e.preventDefault();var html='';if(e.clipboardData&&e.clipboardData.getData){html=e.clipboardData.getData('text/html');if(!html){document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));return;}}html=html.replace(/font-family\s*:[^;}"']*(;|(?=\s*[}"']))/gi,'');html=html.replace(/(<font[^>]*)\sface\s*=\s*["'][^"']*["']/gi,'$1');html=html.replace(/mso-[^;]+;/gi,'');html=html.replace(/(margin(?:-top|-bottom)?\s*:\s*[\d.]+[^;]*;)/gi,'');html=html.replace(/line-height\s*:\s*[\d.]+[^;]*;/gi,'');html=html.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>');document.execCommand('insertHTML',false,html);nbSaveHistory();});
 function nbApplyTextColor(color){document.getElementById('nb_textColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();document.execCommand('foreColor',false,color);setTimeout(nbSaveHistory,50);}
-function nbApplyBgColor(color){document.getElementById('nb_bgColorSwatch').style.background=color;nbSaveHistory();nbEditor.focus();try{document.execCommand('hiliteColor',false,color);}catch(e){document.execCommand('backColor',false,color);}setTimeout(nbSaveHistory,50);}
+let _nbColorSavedRange=null;
+function nbStoreColorSelection(){var sel=window.getSelection();if(sel&&sel.rangeCount>0)_nbColorSavedRange=sel.getRangeAt(0).cloneRange();}
+function nbRestoreColorSelection(){if(!_nbColorSavedRange)return false;var sel=window.getSelection();sel.removeAllRanges();sel.addRange(_nbColorSavedRange);return true;}
+function nbSyncBgSwatches(color){
+  var mainSwatch=document.getElementById('nb_bgColorSwatch');
+  var mainPicker=document.getElementById('nb_bgColorPicker');
+  var inlineSwatch=document.getElementById('nb_it_bg_swatch');
+  var inlinePicker=document.getElementById('nb_it_bg_color');
+  if(mainSwatch)mainSwatch.style.background=color;
+  if(mainPicker)mainPicker.value=color;
+  if(inlineSwatch)inlineSwatch.style.background=color;
+  if(inlinePicker)inlinePicker.value=color;
+}
+function nbApplyBgColor(color){
+  nbSyncBgSwatches(color);
+  nbSaveHistory();
+  nbEditor.focus();
+  if(typeof nbItRestoreSelection==='function')nbItRestoreSelection();
+  if(!window.getSelection()||window.getSelection().isCollapsed)nbRestoreColorSelection();
+  try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+  try{document.execCommand('hiliteColor',false,color);}catch(e){document.execCommand('backColor',false,color);}
+  setTimeout(function(){nbStoreColorSelection();nbSaveHistory();},50);
+}
 function nbInsertTag(tag){nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const el=document.createElement(tag);el.appendChild(range.extractContents());if(!el.textContent.trim())el.textContent=tag==='h2'?'Heading 2':'Heading 3';range.insertNode(el);range.setStartAfter(el);range.collapse(true);sel.removeAllRanges();sel.addRange(range);setTimeout(nbSaveHistory,50);}
 function nbInsertBlockquote(){nbSaveHistory();nbEditor.focus();const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const bq=document.createElement('blockquote');bq.appendChild(range.extractContents());if(!bq.textContent.trim())bq.textContent='Quote here...';range.insertNode(bq);const inner=document.createRange();inner.selectNodeContents(bq);inner.collapse(false);sel.removeAllRanges();sel.addRange(inner);setTimeout(nbSaveHistory,50);}
 function nbInsertHR(){nbSaveHistory();nbEditor.focus();document.execCommand('insertHorizontalRule',false,null);setTimeout(nbSaveHistory,50);}
@@ -1339,7 +1369,7 @@ async function submitArticle(forceStatus){
   const deadline=document.getElementById('ui_deadline').value;if(deadline)formData.append('deadline',deadline);
   const assignedTo=document.getElementById('ui_assigned').value;if(assignedTo)formData.append('assigned_to',assignedTo);
   formData.append('slug',document.getElementById('ui_slug').value);formData.append('canonical_url',document.getElementById('ui_canonical').value);formData.append('meta_description',document.getElementById('ui_meta_desc').value);formData.append('focus_keyword',document.getElementById('ui_focus_kw').value);formData.append('secondary_keywords',document.getElementById('ui_secondary_keywords')?document.getElementById('ui_secondary_keywords').value:'');formData.append('noindex',document.getElementById('ui_noindex').checked?'true':'false');formData.append('nofollow',document.getElementById('ui_nofollow').checked?'true':'false');formData.append('in_sitemap',document.getElementById('ui_in_sitemap').checked?'true':'false');
-  const schedEl=document.getElementById('ui_scheduled_at');if(schedEl&&schedEl.value)formData.append('scheduled_at',schedEl.value);
+  const schedEl=document.getElementById('ui_scheduled_at');if(schedEl&&schedEl.value)formData.append('scheduled_at',new Date(schedEl.value).toISOString());
   const fileInput=document.getElementById('ui_image_file');if(fileInput&&fileInput.files&&fileInput.files.length>0)formData.append('image',fileInput.files[0]);else if(safeImageUrl)formData.append('image_url',safeImageUrl);
   formData.append('image_alt',document.getElementById('ui_image_alt').value.trim());formData.append('image_source',document.getElementById('ui_image_source').value.trim());
   formData.append('editor_name',document.getElementById('ed_name').value);formData.append('editor_position',document.getElementById('ed_position').value);formData.append('editor_bio',document.getElementById('ed_bio').value);formData.append('editor_photo',document.getElementById('ed_photo').value);formData.append('editor_twitter',document.getElementById('ed_twitter').value);formData.append('editor_linkedin',document.getElementById('ed_linkedin').value);formData.append('editor_instagram',document.getElementById('ed_instagram').value);formData.append('editor_facebook',document.getElementById('ed_facebook').value);formData.append('editor_youtube',document.getElementById('ed_youtube').value);formData.append('editor_reddit',document.getElementById('ed_reddit').value);formData.append('editor_articles',document.getElementById('ed_articles').value||'0');
@@ -1347,12 +1377,11 @@ async function submitArticle(forceStatus){
   categoryVal.split(',').filter(Boolean).forEach(id=>{formData.append('categories',id.trim());});
   formData.append('subcategories',subcategoriesJson);
   const tagsVal=document.getElementById('ui_tags').value;if(tagsVal)formData.append('tags',tagsVal);
-  const articleId='{{ original.pk|default:"" }}';
-  const url=articleId?`/api/articles/${articleId}/`:'/api/articles/';
-  const method=articleId?'PUT':'POST';
+  const url=_articleId?`/api/articles/${_articleId}/`:'/api/articles/';
+  const method=_articleId?'PUT':'POST';
   try{
     const res=await fetch(url,{method,headers:{'X-CSRFToken':getCsrf()},body:formData});
-    if(res.ok){if(effectiveStatus!=='draft'){_asPublished=true;_asClearLocalDraft();}window.location.href='/admin/newsapp/article/';}
+    if(res.ok){const payload=await res.json();if(payload&&payload.id)_setArticleId(payload.id);if(effectiveStatus!=='draft'){_asPublished=true;_asClearLocalDraft();}window.location.href='/admin/newsapp/article/';}
     else{const err=await res.json();alert('Error: '+JSON.stringify(err));}
   }catch(e){alert('Server error. Please try again.');}
 }

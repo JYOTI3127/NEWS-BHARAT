@@ -1,49 +1,51 @@
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, m2m_changed
 from django.contrib.auth.models import User
 from django.dispatch import receiver
-from .models import UserProfile, generate_password
-from .models import generate_user_id
+from .models import UserProfile, generate_password, generate_user_id
 from newsapp.models import *
+from django.db import transaction
+import re
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and not getattr(instance, '_disable_signals', False):
-        password = generate_password()
-        instance.set_password(password)
-        instance.is_staff = True
-        instance.save(update_fields=['password', 'is_staff'])
-        UserProfile.objects.create(
+
+        if not instance.is_staff:
+            instance.is_staff = True
+            instance.save(update_fields=['is_staff'])
+
+        UserProfile.objects.get_or_create(
             user=instance,
-            plain_password=password,
+            defaults={'plain_password': ''},
         )
 
-# ───────── Staff ID Generation After Roles ─────────
-from django.db import transaction
-from django.db.models import Max
-import re
-from django.db.models.signals import post_save, m2m_changed
+
+# ══════════════════════════════════════════════════════════════
+#  STAFF ID GENERATION — ROLES ASSIGN HONE KE BAAD
+# ══════════════════════════════════════════════════════════════
 
 @receiver(m2m_changed, sender=UserProfile.roles.through)
 def generate_staff_id_after_roles(sender, instance, action, **kwargs):
     if action == "post_add" and (not instance.staff_id or instance.staff_id.startswith("N4B-GEN")):
         prefix_map = {
-            "reporter": "REP",
-            "journalist": "REP",
-            "editor": "EDT",
-            "managing editor": "EDT",
-            "section editor": "EDT",
-            "video editor": "VID",
-            "social media": "SOC",
-            "fact checker": "FCK",
-            "legal reviewer": "LGL",
-            "contributor": "CNT",
-            "advertiser": "ADV",
-            "super admin": "SAD",
+            "reporter":         "REP",
+            "journalist":       "REP",
+            "editor":           "EDT",
+            "managing editor":  "EDT",
+            "section editor":   "EDT",
+            "video editor":     "VID",
+            "social media":     "SOC",
+            "fact checker":     "FCK",
+            "legal reviewer":   "LGL",
+            "contributor":      "CNT",
+            "advertiser":       "ADV",
+            "super admin":      "SAD",
         }
         first_role = instance.roles.first()
         role_prefix = "GEN"
         if first_role:
             role_prefix = prefix_map.get(first_role.name.strip().lower(), "GEN")
+
         with transaction.atomic():
             profiles = (
                 UserProfile.objects
@@ -55,12 +57,15 @@ def generate_staff_id_after_roles(sender, instance, action, **kwargs):
                 m = re.search(rf"N4B-{role_prefix}-(\d+)", p.staff_id or "")
                 if m:
                     max_num = max(max_num, int(m.group(1)))
+
             next_num = str(max_num + 1).zfill(3)
             instance.staff_id = f"N4B-{role_prefix}-{next_num}"
             instance.save(update_fields=["staff_id"])
 
-from .models import Article
-from .models import Notification
+
+# ══════════════════════════════════════════════════════════════
+#  ARTICLE SIGNALS
+# ══════════════════════════════════════════════════════════════
 
 @receiver(pre_save, sender=Article)
 def store_old_assigned(sender, instance, **kwargs):
@@ -71,6 +76,7 @@ def store_old_assigned(sender, instance, **kwargs):
             instance._old_assigned_to = None
     else:
         instance._old_assigned_to = None
+
 
 @receiver(post_save, sender=Article)
 def article_assigned(sender, instance, created, **kwargs):
@@ -87,6 +93,7 @@ def article_assigned(sender, instance, created, **kwargs):
             action_url=f"/admin/newsapp/article/{instance.id}/change/"
         )
 
+
 @receiver(post_save, sender=Article)
 def article_status_notification(sender, instance, **kwargs):
     if instance.status == "published":
@@ -98,33 +105,50 @@ def article_status_notification(sender, instance, **kwargs):
             icon=""
         )
 
+
+# ══════════════════════════════════════════════════════════════
+#  ROLE & CATEGORY CHANGE NOTIFICATIONS
+# ══════════════════════════════════════════════════════════════
+
 @receiver(m2m_changed, sender=UserProfile.roles.through)
 def role_change_notification(sender, instance, action, pk_set, **kwargs):
     if action in ["post_add", "post_remove"]:
         for role_id in pk_set:
-            role = Role.objects.get(pk=role_id)
-            Notification.objects.create(
-                user=instance.user,
-                notif_type="role",
-                title="Role Updated",
-                message=f"Your role has been updated: {role.name}",
-                icon="",
-                action_url=f"/admin/newsapp/role/{instance.id}/change/"
-            )
+            try:
+                role = Role.objects.get(pk=role_id)
+                Notification.objects.create(
+                    user=instance.user,
+                    notif_type="role",
+                    title="Role Updated",
+                    message=f"Your role has been updated: {role.name}",
+                    icon="",
+                    action_url=f"/admin/newsapp/role/{instance.id}/change/"
+                )
+            except Exception:
+                pass
+
 
 @receiver(m2m_changed, sender=UserProfile.assigned_categories.through)
 def category_assignment_notification(sender, instance, action, pk_set, **kwargs):
     if action == "post_add":
         for cat_id in pk_set:
-            category = Category.objects.get(pk=cat_id)
-            Notification.objects.create(
-                user=instance.user,
-                notif_type="category",
-                title="New Category Assigned",
-                message=f"You have been assigned to category '{category.name}'.",
-                icon="",
-                action_url=f"/admin/newsapp/category/{instance.id}/change/"
-            )
+            try:
+                category = Category.objects.get(pk=cat_id)
+                Notification.objects.create(
+                    user=instance.user,
+                    notif_type="category",
+                    title="New Category Assigned",
+                    message=f"You have been assigned to category '{category.name}'.",
+                    icon="",
+                    action_url=f"/admin/newsapp/category/{instance.id}/change/"
+                )
+            except Exception:
+                pass
+
+
+# ══════════════════════════════════════════════════════════════
+#  WELCOME NOTIFICATION
+# ══════════════════════════════════════════════════════════════
 
 @receiver(post_save, sender=User)
 def new_user_notification(sender, instance, created, **kwargs):
@@ -140,3 +164,14 @@ def new_user_notification(sender, instance, created, **kwargs):
             )
         except Exception:
             pass
+
+import requests
+
+def ping_google_sitemap():
+    sitemap_url = "https://news4bharat.com/sitemap.xml"
+    google_ping = f"https://www.google.com/ping?sitemap={sitemap_url}"
+
+    try:
+        requests.get(google_ping)
+    except Exception as e:
+        print("Ping failed:", e)

@@ -418,5 +418,117 @@ function closeQuickSearch(){document.getElementById('quickSearchInput').style.di
 function runQuickSearch(q){var results=document.getElementById('quickSearchResults');if(!q.trim()){results.style.display='none';return;}var items=buildSearchItems();var matches=items.filter(function(item){return item.label.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!matches.length){results.innerHTML='<div class="qs-empty">No results found</div>';results.style.display='block';return;}results.innerHTML=matches.map(function(item){var clickAttr=item.onclick?'onclick="'+item.onclick+'; closeQuickSearch(); return false;"':'';return'<a href="'+item.url+'" class="qs-item" '+clickAttr+'><span class="qs-label">'+item.label+'</span></a>';}).join('');results.style.display='block';}
 document.addEventListener('click',function(e){var wrap=document.querySelector('.quick-search-wrap');var results=document.getElementById('quickSearchResults');if(wrap&&!wrap.contains(e.target)&&results&&!results.contains(e.target)){closeQuickSearch();}});
 </script>
+
+<script>
+(function(){
+  var searchInput = document.getElementById('adminSearch');
+  if(!searchInput) return;
+
+  var dropdown = document.createElement('div');
+  dropdown.id = 'topbarSearchDropdown';
+  dropdown.style.cssText = 
+    'position:absolute;top:calc(100% + 8px);left:0;right:0;' +
+    'background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.15);' +
+    'border:1px solid #e2e8f0;z-index:99999;max-height:420px;overflow-y:auto;' +
+    'display:none;min-width:320px;';
+  searchInput.parentElement.style.position = 'relative';
+  searchInput.parentElement.appendChild(dropdown);
+
+  var _timer = null;
+
+  searchInput.addEventListener('input', function(){
+    clearTimeout(_timer);
+    var q = this.value.trim();
+    if(!q){ dropdown.style.display='none'; return; }
+    _timer = setTimeout(function(){ doSearch(q); }, 300);
+  });
+
+  searchInput.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ 
+      dropdown.style.display='none'; 
+      searchInput.value=''; 
+    }
+  });
+
+  document.addEventListener('click', function(e){
+    if(!searchInput.parentElement.contains(e.target)){
+      dropdown.style.display='none';
+    }
+  });
+
+  async function doSearch(q){
+    dropdown.innerHTML = 
+      '<div style="padding:14px 16px;font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:8px;">' +
+      '<div style="width:14px;height:14px;border:2px solid #2563eb;border-top-color:transparent;border-radius:50%;animation:topbarSpin 0.6s linear infinite;"></div>' +
+      'Searching…</div>';
+    dropdown.style.display = 'block';
+
+    try{
+      var res = await fetch(
+          '/api/search/articles/?q=' + encodeURIComponent(q) + 
+          '&limit=8&status=all',  // ← add karo
+          { credentials: 'same-origin' }
+      );
+      var data = await res.json();
+      var articles = data.articles || data.results || data.items || [];
+
+      if(!articles.length){
+        dropdown.innerHTML = 
+          '<div style="padding:20px 16px;text-align:center;font-size:12px;color:#94a3b8;">' +
+          '🔍 No results found for "<strong>' + escH(q) + '</strong>"</div>';
+        return;
+      }
+
+      var html = '<div style="padding:8px 12px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Articles</div>';
+      
+      articles.forEach(function(a){
+        var status = a.status || 'draft';
+        var statusColors = {
+          published: '#10b981', draft: '#94a3b8', review: '#f59e0b',
+          scheduled: '#7c3aed', archived: '#64748b', rejected: '#ef4444'
+        };
+        var color = statusColors[status] || '#94a3b8';
+        var editUrl = '/admin/newsapp/article/' + a.id + '/change/';
+        
+        html += 
+          '<a href="' + editUrl + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;border-bottom:1px solid #f1f5f9;transition:background 0.1s;" ' +
+          'onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">' +
+          '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escH(a.title) + '</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + 
+          (a.published_at || a.created_at || '') + '</div>' +
+          '</div>' +
+          '<span style="font-size:10px;font-weight:600;color:' + color + ';background:' + color + '22;padding:2px 8px;border-radius:10px;white-space:nowrap;">' + status + '</span>' +
+          '</a>';
+      });
+
+      // View all link
+      html += 
+        '<a href="/admin/newsapp/article/?q=' + encodeURIComponent(q) + '" ' +
+        'style="display:block;padding:10px 14px;text-align:center;font-size:12px;font-weight:600;color:#2563eb;text-decoration:none;border-top:1px solid #e2e8f0;" ' +
+        'onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'\'">' +
+        'View all results for "' + escH(q) + '" →</a>';
+
+      dropdown.innerHTML = html;
+
+    }catch(err){
+      dropdown.innerHTML = 
+        '<div style="padding:14px 16px;font-size:12px;color:#ef4444;">⚠ Search failed. Try again.</div>';
+    }
+  }
+
+  function escH(s){ 
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+  }
+
+  // Spinner animation
+  if(!document.getElementById('topbarSearchStyle')){
+    var style = document.createElement('style');
+    style.id = 'topbarSearchStyle';
+    style.textContent = '@keyframes topbarSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+})();
+</script>
 </body>
 </html>

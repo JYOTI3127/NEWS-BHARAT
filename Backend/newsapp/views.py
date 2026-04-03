@@ -878,13 +878,13 @@ def _search_elasticsearch(query, status, limit, request=None):
 def _search_django_orm(query, status, limit, request=None):
     qs = Article.objects.filter(
         Q(title__icontains=query) |
-        Q(slug__icontains=query) |
-        Q(content__icontains=query) |
-        Q(author__username__icontains=query) |
-        Q(categories__name__icontains=query)
+        Q(slug__icontains=query)
+        # content, author, categories hatao
     ).select_related('author').prefetch_related('categories').distinct()
+    
     if status != 'all':
         qs = qs.filter(status=status)
+    
     return [_format_article(a, request) for a in qs.order_by('-published_at', '-created_at')[:limit]]
 
 

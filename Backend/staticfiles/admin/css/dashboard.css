@@ -15718,3 +15718,9 @@ tr.art-row td:has(.art-cat) {
   .ml-lb-arrow.prev { left: 8px; }
   .ml-lb-arrow.next { right: 8px; }
 }
+
+.article-twitter-embed {
+  margin: 16px 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

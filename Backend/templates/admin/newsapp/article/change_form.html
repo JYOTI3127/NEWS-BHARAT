@@ -358,6 +358,9 @@ label.image-drop {
   <button onclick="nbInsertInlineImage()" title="Insert Image">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
   </button>
+  <button onclick="nbInsertTwitterEmbed()" title="Insert X/Twitter Embed" style="font-size:13px;">
+  X
+  </button>
   <div class="nb-it-sep"></div>
   <select class="nb-it-select" title="Line Spacing" style="width:58px;"
     onmousedown="nbItSaveSelection()"
@@ -472,6 +475,9 @@ label.image-drop {
         </button>
         <button onclick="nbInsertInlineImage()" title="Insert image into content" style="font-size:13px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;pointer-events:none;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button onclick="nbInsertTwitterEmbed()" title="Insert X/Twitter Embed" style="font-size:13px;">
+          X
         </button>
         <div class="sep"></div>
         <select onchange="nbSetLineHeight(this.value)" title="Line Spacing" style="width:72px;">
@@ -1054,7 +1060,7 @@ label.image-drop {
     'submitArticle','selectEditor','filterEditors','updateBioCount','updateSubtitleCount',
     'updateEditorPreview','switchPreviewTab','getCsrf','getInitials','nbSaveHistory',
     'nbItSaveSelection','nbItRestoreSelection','nbInlineInsertLink',
-    'handleSecondaryAction'
+    'handleSecondaryAction','nbInsertTwitterEmbed'
   ].forEach(function (fn) {
     if (typeof window[fn] !== 'function') window[fn] = noop;
   });
@@ -2153,6 +2159,108 @@ function cleanContentBeforeSubmit(html){
   return html.trim();
 }
 
+function insertNodeAtCursor(node) {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) {
+    var editor = document.getElementById('ui_content');
+    if (editor) editor.appendChild(node);
+    return;
+  }
+
+  var range = sel.getRangeAt(0);
+  range.deleteContents();
+  range.insertNode(node);
+
+  range.setStartAfter(node);
+  range.setEndAfter(node);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function nbInsertTwitterEmbed() {
+  var input = prompt(
+    "Paste Twitter/X tweet URL:",
+    "https://twitter.com/username/status/123"
+  );
+
+  if (!input) return;
+  input = input.trim();
+
+  var urlMatch = input.match(
+    /https?:\/\/(www\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]+\/status\/(\d+)/i
+  );
+
+  if (!urlMatch) {
+    alert('Valid Twitter/X tweet URL paste karo.');
+    return;
+  }
+
+  var tweetUrl = urlMatch[0];
+  var tweetId  = urlMatch[3];
+
+  var finalHtml =
+    '<div class="article-twitter-embed"' +
+         ' data-tweet-id="' + tweetId + '"' +
+         ' data-tweet-url="' + tweetUrl + '"' +
+         ' style="border:1px dashed #2563eb;border-radius:8px;' +
+                'padding:10px 14px;margin:12px 0;background:#eff6ff;' +
+                'color:#1e40af;font-size:12px;font-weight:600;">' +
+      'Tweet: ' + tweetUrl +
+    '</div>' +
+    '<p><br></p>';
+
+  var editor = document.getElementById('ui_content');
+  if (!editor) return;
+
+  editor.focus();
+  document.execCommand('insertHTML', false, finalHtml);
+
+  if (typeof nbSaveHistory === 'function') nbSaveHistory();
+}
+
+function loadTwitterWidgets(target) {
+  var scope = target || document.getElementById('ui_content') || document.body;
+
+  function runLoad() {
+    if (window.twttr && window.twttr.widgets) {
+      try {
+        window.twttr.widgets.load(scope);
+      } catch (e) {}
+    }
+  }
+
+  if (window.twttr && window.twttr.widgets) {
+    runLoad();
+    return;
+  }
+
+  if (!document.getElementById('twitter-wjs')) {
+    var s = document.createElement('script');
+    s.id = 'twitter-wjs';
+    s.src = 'https://platform.twitter.com/widgets.js';
+    s.async = true;
+    s.charset = 'utf-8';
+    s.onload = function () {
+      runLoad();
+      setTimeout(runLoad, 800);
+      setTimeout(runLoad, 1800);
+    };
+    document.body.appendChild(s);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadTwitterWidgets(document.getElementById('ui_content'));
+
+  setTimeout(function () {
+    loadTwitterWidgets(document.getElementById('ui_content'));
+  }, 1000);
+
+  setTimeout(function () {
+    loadTwitterWidgets(document.getElementById('ui_content'));
+  }, 2200);
+});
+
 /* ══════════════════════════════════════════════
    FEATURED IMAGE
 ══════════════════════════════════════════════ */
@@ -3226,4 +3334,7 @@ window.nbInlineInsertLink=window.nbInlineInsertLink;
   if(typeof renderComments==='function')renderComments();
 })();
 </script>
+
+<!-- Twitter Widget for Admin Preview -->
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 {% endblock %}

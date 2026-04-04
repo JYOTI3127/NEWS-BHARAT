@@ -51,6 +51,31 @@ label.image-drop {
   margin-bottom: 0.5em !important;
   line-height: inherit;
 }
+.nb-content-area ul,
+.nb-content-area ol {
+  margin: 0.65em 0 0.9em 1.4em !important;
+  padding-left: 1.15em !important;
+  list-style-position: outside !important;
+}
+.nb-content-area ul {
+  list-style-type: disc !important;
+}
+.nb-content-area ul ul {
+  list-style-type: circle !important;
+}
+.nb-content-area ul ul ul {
+  list-style-type: square !important;
+}
+.nb-content-area ol {
+  list-style-type: decimal !important;
+}
+.nb-content-area li {
+  margin: 0.18em 0 !important;
+  padding-left: 0.2em !important;
+}
+.nb-content-area li > p {
+  margin: 0 !important;
+}
 .nb-content-area br + br { display: none; }
 
 .nb-inline-img {
@@ -1872,7 +1897,34 @@ function updateSelectAllBtn(){
    EDITOR CORE
 ══════════════════════════════════════════════ */
 const nbEditor=document.getElementById('ui_content');
-const nbHistory=[];let nbHistIdx=-1,nbIsUndoRedo=false;
+const nbHistory=[];let nbHistIdx=-1,nbIsUndoRedo=false,nbSavedRange=null;
+
+function nbSaveSelection(){
+  if(!nbEditor)return;
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);
+  const ancestor=range.commonAncestorContainer;
+  if(nbEditor.contains(ancestor)||ancestor===nbEditor){
+    nbSavedRange=range.cloneRange();
+  }
+}
+
+function nbRestoreSelection(){
+  if(!nbEditor||!nbSavedRange)return false;
+  const s=window.getSelection();
+  nbEditor.focus();
+  s.removeAllRanges();
+  s.addRange(nbSavedRange);
+  return true;
+}
+
+function nbFocusEditor(){
+  if(!nbEditor)return false;
+  if(nbRestoreSelection())return true;
+  nbEditor.focus();
+  return true;
+}
 
 function nbSaveHistory(){
   if(!nbEditor||nbIsUndoRedo)return;
@@ -1917,7 +1969,23 @@ if(nbEditor){
     clearTimeout(nbHistTimer);
     nbHistTimer=setTimeout(nbSaveHistory,400);
   });
+  ['mouseup','keyup','focus','blur'].forEach(function(evt){
+    nbEditor.addEventListener(evt,function(){
+      setTimeout(nbSaveSelection,0);
+    });
+  });
   nbSaveHistory();
+
+  ['#nb_toolbar button','#nb_inline_toolbar button','#nb_toolbar select','#nb_inline_toolbar select'].forEach(function(selector){
+    document.querySelectorAll(selector).forEach(function(el){
+      if(el.tagName==='BUTTON')el.type='button';
+      el.addEventListener('mousedown',function(e){
+        if(e.target.tagName==='INPUT'||e.target.tagName==='OPTION')return;
+        nbSaveSelection();
+        e.preventDefault();
+      });
+    });
+  });
 
   nbEditor.addEventListener('keydown',function(e){
     if(e.ctrlKey||e.metaKey){
@@ -1933,7 +2001,7 @@ if(nbEditor){
 function fmt(cmd,val){
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   if(cmd==='insertUnorderedList'){
     if(document.queryCommandState('insertOrderedList')){
       document.execCommand('insertOrderedList',false,null);
@@ -1945,21 +2013,24 @@ function fmt(cmd,val){
     }
   }
   document.execCommand(cmd,false,val!==undefined?val:null);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 
 function nbSetFontSize(size){
   if(!size||!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   document.execCommand('fontSize',false,size);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbSetFontFamily(family){
   if(!family||!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   document.execCommand('fontName',false,family);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
   var sel=document.getElementById('nb_fontFamilySelect');
   if(sel)setTimeout(function(){sel.value='';},80);
@@ -1967,7 +2038,7 @@ function nbSetFontFamily(family){
 function nbSetLineHeight(value){
   if(!value||!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
@@ -2010,6 +2081,7 @@ function nbSetLineHeight(value){
       }catch(e){}
     }
   }
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 
@@ -2040,8 +2112,9 @@ function nbApplyTextColor(color){
   if(sw)sw.style.background=color;
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   document.execCommand('foreColor',false,color);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbApplyBgColor(color){
@@ -2049,9 +2122,10 @@ function nbApplyBgColor(color){
   if(sw)sw.style.background=color;
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   try{document.execCommand('hiliteColor',false,color);}
   catch(e){document.execCommand('backColor',false,color);}
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbStoreColorSelection(){
@@ -2060,7 +2134,7 @@ function nbStoreColorSelection(){
 function nbInsertTag(tag){
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
@@ -2072,12 +2146,13 @@ function nbInsertTag(tag){
   range.collapse(true);
   sel.removeAllRanges();
   sel.addRange(range);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbInsertBlockquote(){
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
@@ -2090,18 +2165,20 @@ function nbInsertBlockquote(){
   inner.collapse(false);
   sel.removeAllRanges();
   sel.addRange(inner);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbInsertHR(){
   if(!nbEditor)return;
   nbSaveHistory();
-  nbEditor.focus();
+  nbFocusEditor();
   document.execCommand('insertHorizontalRule',false,null);
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbInsertLink(){
   if(!nbEditor)return;
-  nbEditor.focus();
+  nbFocusEditor();
   const sel=window.getSelection();
   const selectedText=sel&&sel.toString().trim();
   const url=prompt('Enter URL (e.g. https://example.com):');
@@ -2127,6 +2204,7 @@ function nbInsertLink(){
       nbEditor.appendChild(a);
     }
   }
+  nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
 function nbInsertInlineImage(){
@@ -2144,7 +2222,7 @@ function nbInsertInlineImage(){
     }
     var reader=new FileReader();
     reader.onload=function(ev){
-      nbEditor.focus();
+      nbFocusEditor();
       var sel=window.getSelection();
       var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;
       var img=document.createElement('img');
@@ -2162,6 +2240,7 @@ function nbInsertInlineImage(){
       }else{
         nbEditor.appendChild(img);
       }
+      nbSaveSelection();
       nbSaveHistory();
       document.body.removeChild(inp);
     };
@@ -2196,7 +2275,10 @@ function insertNodeAtCursor(node) {
   var sel = window.getSelection();
   if (!sel || !sel.rangeCount) {
     var editor = document.getElementById('ui_content');
-    if (editor) editor.appendChild(node);
+    if (editor) {
+      editor.appendChild(node);
+      nbSaveSelection();
+    }
     return;
   }
 
@@ -2208,6 +2290,7 @@ function insertNodeAtCursor(node) {
   range.setEndAfter(node);
   sel.removeAllRanges();
   sel.addRange(range);
+  nbSaveSelection();
 }
 
 function nbInsertTwitterEmbed() {

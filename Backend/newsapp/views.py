@@ -303,7 +303,7 @@ def _save_article_from_request(request, article=None):
     return article, None
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
@@ -314,15 +314,6 @@ def article_list(request):
             articles = articles.filter(categories__slug=category).distinct()
         serializer = ArticleSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
-
-    elif request.method == "POST":
-        if not request.user.is_authenticated:
-            return Response({"error": "Login required"}, status=401)
-        article, error = _save_article_from_request(request)
-        if error:
-            return Response(error, status=400)
-        serializer = ArticleSerializer(article, context={'request': request})
-        return Response(serializer.data, status=201)
 
     elif request.method == "POST":
         if not request.user.is_authenticated:
@@ -389,7 +380,7 @@ def update_article_status(request, article):
     article.save()
 
 
-@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def article_detail(request, pk):
     try:
         article = Article.objects.get(pk=pk)
@@ -410,7 +401,7 @@ def article_detail(request, pk):
         except Exception as e:
             return Response({"error": f"Failed to publish: {str(e)}"}, status=400)
 
-    elif request.method == "PUT":
+    elif request.method in ["PUT", "PATCH"]:
         if not request.user.is_authenticated:
             return Response({"error": "Login required"}, status=401)
         updated_article, error = _save_article_from_request(request, article=article)
@@ -420,6 +411,8 @@ def article_detail(request, pk):
         return Response(serializer.data)
 
     elif request.method == "DELETE":
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return Response({"error": "Login required"}, status=401)
         article.delete()
         return Response(status=204)
 

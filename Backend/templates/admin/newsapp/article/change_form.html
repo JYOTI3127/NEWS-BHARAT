@@ -1387,9 +1387,14 @@ function handleSecKwKeydown(e){
 /* ══════════════════════════════════════════════
    AUTO-SAVE
 ══════════════════════════════════════════════ */
+var _asArticleId='{{ original.pk|default:""|escapejs }}';
 var _asLastSavedHash='',_asCountdown=null,_asIntervalSec=30,_asSecsLeft=30,_asIsSaving=false;
 var _asPublished=false;
 var _asStopStatuses=['published','scheduled','archived'];
+
+function _asGetStorageKey(){
+  return 'nb_autosave_'+(_asArticleId||'new');
+}
 
 function _asGetHash(){
   return ((
@@ -1415,13 +1420,14 @@ function _asHideBadge(){
 }
 function _asClearLocalDraft(){
   try{
-    var key='nb_autosave_{{ original.pk|default:"new" }}';
+    var key=_asGetStorageKey();
+    localStorage.removeItem('nb_autosave_new');
     localStorage.removeItem(key);
   }catch(e){}
 }
 function _asSaveToLocalStorage(){
   try{
-    var key='nb_autosave_{{ original.pk|default:"new" }}',data={
+    var key=_asGetStorageKey(),data={
       title:document.getElementById('ui_title')?document.getElementById('ui_title').value:'',
       subtitle:document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'',
       content:document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'',
@@ -1461,9 +1467,8 @@ async function _asAutoSave(){
     formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
     formData.append('secondary_keywords',secondaryKws.join(','));
 
-    var articleId = "{{ original.pk|default:''|escapejs }}";
-    var url = articleId ? ('/api/articles/' + articleId + '/') : '/api/articles/';
-    var method = articleId ? 'PUT' : 'POST';
+    var url = _asArticleId ? ('/api/articles/' + _asArticleId + '/') : '/api/articles/';
+    var method = _asArticleId ? 'PUT' : 'POST';
 
     var res = await fetch(url, {
       method: method,
@@ -1471,7 +1476,12 @@ async function _asAutoSave(){
       body: formData
     });
     if(res.ok){
+      var savedData = await res.json();
+      if(!_asArticleId && savedData && savedData.id){
+        _asArticleId = String(savedData.id);
+      }
       _asLastSavedHash=currentHash;
+      _asSaveToLocalStorage();
       var now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
       _asShowBadge('saved','✓ Draft saved',now);
       setTimeout(_asHideBadge,3000);
@@ -1919,13 +1929,25 @@ if(nbEditor){
     }
   });
 }
+
 function fmt(cmd,val){
   if(!nbEditor)return;
   nbSaveHistory();
   nbEditor.focus();
+  if(cmd==='insertUnorderedList'){
+    if(document.queryCommandState('insertOrderedList')){
+      document.execCommand('insertOrderedList',false,null);
+    }
+  }
+  if(cmd==='insertOrderedList'){
+    if(document.queryCommandState('insertUnorderedList')){
+      document.execCommand('insertUnorderedList',false,null);
+    }
+  }
   document.execCommand(cmd,false,val!==undefined?val:null);
   setTimeout(nbSaveHistory,50);
 }
+
 function nbSetFontSize(size){
   if(!size||!nbEditor)return;
   nbSaveHistory();
@@ -2149,8 +2171,19 @@ function nbInsertInlineImage(){
 }
 function insertTag(tag){ nbInsertTag(tag); }
 function cleanContentBeforeSubmit(html){
+  // Empty paragraphs hatao
   html=html.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi,'');
+  // Triple+ br hatao
   html=html.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>');
+  // Empty li tags hatao
+  html=html.replace(/<li[^>]*>\s*(<br\s*\/?>)?\s*<\/li>/gi,'');
+  // Nested lists fix karo
+  html=html.replace(/<ul[^>]*>\s*(<ol[^>]*>)([\s\S]*?)(<\/ol>)\s*<\/ul>/gi,'$1$2$3');
+  html=html.replace(/<ol[^>]*>\s*(<ul[^>]*>)([\s\S]*?)(<\/ul>)\s*<\/ol>/gi,'$1$2$3');
+  // Empty ul/ol hatao
+  html=html.replace(/<ul[^>]*>\s*<\/ul>/gi,'');
+  html=html.replace(/<ol[^>]*>\s*<\/ol>/gi,'');
+  // Margin cleanup
   html=html.replace(/(<p[^>]*?)style="([^"]*)"/gi,function(match,before,style){
     style=style.replace(/margin(?:-top|-bottom)?\s*:\s*[\d.]+[^;]*;?/gi,'');
     style=style.trim().replace(/;$/,'');
@@ -2853,13 +2886,15 @@ async function submitArticle(forceStatus){
   const tagsVal=document.getElementById('ui_tags')?document.getElementById('ui_tags').value:'';
   if(tagsVal)formData.append('tags',tagsVal);
 
-  const articleId='{{ original.pk|default:"" }}';
+  const articleId=_asArticleId||'{{ original.pk|default:"" }}';
   const url=articleId?('/api/articles/'+articleId+'/'):'/api/articles/';
   const method=articleId?'PUT':'POST';
 
   try{
     const res=await fetch(url,{method:method,headers:{'X-CSRFToken':getCsrf()},body:formData});
     if(res.ok){
+      const savedData=await res.json();
+      if(savedData&&savedData.id)_asArticleId=String(savedData.id);
       if(effectiveStatus!=='draft'){
         _asPublished=true;
         _asClearLocalDraft();

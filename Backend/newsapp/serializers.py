@@ -271,18 +271,18 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     image_url    = serializers.SerializerMethodField()
     category     = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
-    categories   = CategorySerializer(many=True, read_only=True)  
+    categories   = CategorySerializer(many=True, read_only=True)
 
     class Meta:
         model  = Article
         fields = [
             'id', 'title', 'slug', 'subtitle',
+            'content',                  
             'image_url', 'image_alt',
-            'category',
-            'categories',              
+            'category', 'categories',
             'published_at', 'created_at',
             'author_name', 'tags', 'is_paid',
-            'selected_subcategories', 
+            'selected_subcategories',
         ]
 
     def get_image_url(self, obj):

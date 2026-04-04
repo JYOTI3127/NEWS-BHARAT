@@ -18,7 +18,7 @@ import requests
 from django.conf import settings
 from django.core.paginator import Paginator
 from rest_framework import status
-from .serializers import CategorySerializer, ArticleSerializer, ArticleMinSerializer
+from .serializers import *
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -303,15 +303,43 @@ def _save_article_from_request(request, article=None):
     return article, None
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        articles = Article.objects.filter(status="published")
+        page     = int(request.GET.get('page', 1))
+        limit    = min(int(request.GET.get('limit', 20)), 50)
+        offset   = (page - 1) * limit
+
+        cache_key = f"articles:list:{category or 'all'}:{page}:{limit}"
+        cached    = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        articles = Article.objects.filter(
+            status="published"
+        ).select_related('author').prefetch_related('categories').order_by('-published_at')
+
         if category:
-            articles = articles.filter(categories__slug=category).distinct()
-        serializer = ArticleSerializer(articles, many=True, context={'request': request})
-        return Response(serializer.data)
+            articles = articles.filter(
+                categories__slug=category
+            ).distinct()
+
+        total = articles.count()
+        articles = articles[offset:offset+limit]
+
+        data = ArticleHomepageSerializer(
+            articles, many=True, context={'request': request}
+        ).data
+
+        result = {
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'results': data
+        }
+        cache.set(cache_key, data, 300)
+        return Response(data)
 
     elif request.method == "POST":
         if not request.user.is_authenticated:

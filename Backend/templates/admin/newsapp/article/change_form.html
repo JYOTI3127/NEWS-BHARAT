@@ -1976,13 +1976,26 @@ if(nbEditor){
   });
   nbSaveHistory();
 
-  ['#nb_toolbar button','#nb_inline_toolbar button','#nb_toolbar select','#nb_inline_toolbar select'].forEach(function(selector){
+  ['#nb_toolbar button','#nb_inline_toolbar button'].forEach(function(selector){
     document.querySelectorAll(selector).forEach(function(el){
       if(el.tagName==='BUTTON')el.type='button';
       el.addEventListener('mousedown',function(e){
         if(e.target.tagName==='INPUT'||e.target.tagName==='OPTION')return;
         nbSaveSelection();
         e.preventDefault();
+      });
+    });
+  });
+  ['#nb_toolbar select','#nb_inline_toolbar select'].forEach(function(selector){
+    document.querySelectorAll(selector).forEach(function(el){
+      el.addEventListener('mousedown',function(){
+        nbSaveSelection();
+      });
+      el.addEventListener('focus',function(){
+        nbSaveSelection();
+      });
+      el.addEventListener('change',function(){
+        nbSaveSelection();
       });
     });
   });

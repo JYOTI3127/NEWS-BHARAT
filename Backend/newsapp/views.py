@@ -307,39 +307,20 @@ def _save_article_from_request(request, article=None):
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        page     = int(request.GET.get('page', 1))
-        limit    = min(int(request.GET.get('limit', 20)), 50)
-        offset   = (page - 1) * limit
-
-        cache_key = f"articles:list:{category or 'all'}:{page}:{limit}"
-        cached    = cache.get(cache_key)
-        if cached:
-            return Response(cached)
-
-        articles = Article.objects.filter(
-            status="published"
-        ).select_related('author').prefetch_related('categories').order_by('-published_at')
-
+        articles = Article.objects.filter(status="published")
         if category:
-            articles = articles.filter(
-                categories__slug=category
-            ).distinct()
+            articles = articles.filter(categories__slug=category).distinct()
+        serializer = ArticleSerializer(articles, many=True, context={'request': request})
+        return Response(serializer.data)
 
-        total = articles.count()
-        articles = articles[offset:offset+limit]
-
-        data = ArticleHomepageSerializer(
-            articles, many=True, context={'request': request}
-        ).data
-
-        result = {
-            'total': total,
-            'page': page,
-            'limit': limit,
-            'results': data
-        }
-        cache.set(cache_key, data, 300)
-        return Response(data)
+    elif request.method == "POST":
+        if not request.user.is_authenticated:
+            return Response({"error": "Login required"}, status=401)
+        article, error = _save_article_from_request(request)
+        if error:
+            return Response(error, status=400)
+        serializer = ArticleSerializer(article, context={'request': request})
+        return Response(serializer.data, status=201)
 
     elif request.method == "POST":
         if not request.user.is_authenticated:

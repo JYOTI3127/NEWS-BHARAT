@@ -307,7 +307,9 @@ def _save_article_from_request(request, article=None):
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        articles = Article.objects.filter(status="published")
+        articles = Article.objects.filter(
+            status="published"
+        ).select_related('author').prefetch_related('categories')
         if category:
             articles = articles.filter(categories__slug=category).distinct()
         serializer = ArticleSerializer(articles, many=True, context={'request': request})

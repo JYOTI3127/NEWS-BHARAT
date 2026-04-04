@@ -162,7 +162,11 @@ STATICFILES_DIRS = [
 # MEDIA_URL = "/media/"
 # MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://www.news4bharat.com",
+    "https://news4bharat.com",
+]
+CORS_PREFLIGHT_MAX_AGE = 3600
 
 OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 METAL_API_KEY = os.environ.get("METAL_API_KEY", "")

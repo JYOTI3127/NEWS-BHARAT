@@ -40,13 +40,14 @@ def xml_resp(content: str) -> HttpResponse:
 def robots_txt():
     return """User-agent: *
 Allow: /
-Sitemap: https://www.news4bharat.com/sitemap-index.xml
+Sitemap: https://news4bharat.com/sitemap_index.xml
 """
 
 @require_GET
 def view_robots(request):
     host = request.get_host()
-
+    
+    # .cloud domain pe sab disallow karo
     if 'news4bharat.cloud' in host:
         content = "User-agent: *\nDisallow: /\n"
     else:

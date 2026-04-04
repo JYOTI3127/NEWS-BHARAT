@@ -244,7 +244,7 @@ if GCS_JSON:
 else:
     GS_CREDENTIALS = None
 
-SEO_SITE_URL = "https://www.news4bharat.com"
+SEO_SITE_URL = "https://news4bharat.com"
 SEO_SITE_NAME = "news4bharat"
 
 SEO_INDEXNOW_KEY = "abc123xyz"

@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/Fevicon (1).png" />
@@ -7,31 +9,137 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://news4bharat.cloud">
 
-  <!-- 🔥 Font -->
-  <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
-    onload="this.onload=null;this.rel='stylesheet'">
+  <!-- Fonts: load asynchronously so the Google Fonts stylesheet does not block first paint -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+    media="print"
+    onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
+  </noscript>
 
-  <!-- 🔥 LCP Image Preload -->
-  <link rel="preload" as="image" href="https://storage.googleapis.com/news4bharat-media-37/articles/39.jpg">
-
-  <!-- GA -->
-  <script defer src="https://www.googletagmanager.com/gtag/js?id=G-NR6G1PPS6N"></script>
+  <!-- GA: load after first paint/idle so analytics does not compete with LCP resources -->
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-NR6G1PPS6N');
+    window.gtag = function gtag(){ window.dataLayer.push(arguments); };
+
+    (function () {
+      var GA_ID = 'G-NR6G1PPS6N';
+      var loaded = false;
+      var listenersAttached = false;
+      var fallbackTimer = 0;
+      var interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+
+      function loadAnalytics() {
+        if (loaded) return;
+        loaded = true;
+        cleanupListeners();
+        window.clearTimeout(fallbackTimer);
+
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+        script.async = true;
+        document.head.appendChild(script);
+
+        window.gtag('js', new Date());
+        window.gtag('config', GA_ID);
+      }
+
+      function cleanupListeners() {
+        if (!listenersAttached) return;
+        listenersAttached = false;
+
+        interactionEvents.forEach(function (eventName) {
+          window.removeEventListener(eventName, loadAnalytics, { passive: true });
+        });
+      }
+
+      function attachInteractionListeners() {
+        if (listenersAttached) return;
+        listenersAttached = true;
+
+        interactionEvents.forEach(function (eventName) {
+          window.addEventListener(eventName, loadAnalytics, { once: true, passive: true });
+        });
+      }
+
+      function scheduleAnalytics() {
+        attachInteractionListeners();
+
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(function () {
+            fallbackTimer = window.setTimeout(loadAnalytics, 6000);
+          }, { timeout: 7000 });
+        } else {
+          fallbackTimer = window.setTimeout(loadAnalytics, 6000);
+        }
+      }
+
+      if (document.readyState === 'complete') {
+        scheduleAnalytics();
+      } else {
+        window.addEventListener('load', scheduleAnalytics, { once: true });
+      }
+    })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--
+    NOTE: These are default homepage tags.
+    Article and category pages get their final SEO values from the prerender script.
+  -->
+  <title>News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained</title>
+  <meta name="description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+
+  <!-- Default OG tags -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="News4Bharat" />
+  <meta property="og:title" content="News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained" />
+  <meta property="og:description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <meta property="og:url" content="https://news4bharat.com/" />
+  <meta property="og:image" content="https://news4bharat.com/news4bharat-share.png" />
+  <meta property="og:locale" content="en_IN" />
+
+  <!-- Twitter card defaults -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@news4_bharat" />
+  <meta name="twitter:title" content="News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained" />
+  <meta name="twitter:description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <meta name="twitter:image" content="https://news4bharat.com/news4bharat-share.png" />
+
+  <!--
+    Canonical is injected by the prerender script so each route gets the correct URL.
+  -->
+
+  <script>
+    (function () {
+      try {
+        var path = window.location.pathname;
+        if (path === '/' || path === '') return;
+
+        var ogTitleEl = document.querySelector('meta[property="og:title"]');
+        var ogTitle = ogTitleEl && ogTitleEl.getAttribute('content');
+
+        if (
+          ogTitle &&
+          ogTitle !== 'News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education & Business Updates Explained' &&
+          ogTitle.length > 0
+        ) {
+          document.title = ogTitle.includes('News4Bharat')
+            ? ogTitle
+            : ogTitle + ' | News4Bharat';
+        }
+      } catch (e) {
+        // React Helmet handles final titles after hydration.
+      }
+    })();
   </script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>News4Bharat</title>
 </head>
-
-
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
-
 </html>

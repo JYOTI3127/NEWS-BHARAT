@@ -1,8 +1,21 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import MenuDrawer from "./MenuDrawer";
+import { apiUrl } from "../lib/api";
 
 const BREAKING_NEWS_CATEGORY_ID = 2;
+
+const deferNonCritical = (callback, timeout = 1200) => {
+  if (typeof window === "undefined") return () => {};
+
+  if ("requestIdleCallback" in window) {
+    const id = window.requestIdleCallback(callback, { timeout });
+    return () => window.cancelIdleCallback?.(id);
+  }
+
+  const id = window.setTimeout(callback, timeout);
+  return () => window.clearTimeout(id);
+};
 
 const HomeIcon = ({ active }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -53,29 +66,38 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Ab { title, slug } store karenge sirf title nahi
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
   const [breakingNewsItems, setBreakingNewsItems] = useState([]);
-
   const [showBreaking, setShowBreaking] = useState(() => {
     return sessionStorage.getItem("breakingClosed") !== "true";
   });
 
+  const shouldReserveBreakingSpace = showBreaking;
+
   useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileView || !showBreaking) return;
+
     const fetchBreakingNews = async () => {
       try {
-        const res = await fetch("https://news4bharat.cloud/api/articles/");
+        const res = await fetch(apiUrl("/articles/?category=breaking-news&limit=4"));
         const data = await res.json();
 
         const articles = Array.isArray(data) ? data : (data.results ?? []);
-
         const breaking = articles.filter((article) =>
           article.categories?.includes(BREAKING_NEWS_CATEGORY_ID) &&
           article.status === "published"
         );
 
-        // { title, slug } dono save karo
-        const shuffled = breaking
+        const source = breaking.length > 0 ? breaking : articles;
+        const shuffled = source
           .sort(() => Math.random() - 0.5)
           .slice(0, 2)
           .map((article) => ({ title: article.title, slug: article.slug }));
@@ -87,8 +109,9 @@ export default function BottomNav() {
       }
     };
 
-    fetchBreakingNews();
-  }, []);
+    const cancelDeferred = deferNonCritical(fetchBreakingNews, 4500);
+    return () => cancelDeferred();
+  }, [isMobileView, showBreaking]);
 
   const handleCloseBreaking = () => {
     sessionStorage.setItem("breakingClosed", "true");
@@ -104,13 +127,11 @@ export default function BottomNav() {
 
   return (
     <>
-      <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {menuOpen && <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />}
 
       <div className="fixed bottom-0 left-0 right-0 z-50 font-sans block md:hidden">
-
-        {/* Breaking News Bar */}
-        {showBreaking && breakingNewsItems.length > 0 && (
-          <div className="bg-red-800 px-2 py-2 xs:px-3 xs:py-2.5">
+        {showBreaking && (
+          <div className="bg-red-800 px-2 py-2 xs:px-3 xs:py-2.5 min-h-[109px] xs:min-h-[115px]">
             <div className="flex justify-between items-center mb-1.5 xs:mb-2">
               <div className="bg-red-900 px-2 py-0.5 xs:px-3.5 xs:py-1 rounded text-yellow-300 font-black text-[10px] xs:text-sm italic uppercase tracking-wide">
                 BREAKING NEWS
@@ -127,21 +148,33 @@ export default function BottomNav() {
             </div>
 
             <ul className="list-none m-0 p-0 space-y-0.5">
-              {breakingNewsItems.map((item, i) => (
-                <li
-                  key={i}
-                  onClick={() => item.slug && navigate(`/article/${item.slug}`)}
-                  className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer hover:text-yellow-300 transition-colors duration-200"
-                >
-                  <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>
-                  <span>{item.title}</span>
-                </li>
-              ))}
+              {breakingNewsItems.length > 0 ? (
+                breakingNewsItems.map((item, i) => (
+                  <li
+                    key={i}
+                    onClick={() => (item.slug || item.id) && navigate(`/article/${item.slug || item.id}`)}
+                    className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer hover:text-yellow-300 transition-colors duration-200"
+                  >
+                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>
+                    <span>{item.title}</span>
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li className="text-white/85 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
+                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>
+                    <span>Loading breaking news...</span>
+                  </li>
+                  <li className="text-white/60 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
+                    <span className="text-white/80 text-base xs:text-lg leading-none flex-shrink-0">•</span>
+                    <span>Latest updates will appear here shortly.</span>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         )}
 
-        {/* Bottom Nav Bar */}
         <nav className="
           h-[56px] xs:h-[60px] sm:h-[65px]
           bg-white
@@ -181,7 +214,6 @@ export default function BottomNav() {
             );
           })}
 
-          {/* Menu Button */}
           <button
             onClick={() => setMenuOpen(true)}
             className={`
@@ -210,8 +242,7 @@ export default function BottomNav() {
         </nav>
       </div>
 
-      {/* Spacer */}
-      <div className={`block md:hidden ${showBreaking && breakingNewsItems.length > 0 ? "h-[165px] xs:h-[175px]" : "h-[56px] xs:h-[60px] sm:h-[65px]"}`} />
+      <div className={`block md:hidden ${shouldReserveBreakingSpace ? "h-[165px] xs:h-[175px]" : "h-[56px] xs:h-[60px] sm:h-[65px]"}`} />
     </>
   );
 }

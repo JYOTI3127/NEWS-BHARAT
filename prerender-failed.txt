@@ -1,0 +1,3 @@
+/category/entertainment
+/category/national
+/category/markets

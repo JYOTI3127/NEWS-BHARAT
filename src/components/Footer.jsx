@@ -1,4 +1,4 @@
-import logo from "../assets/Logo 02.png";
+import logo from "../assets/Logo 02 compact.png";
 import "../Footer.css";
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Youtube, Linkedin, X, MessageCircle } from "lucide-react";
@@ -60,7 +60,7 @@ const policyLinks = [
   { label: "Contact Us", path: "/contact" },
   { label: "Privacy Policy", path: "/privacy-policy" },
   { label: "Terms & Conditions", path: "/terms-of-service" },
-  { label: "Disclaimer",   path: "/disclaimer" },
+  { label: "Disclaimer", path: "/disclaimer" },
 ];
 
 const AppleIcon = () => (
@@ -119,7 +119,7 @@ export default function Footer() {
         {/* LEFT: Brand */}
         <div className="ft-brand">
 
-          <img src={logo} alt="News4Bharat" className="ft-logo" />
+          <img src={logo} alt="News4Bharat" className="ft-logo" width="384" height="58" loading="lazy" decoding="async" />
 
           <p className="ft-desc">
             In An Era Where Information Moves Faster Than Verification,

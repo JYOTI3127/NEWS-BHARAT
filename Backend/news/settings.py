@@ -37,6 +37,8 @@ ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
     'https://news4bharat.cloud',
     'https://www.news4bharat.cloud',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ]
 
 # Application definition
@@ -165,6 +167,8 @@ STATICFILES_DIRS = [
 CORS_ALLOWED_ORIGINS = [
     "https://www.news4bharat.com",
     "https://news4bharat.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 CORS_PREFLIGHT_MAX_AGE = 3600
 

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { fetchArticles } from "../lib/api";
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return "";
@@ -39,17 +38,22 @@ const ShareCircleIcon = () => (
 );
 
 // ✅ API fetch function — alag rakha taaki sab components share kar sakein
-const fetchArticles = () =>
-  fetch(`${API_BASE}/articles/`).then((r) => r.json());
-
 export default function NewsBanner() {
   const navigate = useNavigate();
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
+  const hasDispatchedReadyRef = useRef(false);
 
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState("next");
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 425);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 425);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ✅ useEffect + fetch HATAYA — useQuery lagaya
   // Ab yeh data cache hoga — doosre components bhi same data use karenge
@@ -57,6 +61,7 @@ export default function NewsBanner() {
     queryKey: ["articles"],
     queryFn: fetchArticles,
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Data process karo
@@ -140,8 +145,9 @@ export default function NewsBanner() {
 
   const getBottomNews = () => {
     if (allArticles.length === 0) return [];
-    const startIndex = (current * 3) % allArticles.length;
-    return [0, 1, 2].map((offset) => {
+    const visibleCount = isMobile ? 2 : 3;
+    const startIndex = (current * visibleCount) % allArticles.length;
+    return Array.from({ length: Math.min(visibleCount, allArticles.length) }, (_, offset) => {
       const idx = (startIndex + offset) % allArticles.length;
       return allArticles[idx];
     });
@@ -163,6 +169,12 @@ export default function NewsBanner() {
   const currentBottomNews = getBottomNews();
   const visibleDotIndexes = getVisibleDotIndexes();
 
+  const emitBannerReady = () => {
+    if (hasDispatchedReadyRef.current) return;
+    hasDispatchedReadyRef.current = true;
+    document.dispatchEvent(new Event("news-banner-ready"));
+  };
+
   return (
     <div className="nb-root">
       <div
@@ -181,12 +193,17 @@ export default function NewsBanner() {
           loading="eager"
           fetchPriority="high"
           decoding="async"
+          width={1600}
+          height={900}
 
           className={`nb-bg absolute inset-0 w-full h-full object-cover object-top z-0
   ${current === 0 ? "" : "transform transition-all duration-500 ease-linear"}
   ${animating ? "opacity-0" : "opacity-100"}
 `}
 
+          onLoad={() => {
+            if (current === 0) emitBannerReady();
+          }}
           onError={(e) => { e.target.style.display = "none"; }}
         />
 
@@ -220,7 +237,7 @@ export default function NewsBanner() {
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard?.writeText(
-                    window.location.origin + `/article/${slide.slug}`
+                    window.location.origin + `/article/${slide.slug || slide.id}`
                   );
                 }}
               >

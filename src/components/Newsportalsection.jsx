@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { API_BASE } from "../lib/api";
 
 // ✅ Fix 1 — Category slug se seedha fetch, saare articles nahi
 function useCategoryArticles(slug) {
@@ -51,6 +50,20 @@ const useIs4K = () => {
   }, []);
 
   return is4K;
+};
+
+const useIs2K = () => {
+  const getValue = () =>
+    typeof window !== "undefined" ? window.innerWidth >= 1441 && window.innerWidth <= 2560 : false;
+  const [is2K, setIs2K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs2K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is2K;
 };
 
 // ── Section Header ─────────────────────────────────────────────
@@ -122,17 +135,36 @@ function ArticleImg({ src, alt, className, style, priority = false }) {
 export function EntertainmentSection() {
   const navigate = useNavigate();
   const is4K = useIs4K();
+  const is2K = useIs2K();
 
   const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers");
-  const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-numbers");
+  const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-in-numbers");
 
   const featured     = explainers[0] || null;
   const smallCard    = explainers[1] || null;
   const midCards     = explainers.slice(2, 6);
   const sidebarItems = numbers.slice(0, 5);
 
+  const rootStyle = is2K
+    ? {
+        width: "min(1820px, calc(100% - 96px))",
+        margin: "0 auto 24px",
+      }
+    : undefined;
+  const layoutStyle = is2K ? { gap: 24, alignItems: "stretch" } : undefined;
+  const leftMidStyle = is2K
+    ? {
+        gridTemplateColumns: "620px minmax(0, 1fr)",
+        gap: 18,
+      }
+    : undefined;
+  const featuredStyle = is2K ? { height: 330, borderRadius: 10 } : undefined;
+  const midColStyle = is2K ? { height: 438, paddingLeft: 18 } : undefined;
+  const sidebarStyle = is2K ? { width: 260, minWidth: 260, height: 452 } : undefined;
+  const sidebarScrollStyle = is2K ? { maxHeight: 408, padding: "8px 10px" } : undefined;
+
   return (
-    <div className={`nps-entertainment${is4K ? " nps-4k" : ""}`}>
+    <div className={`nps-entertainment${is4K ? " nps-4k" : ""}`} style={rootStyle}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -142,10 +174,10 @@ export function EntertainmentSection() {
 
       <SectionHeader title="BHARAT EXPLAINERS" slug="bharat-explainers" />
 
-      <div className="nps-ent-layout">
+      <div className="nps-ent-layout" style={layoutStyle}>
 
         {/* ── LEFT + MIDDLE ── */}
-        <div className="nps-ent-left-mid">
+        <div className="nps-ent-left-mid" style={leftMidStyle}>
 
           {/* Featured big card — priority load */}
           {explainersLoading ? (
@@ -158,9 +190,9 @@ export function EntertainmentSection() {
             <div
               className="hs-featured-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${featured.slug}`)}
+              onClick={() => navigate(`/article/${featured.slug || featured.id}`)}
             >
-              <div className="hs-featured-img-wrap">
+              <div className="hs-featured-img-wrap" style={featuredStyle}>
                 <ArticleImg
                   src={imgSrc(featured)}
                   alt={featured.title}
@@ -197,7 +229,7 @@ export function EntertainmentSection() {
             <div
               className="hs-small-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${smallCard.slug}`)}
+              onClick={() => navigate(`/article/${smallCard.slug || smallCard.id}`)}
             >
               <div className="hs-small-img">
                 <ArticleImg
@@ -216,7 +248,7 @@ export function EntertainmentSection() {
           ) : null}
 
           {/* Middle: 4 horizontal cards — lazy load */}
-          <div className="hs-mid-col">
+          <div className="hs-mid-col" style={midColStyle}>
             {explainersLoading
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="hs-mid-card">
@@ -233,7 +265,7 @@ export function EntertainmentSection() {
                     key={card.id}
                     className="hs-mid-card"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${card.slug}`)}
+                    onClick={() => navigate(`/article/${card.slug || card.id}`)}
                   >
                     <div className="hs-mid-img">
                       <ArticleImg
@@ -255,15 +287,15 @@ export function EntertainmentSection() {
         </div>
 
         {/* ── SIDEBAR: Bharat in Numbers ── */}
-        <div className="nps-health-sidebar">
+        <div className="nps-health-sidebar" style={sidebarStyle}>
           <div
             className="nps-health-header"
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/category/bharat-numbers")}
+            onClick={() => navigate("/category/bharat-in-numbers")}
           >
             <span className="nps-health-header-text">BHARAT IN NUMBERS</span>
           </div>
-          <div className="nps-health-scroll">
+          <div className="nps-health-scroll" style={sidebarScrollStyle}>
             {numbersLoading
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="nps-health-item">
@@ -286,7 +318,7 @@ export function EntertainmentSection() {
                     key={item.id}
                     className="nps-health-item"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${item.slug}`)}
+                    onClick={() => navigate(`/article/${item.slug || item.id}`)}
                   >
                     <div className="nps-health-img">
                       <ArticleImg

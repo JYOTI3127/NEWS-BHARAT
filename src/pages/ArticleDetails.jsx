@@ -6,8 +6,13 @@ import {
   ChevronRight, Newspaper, Tag, ArrowLeft,
   Instagram, Youtube, Linkedin,
 } from "lucide-react";
+import { API_BASE, apiUrl } from "../lib/api";
+import { buildAuthorSlug } from "../lib/authors";
 
-const API_BASE = "https://news4bharat.cloud/api";
+const toCategoryArray = (categoryDetails) => {
+  if (Array.isArray(categoryDetails)) return categoryDetails;
+  return categoryDetails ? [categoryDetails] : [];
+};
 
 const formatDate = (d) =>
   d
@@ -21,11 +26,97 @@ const formatDate = (d) =>
     }).replace(/am|pm/i, (match) => match.toUpperCase())
     : "";
 
+const getPlainText = (value) =>
+  String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const getArticleImage = (article) => {
   const candidates = [article?.image_url, article?.image];
   return candidates.find(
     (value) => typeof value === "string" && value.trim().length > 0
   ) || null;
+};
+
+const getArticleCategoryIds = (article) =>
+  Array.isArray(article?.categories) ? article.categories.map((value) => String(value)) : [];
+
+const getArticleCategoryDetails = (article) =>
+  toCategoryArray(article?.category_details || article?.category);
+
+const getArticleCategorySlugs = (article) =>
+  getArticleCategoryDetails(article)
+    .map((category) => String(category?.slug || "").trim().toLowerCase())
+    .filter(Boolean);
+
+const getArticleTags = (article) => {
+  if (Array.isArray(article?.tags_list)) {
+    return article.tags_list.filter(Boolean);
+  }
+
+  return String(article?.tags || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+};
+
+const matchesRouteCandidates = (article, routeCandidates) => {
+  const articleSlug = String(article?.slug || "").trim().toLowerCase();
+  const articleId = String(article?.id || "").trim().toLowerCase();
+  const articleSlugTail = articleSlug.split("/").filter(Boolean).pop() || "";
+
+  return (
+    routeCandidates.includes(articleSlug) ||
+    routeCandidates.includes(articleSlugTail) ||
+    routeCandidates.includes(articleId)
+  );
+};
+
+const findArticleInList = (list, routeCandidates) =>
+  list.find((item) => matchesRouteCandidates(item, routeCandidates)) || null;
+
+const sharesCategoryWithArticle = (candidate, currentArticle) => {
+  const currentIds = getArticleCategoryIds(currentArticle);
+  const candidateIds = getArticleCategoryIds(candidate);
+  const currentSlugs = getArticleCategorySlugs(currentArticle);
+  const candidateSlugs = getArticleCategorySlugs(candidate);
+
+  return (
+    currentIds.some((id) => candidateIds.includes(id)) ||
+    currentSlugs.some((slug) => candidateSlugs.includes(slug))
+  );
+};
+
+const isInPrimaryCategory = (candidate, primaryCategory) => {
+  if (!primaryCategory) return false;
+
+  const primaryId = String(primaryCategory.id || "");
+  const primarySlug = String(primaryCategory.slug || "").trim().toLowerCase();
+  const candidateIds = getArticleCategoryIds(candidate);
+  const candidateSlugs = getArticleCategorySlugs(candidate);
+
+  return (
+    (primaryId && candidateIds.includes(primaryId)) ||
+    (primarySlug && candidateSlugs.includes(primarySlug))
+  );
+};
+
+// ✅ BUG FIX: Pehle apiCanonical valid ho toh use return karo — pehle hamesha fallback return ho raha tha
+const getArticleCanonicalUrl = (article, articlePathSlug) => {
+  const fallback = `https://news4bharat.com/article/${articlePathSlug}`;
+  const apiCanonical = String(article?.canonical_url || "").trim();
+
+  if (!apiCanonical) return fallback;
+
+  try {
+    const parsed = new URL(apiCanonical);
+    if (parsed.origin !== "https://news4bharat.com") return fallback;
+    if (parsed.pathname === "/" || parsed.pathname === "") return fallback;
+    return apiCanonical; 
+  } catch {
+    return fallback;
+  }
 };
 
 const XIcon = ({ size = 15 }) => (
@@ -41,10 +132,189 @@ const XIcon = ({ size = 15 }) => (
   </svg>
 );
 
+const DIRECT_VIDEO_FILE_REGEX = /\.(mp4|webm|ogg|mov|m4v)(?:[?#].*)?$/i;
+
+const parseTimeToSeconds = (value) => {
+  if (!value) return 0;
+
+  const normalized = String(value).trim().toLowerCase();
+  if (/^\d+$/.test(normalized)) return Number(normalized);
+
+  const match = normalized.match(
+    /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/
+  );
+
+  if (!match) return 0;
+
+  const [, hours = "0", minutes = "0", seconds = "0"] = match;
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+};
+
+const getYouTubeEmbedUrl = (value) => {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+    let videoId = "";
+
+    if (host === "youtu.be") {
+      videoId = url.pathname.split("/").filter(Boolean)[0] || "";
+    } else if (
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "youtube-nocookie.com"
+    ) {
+      if (url.pathname === "/watch") {
+        videoId = url.searchParams.get("v") || "";
+      } else {
+        const parts = url.pathname.split("/").filter(Boolean);
+        const markerIndex = parts.findIndex((part) =>
+          ["embed", "shorts", "live"].includes(part)
+        );
+
+        if (markerIndex >= 0) {
+          videoId = parts[markerIndex + 1] || "";
+        }
+      }
+    }
+
+    if (!videoId) return null;
+
+    const start =
+      parseTimeToSeconds(url.searchParams.get("t")) ||
+      parseTimeToSeconds(url.searchParams.get("start"));
+
+    const embedUrl = new URL(
+      `https://www.youtube-nocookie.com/embed/${videoId}`
+    );
+
+    if (start > 0) {
+      embedUrl.searchParams.set("start", String(start));
+    }
+
+    return embedUrl.toString();
+  } catch {
+    return null;
+  }
+};
+
+const getTweetEmbedData = (value) => {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+
+    if (!["x.com", "twitter.com", "mobile.twitter.com"].includes(host)) {
+      return null;
+    }
+
+    const match = url.pathname.match(/\/status\/(\d+)/i);
+    if (!match) return null;
+
+    return {
+      id: match[1],
+      url: value,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const getEmbedDescriptor = (value) => {
+  const url = String(value || "").trim();
+  if (!url) return null;
+
+  const youtubeEmbed = getYouTubeEmbedUrl(url);
+  if (youtubeEmbed) {
+    return {
+      type: "iframe",
+      src: youtubeEmbed,
+      title: "Embedded YouTube video",
+    };
+  }
+
+  const tweetData = getTweetEmbedData(url);
+  if (tweetData) {
+    return {
+      type: "tweet",
+      ...tweetData,
+    };
+  }
+
+  if (DIRECT_VIDEO_FILE_REGEX.test(url)) {
+    return {
+      type: "video",
+      src: url,
+    };
+  }
+
+  return null;
+};
+
+const isStandaloneLinkElement = (element) =>
+  Array.from(element.childNodes).every((node) => {
+    if (node.nodeType === 3) {
+      return !node.textContent || !node.textContent.trim();
+    }
+
+    return ["A", "BR"].includes(node.nodeName);
+  });
+
+const createEmbedNode = (doc, descriptor) => {
+  if (descriptor.type === "tweet") {
+    const wrapper = doc.createElement("div");
+    wrapper.className = "article-twitter-embed";
+    wrapper.setAttribute("data-tweet-id", descriptor.id);
+    wrapper.setAttribute("data-tweet-url", descriptor.url);
+    return wrapper;
+  }
+
+  const wrapper = doc.createElement("div");
+  wrapper.className =
+    descriptor.type === "video"
+      ? "article-media-frame article-native-video"
+      : "article-media-frame";
+
+  if (descriptor.type === "iframe") {
+    const iframe = doc.createElement("iframe");
+    iframe.src = descriptor.src;
+    iframe.title = descriptor.title || "Embedded media";
+    iframe.loading = "lazy";
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    iframe.allow =
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    iframe.setAttribute("allowfullscreen", "");
+    wrapper.appendChild(iframe);
+  } else if (descriptor.type === "video") {
+    const video = doc.createElement("video");
+    video.src = descriptor.src;
+    video.controls = true;
+    video.preload = "metadata";
+    video.playsInline = true;
+    wrapper.appendChild(video);
+  }
+
+  return wrapper;
+};
+
+const useIs2K = () => {
+  const getValue = () =>
+    typeof window !== "undefined" &&
+    window.innerWidth >= 1441 &&
+    window.innerWidth <= 2560;
+
+  const [is2K, setIs2K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs2K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is2K;
+};
+
 const normalizeArticleContent = (html) => {
   if (typeof html !== "string" || !html.trim()) return "";
 
-  // Remove presentational tags/attributes from pasted rich text so frontend typography stays in control.
   let normalized = html
     .replace(/<\/?font\b[^>]*>/gi, "")
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "");
@@ -86,44 +356,281 @@ const normalizeArticleContent = (html) => {
     }
   });
 
+  Array.from(doc.body.querySelectorAll("iframe")).forEach((iframe) => {
+    if (iframe.closest(".article-media-frame")) return;
+
+    iframe.setAttribute("loading", "lazy");
+    iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+
+    if (!iframe.getAttribute("title")) {
+      iframe.setAttribute("title", "Embedded media");
+    }
+
+    if (!iframe.getAttribute("allow")) {
+      iframe.setAttribute(
+        "allow",
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      );
+    }
+
+    iframe.setAttribute("allowfullscreen", "");
+
+    const wrapper = doc.createElement("div");
+    wrapper.className = "article-media-frame";
+    iframe.parentNode?.insertBefore(wrapper, iframe);
+    wrapper.appendChild(iframe);
+  });
+
+  Array.from(doc.body.querySelectorAll("video")).forEach((video) => {
+    if (video.closest(".article-media-frame")) return;
+
+    video.setAttribute("controls", "");
+    video.setAttribute("preload", "metadata");
+    video.setAttribute("playsinline", "");
+
+    const wrapper = doc.createElement("div");
+    wrapper.className = "article-media-frame article-native-video";
+    video.parentNode?.insertBefore(wrapper, video);
+    wrapper.appendChild(video);
+  });
+
+  Array.from(doc.body.querySelectorAll("p, div")).forEach((element) => {
+    if (element.closest(".article-media-frame, .article-twitter-embed")) return;
+    if (element.querySelector("iframe, video, .article-twitter-embed")) return;
+
+    const anchors = Array.from(element.querySelectorAll("a[href]"));
+    let descriptor = null;
+
+    if (anchors.length === 1 && isStandaloneLinkElement(element)) {
+      descriptor = getEmbedDescriptor(anchors[0].href);
+    } else if (anchors.length === 0 && element.children.length === 0) {
+      descriptor = getEmbedDescriptor(element.textContent);
+    }
+
+    if (descriptor) {
+      element.replaceWith(createEmbedNode(doc, descriptor));
+    }
+  });
+
   return doc.body.innerHTML;
 };
 
 export default function ArticleDetails() {
   const params = useParams();
-  const slug = params.slug || params.id;
+  const routeParam = params.slug || params.id;
+  const fullRouteSlug =
+    params.categorySlug && params.slug
+      ? `${params.categorySlug}/${params.slug}`
+      : routeParam;
+  const routeCandidates = Array.from(
+    new Set(
+      [routeParam, fullRouteSlug]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    )
+  );
+  const normalizedRouteCandidates = routeCandidates.map((value) =>
+    value.toLowerCase()
+  );
+  const apiRouteCandidates = Array.from(
+    new Set(
+      routeCandidates.flatMap((value) => {
+        const normalized = value.toLowerCase();
+        return normalized === value ? [value] : [normalized, value];
+      })
+    )
+  );
+  const is2K = useIs2K();
 
   const [article, setArticle] = useState(null);
   const [allArticles, setAllArticles] = useState([]);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     setArticle(null);
+    setAllArticles([]);
     setNotFound(false);
+    setLoadError(false);
     window.scrollTo(0, 0);
 
-    fetch(`${API_BASE}/articles/`)
-      .then((res) => res.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.results || [];
+    const loadArticle = async () => {
+      try {
+        let found = null;
+
+        for (const candidate of apiRouteCandidates) {
+          const response = await fetch(
+            apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
+            { signal: controller.signal }
+          );
+
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const candidateArticle = Array.isArray(data) ? data[0] : data;
+
+          if (candidateArticle && (candidateArticle.slug || candidateArticle.id)) {
+            found = candidateArticle;
+            break;
+          }
+        }
+
+        const listResponse = await fetch(`${API_BASE}/articles/`, {
+          signal: controller.signal,
+        });
+
+        if (!listResponse.ok) {
+          throw new Error("Failed to fetch articles");
+        }
+
+        const data = await listResponse.json();
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.value)
+            ? data.value
+            : data?.results || [];
         setAllArticles(list);
-        const found = list.find((a) => a.slug === slug);
-        if (found) setArticle(found);
-        else setNotFound(true);
-      })
-      .catch(() => setNotFound(true));
-  }, [slug]);
+
+        if (!found) {
+          found = findArticleInList(list, normalizedRouteCandidates);
+        }
+
+        if (found) {
+          setArticle(found);
+        } else {
+          setNotFound(true);
+        }
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        setLoadError(true);
+      }
+    };
+
+    loadArticle();
+
+    return () => controller.abort();
+  }, [fullRouteSlug, routeParam]);
+
+  // ✅ BUG FIX: Browser tab title React hydration ke baad bhi sahi rahe
+  useEffect(() => {
+    if (article?.title) {
+      document.title = `${article.title} | News4Bharat`;
+    }
+    return () => {
+      // Cleanup: jab article page se navigate away ho toh default title restore karo
+      document.title = "News4Bharat — Latest News on India";
+    };
+  }, [article?.title]);
+
+  useEffect(() => {
+    if (!article) return;
+
+    const embeds = Array.from(document.querySelectorAll(
+      ".article-twitter-embed[data-tweet-id]"
+    ));
+
+    if (embeds.length === 0) return;
+
+    embeds.forEach((el) => {
+      const tweetUrl = el.getAttribute("data-tweet-url");
+      if (!tweetUrl || el.getAttribute("data-rendered")) return;
+
+      el.setAttribute("data-rendered", "true");
+      el.innerHTML = "";
+      el.style.cssText =
+        "display:flex; justify-content:center; width:100%; max-width:100%; margin:24px 0; overflow-x:auto;";
+
+      const blockquote = document.createElement("blockquote");
+      blockquote.className = "twitter-tweet";
+      blockquote.setAttribute("data-dnt", "true");
+      blockquote.setAttribute("data-align", "center");
+
+      const anchor = document.createElement("a");
+      anchor.href = tweetUrl;
+      anchor.textContent = "Loading tweet...";
+
+      blockquote.appendChild(anchor);
+      el.appendChild(blockquote);
+    });
+
+    let cancelled = false;
+
+    const loadWidgets = () => {
+      if (cancelled) return;
+      if (window.twttr?.widgets) {
+        window.twttr.widgets.load();
+      }
+    };
+
+    const ensureWidgets = () => {
+      if (window.twttr?.widgets) {
+        loadWidgets();
+        return;
+      }
+
+      if (!document.getElementById("twitter-wjs")) {
+        const script = document.createElement("script");
+        script.id = "twitter-wjs";
+        script.src = "https://platform.twitter.com/widgets.js";
+        script.async = true;
+        script.charset = "utf-8";
+        script.onload = () => {
+          loadWidgets();
+          window.setTimeout(loadWidgets, 1000);
+        };
+        document.body.appendChild(script);
+      } else {
+        window.setTimeout(loadWidgets, 500);
+      }
+    };
+
+    if (typeof IntersectionObserver === "undefined") {
+      ensureWidgets();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hasVisibleTweet = entries.some((entry) => entry.isIntersecting);
+        if (!hasVisibleTweet) return;
+
+        observer.disconnect();
+        ensureWidgets();
+      },
+      { rootMargin: "320px 0px" }
+    );
+
+    embeds.forEach((embed) => observer.observe(embed));
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [article]);
+
+  useEffect(() => {
+    if (!routeParam) return;
+    if (!article && !notFound && !loadError) return;
+
+    const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
+    const rafId = window.requestAnimationFrame(emitReady);
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [article, loadError, notFound, routeParam]);
+
+  const sidebarBaseArticles = article
+    ? allArticles.filter(
+        (a) => String(a?.slug || a?.id || "") !== String(article?.slug || article?.id || "")
+      )
+    : [];
 
   const relatedArticles = article
-    ? allArticles
-      .filter((a) => {
-        if (a.slug === slug) return false;
-        const currentCatIds = article.categories || [];
-        const aCatIds = a.categories || [];
-        return currentCatIds.some((id) => aCatIds.includes(id));
-      })
-      .slice(0, 3)
+    ? sidebarBaseArticles.filter((a) => sharesCategoryWithArticle(a, article)).slice(0, 3)
     : [];
 
   const handleShare = (platform) => {
@@ -155,13 +662,46 @@ export default function ArticleDetails() {
 
   if (notFound) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <Newspaper size={48} color="#ccc" />
-        <p className="text-xl font-bold text-gray-700 mt-4">Article not found</p>
-        <Link to="/" className="mt-4 text-red-600 text-sm font-semibold hover:underline">
-          ← Back to Home
-        </Link>
-      </div>
+      <>
+        <Helmet>
+          <title>Article Not Found | News4Bharat</title>
+          <meta name="robots" content="noindex, nofollow" />
+          <meta name="description" content="This article is unavailable." />
+        </Helmet>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <Newspaper size={48} color="#ccc" />
+          <p className="text-xl font-bold text-gray-700 mt-4">Article not found</p>
+          <Link to="/" className="mt-4 text-red-600 text-sm font-semibold hover:underline">
+            ← Back to Home
+          </Link>
+        </div>
+      </>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <>
+        <Helmet>
+          <title>Article Unavailable | News4Bharat</title>
+          <meta
+            name="description"
+            content="We could not load this article right now. Please try again shortly."
+          />
+          <meta name="robots" content="index,follow,max-image-preview:large" />
+          <link rel="canonical" href={`https://news4bharat.com/article/${fullRouteSlug}`} />
+        </Helmet>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <Newspaper size={48} color="#ccc" />
+          <p className="text-xl font-bold text-gray-700 mt-4">Article is temporarily unavailable</p>
+          <p className="text-sm text-gray-500 mt-2 max-w-md">
+            Please refresh the page after a short while.
+          </p>
+          <Link to="/" className="mt-4 text-red-600 text-sm font-semibold hover:underline">
+            ← Back to Home
+          </Link>
+        </div>
+      </>
     );
   }
 
@@ -179,17 +719,145 @@ export default function ArticleDetails() {
   const imageAlt = article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
   const normalizedContent = normalizeArticleContent(article.content);
-  const primaryCategory = article.category_details?.[0];
+  const primaryCategory = getArticleCategoryDetails(article)[0] || null;
+  const articlePathSlug = article?.slug || routeParam;
+  const canonicalUrl = getArticleCanonicalUrl(article, articlePathSlug);
+  const fallbackSidebarArticles = sidebarBaseArticles.slice(0, 3);
+  const displayRelatedArticles =
+    relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
+  const moreCatArticles = primaryCategory
+    ? sidebarBaseArticles.filter((a) => isInPrimaryCategory(a, primaryCategory)).slice(0, 3)
+    : [];
+  const displayMoreArticles =
+    moreCatArticles.length > 0 ? moreCatArticles : fallbackSidebarArticles;
 
-  const tags = Array.isArray(article.tags_list) ? article.tags_list : [];
+  const tags = getArticleTags(article);
+  const authorDisplayName =
+    article.display_author_name?.trim() ||
+    article.author_display_name?.trim() ||
+    article.author_name?.trim() ||
+    article.posted_by_fullname?.trim() ||
+    "News4Bharat";
+  const authorPosition = article.author_display_position?.trim() || "";
+  const authorBio = article.author_display_bio?.trim() || "";
+  const authorPagePath = `/author/${buildAuthorSlug(authorDisplayName)}`;
+  const authorLinks = [
+    { key: "twitter", href: article.author_display_twitter?.trim() || "", label: "X", icon: <XIcon size={14} /> },
+    { key: "linkedin", href: article.author_display_linkedin?.trim() || "", label: "LinkedIn", icon: <Linkedin size={14} /> },
+    { key: "instagram", href: article.author_display_instagram?.trim() || "", label: "Instagram", icon: <Instagram size={14} /> },
+    { key: "facebook", href: article.author_display_facebook?.trim() || "", label: "Facebook", icon: <Facebook size={14} /> },
+    { key: "youtube", href: article.author_display_youtube?.trim() || "", label: "YouTube", icon: <Youtube size={14} /> },
+  ].filter((item) => item.href);
+  const shellStyle = is2K
+    ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
+    : undefined;
+
+  const visibleSummary =
+    getPlainText(article.subtitle) ||
+    getPlainText(article.content).slice(0, 155) ||
+    article.title;
+
+  const metaDescription =
+    getPlainText(article.meta_description) ||
+    visibleSummary;
+  const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
+    ? article.secondary_keywords_list.filter(Boolean)
+    : String(article.secondary_keywords || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  const metaKeywords = Array.from(
+    new Set(
+      [
+        article.focus_keyword,
+        ...secondaryKeywords,
+        ...tags,
+      ]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  ).join(", ");
+  const robotsContent = `${article.noindex ? "noindex" : "index"},${article.nofollow ? "nofollow" : "follow"},max-image-preview:large`;
+
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
+
+      {/* ✅ SEO HELMET */}
+      <Helmet>
+        <title>{article.title} | News4Bharat</title>
+        <meta name="description" content={metaDescription} />
+        {metaKeywords && <meta name="keywords" content={metaKeywords} />}
+        {tags.length > 0 && <meta name="news_keywords" content={tags.join(", ")} />}
+        {article.focus_keyword && (
+          <meta name="focus_keyword" content={article.focus_keyword} />
+        )}
+        {secondaryKeywords.length > 0 && (
+          <meta
+            name="secondary_keywords"
+            content={secondaryKeywords.join(", ")}
+          />
+        )}
+        <link rel="canonical" href={canonicalUrl} />
+        <meta name="robots" content={robotsContent} />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        {imageUrl && <meta property="og:image" content={imageUrl} />}
+        <meta property="og:site_name" content="News4Bharat" />
+        <meta property="og:locale" content="en_IN" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={metaDescription} />
+        {imageUrl && <meta name="twitter:image" content={imageUrl} />}
+        {article.published_at && (
+          <meta property="article:published_time" content={article.published_at} />
+        )}
+        {(article.updated_at || article.published_at) && (
+          <meta
+            property="article:modified_time"
+            content={article.updated_at || article.published_at}
+          />
+        )}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": article.title,
+            "description": metaDescription,
+            "image": imageUrl ? [imageUrl] : [],
+            "datePublished": article.published_at || article.created_at || "",
+            "dateModified": article.updated_at || article.published_at || article.created_at || "",
+            "author": {
+              "@type": authorDisplayName === "News4Bharat" ? "Organization" : "Person",
+              "name": authorDisplayName,
+              "url": "https://news4bharat.com",
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "News4Bharat",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://news4bharat.com/Fevicon (1).png",
+              },
+            },
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": canonicalUrl,
+            },
+            "url": canonicalUrl,
+          })}
+        </script>
+      </Helmet>
+
+      <div
+        className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start"
+        style={shellStyle}
+      >
 
         {/* ── MAIN ARTICLE ── */}
         <article className="min-w-0">
 
-          {/* Back */}
           <Link
             to="/"
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 mb-5 transition-colors"
@@ -197,7 +865,6 @@ export default function ArticleDetails() {
             <ArrowLeft size={13} /> Back to Home
           </Link>
 
-          {/* Category Badge */}
           {primaryCategory && (
             <div className="mb-3">
               <Link
@@ -210,24 +877,28 @@ export default function ArticleDetails() {
             </div>
           )}
 
-          {/* Title */}
           <h1 className="text-[clamp(20px,4vw,36px)] font-extrabold leading-[1.3] text-gray-900 mb-3 tracking-tight">
             {article.title}
           </h1>
 
-          {/* Subtitle */}
-          {article.subtitle && (
+          {visibleSummary && (
             <p className="text-[15px] text-gray-500 mb-4 leading-[1.7]">
-              {article.subtitle}
+              {visibleSummary}
             </p>
           )}
 
-          {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 text-[12.5px] text-gray-500 mb-5 pb-5 border-b border-gray-200">
-            <span className="flex items-center gap-1.5 font-semibold text-red-600">
+            <Link
+              to={authorPagePath}
+              className="inline-flex items-center gap-1.5 font-semibold text-red-600 hover:text-red-700 transition-colors cursor-pointer pointer-events-auto relative z-[1]"
+              style={{ textDecoration: "none" }}
+            >
               <User size={13} />
-              News4Bharat
-            </span>
+              {authorDisplayName}
+            </Link>
+            {authorPosition && (
+              <span className="text-gray-400">{authorPosition}</span>
+            )}
             {date && (
               <span className="flex items-center gap-1.5 text-gray-500">
                 <Clock size={13} /> {formatDate(date)}
@@ -235,7 +906,6 @@ export default function ArticleDetails() {
             )}
           </div>
 
-          {/* Hero Image */}
           {imageUrl && (
             <div className="w-full rounded-xl overflow-hidden mb-7 shadow-sm">
               <img
@@ -256,9 +926,8 @@ export default function ArticleDetails() {
             </div>
           )}
 
-          {/* Content */}
           <div
-            className="text-gray-700 text-left md:text-justify
+            className="article-content text-gray-700 text-left md:text-justify
   [&_p]:text-[16px] [&_p]:leading-[1.6] [&_p]:mb-[1.2rem]
   [&_h1]:text-[18px] [&_h1]:leading-[1.4] [&_h1]:mb-[1.2rem] [&_h1]:font-bold
   [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
@@ -266,12 +935,12 @@ export default function ArticleDetails() {
   [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
   [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
   [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-  [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1"
+            [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1"
             style={{ userSelect: "text", WebkitUserSelect: "text" }}
             dangerouslySetInnerHTML={{ __html: normalizedContent }}
+            suppressHydrationWarning={true}
           />
 
-          {/* ✅ TAGS SECTION — Share Bar se pehle */}
           {tags.length > 0 && (
             <div className="mt-8 pt-5 border-t border-gray-200">
               <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
@@ -279,19 +948,19 @@ export default function ArticleDetails() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag, i) => (
-                  <span
+                  <Link
                     key={i}
+                    to={`/tag/${encodeURIComponent(tag)}`}
                     className="inline-flex items-center gap-1 bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-600 text-[12px] font-medium px-3 py-1 rounded-full transition-colors border border-gray-200 cursor-pointer"
                   >
                     <Tag size={10} />
                     {tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Share Bar */}
           <div className="mt-10 pt-6 border-t border-gray-200">
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
               Share this article
@@ -327,35 +996,29 @@ export default function ArticleDetails() {
               </button>
             </div>
           </div>
+
         </article>
 
         {/* ── SIDEBAR ── */}
         <aside className="flex flex-col gap-6 lg:order-last">
 
-          {/* Related Articles */}
-          {relatedArticles.length > 0 && (
+          {displayRelatedArticles.length > 0 && (
             <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b-2 border-red-600 text-xs font-bold uppercase tracking-wider text-slate-900">
                 <Newspaper size={14} color="#D80100" />
                 <span>Related Articles</span>
               </div>
               <div className="divide-y divide-slate-100">
-                {relatedArticles.map((rel) => (
+                {displayRelatedArticles.map((rel) => (
                   <Link key={rel.id} to={`/article/${rel.slug || rel.id}`}
                     target="_blank" rel="noopener noreferrer"
                     style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                     <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
-                        <div className="flex-shrink-0 w-16 h-14 rounded-md overflow-hidden bg-slate-100">
-                          {getArticleImage(rel) ? (
-                            <img
-                              src={getArticleImage(rel)}
-                              alt={rel.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            decoding="async"
-                            width={64}
-                            height={56}
-                          />
+                      <div className="flex-shrink-0 w-16 h-14 rounded-md overflow-hidden bg-slate-100">
+                        {getArticleImage(rel) ? (
+                          <img src={getArticleImage(rel)} alt={rel.title}
+                            className="w-full h-full object-cover" loading="lazy"
+                            decoding="async" width={64} height={56} />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center bg-slate-100">
                             <Newspaper size={16} color="#ccc" />
@@ -375,45 +1038,30 @@ export default function ArticleDetails() {
             </div>
           )}
 
-          {/* More from category */}
-          {primaryCategory && (() => {
-            const moreCatArticles = allArticles
-              .filter((a) =>
-                a.slug !== slug &&
-                Array.isArray(a.categories) &&
-                a.categories.includes(primaryCategory.id)
-              )
-              .slice(0, 3);
-            if (moreCatArticles.length === 0) return null;
+          {displayMoreArticles.length > 0 && (() => {
             return (
               <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    More in {primaryCategory.name}
+                    {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
                   </span>
-                  <Link to={`/category/${primaryCategory.slug}`}
+                  <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
                     target="_blank" rel="noopener noreferrer"
                     className="text-[11px] text-red-600 font-semibold hover:underline flex items-center gap-0.5">
                     View All <ChevronRight size={11} />
                   </Link>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {moreCatArticles.map((a) => (
+                  {displayMoreArticles.map((a) => (
                     <Link key={a.id} to={`/article/${a.slug || a.id}`}
                       target="_blank" rel="noopener noreferrer"
                       style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                       <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
                         <div className="flex-shrink-0 w-16 h-14 rounded-md overflow-hidden bg-slate-100">
                           {getArticleImage(a) ? (
-                            <img
-                              src={getArticleImage(a)}
-                              alt={a.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                              width={64}
-                              height={56}
-                            />
+                            <img src={getArticleImage(a)} alt={a.title}
+                              className="w-full h-full object-cover" loading="lazy"
+                              decoding="async" width={64} height={56} />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center bg-slate-100">
                               <Newspaper size={16} color="#ccc" />

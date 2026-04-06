@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     FaChevronLeft,
@@ -6,10 +6,9 @@ import {
     FaCirclePlay,
     FaCircle,
 } from "react-icons/fa6";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { API_BASE, apiUrl } from "../lib/api";
 const CATEGORY_SLUG = "bharat-economy";
-const LIVE_CRICKET_API = "https://news4bharat.cloud/api/live-cricket/";
+const LIVE_CRICKET_API = apiUrl("/live-cricket/");
 
 const tabs = ["Live", "Upcoming", "Recent"];
 
@@ -246,6 +245,7 @@ export default function VisualStoriesWithScore() {
     const VISIBLE = VISIBLE_MAP[bp];
     const navigate = useNavigate();
     const is4K = bp === "4k";
+    const is2K = bp === "laptop-l";
 
     const [offset, setOffset] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
@@ -256,6 +256,7 @@ export default function VisualStoriesWithScore() {
 
     const [stories, setStories] = useState([]);
     const [storiesLoading, setStoriesLoading] = useState(true);
+    const storiesRailRef = useRef(null);
 
     // ✅ Fix 2 — Category filter se fetch, saare articles nahi
     useEffect(() => {
@@ -318,9 +319,51 @@ export default function VisualStoriesWithScore() {
     }[bp] || "220px";
 
     const visibleStories = stories.slice(offset, offset + VISIBLE);
+    const renderedStories = isMobile ? stories : visibleStories;
+    const scrollStories = (direction) => {
+        if (isMobile && storiesRailRef.current) {
+            const firstCard = storiesRailRef.current.querySelector('[data-story-card="true"]');
+            const scrollAmount = firstCard
+                ? firstCard.getBoundingClientRect().width + 10
+                : storiesRailRef.current.clientWidth / 2;
+
+            storiesRailRef.current.scrollBy({
+                left: direction * scrollAmount,
+                behavior: "smooth",
+            });
+            return;
+        }
+
+        if (direction < 0) {
+            if (canPrev) setOffset((o) => o - 1);
+            return;
+        }
+
+        if (canNext) setOffset((o) => o + 1);
+    };
+    const sectionStyle = is2K
+        ? { width: "min(1820px, calc(100% - 96px))", margin: "0 auto 24px" }
+        : { margin: "0 3% 22px" };
+    const storiesWrapStyle = is2K
+        ? { padding: "10px", borderRadius: "12px" }
+        : { padding: "8px", borderRadius: "10px" };
+    const mobileStoriesWrapStyle = isMobile
+        ? {
+            ...storiesWrapStyle,
+            overflowX: "auto",
+            overflowY: "hidden",
+            scrollSnapType: "x mandatory",
+            scrollPaddingInline: "8px",
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            gap: "8px",
+            padding: "8px",
+        }
+        : storiesWrapStyle;
 
     return (
-        <div className="font-sans" style={{ margin: "0 3% 22px" }}>
+        <div className="font-sans" style={sectionStyle}>
             <div className={`flex gap-3 ${isMobile ? "flex-col" : "flex-row items-start"}`}>
 
                 {/* Left: Visual Stories */}
@@ -340,17 +383,23 @@ export default function VisualStoriesWithScore() {
 
                     <div className="relative">
                         <button
-                            onClick={() => canPrev && setOffset((o) => o - 1)}
-                            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${!canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                            onClick={() => scrollStories(-1)}
+                            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center bg-white shadow-md ${!isMobile && !canPrev ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
                                 }`}
-                            style={{ border: "1px solid #999999" }}
+                            style={{
+                                border: "1px solid #999999",
+                                width: isMobile ? "28px" : "28px",
+                                height: isMobile ? "28px" : "28px",
+                                transform: isMobile ? "translate(-10px, -50%)" : "translate(-50%, -50%)",
+                            }}
                         >
                             <FaChevronLeft size={12} />
                         </button>
 
                         <div
                             className="flex gap-2 overflow-hidden border border-gray-300"
-                            style={{ padding: "8px", borderRadius: "10px" }}
+                            ref={storiesRailRef}
+                            style={mobileStoriesWrapStyle}
                         >
                             {storiesLoading ? (
                                 <SkeletonCard visible={VISIBLE} />
@@ -359,14 +408,18 @@ export default function VisualStoriesWithScore() {
                                     No articles in this category yet.
                                 </div>
                             ) : (
-                                visibleStories.map((article) => (
+                                renderedStories.map((article) => (
                                     <div
                                         key={article.id}
+                                        data-story-card="true"
                                         className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white overflow-hidden"
                                         style={{
-                                            width: `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
+                                            width: isMobile ? "calc((100% - 8px) / 2)" : `calc((100% - ${(VISIBLE - 1) * 8}px) / ${VISIBLE})`,
+                                            flex: isMobile ? "0 0 calc((100% - 8px) / 2)" : undefined,
+                                            maxWidth: isMobile ? "calc((100% - 8px) / 2)" : undefined,
+                                            scrollSnapAlign: isMobile ? "start" : undefined,
                                         }}
-                                        onClick={() => navigate(`/article/${article.slug}`)}
+                                        onClick={() => navigate(`/article/${article.slug || article.id}`)}
                                     >
                                         {/* Image — fixed aspect ratio */}
                                         <div
@@ -402,10 +455,17 @@ export default function VisualStoriesWithScore() {
                                         </div>
 
                                         {/* Title — fixed height neeche */}
-                                        <div style={{ height: is4K ? 72 : 46, overflow: "hidden", padding: is4K ? "10px 10px 0" : "4px 5px 0" }}>
+                                        <div
+                                            style={{
+                                                height: is4K ? 82 : is2K ? 62 : 54,
+                                                overflow: "hidden",
+                                                padding: is4K ? "10px 10px 0" : is2K ? "8px 8px 0" : "6px 6px 0",
+                                            }}
+                                        >
                                             <p className="text-gray-500 group-hover:text-[#D80100] leading-snug transition-colors duration-300"
                                                 style={{
-                                                    fontSize: is4K ? "18px" : "12px",
+                                                    fontSize: is4K ? "18px" : is2K ? "14px" : "13px",
+                                                    fontWeight: 500,
                                                     display: "-webkit-box",
                                                     WebkitLineClamp: 2,
                                                     WebkitBoxOrient: "vertical",
@@ -420,10 +480,15 @@ export default function VisualStoriesWithScore() {
                         </div>
 
                         <button
-                            onClick={() => canNext && setOffset((o) => o + 1)}
-                            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-md ${!canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                            onClick={() => scrollStories(1)}
+                            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center bg-white shadow-md ${!isMobile && !canNext ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
                                 }`}
-                            style={{ border: "1px solid #999999" }}
+                            style={{
+                                border: "1px solid #999999",
+                                width: isMobile ? "28px" : "28px",
+                                height: isMobile ? "28px" : "28px",
+                                transform: isMobile ? "translate(10px, -50%)" : "translate(50%, -50%)",
+                            }}
                         >
                             <FaChevronRight size={12} />
                         </button>
@@ -434,9 +499,9 @@ export default function VisualStoriesWithScore() {
                 <div
                     className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
                     style={{
-                        width: scoreCardWidth,
+                        width: is2K ? "260px" : scoreCardWidth,
                         marginTop: isMobile ? "12px" : "3%",
-                        height: "278px",
+                        height: is2K ? "430px" : "295px",
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >

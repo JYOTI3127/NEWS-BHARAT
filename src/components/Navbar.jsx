@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import logoBig from "../assets/NEWS4BHARAT LOGO 2.png";
-import logoSmall from "../assets/NEWS4BHARAT.png";
+import logoBig from "../assets/NEWS4BHARAT LOGO 2 compact.png";
+import logoSmall from "../assets/NEWS4BHARAT compact.png";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -10,28 +10,76 @@ import {
   Leaf, Video, Camera, MoreHorizontal, Newspaper, CloudSun,
 } from "lucide-react";
 import "../Navbar.css";
+import { apiUrl } from "../lib/api";
 
-const getIconForCategory = (name) => {
-  const map = {
-    "Breaking News":             Flame,
-    "States of Bharat":          Globe,
-    "Bharat Economy & Business": TrendingUp,
-    "Bharat's BFSI":             BarChart2,
-    "Bharat Explainers":         FileText,
-    "Bharat in Numbers":         BarChart2,
-    "Bharat Opinions":           PenLine,
-    "Bharat's Startups":         Zap,
-    "Bharat 2047":               Flame,
-    "Bharat By 2047":            Flame,
-    "Technology":                Cpu,
-    "Artificial Intelligence":   Cpu,
-    "Sports":                    Trophy,
-    "World News":                Globe,
-    "Entertainment":             Film,
-    "Trending":                  TrendingUp,
-    "60-Second Read":            Zap,
-  };
-  return map[name] || Newspaper;
+const deferNonCritical = (callback, timeout = 1200) => {
+  if (typeof window === "undefined") return () => {};
+
+  if ("requestIdleCallback" in window) {
+    const id = window.requestIdleCallback(callback, { timeout });
+    return () => window.cancelIdleCallback?.(id);
+  }
+
+  const id = window.setTimeout(callback, timeout);
+  return () => window.clearTimeout(id);
+};
+
+const CATEGORY_ICON_MAP = {
+  "Breaking News":             Flame,
+  "States of Bharat":          Globe,
+  "Bharat Economy & Business": TrendingUp,
+  "Bharat's BFSI":             BarChart2,
+  "Bharat Explainers":         FileText,
+  "Bharat in Numbers":         BarChart2,
+  "Bharat Opinions":           PenLine,
+  "Bharat's Startups":         Zap,
+  "Bharat 2047":               Flame,
+  "Bharat By 2047":            Flame,
+  "Technology":                Cpu,
+  "Artificial Intelligence":   Cpu,
+  "Sports":                    Trophy,
+  "World News":                Globe,
+  "Entertainment":             Film,
+  "Trending":                  TrendingUp,
+  "60-Second Read":            Zap,
+};
+
+const FALLBACK_ICONS = [
+  Newspaper,
+  Globe,
+  TrendingUp,
+  BarChart2,
+  Cpu,
+  Trophy,
+  Film,
+  Heart,
+  PenLine,
+  Zap,
+  GraduationCap,
+  Leaf,
+  Video,
+  Camera,
+  CloudSun,
+  MoreHorizontal,
+];
+
+const getStableIconIndex = (value) => {
+  const source = String(value || "").trim().toLowerCase();
+  if (!source) return 0;
+
+  let hash = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+  }
+
+  return hash % FALLBACK_ICONS.length;
+};
+
+const getIconForCategory = (name, slug = "") => {
+  const directMatch = CATEGORY_ICON_MAP[name];
+  if (directMatch) return directMatch;
+
+  return FALLBACK_ICONS[getStableIconIndex(slug || name)];
 };
 
 const makeSlug = (slug, label) => {
@@ -40,10 +88,10 @@ const makeSlug = (slug, label) => {
 };
 
 const SLUG_OVERRIDES = {
-  "bharat-in-numbers": "bharat-numbers",
+  "bharat-in-numbers": "bharat-in-numbers",
   "states-of-bharat":  "state-of-bharat",
   "bharats-startups":  "bharat-startups",
-  "breaking-news":     "breaking-now",
+  "breaking-news":     "breaking-news",
 };
 
 const getFinalSlug = (slug, label) => {
@@ -119,7 +167,7 @@ const navLinks = [
   { label: "Breaking News",     path: "/category/breaking-news" },
   { label: "States of Bharat",  path: "/category/state-of-bharat" },
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },
-  { label: "Bharat in Numbers", path: "/category/bharat-numbers" },
+  { label: "Bharat in Numbers", path: "/category/bharat-in-numbers" },
   { label: "Bharat's Startups", path: "/category/bharat-startups" },
   { label: "60-Second Read",    path: "/category/60-second-read" },
   { label: "Sports",            path: "/category/sports" },
@@ -130,13 +178,13 @@ const navLinks = [
 
 const LogoFull = () => (
   <div className="logo-full">
-    <Link to="/"><img src={logoBig} alt="News4Bharat Logo" /></Link>
+    <Link to="/"><img src={logoBig} alt="News4Bharat Logo" width="160" height="160" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
 );
 
 const LogoScroll = () => (
   <div className="logo-scroll">
-    <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" /></Link>
+    <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
 );
 
@@ -146,6 +194,7 @@ const Header = () => {
   const [expandedSection, setExpandedSection] = useState(null);
   const [expandedSubcat, setExpandedSubcat]   = useState(null);
   const [navSections, setNavSections]         = useState(NAV_SECTIONS);
+  const [navSectionsLoaded, setNavSectionsLoaded] = useState(false);
 
   const [weather, setWeather]   = useState(null);
   const [metals, setMetals]     = useState(null);
@@ -159,6 +208,7 @@ const Header = () => {
   const searchRef         = useRef(null);
   const searchDebounceRef = useRef(null);
   const headerRef         = useRef(null);
+  const measuredHeaderHeightRef = useRef(0);
   const navigate          = useNavigate();
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -173,26 +223,42 @@ const Header = () => {
       date: new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
       time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
     });
+
+    setDateTime(getLocal());
+
+    if (isMobile) return;
+
     const fetchDate = async () => {
       try {
-        const res  = await fetch("https://news4bharat.cloud/api/datetime/");
+        const res  = await fetch(apiUrl("/datetime/"));
         const data = await res.json();
-        setDateTime({ date: data.date || data.formatted_date || getLocal().date, time: getLocal().time });
-      } catch {
-        setDateTime(getLocal());
-      }
+        setDateTime((prev) => ({
+          date: data.date || data.formatted_date || prev.date || getLocal().date,
+          time: prev.time || getLocal().time,
+        }));
+      } catch {}
     };
-    fetchDate();
+
+    const cancelDeferred = deferNonCritical(fetchDate, 5000);
     const iv = setInterval(() => {
-      setDateTime(prev => ({ ...prev, time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }));
+      setDateTime(prev => ({
+        ...prev,
+        time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      }));
     }, 1000);
-    return () => clearInterval(iv);
-  }, []);
+
+    return () => {
+      cancelDeferred();
+      clearInterval(iv);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
+    if (!isOpen || navSectionsLoaded) return;
+
     const fetchCategories = async () => {
       try {
-        const res    = await fetch("https://news4bharat.cloud/api/categories/");
+        const res    = await fetch(apiUrl("/categories/"));
         const data   = await res.json();
         const active = data.filter(cat => cat.status === "active");
 
@@ -218,20 +284,24 @@ const Header = () => {
           return {
             label: cat.name,
             slug:  cat.slug,
-            Icon:  getIconForCategory(cat.name),
+            Icon:  getIconForCategory(cat.name, cat.slug),
             ...(subcategories && { subcategories }),
             ...(links         && { links }),
           };
         });
 
         setNavSections(sections);
+        setNavSectionsLoaded(true);
       } catch (err) {
         console.error("Categories API fail:", err.message);
         setNavSections(NAV_SECTIONS);
+        setNavSectionsLoaded(true);
       }
     };
-    fetchCategories();
-  }, []);
+    const cancelDeferred = deferNonCritical(fetchCategories, 800);
+
+    return () => cancelDeferred();
+  }, [isOpen, navSectionsLoaded]);
 
   // ✅ UPDATED: /api/search/articles/ + fixed showResults logic + debug logs
   const fetchSearchResults = async (query) => {
@@ -239,13 +309,11 @@ const Header = () => {
     setIsSearching(true);
     setShowResults(true); // show dropdown immediately with "Searching..."
     try {
-      const res  = await fetch(`https://news4bharat.cloud/api/search/articles/?q=${encodeURIComponent(query)}`);
+      const res  = await fetch(apiUrl(`/search/articles/?q=${encodeURIComponent(query)}`));
       const data = await res.json();
-      console.log("🔍 Search API raw response:", data); // DEBUG — hata dena baad mein
       const results = Array.isArray(data)
         ? data
         : (data.results || data.articles || data.data || data.items || []);
-      console.log("🔍 Parsed results:", results.length, "items"); // DEBUG
       setSearchResults(results);
     } catch (err) {
       console.error("Search API error:", err);
@@ -275,42 +343,53 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    if (isMobile) return;
+
     const fetchWeather = async () => {
       try {
-        const r    = await fetch("https://news4bharat.cloud/api/weather/?city=Delhi");
+        const r    = await fetch(apiUrl("/weather/?city=Delhi"));
         const data = await r.json();
         setWeather(data);
       } catch {}
     };
-    fetchWeather();
+    const cancelDeferred = deferNonCritical(fetchWeather, 5200);
     const iv = setInterval(fetchWeather, 10 * 60 * 1000);
-    return () => clearInterval(iv);
-  }, []);
+    return () => {
+      cancelDeferred();
+      clearInterval(iv);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     const fetchMetals = async () => {
       try {
-        const r    = await fetch("https://news4bharat.cloud/api/metal-ticker/");
+        const r    = await fetch(apiUrl("/metal-ticker/"));
         const data = await r.json();
         setMetals(data);
       } catch {}
     };
-    fetchMetals();
+    const cancelDeferred = deferNonCritical(fetchMetals, 4600);
     const iv = setInterval(fetchMetals, 15 * 60 * 1000);
-    return () => clearInterval(iv);
+    return () => {
+      cancelDeferred();
+      clearInterval(iv);
+    };
   }, []);
 
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
-        const r    = await fetch("https://news4bharat.cloud/api/market-indices/");
+        const r    = await fetch(apiUrl("/market-indices/"));
         const data = await r.json();
         setMarkets(data);
       } catch {}
     };
-    fetchMarkets();
+    const cancelDeferred = deferNonCritical(fetchMarkets, 4200);
     const iv = setInterval(fetchMarkets, 5 * 60 * 1000);
-    return () => clearInterval(iv);
+    return () => {
+      cancelDeferred();
+      clearInterval(iv);
+    };
   }, []);
 
   useEffect(() => {
@@ -331,29 +410,52 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    const updateHeaderHeight = () => {
-      if (headerRef.current) {
-        setHeaderHeight(headerRef.current.offsetHeight);
+    const node = headerRef.current;
+    if (!node) return;
+
+    const syncMeasuredHeight = (nextHeight) => {
+      measuredHeaderHeightRef.current = nextHeight;
+      if (!isMobile && isScrolled) return;
+      setHeaderHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    };
+
+    const applyCurrentHeight = () => {
+      const nextHeight = Math.round(node.getBoundingClientRect().height);
+      if (nextHeight > 0) {
+        syncMeasuredHeight(nextHeight);
       }
-    };    
+    };
 
-    updateHeaderHeight();
-    const raf = window.requestAnimationFrame(updateHeaderHeight);
-    window.addEventListener("resize", updateHeaderHeight);
-    const observer = typeof ResizeObserver !== "undefined" && headerRef.current
-      ? new ResizeObserver(updateHeaderHeight)
-      : null;
+    applyCurrentHeight();
 
-    if (observer && headerRef.current) {
-      observer.observe(headerRef.current);
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", applyCurrentHeight);
+      return () => window.removeEventListener("resize", applyCurrentHeight);
     }
 
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", updateHeaderHeight);
-      observer?.disconnect();
-    };
-  }, [isScrolled, isMobile, isOpen, showResults, searchResults.length, searchQuery]);
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextHeight = Math.round(entry?.contentRect?.height || 0);
+      if (nextHeight > 0) {
+        syncMeasuredHeight(nextHeight);
+      }
+    });
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [isScrolled, isMobile]);
+
+  useEffect(() => {
+    if (!isMobile && isScrolled) {
+      setHeaderHeight(44);
+      return;
+    }
+
+    if (measuredHeaderHeightRef.current > 0) {
+      setHeaderHeight(measuredHeaderHeightRef.current);
+    }
+  }, [isScrolled, isMobile]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -391,11 +493,11 @@ const Header = () => {
 
   const tickerBarClasses = isMobile
     ? "flex flex-nowrap items-center px-2.5 py-1 border-b border-slate-200"
-    : `flex flex-nowrap items-center overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
+    : `overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
 
   const topBarClasses = isMobile
     ? "hidden"
-    : `${showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 px-4 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 px-4 py-1"}`;
+    : `${showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
 
   const TickerContent = () => (
     <>
@@ -582,6 +684,7 @@ const Header = () => {
       <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
 
         <div className={tickerBarClasses}>
+          <div className="header-shell ticker-shell">
           <div className="ticker-left">
             <BarChart2 size={14} className="ticker-icon" />
             <span className="ticker-label">Markets :</span>
@@ -602,9 +705,11 @@ const Header = () => {
               हिंदी
             </button>
           </div>
+          </div>
         </div>
 
         <div className={topBarClasses}>
+          <div className="header-shell">
           <div className="search-row">
             <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
               <Search size={14} className="search-icon" />
@@ -650,9 +755,11 @@ const Header = () => {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         <nav className="main-nav">
+          <div className="header-shell main-nav-shell">
           <div className="nav-left">
             <button className="hamburger" aria-label="Menu" onClick={() => setIsOpen(true)}>
               <Menu size={22} color="white" />
@@ -680,6 +787,7 @@ const Header = () => {
               </svg>
               हिंदी
             </button>
+          </div>
           </div>
         </nav>
 

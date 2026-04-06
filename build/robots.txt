@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://news4bharat.com/sitemap.xml

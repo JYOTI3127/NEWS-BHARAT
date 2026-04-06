@@ -154,7 +154,7 @@ const disclaimerSections = [
 /* ── COMPONENT ── */
 export default function DisclaimerPage() {
   return (
-    <div className="terms-page">
+    <div className="terms-page disclaimer-page">
 
       {/* ══════ HERO ══════ */}
       <section className="terms-hero">

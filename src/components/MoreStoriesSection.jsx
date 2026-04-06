@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./MoreStoriesSection.css";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { API_BASE } from "../lib/api";
 const CATEGORY_API = `${API_BASE}/categories/`;
 
 const FEATURED_HOME_SLUGS = new Set([
@@ -25,7 +24,7 @@ const EXISTING_HOME_SLUGS = new Set([
   "bharat-economy",
   "bharat-explainers",
   "bharat-opinions",
-  "bharat-numbers",
+  "bharat-in-numbers",
   "bharats-startups",
   "bharat-startups",
   "states-of-bharat",
@@ -148,7 +147,7 @@ async function fetchAllArticles() {
     const res = await fetch(`${API_BASE}/articles/`);
     if (!res.ok) throw new Error("Failed to fetch all articles");
     const data = await res.json();
-    return normalizeArticles(data).filter((article) => !isExcludedArticle(article));
+    return normalizeArticles(data);
   } catch {
     return [];
   }
@@ -167,6 +166,8 @@ function StoryCard({ article }) {
             className="mss-thumb"
             loading="lazy"
             decoding="async"
+            width={480}
+            height={240}
           />
         ) : (
           <div className="mss-thumb mss-thumb-fallback">No Image</div>
@@ -256,8 +257,12 @@ export default function MoreStoriesSection() {
           .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0))
           .slice(0, MAX_TOTAL_ARTICLES);
 
+        const recentFallback = allArticles
+          .filter((article) => article && (article.id || article.slug))
+          .slice(0, MAX_TOTAL_ARTICLES);
+
         if (!ignore) {
-          setArticles(filtered);
+          setArticles(filtered.length > 0 ? filtered : recentFallback);
         }
       } catch {
         if (!ignore) {

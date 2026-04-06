@@ -51,10 +51,10 @@ const offices = [
 ];
 
 const socialLinks = [
-  { icon: <Linkedin size={18} />, label: "LinkedIn", href: "#" },
-  { icon: <Twitter size={18} />, label: "Twitter", href: "#" },
-  { icon: <Instagram size={18} />, label: "Instagram", href: "#" },
-  { icon: <Facebook size={18} />, label: "Facebook", href: "#" },
+  { icon: <Linkedin size={18} />, label: "LinkedIn", href: "https://www.linkedin.com/company/news4bharat" },
+  { icon: <Twitter size={18} />, label: "Twitter", href: "https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" },
+  { icon: <Instagram size={18} />, label: "Instagram", href: "https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" },
+  { icon: <Facebook size={18} />, label: "Facebook", href: "https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" },
 ];
 
 const adOpportunities = [
@@ -73,17 +73,64 @@ const whyPartner = [
   "High Engagement Content",
 ];
 
+const contactEmails = [
+  { label: "Editorial Queries", email: "editorial@news4bharat.com" },
+  { label: "PR & Communications", email: "press@news4bharat.com" },
+  { label: "Advertisements", email: "advertisement@news4bharat.com" },
+  { label: "General Queries", email: "info@news4bharat.com" },
+
+];
+
+const CONTACT_FORM_RECIPIENT = "news4bharat11@gmail.com";
+
+/* ── EMAIL HELPER — mobile pe mail app, desktop pe Gmail web ── */
+const getMailHref = (email, subject = "", body = "") => {
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const params = new URLSearchParams();
+    if (subject) params.set("subject", subject);
+    if (body) params.set("body", body);
+    const query = params.toString();
+    return `mailto:${email}${query ? `?${query}` : ""}`;
+  }
+
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: email,
+  });
+
+  if (subject) params.set("su", subject);
+  if (body) params.set("body", body);
+
+  return `https://mail.google.com/mail/?${params.toString()}`;
+};
+
 /* ── CONTACT FORM ── */
 function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", phone: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (!submitted) return undefined;
+
+    const timer = setTimeout(() => {
+      setForm({ name: "", email: "", subject: "", phone: "", message: "" });
+      setErrors({});
+      setSubmitted(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [submitted]);
+
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required";
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = "Valid email required";
     if (!form.subject.trim()) e.subject = "Subject is required";
+    if (!form.phone.trim()) e.phone = "Number is required";
     if (!form.message.trim()) e.message = "Message is required";
     return e;
   };
@@ -91,6 +138,21 @@ function ContactForm() {
   const handleSubmit = () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
+    const emailBody = [
+      `Name: ${form.name}`,
+      `Email: ${form.email}`,
+      `Phone: ${form.phone}`,
+      "",
+      "Message:",
+      form.message,
+    ].join("\n");
+
+    window.open(
+      getMailHref(CONTACT_FORM_RECIPIENT, form.subject, emailBody),
+      "_blank",
+      "noopener,noreferrer"
+    );
+    setErrors({});
     setSubmitted(true);
   };
 
@@ -99,8 +161,19 @@ function ContactForm() {
       <div className="ct-form-success">
         <div className="ct-success-icon"><CheckCircle size={34} /></div>
         <h3 className="ct-success-title">Message Sent</h3>
-        <p className="ct-success-text">Thank you for reaching out to News 4 Bharat. We will get back to you at info@news4bharat.com within 24 hours.</p>
-        <button className="ct-success-reset" onClick={() => { setForm({ name: "", email: "", subject: "", message: "" }); setSubmitted(false); }}>
+        <p className="ct-success-text">
+          Thank you for reaching out to News 4 Bharat. We will get back to you at{" "}
+          <a
+            href={getMailHref(CONTACT_FORM_RECIPIENT)}
+            className="ct-email-link"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {CONTACT_FORM_RECIPIENT}
+          </a>{" "}
+          within 24 hours.
+        </p>
+        <button className="ct-success-reset" onClick={() => { setForm({ name: "", email: "", subject: "", phone: "", message: "" }); setErrors({}); setSubmitted(false); }}>
           Send Another Message
         </button>
       </div>
@@ -190,37 +263,23 @@ export default function ContactPage() {
               <FadeIn direction="left" delay={0.05}>
                 <div className="ct-info-block">
                   <span className="ct-label">Contact Us</span>
-                  {/* <p className="ct-contact-desc">
-                    If you have any questions, feedback, business inquiries, or concerns regarding content, you can contact us using the details below:
-                  </p> */}
                   <p className="ct-contact-desc">
                     We'd be glad to hear from you. We aim to respond to all queries within 24–48 hours.
                   </p>
                   <div className="ct-email-list">
-                    <div className="ct-email-row">
-                      <span className="ct-email-tag">Editorial Queries</span>
-                      <a href="mailto:editorial@news4bharat.com" className="ct-email-link">
-                        <Mail size={14} /> editorial@news4bharat.com
-                      </a>
-                    </div>
-                    <div className="ct-email-row">
-                      <span className="ct-email-tag">PR & Communications</span>
-                      <a href="mailto:press@news4bharat.com" className="ct-email-link">
-                        <Mail size={14} /> press@news4bharat.com
-                      </a>
-                    </div>
-                    <div className="ct-email-row">
-                      <span className="ct-email-tag">Advertisements</span>
-                      <a href="mailto:advertisement@news4bharat.com" className="ct-email-link">
-                        <Mail size={14} /> advertisement@news4bharat.com
-                      </a>
-                    </div>
-                    <div className="ct-email-row">
-                      <span className="ct-email-tag">General Queries</span>
-                      <a href="mailto:info@news4bharat.com" className="ct-email-link">
-                        <Mail size={14} /> info@news4bharat.com
-                      </a>
-                    </div>
+                    {contactEmails.map(({ label, email }) => (
+                      <div key={email} className="ct-email-row">
+                        <span className="ct-email-tag">{label}</span>
+                        <a
+                          href={getMailHref(email)}
+                          className="ct-email-link"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <Mail size={14} /> {email}
+                        </a>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </FadeIn>
@@ -315,7 +374,12 @@ export default function ContactPage() {
                 </div>
                 <div className="ct-ad-cta">
                   <p className="ct-ad-cta-label">For media kit and pricing</p>
-                  <a href="mailto:info@news4bharat.com" className="ct-ad-cta-email">
+                  <a
+                    href={getMailHref("info@news4bharat.com")}
+                    className="ct-ad-cta-email"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <Mail size={15} /> info@news4bharat.com
                   </a>
                 </div>

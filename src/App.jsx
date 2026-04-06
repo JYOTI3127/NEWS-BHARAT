@@ -1,19 +1,23 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 // Seedhe load honge — har page pe zaroori hain
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import "../src/style.css";
-import DisclaimerPage from "./pages/Disclaimer";
+
+
+
 
 // Lazy load — sirf tab load honge jab user us page pe jaaye
+const Footer = lazy(() => import("./components/Footer"));
 const Home = lazy(() => import("./pages/Home"));
 const About = lazy(() => import("./pages/About"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const TermsPage = lazy(() => import("./pages/Termspage"));
+const DisclaimerPage = lazy(() => import("./pages/Disclaimer"));
+
 const FoundersNote = lazy(() => import("./pages/Foundersnote"));
 const EditorialPolicy = lazy(() => import("./pages/Editorialpolicy"));
 const CareersPage = lazy(() => import("./pages/Careerspage"));
@@ -22,7 +26,9 @@ const CommingSoon = lazy(() => import("./pages/ComingSoon"));
 const ArticleDetails = lazy(() => import("./pages/ArticleDetails"));
 const SixtySecondsPage = lazy(() => import("./pages/SixtySecondsPage"));
 const CategoryPage = lazy(() => import("./pages/Categorypage"));
-// const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
+const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
+const TagPage = lazy(() => import("./pages/TagPage"));
+const AuthorPage = lazy(() => import("./pages/AuthorPage"));
 
 // Loading Spinner
 function PageLoader() {
@@ -59,6 +65,31 @@ function PageLoader() {
 function Layout() {
   const location = useLocation();
   const hideLayout = location.pathname === "/CommingSoon";
+  const [showFooter, setShowFooter] = useState(false);
+
+  useEffect(() => {
+    if (hideLayout) return;
+
+    setShowFooter(false);
+
+    let timeoutId = 0;
+    let idleId = 0;
+
+    const revealFooter = () => setShowFooter(true);
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(revealFooter, { timeout: 4000 });
+    } else {
+      timeoutId = window.setTimeout(revealFooter, 2500);
+    }
+
+    return () => {
+      if (idleId && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      window.clearTimeout(timeoutId);
+    };
+  }, [hideLayout, location.pathname]);
 
   return (
     <>
@@ -76,6 +107,9 @@ function Layout() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/CommingSoon" element={<CommingSoon />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/tag/:tagName" element={<TagPage />} />
+          <Route path="/author/:slug" element={<AuthorPage />} />
+          <Route path="/article/:categorySlug/:slug" element={<ArticleDetails />} />
           <Route path="/article/:slug" element={<ArticleDetails />} />
           <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
           <Route path="/disclaimer" element={<DisclaimerPage />} />
@@ -96,7 +130,11 @@ function Layout() {
         </Routes>
       </Suspense>
 
-      {!hideLayout && <Footer />}
+      {!hideLayout && showFooter && (
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
+      )}
       {!hideLayout && (
         <div className="block md:hidden">
           <BottomNav />

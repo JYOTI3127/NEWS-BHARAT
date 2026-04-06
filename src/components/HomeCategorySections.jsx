@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./HomeCategorySections.css";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { API_BASE } from "../lib/api";
 const CATEGORY_API = `${API_BASE}/categories/`;
 
 const VARIANT_ROTATION = ["editorial", "scoreline", "mosaic", "cards", "spotlight"];
@@ -34,7 +33,7 @@ const EXCLUDED_HOME_SLUGS = new Set([
   "bharat-economy",
   "bharat-explainers",
   "bharat-opinions",
-  "bharat-numbers",
+  "bharat-in-numbers",
   "bharats-startups",
   "bharat-startups",
   "states-of-bharat",
@@ -227,7 +226,17 @@ function ArticleThumb({ article, alt, className }) {
     return <div className={`${className} hcs-thumb-fallback`}>No Image</div>;
   }
 
-  return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      width={640}
+      height={360}
+    />
+  );
 }
 
 function SectionFallback({ title, path }) {
@@ -391,7 +400,7 @@ function SpotlightSection({ section, articles }) {
         <StoryLink article={featured} className="hcs-spotlight-main">
             <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-spotlight-main-image" />
           <div className="hcs-spotlight-main-copy">
-            <span className="hcs-kicker">Featured</span>
+            <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
             <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
@@ -466,6 +475,7 @@ export default function HomeCategorySections() {
       if (ignore) return;
       setSections(results.filter((section) => section.articles.length > 0));
       setLoading(false);
+      document.dispatchEvent(new Event('prerender-ready'))
     }
 
     loadSections();

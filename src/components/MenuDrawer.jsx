@@ -2,23 +2,96 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart2, TrendingUp, PenLine, Cpu, Flame,
-  ChevronDown, ChevronRight, X, Loader2,
+  ChevronDown, ChevronRight, X, Loader2, FileText,
+  Globe, Trophy, Zap, Film, Newspaper,
 } from "lucide-react";
-import logo from "../assets/logo 01 (1).png";
+import logo from "../assets/logo 01 (1) compact.png";
+import { apiUrl } from "../lib/api";
 
-const API_BASE = "https://news4bharat.cloud/api";
+const CATEGORY_ICON_MAP = {
+  "Breaking News": Flame,
+  "States of Bharat": Globe,
+  "Bharat Economy & Business": TrendingUp,
+  "Bharat's BFSI": BarChart2,
+  "Bharat Explainers": FileText,
+  "Bharat in Numbers": BarChart2,
+  "Bharat Opinions": PenLine,
+  "Bharat's Startups": Zap,
+  "Bharat 2047": Flame,
+  "Bharat By 2047": Flame,
+  "Technology": Cpu,
+  "Artificial Intelligence": Cpu,
+  "Sports": Trophy,
+  "World News": Globe,
+  "Entertainment": Film,
+  "Trending": TrendingUp,
+  "60-Second Read": Zap,
+};
+
+const FALLBACK_ICONS = [
+  Newspaper,
+  Globe,
+  TrendingUp,
+  BarChart2,
+  Cpu,
+  Trophy,
+  Zap,
+  Film,
+  PenLine,
+  Flame,
+  FileText,
+];
+
+const getStableIconIndex = (value) => {
+  const source = String(value || "").trim().toLowerCase();
+  if (!source) return 0;
+
+  let hash = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+  }
+
+  return hash % FALLBACK_ICONS.length;
+};
+
+const getIconForCategory = (name, slug = "") => {
+  const directMatch = CATEGORY_ICON_MAP[name];
+  if (directMatch) return directMatch;
+
+  return FALLBACK_ICONS[getStableIconIndex(slug || name)];
+};
+
+const makeSlug = (slug, label) => {
+  if (slug && String(slug).trim() !== "") return slug;
+  return String(label || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
+const SLUG_OVERRIDES = {
+  "bharat-in-numbers": "bharat-in-numbers",
+  "states-of-bharat": "state-of-bharat",
+  "bharats-startups": "bharat-startups",
+  "breaking-news": "breaking-news",
+};
+
+const getFinalSlug = (slug, label) => {
+  const normalized = makeSlug(slug, label);
+  return SLUG_OVERRIDES[normalized] || normalized;
+};
 
 // ── All nav links ──
 const navLinks = [
-  { label: "Breaking News",     path: "/breaking-news",    isBreaking: true },
-  { label: "States of Bharat",  path: "/state-of-bharat" },
-  { label: "Bharat Explainers", path: "/bharat-explainers" },
-  { label: "Bharat in Numbers", path: "/bharat-numbers" },
-  { label: "Bharat's Startups", path: "/bharat-startups" },
-  { label: "60-Second Read",    path: "/60-second-read" },
-  { label: "Sports",            path: "/sports" },
-  { label: "World News",        path: "/world-news" },
-  { label: "Entertainment",     path: "/entertainment" },
+  { label: "Breaking News",     path: "/category/breaking-news",    isBreaking: true },
+  { label: "States of Bharat",  path: "/category/state-of-bharat" },
+  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
+  { label: "Bharat in Numbers", path: "/category/bharat-in-numbers" },
+  { label: "Bharat's Startups", path: "/category/bharat-startups" },
+  { label: "60-Second Read",    path: "/category/60-second-read" },
+  { label: "Sports",            path: "/category/sports" },
+  { label: "World News",        path: "/category/world-news" },
+  { label: "Entertainment",     path: "/category/entertainment" },
   { label: "Founder's Note",    path: "/founders-note" },
   { label: "Editorial Policy",  path: "/editorial-policy" },
   { label: "Career",            path: "/careers" },
@@ -30,93 +103,60 @@ const navLinks = [
 const NAV_SECTIONS = [
   {
     label: "Bharat Economy & Business",
+    slug: "bharat-economy",
     Icon: TrendingUp,
     subcategories: [
       {
         label: "Macro Economy",
-        topics: [
-          { label: "GDP & Growth",                path: "/category/gdp-growth" },
-          { label: "Inflation",                   path: "/category/inflation" },
-          { label: "Fiscal & Monetary",           path: "/category/fiscal-monetary" },
-          { label: "Employment & Labour Market",  path: "/category/employment-labour" },
-        ],
+        topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"],
       },
       {
         label: "Government Policy",
-        topics: [
-          { label: "Union Budget",      path: "/category/union-budget" },
-          { label: "Economic Reforms",  path: "/category/economic-reforms" },
-          { label: "PLI & Policies",    path: "/category/pli-policies" },
-          { label: "PSU",               path: "/category/psu" },
-        ],
+        topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"],
       },
       {
         label: "Industry & Sectors",
-        topics: [
-          { label: "Manufacturing",                 path: "/category/manufacturing" },
-          { label: "Agriculture",                   path: "/category/agriculture" },
-          { label: "Rural Economy",                 path: "/category/rural-economy" },
-          { label: "Infrastructure & Construction", path: "/category/infrastructure" },
-          { label: "Energy & Power",                path: "/category/energy-power" },
-          { label: "Telecom & Digital",             path: "/category/telecom-digital" },
-        ],
+        topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"],
       },
       {
         label: "Corporate & Companies",
-        topics: [
-          { label: "Corporate News",                path: "/category/corporate-news" },
-          { label: "Mergers & Acquisitions",        path: "/category/mergers-acquisitions" },
-          { label: "Company Results",               path: "/category/company-results" },
-          { label: "Business Leaders & Interviews", path: "/category/business-leaders" },
-        ],
+        topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"],
       },
       {
         label: "MSME & Entrepreneurship",
-        topics: [
-          { label: "MSME Policies",         path: "/category/msme-policies" },
-          { label: "Small Business Stories",path: "/category/small-business" },
-        ],
+        topics: ["MSME Policies", "Small Business Stories"],
       },
     ],
   },
   {
     label: "Bharat's BFSI",
+    slug: "bfsi",
     Icon: BarChart2,
-    links: [
-      { label: "Banking",      path: "/category/banking" },
-      { label: "NBFCs",        path: "/category/nbfcs" },
-      { label: "Fintech",      path: "/category/fintech" },
-      { label: "Stock Market", path: "/category/stock-market" },
-      { label: "Insurance",    path: "/category/insurance" },
-    ],
+    links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"],
   },
   {
     label: "Bharat Opinions",
+    slug: "bharat-opinions",
     Icon: PenLine,
-    links: [
-      { label: "Editorials",               path: "/category/editorials" },
-      { label: "Expert Opinions",          path: "/category/expert-opinions" },
-      { label: "Industry Voices",          path: "/category/industry-voices" },
-      { label: "Articles",                 path: "/category/articles" },
-      { label: "Interviews",               path: "/category/interviews" },
-      { label: "Debates & Counterpoints",  path: "/category/debates" },
-      { label: "Policy Perspective",       path: "/category/policy-perspective" },
-    ],
+    links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"],
   },
   {
     label: "Technology",
+    slug: "technology",
     Icon: Cpu,
-    links: [{ label: "Technology", path: "/category/technology" }],
+    links: ["Technology"],
   },
   {
     label: "Artificial Intelligence",
+    slug: "ai",
     Icon: Cpu,
-    links: [{ label: "Artificial Intelligence", path: "/category/artificial-intelligence" }],
+    links: ["Artificial Intelligence"],
   },
   {
     label: "Bharat By 2047",
+    slug: "bharat-2047",
     Icon: Flame,
-    links: [{ label: "Bharat By 2047", path: "/category/bharat-by-2047" }],
+    links: ["Bharat By 2047"],
   },
 ];
 
@@ -146,6 +186,10 @@ function ArticleImg({ src, alt }) {
   return (
     <img src={src} alt={alt}
       style={{ width: 56, height: 44, borderRadius: 6, objectFit: "cover", flexShrink: 0 }}
+      width={56}
+      height={44}
+      loading="lazy"
+      decoding="async"
       onError={() => setErr(true)}
     />
   );
@@ -156,6 +200,8 @@ export default function MenuDrawer({ open, onClose }) {
   const navigate = useNavigate();
   const [expandedSection,  setExpandedSection]  = useState(null);
   const [expandedSubcat,   setExpandedSubcat]   = useState(null);
+  const [navSections,      setNavSections]      = useState(NAV_SECTIONS);
+  const [navSectionsLoaded, setNavSectionsLoaded] = useState(false);
 
   // Breaking News state
   const [showBreaking,     setShowBreaking]     = useState(false);
@@ -167,7 +213,7 @@ export default function MenuDrawer({ open, onClose }) {
     if (!showBreaking || breakingArticles.length > 0) return;
     setBreakingLoading(true);
 
-    fetch(`${API_BASE}/articles/`)
+    fetch(apiUrl("/articles/?category=breaking-news&limit=10"))
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
@@ -192,6 +238,59 @@ export default function MenuDrawer({ open, onClose }) {
       })
       .catch(() => setBreakingLoading(false));
   }, [showBreaking]);
+
+  useEffect(() => {
+    if (!open || navSectionsLoaded) return;
+
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(apiUrl("/categories/"));
+        const data = await res.json();
+        const active = Array.isArray(data)
+          ? data.filter((cat) => cat?.status === "active")
+          : [];
+
+        const sections = active.map((cat) => {
+          const subCategories = cat?.sub_categories || {};
+          const subKeys = Object.keys(subCategories);
+          let links = null;
+          let subcategories = null;
+
+          if (subKeys.length > 1) {
+            subcategories = subKeys.map((key) => ({
+              label: key,
+              topics: Array.isArray(subCategories[key]) ? subCategories[key] : [],
+            }));
+          } else if (subKeys.length === 1) {
+            const key = subKeys[0];
+            const values = Array.isArray(subCategories[key]) ? subCategories[key] : [];
+
+            if (key === "default") {
+              links = values;
+            } else if (values.length > 0) {
+              subcategories = [{ label: key, topics: values }];
+            }
+          }
+
+          return {
+            label: cat?.name,
+            slug: cat?.slug,
+            Icon: getIconForCategory(cat?.name, cat?.slug),
+            ...(subcategories ? { subcategories } : {}),
+            ...(links ? { links } : {}),
+          };
+        });
+
+        setNavSections(sections.length > 0 ? sections : NAV_SECTIONS);
+        setNavSectionsLoaded(true);
+      } catch {
+        setNavSections(NAV_SECTIONS);
+        setNavSectionsLoaded(true);
+      }
+    };
+
+    fetchCategories();
+  }, [open, navSectionsLoaded]);
 
   const handleNav = (path) => {
     if (!path) return;
@@ -224,7 +323,6 @@ export default function MenuDrawer({ open, onClose }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         .md-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1100; }
         .md-drawer {
           position:fixed;top:0;left:0;bottom:0;width:300px;background:#fff;
@@ -292,6 +390,10 @@ export default function MenuDrawer({ open, onClose }) {
         {/* Header */}
         <div className="md-header">
           <img src={logo} alt="News4Bharat"
+            width="384"
+            height="58"
+            loading="lazy"
+            decoding="async"
             style={{ height: 32, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
           />
           <button className="md-close" onClick={onClose}><X size={16} /></button>
@@ -349,7 +451,7 @@ export default function MenuDrawer({ open, onClose }) {
                       </div>
                     </div>
                   ))}
-                  <button className="md-bn-viewall" onClick={() => handleNav("/breaking-news")}>
+                  <button className="md-bn-viewall" onClick={() => handleNav("/category/breaking-news")}>
                     View All Breaking News →
                   </button>
                 </>
@@ -360,10 +462,11 @@ export default function MenuDrawer({ open, onClose }) {
           <div className="md-divider" />
           <div className="md-section-title">Categories</div>
 
-          {NAV_SECTIONS.map(({ label, Icon, links, subcategories }) => {
+          {navSections.map(({ label, slug, Icon, links, subcategories }) => {
             const sectionOpen = expandedSection === label;
             const hasSubcats  = subcategories && subcategories.length > 0;
             const hasLinks    = links && links.length > 0;
+            const finalSlug   = getFinalSlug(slug, label);
 
             return (
               <div key={label}>
@@ -371,7 +474,15 @@ export default function MenuDrawer({ open, onClose }) {
                   <span className="md-sec-icon">
                     <Icon size={15} color="#D80100" strokeWidth={2} />
                   </span>
-                  <span className="md-sec-label">{label}</span>
+                  <span
+                    className="md-sec-label"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNav(`/category/${finalSlug}`);
+                    }}
+                  >
+                    {label}
+                  </span>
                   {(hasSubcats || hasLinks) && (
                     <ChevronDown size={14} color="#aaa"
                       style={{ transition: "transform 0.2s", transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -394,22 +505,36 @@ export default function MenuDrawer({ open, onClose }) {
                               style={{ transition: "transform 0.2s", transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                             />
                           </button>
-                          {subcatOpen && sub.topics.map((topic) => (
-                            <button key={topic.label} className="md-topic-btn"
-                              onClick={() => handleNav(topic.path)}>
-                              › {topic.label}
-                            </button>
-                          ))}
+                          {subcatOpen && (sub.topics || []).map((topic) => {
+                            const topicLabel = typeof topic === "string" ? topic : topic?.label;
+                            const topicPath = typeof topic === "string"
+                              ? `/category/${finalSlug}?subcategory=${encodeURIComponent(topic)}`
+                              : topic?.path;
+
+                            return (
+                              <button key={topicLabel} className="md-topic-btn"
+                                onClick={() => handleNav(topicPath)}>
+                                › {topicLabel}
+                              </button>
+                            );
+                          })}
                         </div>
                       );
                     })
                   ) : hasLinks ? (
-                    links.map((link) => (
-                      <button key={link.label} className="md-sub-link"
-                        onClick={() => handleNav(link.path)}>
-                        › {link.label}
-                      </button>
-                    ))
+                    links.map((link) => {
+                      const linkLabel = typeof link === "string" ? link : link?.label;
+                      const linkPath = typeof link === "string"
+                        ? `/category/${finalSlug}?subcategory=${encodeURIComponent(link)}`
+                        : link?.path;
+
+                      return (
+                        <button key={linkLabel} className="md-sub-link"
+                          onClick={() => handleNav(linkPath)}>
+                          › {linkLabel}
+                        </button>
+                      );
+                    })
                   ) : null}
                 </div>
               </div>

@@ -1,11 +1,41 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiUrl, fetchArticles, fetchCategories } from "../lib/api";
 
-const API_URL = "https://news4bharat.cloud/api/articles/";
-const CATEGORIES_URL = "https://news4bharat.cloud/api/categories/";
+const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read");
 
 // ── Helpers ───────────────────────────────────────────────────
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
+const getArticleImage = (article) => article?.image_url || article?.image || "";
+const getArticleFallbackImage = (article) => article?.image || article?.image_url || "";
+const INDIA_TZ = "Asia/Kolkata";
+
+const getArticleDateValue = (article) => {
+  const raw = article?.published_at || article?.created_at || null;
+  if (!raw) return null;
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatIndiaDateKey = (value) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
+
+const isArticleFromTodayInIndia = (article) => {
+  const articleDate = getArticleDateValue(article);
+  if (!articleDate) return false;
+
+  const now = new Date();
+  if (articleDate.getTime() > now.getTime()) return false;
+
+  return formatIndiaDateKey(articleDate) === formatIndiaDateKey(now);
+};
 
 const useIs4K = () => {
   const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
@@ -20,14 +50,42 @@ const useIs4K = () => {
   return is4K;
 };
 
+const useIs2K = () => {
+  const getValue = () =>
+    typeof window !== "undefined" ? window.innerWidth >= 1441 && window.innerWidth <= 2560 : false;
+  const [is2K, setIs2K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs2K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is2K;
+};
+
+const useIs320 = () => {
+  const getValue = () =>
+    typeof window !== "undefined" ? window.innerWidth <= 320 : false;
+  const [is320, setIs320] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs320(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is320;
+};
+
 // ── Icons ─────────────────────────────────────────────────────
-const ArrowBtn = ({ direction, disabled, onClick }) => (
+const ArrowBtn = ({ direction, disabled, onClick, compact = false }) => (
   <div
     onClick={disabled ? undefined : onClick}
-    className={`w-8 h-8 min-w-[32px] flex items-center justify-center select-none ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+    className={`${compact ? "w-[26px] h-[26px] min-w-[26px]" : "w-8 h-8 min-w-[32px]"} flex items-center justify-center select-none ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
       }`}
   >
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <svg width={compact ? "26" : "32"} height={compact ? "26" : "32"} viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="15" fill="#ffffff" stroke="#999999" strokeWidth="1" />
       {direction === "left"
         ? <path d="M19 10L13 16L19 22" stroke={disabled ? "#c0c0c0" : "#999999"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -43,63 +101,78 @@ const FlameSvg = () => (
   </svg>
 );
 
-if (typeof document !== "undefined" && !document.getElementById("poppins-font")) {
-  const link = document.createElement("link");
-  link.id = "poppins-font";
-  link.rel = "stylesheet";
-  link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap";
-  document.head.appendChild(link);
-}
 
 // ── API Hook ──────────────────────────────────────────────────
 function useArticles() {
-  const [articles, setArticles] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    data: articleData,
+    isLoading: articlesLoading,
+    error: articlesError,
+  } = useQuery({
+    queryKey: ["articles"],
+    queryFn: fetchArticles,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    Promise.all([
-      fetch(API_URL).then((r) => { if (!r.ok) throw new Error("Articles API error"); return r.json(); }),
-      fetch(CATEGORIES_URL).then((r) => r.ok ? r.json() : []).catch(() => []),
-    ])
-      .then(([articleData, catData]) => {
-        const published = Array.isArray(articleData)
-          ? articleData
-            .filter((a) => a.status === "published" || a.image_url)
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-          : [];
+  const {
+    data: categoryData,
+    isLoading: categoriesLoading,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-        setArticles(published);
+  const articles = useMemo(() => {
+    const list = Array.isArray(articleData)
+      ? articleData
+      : Array.isArray(articleData?.value)
+        ? articleData.value
+        : articleData?.results || [];
 
-        const fromApi = Array.isArray(catData)
-          ? catData
-            .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
-            .map((c) => ({ name: c.name || c.title, slug: c.slug }))
-          : [];
+    return list
+      .filter((a) => a.status === "published" || a.image_url)
+      .sort(
+        (a, b) =>
+          new Date(b.published_at || b.created_at || 0) -
+          new Date(a.published_at || a.created_at || 0)
+      );
+  }, [articleData]);
 
-        if (fromApi.length > 0) {
-          setCategories(fromApi);
-        } else {
-          const seen = new Set();
-          const fromArticles = [];
-          published.forEach((a) => {
-            (a.category_details || []).forEach((cat) => {
-              if (cat.name && !seen.has(cat.name)) {
-                seen.add(cat.name);
-                fromArticles.push({ name: cat.name, slug: cat.slug || "" });
-              }
-            });
-          });
-          setCategories(fromArticles);
+  const categories = useMemo(() => {
+    const fromApi = Array.isArray(categoryData)
+      ? categoryData
+          .filter((c) => (c.name || c.title) && c.status === "active" && c.slug && c.slug.trim() !== "")
+          .map((c) => ({ name: c.name || c.title, slug: c.slug }))
+      : [];
+
+    if (fromApi.length > 0) {
+      return fromApi;
+    }
+
+    const seen = new Set();
+    const fromArticles = [];
+
+    articles.forEach((article) => {
+      (article.category_details || []).forEach((cat) => {
+        if (cat.name && !seen.has(cat.name)) {
+          seen.add(cat.name);
+          fromArticles.push({ name: cat.name, slug: cat.slug || "" });
         }
+      });
+    });
 
-        setLoading(false);
-      })
-      .catch((e) => { setError(e.message); setLoading(false); });
-  }, []);
+    return fromArticles;
+  }, [articles, categoryData]);
 
-  return { articles, categories, loading, error };
+  return {
+    articles,
+    categories,
+    loading: articlesLoading || categoriesLoading,
+    error: articlesError ? articlesError.message : null,
+  };
 }
 
 // ── Skeleton ──────────────────────────────────────────────────
@@ -124,65 +197,84 @@ function SecHeader({ title }) {
 }
 
 // ── Trending Bar ──────────────────────────────────────────────
-function TrendingBar({ categories }) {
+function TrendingBar({ categories, is2K, is320 }) {
   const navigate = useNavigate();
-  const GAP = 8;
-  const [startIdx, setStartIdx] = useState(0);
-  const [translateX, setTranslateX] = useState(0);
+  const scrollRef = useRef(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-  const itemRefs = useRef([]);
-  const outerRef = useRef(null);
 
   const topics = categories.length > 0 ? categories : [{ name: "Loading...", slug: "" }];
 
   useEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
-    let px = 0;
-    for (let i = 0; i < startIdx; i++) {
-      const el = itemRefs.current[i];
-      if (el) px += el.offsetWidth + GAP;
-    }
-    setTranslateX(px);
-    setCanPrev(startIdx > 0);
-    const outerWidth = outer.clientWidth;
-    let remaining = 0;
-    for (let i = startIdx; i < topics.length; i++) {
-      const el = itemRefs.current[i];
-      if (el) remaining += el.offsetWidth + GAP;
-    }
-    setCanNext(remaining - GAP > outerWidth);
-  }, [startIdx, topics.length]);
+    const node = scrollRef.current;
+    if (!node) return;
 
-  useEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
-    const outerWidth = outer.clientWidth;
-    let total = 0;
-    for (let i = 0; i < topics.length; i++) {
-      const el = itemRefs.current[i];
-      if (el) total += el.offsetWidth + GAP;
-    }
-    setCanNext(total - GAP > outerWidth);
+    const updateButtons = () => {
+      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+      setCanPrev(node.scrollLeft > 4);
+      setCanNext(node.scrollLeft < maxScrollLeft - 4);
+    };
+
+    updateButtons();
+    node.addEventListener("scroll", updateButtons, { passive: true });
+    window.addEventListener("resize", updateButtons);
+
+    return () => {
+      node.removeEventListener("scroll", updateButtons);
+      window.removeEventListener("resize", updateButtons);
+    };
   }, [topics.length]);
 
+  const scrollTopics = (direction) => {
+    const node = scrollRef.current;
+    if (!node) return;
+
+    const amount = Math.max(node.clientWidth * 0.72, 120);
+    node.scrollBy({
+      left: direction * amount,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <div className="tn-trending-bar">
+    <div
+      className="tn-trending-bar"
+      style={
+        is2K
+          ? {
+              width: "min(1820px, calc(100% - 96px))",
+              margin: "0 auto",
+              padding: "18px 0 8px",
+              height: "auto",
+              gap: 12,
+            }
+          : undefined
+      }
+    >
       <div className="tn-trending-label">
-        <div className="tn-trending-label-line">TRENDING NEWS :</div>
+        <div className="tn-trending-label-line">{is320 ? "TRENDING :" : "TRENDING NEWS :"}</div>
       </div>
-      <ArrowBtn direction="left" disabled={!canPrev} onClick={() => setStartIdx((i) => i - 1)} />
-      <div ref={outerRef} style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+      <ArrowBtn compact={is320} direction="left" disabled={!canPrev} onClick={() => scrollTopics(-1)} />
+      <div
+        ref={scrollRef}
+        style={{
+          overflowX: "auto",
+          overflowY: "hidden",
+          flex: 1,
+          minWidth: 0,
+          maxWidth: is320 ? "184px" : undefined,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
         <div style={{
-          display: "flex", gap: `${GAP}px`,
-          transform: `translateX(-${translateX}px)`,
-          transition: "transform 0.35s ease", width: "max-content",
+          display: "flex",
+          gap: `${is320 ? 6 : 8}px`,
+          width: "max-content",
         }}>
           {topics.map((cat, i) => (
             <button
               key={i}
-              ref={(el) => { itemRefs.current[i] = el; }}
               className="tn-topic-btn"
               style={{ whiteSpace: "nowrap", flexShrink: 0 }}
               onClick={() => { if (cat.slug) navigate(`/category/${cat.slug}`); }}
@@ -192,67 +284,26 @@ function TrendingBar({ categories }) {
           ))}
         </div>
       </div>
-      <ArrowBtn direction="right" disabled={!canNext} onClick={() => setStartIdx((i) => i + 1)} />
+      <div style={is320 ? { marginLeft: "2px" } : undefined}>
+        <ArrowBtn compact={is320} direction="right" disabled={!canNext} onClick={() => scrollTopics(1)} />
+      </div>
     </div>
   );
 }
 
 // ── Latest News ───────────────────────────────────────────────
 function LatestNews({ articles, loading }) {
-  const [startIdx, setStartIdx] = useState(0);
-  const [animating, setAnimating] = useState(false);
-  const [exitIdx, setExitIdx] = useState(null);
-  const [tick, setTick] = useState(0);
-  const pausedRef = useRef(false);
-  const timerRef = useRef(null);
-
-  const VISIBLE = 3;
-
-  const getVisible = (from) => {
-    if (articles.length === 0) return [];
-    return Array.from({ length: VISIBLE }, (_, i) => articles[(from + i) % articles.length]);
-  };
-
-  const visibleArticles = getVisible(startIdx);
-
-  useEffect(() => {
-    if (loading || articles.length <= VISIBLE) return;
-    const schedule = () => {
-      timerRef.current = setTimeout(() => {
-        if (pausedRef.current) { schedule(); return; }
-        setExitIdx(0);
-        setAnimating(true);
-        setTimeout(() => {
-          setStartIdx((prev) => (prev + 1) % articles.length);
-          setTick((t) => t + 1);
-          setExitIdx(null);
-          setAnimating(false);
-          schedule();
-        }, 500);
-      }, 3000);
-    };
-    schedule();
-    return () => clearTimeout(timerRef.current);
-  }, [loading, articles.length]);
+  const visibleArticles = articles.slice(0, 3);
 
   return (
-    <div className="tn-latest-news">
+    <div
+      className="tn-latest-news"
+      style={typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560
+        ? { maxHeight: 430, padding: 18 }
+        : undefined}
+    >
       <SecHeader title="LATEST NEWS" />
       <style>{`
-        @keyframes slideOutUp {
-          from { opacity: 1; transform: translateY(0); max-height: 120px; }
-          to   { opacity: 0; transform: translateY(-20px); max-height: 0; padding-top: 0; padding-bottom: 0; }
-        }
-        @keyframes slideInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes leftLineGrow {
-          from { height: 0%; }
-          to   { height: 100%; }
-        }
-        .news-item-exit { animation: slideOutUp 0.45s ease forwards; overflow: hidden; }
-        .news-item-enter { animation: slideInUp 0.45s ease forwards; }
         .news-ticker-item:hover .news-ticker-title { color: #D80100 !important; }
         .news-ticker-title { transition: color 0.2s ease; }
         .tn-article-link {
@@ -274,35 +325,43 @@ function LatestNews({ articles, loading }) {
             </div>
           ))}
         </div>
-      ) : articles.length === 0 ? (
+      ) : visibleArticles.length === 0 ? (
         <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
       ) : (
         <div
           className="tn-latest-scroll"
-          style={{ overflowY: "auto", position: "relative" }}
-          onMouseEnter={() => { pausedRef.current = true; }}
-          onMouseLeave={() => { pausedRef.current = false; }}
+          style={{
+            overflowY: "auto",
+            position: "relative",
+            ...(typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560
+              ? { maxHeight: 300 }
+              : {}),
+          }}
         >
           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#f0f0f0", zIndex: 1 }}>
-            <div key={tick} style={{ width: "100%", background: "#D80100", animation: "leftLineGrow 3s linear forwards" }} />
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background: "#D80100",
+              }}
+            />
           </div>
 
           {visibleArticles.map((article, i) => {
             const desc = article.subtitle ? article.subtitle : stripHtml(article.content);
             const isTop = i === 0;
-            const isExiting = animating && i === exitIdx;
-            const isEntering = animating && i === VISIBLE - 1;
             const hasImage = !!article.image_url;
 
             // ✅ Link component — same tab click + right click "Open in new tab" + Ctrl+Click dono
             const Wrapper = hasImage
               ? ({ children }) => (
                   <Link
-                    to={`/article/${article.slug}`}
-                    className={`tn-article-link news-ticker-item${isExiting ? " news-item-exit" : isEntering ? " news-item-enter" : ""}`}
+                    to={`/article/${article.slug || article.id}`}
+                    className="tn-article-link news-ticker-item"
                     style={{
                       padding: "11px 14px 11px 18px",
-                      borderBottom: i < VISIBLE - 1 ? "1px solid #f0f0f0" : "none",
+                      borderBottom: i < visibleArticles.length - 1 ? "1px solid #f0f0f0" : "none",
                       background: isTop ? "#fff8f8" : "#fff",
                     }}
                   >
@@ -311,10 +370,10 @@ function LatestNews({ articles, loading }) {
                 )
               : ({ children }) => (
                   <div
-                    className={`news-ticker-item${isExiting ? " news-item-exit" : isEntering ? " news-item-enter" : ""}`}
+                    className="news-ticker-item"
                     style={{
                       padding: "11px 14px 11px 18px",
-                      borderBottom: i < VISIBLE - 1 ? "1px solid #f0f0f0" : "none",
+                      borderBottom: i < visibleArticles.length - 1 ? "1px solid #f0f0f0" : "none",
                       display: "flex", gap: 12, alignItems: "flex-start",
                       background: isTop ? "#fff8f8" : "#fff",
                       cursor: "default",
@@ -325,7 +384,7 @@ function LatestNews({ articles, loading }) {
                 );
 
             return (
-              <Wrapper key={`${article.id}-${startIdx}-${i}`}>
+              <Wrapper key={article.id || `${article.slug || "article"}-${i}`}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#D80100", fontFamily: "Poppins, sans-serif", lineHeight: "1.4", flexShrink: 0, marginTop: 1 }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
@@ -352,8 +411,14 @@ function FeatureCards({ articles, loading }) {
   const [animDir, setAnimDir] = useState(null);
   const timerRef = useRef(null);
 
-  const withImage = articles.filter((a) => a.image_url);
+  const withImage = articles.filter(
+    (a) => getArticleImage(a) && isArticleFromTodayInIndia(a)
+  );
   const totalPages = Math.ceil(withImage.length / 3);
+
+  useEffect(() => {
+    setPage(0);
+  }, [withImage.length]);
 
   useEffect(() => {
     if (loading || withImage.length === 0) return;
@@ -364,7 +429,7 @@ function FeatureCards({ articles, loading }) {
         setTimeout(() => { setPage(next); setAnimDir("in"); setTimeout(() => setAnimDir(null), 400); }, 300);
         return prev;
       });
-    }, 4000);
+    }, 12000);
     return () => clearInterval(timerRef.current);
   }, [loading, withImage.length, totalPages]);
 
@@ -394,21 +459,45 @@ function FeatureCards({ articles, loading }) {
 
   return (
     <div>
-      <div className="tn-feature-cards" style={transitionStyle}>
+      {!loading && withImage.length === 0 ? (
+        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>
+          No today posts found.
+        </div>
+      ) : null}
+      <div
+        className="tn-feature-cards"
+        style={{
+          ...transitionStyle,
+          ...(typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560
+            ? { height: 430 }
+            : {}),
+        }}
+      >
         {cards.map((card) => (
           // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
           <Link
             key={card.id}
-            to={`/article/${card.slug}`}
+            to={`/article/${card.slug || card.id}`}
             className="tn-feature-card"
             style={{ textDecoration: "none", color: "inherit", display: "block", cursor: "pointer" }}
           >
             <div className="tn-feature-card-img-wrap">
               <img
-                src={card.image_url}
+                src={getArticleImage(card)}
                 alt={card.title}
+                loading="lazy"
+                decoding="async"
+                width={360}
+                height={220}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                onError={(e) => { e.target.style.display = "none"; }}
+                onError={(e) => {
+                  const fallback = getArticleFallbackImage(card);
+                  if (fallback && e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                    return;
+                  }
+                  e.currentTarget.style.display = "none";
+                }}
               />
             </div>
             <div className="tn-feature-card-body">
@@ -422,15 +511,40 @@ function FeatureCards({ articles, loading }) {
 }
 
 // ── 60 Seconds ────────────────────────────────────────────────
-function LiveUpdates({ articles, loading }) {
+function LiveUpdates() {
   const scrollRef = useRef(null);
   const animRef = useRef(null);
   const autoScrollRef = useRef(true);
+  const [sixtyArticles, setSixtyArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const sixtyArticles = articles.filter((a) =>
-    Array.isArray(a.category_details) &&
-    a.category_details.some((c) => c.slug === "60-second-read")
-  );
+  useEffect(() => {
+    let ignore = false;
+
+    fetch(SIXTY_SECONDS_URL)
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch 60-second articles");
+        return r.json();
+      })
+      .then((data) => {
+        if (ignore) return;
+        const list = Array.isArray(data) ? data : data?.results || [];
+        const sorted = list.sort(
+          (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
+        );
+        setSixtyArticles(sorted);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSixtyArticles([]);
+        setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -451,11 +565,19 @@ function LiveUpdates({ articles, loading }) {
   }, []);
 
   return (
-    <div className="tn-live-updates">
+    <div
+      className="tn-live-updates"
+      style={typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560
+        ? { height: "360px", padding: "18px 14px 18px 16px" }
+        : undefined}
+    >
       <SecHeader title="60 SECONDS" />
       <div
         className="tn-live-scroll"
         ref={scrollRef}
+        style={typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560
+          ? { maxHeight: 300, paddingBottom: 14, boxSizing: "border-box" }
+          : undefined}
         onMouseEnter={() => { autoScrollRef.current = false; }}
         onMouseLeave={() => { autoScrollRef.current = true; }}
       >
@@ -475,7 +597,7 @@ function LiveUpdates({ articles, loading }) {
                 // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
                 <Link
                   key={item.id}
-                  to={`/article/${item.slug}`}
+                  to={`/article/${item.slug || item.id}`}
                   className="tn-live-item group cursor-pointer"
                   style={{ textDecoration: "none", color: "inherit", display: "flex" }}
                 >
@@ -591,9 +713,27 @@ function Banner() {
 export default function TrendingNews() {
   const { articles, categories, loading, error } = useArticles();
   const is4K = useIs4K();
+  const is2K = useIs2K();
+  const is320 = useIs320();
+  const twoKInnerStyle = is2K
+    ? {
+        width: "min(1820px, calc(100% - 96px))",
+        maxWidth: "none",
+        margin: "0 auto",
+        padding: "34px 0 38px",
+      }
+    : undefined;
+  const twoKGridStyle = is2K
+    ? {
+        gridTemplateColumns: "560px minmax(0, 1fr) 260px",
+        gap: "18px",
+        height: "360px",
+        alignItems: "stretch",
+      }
+    : undefined;
 
   return (
-    <div className={`tn-page${is4K ? " tn-page-4k" : ""}`}>
+    <div className={`tn-page${is2K ? " tn-page-2k" : ""}${is4K ? " tn-page-4k" : ""}`}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -601,7 +741,7 @@ export default function TrendingNews() {
         }
       `}</style>
 
-      <TrendingBar categories={categories} />
+      <TrendingBar categories={categories} is2K={is2K} is320={is320} />
 
       {error && (
         <div style={{ background: "#fff3f3", color: "#c00", padding: "8px 16px", fontSize: 13, fontFamily: "Poppins,sans-serif" }}>
@@ -609,19 +749,26 @@ export default function TrendingNews() {
         </div>
       )}
 
-      <div className="tn-inner">
-        <div className="tn-grid">
+      <div className="tn-inner" style={twoKInnerStyle}>
+        <div className="tn-grid" style={twoKGridStyle}>
           <div className="col-news">
             <LatestNews articles={articles} loading={loading} />
           </div>
           <div className="col-cards">
             <FeatureCards articles={articles} loading={loading} />
           </div>
-          <div className="col-live">
-            <LiveUpdates articles={articles} loading={loading} />
-          </div>
+          {!is320 && (
+            <div className="col-live">
+              <LiveUpdates articles={articles} loading={loading} />
+            </div>
+          )}
         </div>
         <Banner />
+        {is320 && (
+          <div className="tn-live-mobile">
+            <LiveUpdates />
+          </div>
+        )}
       </div>
     </div>
   );

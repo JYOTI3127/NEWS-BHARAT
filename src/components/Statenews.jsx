@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE = "https://news4bharat.cloud/api";
+import { API_BASE } from "../lib/api";
 
 // ── State List ────────────────────────────────────────────────
 const stateList = [
@@ -11,6 +10,8 @@ const stateList = [
   "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
 ];
+
+const stateNameSet = new Set(stateList.map((state) => state.toLowerCase()));
 
 // ── Helpers ───────────────────────────────────────────────────
 const formatDate = (d) =>
@@ -22,6 +23,45 @@ const formatDate = (d) =>
     : "";
 
 const imgSrc = (a) => a?.image_url || a?.image || null;
+const categoryLabel = (article, fallback = "STATE NEWS") =>
+  article?.category_details?.[0]?.name ||
+  article?.categories?.[0]?.name ||
+  fallback;
+
+const getSelectedStateName = (article) => {
+  const subs = article?.selected_subcategories?.subs;
+  if (!subs || typeof subs !== "object") return "";
+
+  for (const values of Object.values(subs)) {
+    if (Array.isArray(values) && values.length > 0) {
+      const first = values.find((value) => typeof value === "string" && value.trim());
+      if (first) return first.trim();
+    }
+  }
+
+  return "";
+};
+
+const hasMappedState = (article) => {
+  const stateName = getSelectedStateName(article);
+  return Boolean(stateName) && stateNameSet.has(stateName.toLowerCase());
+};
+
+const getStateTagLabel = (article, activeState, fallback = "STATE NEWS") =>
+  activeState || getSelectedStateName(article) || categoryLabel(article, fallback);
+
+const getSortTimestamp = (article) => {
+  const rawDate =
+    article?.published_at ||
+    article?.created_at ||
+    article?.date ||
+    null;
+
+  if (!rawDate) return 0;
+
+  const parsed = new Date(rawDate).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
 
 // ── Breakpoint Hook ───────────────────────────────────────────
 const useBreakpoint = () => {
@@ -102,6 +142,7 @@ export default function StateNews() {
 
   const isMobile = ["s", "m", "l", "mobile"].includes(bp);
   const isTablet = bp === "tablet";
+  const is2K = bp === "laptop-l";
 
   useEffect(() => {
     setStateLoading(true);
@@ -109,13 +150,18 @@ export default function StateNews() {
 
     const url = activeState
       ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(activeState)}`
-      : `${API_BASE}/articles/`;
+      : `${API_BASE}/articles/?category=state-of-bharat`;
 
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
         const articles = Array.isArray(data) ? data : (data.results || []);
-        const sorted = articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const filteredArticles = activeState
+          ? articles
+          : articles.filter(hasMappedState);
+        const sorted = [...filteredArticles].sort(
+          (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
+        );
         setStateArticles(sorted);
         setStateLoading(false);
       })
@@ -131,10 +177,10 @@ export default function StateNews() {
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
-        const sorted = all.sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        const sorted = [...all].sort(
+          (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
         );
-        setStartupArticles(sorted);
+        setStartupArticles(sorted.slice(0, 6));
         setStartupLoading(false);
       })
       .catch(() => setStartupLoading(false));
@@ -157,7 +203,17 @@ export default function StateNews() {
   const loading = stateLoading;
 
   return (
-    <div className="sn-wrap">
+    <div
+      className="sn-wrap"
+      style={is2K
+        ? {
+            width: "min(1820px, calc(100% - 96px))",
+            maxWidth: "none",
+            margin: "0 auto",
+            padding: "24px 0",
+          }
+        : undefined}
+    >
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -208,7 +264,7 @@ export default function StateNews() {
         >
           <span
             className="inline-flex items-center justify-center w-7 h-7 min-w-[28px] min-h-[28px] rounded-full border border-white/90 bg-[#002765] overflow-hidden"
-            style={{ marginLeft: isMobile ? "0" : "11%" }}
+            style={{ marginLeft: isMobile || is2K ? "0" : "11%" }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4 2L8 6L4 10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -223,7 +279,7 @@ export default function StateNews() {
         style={{
           display: "flex",
           flexDirection: isMobile ? "column" : "row",
-          gap: isMobile ? "12px" : "16px",
+          gap: isMobile ? "12px" : is2K ? "20px" : "16px",
           alignItems: "flex-start",
         }}
       >
@@ -234,7 +290,7 @@ export default function StateNews() {
             flex: 1, minWidth: 0,
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : is2K ? "1.08fr minmax(0, 0.92fr)" : "1fr 1fr",
             gridTemplateRows: isMobile ? "auto" : "auto auto",
           }}
         >
@@ -254,7 +310,7 @@ export default function StateNews() {
                 className="sn-big-card"
                 style={{
                   position: "relative", borderRadius: "8px", overflow: "hidden",
-                  height: isMobile ? "200px" : isTablet ? "220px" : "260px",
+                  height: isMobile ? "200px" : isTablet ? "220px" : is2K ? "300px" : "260px",
                   cursor: "pointer",
                 }}
                 onClick={() => goToArticle(featuredCard)}
@@ -272,7 +328,7 @@ export default function StateNews() {
                   display: "flex", flexDirection: "column", justifyContent: "flex-end",
                 }}>
                   <div className="sn-big-badge">
-                    {featuredCard.categories?.[0]?.name || "STATE NEWS"}
+                    {getStateTagLabel(featuredCard, activeState)}
                   </div>
                   <p className="sn-big-title" style={{ fontSize: isMobile ? "12px" : "14px" }}>
                     {featuredCard.title}
@@ -334,7 +390,7 @@ export default function StateNews() {
                       />
                     </div>
                     <div className="sn-mid-text" style={{ flex: 1, minWidth: 0 }}>
-                      <span className="sn-card-tag">{card.categories?.[0]?.name || "STATE"}</span>
+                      <span className="sn-card-tag">{getStateTagLabel(card, activeState, "STATE")}</span>
                       <p className="sn-mid-title">{card.title}</p>
                       <span className="sn-card-date">
                         {formatDate(card.published_at || card.created_at)}
@@ -370,7 +426,7 @@ export default function StateNews() {
                     <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
                   </div>
                   <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
-                    <span className="sn-card-tag">{bottomLeftCard.categories?.[0]?.name || "STATE"}</span>
+                    <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
                     <p className="sn-sc-title">{bottomLeftCard.title}</p>
                     <span className="sn-card-date">{formatDate(bottomLeftCard.published_at || bottomLeftCard.created_at)}</span>
                   </div>
@@ -389,9 +445,15 @@ export default function StateNews() {
                 <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span className="sn-card-tag">{bottomLeftCard.categories?.[0]?.name || "STATE"}</span>
+                <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
                 <p className="sn-sc-title">{bottomLeftCard.title}</p>
-                <span className="sn-card-date">{bottomLeftCard.date || ""}</span>
+                <span className="sn-card-date">
+                  {formatDate(
+                    bottomLeftCard.published_at ||
+                    bottomLeftCard.created_at ||
+                    bottomLeftCard.date
+                  )}
+                </span>
               </div>
             </div>
           )}
@@ -400,7 +462,7 @@ export default function StateNews() {
         {/* ── RIGHT: Bharat's Startups ── */}
         <div
           className="sn-defence"
-          style={{ width: isMobile ? "100%" : isTablet ? "200px" : "220px", flexShrink: 0 }}
+          style={{ width: isMobile ? "100%" : isTablet ? "200px" : is2K ? "260px" : "220px", flexShrink: 0 }}
         >
           <div
             className="sn-defence-head"
@@ -427,7 +489,7 @@ export default function StateNews() {
                     className="sn-defence-item"
                     key={item.id}
                     style={{ display: "flex", gap: "8px", cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${item.slug}`)}
+                    onClick={() => goToArticle(item)}
                   >
                     <div style={{ flexShrink: 0, width: "64px", height: "50px", borderRadius: "5px", overflow: "hidden" }}>
                       <ArticleImg src={imgSrc(item)} alt={item.title} style={{ width: "100%", height: "100%" }} />

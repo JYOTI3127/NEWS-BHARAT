@@ -269,9 +269,34 @@
   }
 }
 
-@media (max-width: 2560px) {
+@media (min-width: 1441px) and (max-width: 2560px) {
   .mss-root {
-    width: min(1380px, calc(100% - 72px));
+    width: min(1820px, calc(100% - 96px));
+  }
+
+  .mss-header-title {
+    font-size: 22px;
+  }
+
+  .mss-thumb {
+    height: 210px;
+  }
+
+  .mss-kicker {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .mss-title {
+    font-size: 17px;
+  }
+
+  .mss-summary {
+    font-size: 14px;
+  }
+
+  .mss-meta {
+    font-size: 12px;
   }
 }
 

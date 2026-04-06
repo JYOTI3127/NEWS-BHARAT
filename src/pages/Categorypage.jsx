@@ -4,8 +4,27 @@ import {
   Clock, User, TrendingUp, ChevronRight,
   Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
+import { API_BASE } from "../lib/api";
 
-const API_BASE = "https://news4bharat.cloud/api";
+const toCategoryArray = (categoryDetails) => {
+  if (Array.isArray(categoryDetails)) return categoryDetails;
+  return categoryDetails ? [categoryDetails] : [];
+};
+
+const useViewportWidth = () => {
+  const getValue = () =>
+    typeof window !== "undefined" ? window.innerWidth : 1280;
+
+  const [viewportWidth, setViewportWidth] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return viewportWidth;
+};
 
 // ✅ AM/PM ke saath time
 const formatDate = (d) =>
@@ -29,9 +48,26 @@ const formatViews = (v) => {
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 
+const getSelectedSubcategoryValues = (selectedSubcategories) => {
+  if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
+
+  const subs = selectedSubcategories.subs;
+  if (subs && typeof subs === "object") {
+    return Object.values(subs)
+      .flat()
+      .filter((value) => typeof value === "string" && value.trim().length > 0);
+  }
+
+  return Object.values(selectedSubcategories)
+    .flat()
+    .filter((value) => typeof value === "string" && value.trim().length > 0);
+};
+
 export default function CategoryPage() {
   const { slug } = useParams();
   const location = useLocation();
+  const viewportWidth = useViewportWidth();
+  const is2K = viewportWidth >= 1441 && viewportWidth <= 2560;
 
   const searchParams  = new URLSearchParams(location.search);
   const subFilter     = searchParams.get("subcategory") || "";
@@ -57,16 +93,10 @@ export default function CategoryPage() {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/articles/`);
+        const res = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}`);
         const data = await res.json();
 
-        const all = Array.isArray(data) ? data : (data.results || []);
-        const filtered = all.filter((article) =>
-          Array.isArray(article.category_details) &&
-          article.category_details.some(
-            (c) => c.slug?.toLowerCase() === slug.toLowerCase()
-          )
-        );
+        const filtered = Array.isArray(data) ? data : (data.results || []);
 
         const sorted = filtered.sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
@@ -74,11 +104,10 @@ export default function CategoryPage() {
 
         const finalArticles = subFilter
           ? sorted.filter((a) => {
-              const selectedSubs = a.selected_subcategories || {};
-              const allSelected  = Object.values(selectedSubs).flat();
+              const allSelected = getSelectedSubcategoryValues(a.selected_subcategories);
               if (allSelected.length > 0) {
                 return allSelected.some(
-                  (s) => s.toLowerCase() === subFilter.toLowerCase()
+                  (s) => String(s || "").toLowerCase() === subFilter.toLowerCase()
                 );
               }
               const text = `${a.title} ${a.subtitle || ""} ${stripHtml(a.content || "")}`.toLowerCase();
@@ -102,14 +131,40 @@ export default function CategoryPage() {
       }
 
       setLoading(false);
+      document.dispatchEvent(new Event('prerender-ready'))
     };
     fetchData();
-  }, [slug]);
+  }, [slug, subFilter]);
 
   const heroArticle   = articles[0] || null;
   const gridArticles  = articles.slice(1, visibleCount + 1);
   const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
   const hasMore       = visibleCount + 1 < articles.length;
+  const shellStyle = is2K
+    ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
+    : undefined;
+  const heroMediaStyle = (() => {
+    if (viewportWidth >= 1441 && viewportWidth <= 2560) {
+      return {
+        aspectRatio: "14 / 8",
+        height: "auto",
+      };
+    }
+
+    if (viewportWidth >= 1280) {
+      return { height: "500px" };
+    }
+
+    if (viewportWidth >= 1024) {
+      return { height: "450px" };
+    }
+
+    if (viewportWidth >= 768) {
+      return { height: "480px" };
+    }
+
+    return undefined;
+  })();
 
   if (loading) {
     return (
@@ -125,7 +180,7 @@ export default function CategoryPage() {
 
       {/* Category Header */}
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
             {subFilter ? `${category?.name || slug} › ${subFilter}` : (category?.name || slug)}
           </h1>
@@ -139,7 +194,10 @@ export default function CategoryPage() {
         </div>
       </div>
 
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-[28px] grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-7 items-start">
+      <div
+        className="max-w-[1240px] mx-auto px-4 sm:px-6 py-[28px] grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-7 items-start"
+        style={shellStyle}
+      >
 
         {/* LEFT MAIN CONTENT */}
         <div className="min-w-0">
@@ -147,13 +205,16 @@ export default function CategoryPage() {
           {/* Hero Article */}
           {heroArticle && (
             <Link
-              to={`/article/${heroArticle.slug}`}
+              to={`/article/${heroArticle.slug || heroArticle.id}`}
               style={{ textDecoration: "none", color: "inherit", display: "block" }}
             >
               <div className="bg-white rounded-[12px] overflow-hidden shadow-[0_2px_14px_rgba(0,0,0,0.08)] mb-7 hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)] transition-shadow duration-200">
-                <div className="relative w-full h-[220px] sm:h-[280px] lg:h-[320px] overflow-hidden">
+                <div
+                  className="relative w-full h-[220px] sm:h-[300px] lg:h-[420px] xl:h-[460px] overflow-hidden"
+                  style={heroMediaStyle}
+                >
                   {heroArticle.image
-                    ? <img src={heroArticle.image} alt={heroArticle.title} className="w-full h-full object-cover" />
+                    ? <img src={heroArticle.image} alt={heroArticle.title} className="w-full h-full object-cover" loading="eager" fetchPriority="high" decoding="async" width={1280} height={720} />
                     : <div className="w-full h-full flex items-center justify-center bg-[#f0ece8]"><Newspaper size={40} color="#ccc" /></div>
                   }
                   <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[rgba(0,0,0,0.3)] to-transparent" />
@@ -204,13 +265,13 @@ export default function CategoryPage() {
               {gridArticles.map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
                     <div className="relative h-[180px] sm:h-40 w-full overflow-hidden">
                       {article.image ? (
-                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" loading="lazy" decoding="async" width={640} height={360} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-slate-100">
                           <Newspaper size={28} color="#ccc" />
@@ -273,7 +334,7 @@ export default function CategoryPage() {
               {trendingTop5.map((article, idx) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 min-w-[260px] lg:min-w-0">
@@ -302,13 +363,13 @@ export default function CategoryPage() {
               {articles.slice(0, 4).map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug}`}
+                  to={`/article/${article.slug || article.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">
                     <div className="flex-shrink-0 w-16 h-12 rounded-md overflow-hidden bg-slate-100">
                       {article.image ? (
-                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" loading="lazy" decoding="async" width={128} height={96} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-slate-100">
                           <Newspaper size={16} color="#ccc" />

@@ -246,10 +246,12 @@ export default function EditorialPolicy() {
                         {factCheckSteps.map((step, i) => (
                             <FadeIn key={i} delay={i * 0.1}>
                                 <div className="ep-factcheck-card">
-                                    <div className="ep-factcheck-icon">
-                                        <FiSearch size={20} strokeWidth={2} />
+                                    <div className="ep-factcheck-head">
+                                        <div className="ep-factcheck-icon">
+                                            <FiSearch size={20} strokeWidth={2} />
+                                        </div>
+                                        <div className="ep-factcheck-num">{step.num}</div>
                                     </div>
-                                    <div className="ep-factcheck-num">{step.num}</div>
                                     <p className="ep-factcheck-text">{step.text}</p>
                                 </div>
                             </FadeIn>

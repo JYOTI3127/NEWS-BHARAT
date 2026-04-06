@@ -12,41 +12,39 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="w-full bg-white flex items-center justify-center px-4 py-6 max-[425px]:px-3 max-[375px]:px-2.5 max-[320px]:px-2 py-6 font-[Poppins,sans-serif]">
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
+    <section className="w-full bg-white flex items-center justify-center px-4 py-6 min-[1441px]:px-8 min-[1800px]:px-10 min-[2561px]:px-12 max-[425px]:px-3 max-[375px]:px-2.5 max-[320px]:px-2 font-[Poppins,sans-serif]">
+      <div className="w-full max-w-[1480px] min-[1441px]:max-w-[1680px] min-[1800px]:max-w-[1800px] min-[2561px]:max-w-[1900px] bg-[#002765] rounded-2xl min-[1441px]:rounded-[28px] px-6 py-8 min-[1441px]:px-10 min-[1441px]:py-10 min-[1800px]:px-12 min-[1800px]:py-12 max-[768px]:px-5 max-[768px]:py-7 max-[425px]:px-4 max-[425px]:py-6 max-[375px]:px-3.5 max-[320px]:px-3 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
 
-      <div className="w-full max-w-[1400px] bg-[#002765] rounded-2xl px-6 py-8 max-[768px]:px-5 max-[768px]:py-7 max-[425px]:px-4 max-[425px]:py-6 max-[375px]:px-3.5 max-[320px]:px-3 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
-
-        <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-between gap-8 min-[1025px]:gap-12">
+        <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-between gap-8 min-[1025px]:gap-12 min-[1441px]:gap-16 min-[1800px]:gap-20">
 
           {/* LEFT — Icon + Text */}
-          <div className="flex flex-col items-start text-left gap-3 min-[1025px]:max-w-[55%]">
+          <div className="flex flex-col items-start text-left gap-3 min-[1441px]:gap-4 min-[1025px]:max-w-[55%] min-[1800px]:max-w-[58%]">
 
             {/* Icon */}
-            <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-xl flex items-center justify-center text-white self-start">
-              <Mail size={22} />
+            <div className="w-12 h-12 min-[1441px]:w-14 min-[1441px]:h-14 min-[1800px]:w-16 min-[1800px]:h-16 bg-white/10 border border-white/20 rounded-xl min-[1441px]:rounded-2xl flex items-center justify-center text-white self-start">
+              <Mail size={26} className="min-[1800px]:w-8 min-[1800px]:h-8" />
             </div>
 
             {/* Label */}
-            <p className="text-white text-xs min-[426px]:text-sm font-medium tracking-widest uppercase self-start m-0">
+            <p className="text-white text-xs min-[426px]:text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base font-medium tracking-widest uppercase self-start m-0">
               Our Newsletter
             </p>
 
             {/* Title */}
-            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-4xl leading-tight m-0 self-start">
+            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[2.4rem] min-[1441px]:text-[2.45rem] min-[1800px]:text-[2rem] leading-tight m-0 self-start">
               Subscribe To Our Newsletter!
             </h2>
 
             {/* Subtitle */}
-            <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base leading-relaxed m-0 self-start">
+            <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base min-[1441px]:text-[1rem] min-[1800px]:text-[1.06rem] leading-relaxed min-[1441px]:leading-7 m-0 self-start max-w-[62ch]">
               Sign up for our weekly newsletter to stay informed about exciting offers, our latest products, and industry updates.
             </p>
           </div>
 
           {/* RIGHT — Input + Button */}
-          <div className="flex flex-col min-[426px]:flex-row items-stretch min-[426px]:items-center gap-3 min-[1025px]:min-w-[380px] min-[1441px]:min-w-[440px]">
+          <div className="flex flex-col min-[426px]:flex-row items-stretch min-[426px]:items-center gap-3 min-[1441px]:gap-4 min-[1025px]:min-w-[380px] min-[1441px]:min-w-[520px] min-[1800px]:min-w-[620px]">
             {submitted ? (
-              <p className="text-[#7dd3a8] text-sm min-[769px]:text-base font-medium m-0">
+              <p className="text-[#7dd3a8] text-sm min-[769px]:text-base min-[1441px]:text-[1rem] font-medium m-0">
                 Thank you for subscribing!
               </p>
             ) : (
@@ -58,8 +56,8 @@ export default function Newsletter() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="
                     flex-1 bg-white/10 border border-white
-                    rounded-full px-5 py-3 min-[769px]:py-3.5 max-[425px]:px-4
-                    text-white text-sm placeholder:text-white/40
+                    rounded-full px-5 py-3 min-[769px]:py-3.5 min-[1441px]:px-6 min-[1441px]:py-3.5 min-[1800px]:px-7 min-[1800px]:py-4 max-[425px]:px-4
+                    text-white text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base placeholder:text-white/40
                     outline-none font-[Poppins,sans-serif]
                     focus:border-blue-400 transition-colors duration-200
                   "
@@ -68,8 +66,8 @@ export default function Newsletter() {
                   onClick={handleSubmit}
                   className="
                     bg-blue-500 hover:bg-blue-600 active:scale-95
-                    text-white font-semibold text-sm
-                    rounded-full px-7 py-3 min-[769px]:py-3.5 max-[425px]:px-5
+                    text-white font-semibold text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base
+                    rounded-full px-7 py-3 min-[769px]:py-3.5 min-[1441px]:px-8 min-[1441px]:py-3.5 min-[1800px]:px-9 min-[1800px]:py-4 max-[425px]:px-5
                     whitespace-nowrap cursor-pointer border-none
                     transition-all duration-200
                     font-[Poppins,sans-serif]

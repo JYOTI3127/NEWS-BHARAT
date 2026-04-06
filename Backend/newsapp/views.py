@@ -717,6 +717,10 @@ def update_ad_slot(request):
 @api_view(['GET'])
 def weather_api(request):
     city   = request.GET.get("city", "Delhi")
+    cache_key = f"weather:{city.strip().lower() or 'delhi'}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
     url    = "https://api.openweathermap.org/data/2.5/weather"
     params = {"q": city, "appid": settings.OPENWEATHER_API_KEY, "units": "metric"}
     try:
@@ -724,27 +728,33 @@ def weather_api(request):
         data = response.json()
         if response.status_code != 200:
             return Response({"error": "City not found"}, status=400)
-        return Response({
+        payload = {
             "city":        city,
             "temperature": data["main"]["temp"],
             "feels_like":  data["main"]["feels_like"],
             "humidity":    data["main"]["humidity"],
             "description": data["weather"][0]["description"],
             "icon":        data["weather"][0]["icon"]
-        })
+        }
+        cache.set(cache_key, payload, 600)
+        return Response(payload)
     except Exception:
         return Response({"error": "Weather service unavailable"}, status=500)
 
 
 @api_view(['GET'])
 def metal_ticker(request):
+    cache_key = "metal_ticker:latest"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
     try:
         fetch_and_store_metal_rates()
     except Exception:
         pass
     gold   = MetalRate.objects.filter(metal_type="gold").order_by('-created_at').first()
     silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
-    return Response({
+    payload = {
         "gold": {
             "price":          gold.price if gold else 0,
             "change":         gold.change if gold else 0,
@@ -757,7 +767,9 @@ def metal_ticker(request):
             "percent_change": silver.percent_change if silver else 0,
             "trend":          silver.trend if silver else "neutral"
         }
-    })
+    }
+    cache.set(cache_key, payload, 600)
+    return Response(payload)
 
 
 from .utils import fetch_and_store_metal_rates, fetch_index_data

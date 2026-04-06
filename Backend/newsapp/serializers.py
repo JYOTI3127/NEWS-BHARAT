@@ -285,6 +285,8 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'image_url', 'image_alt',
             'category', 'categories',
             'published_at', 'created_at',
+            'canonical_url', 'meta_description', 'focus_keyword',
+            'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
             'selected_subcategories',
         ]

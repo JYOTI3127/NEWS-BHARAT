@@ -40,9 +40,15 @@ User = get_user_model()
 # CATEGORY VIEWS
 # ═══════════════════════════════════════════════════════
 
-def category_list_page(request):
+@api_view(['GET'])
+def category_list(request):
+    cached = cache.get('categories:all')
+    if cached:
+        return Response(cached)
     categories = Category.objects.all()
-    return render(request, 'articles/category_list.html', {'categories': categories})
+    serializer = CategorySerializer(categories, many=True)
+    cache.set('categories:all', serializer.data, 3600)  # 1 hour
+    return Response(serializer.data)
 
 
 def category_detail_page(request, slug):
@@ -232,28 +238,23 @@ def _save_article_from_request(request, article=None):
 
             img = PILImage.open(uploaded_file)
 
-            # RGB mein convert karo (WebP ke liye)
             if img.mode in ("RGBA", "P", "LA"):
                 img = img.convert("RGB")
 
-            # 1200px se bada hai toh resize karo
             if img.width > 1200:
                 ratio = 1200 / img.width
                 new_height = int(img.height * ratio)
                 img = img.resize((1200, new_height), PILImage.LANCZOS)
 
-            # WebP mein compress karo
             output = io.BytesIO()
             img.save(output, format='WEBP', quality=75, optimize=True)
             output.seek(0)
 
-            # .webp extension ke saath save karo
             original_name = uploaded_file.name.rsplit('.', 1)[0] + '.webp'
             article.image     = ContentFile(output.read(), name=original_name)
             article.image_url = ''
 
         except Exception:
-            # Compress fail ho toh original file save karo
             article.image     = uploaded_file
             article.image_url = ''
     else:
@@ -300,8 +301,17 @@ def _save_article_from_request(request, article=None):
     elif 'categories' in data:
         article.categories.clear()
 
-    return article, None
+    # ── CACHE INVALIDATE ──
+    try:
+        cache.delete(f"article:slug:{article.slug}")
+        cache.delete('articles:homepage:')
+        cat_slugs = list(article.categories.values_list('slug', flat=True))
+        for cat_slug in cat_slugs:
+            cache.delete(f"articles:homepage:{cat_slug}")
+    except Exception:
+        pass
 
+    return article, None
 
 @api_view(['GET', 'POST'])
 def article_list(request):
@@ -313,6 +323,7 @@ def article_list(request):
         if category:
             articles = articles.filter(categories__slug=category).distinct()
         serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})
+        cache.set(cache_key, serializer.data, 300)
         return Response(serializer.data)
 
     elif request.method == "POST":
@@ -2030,4 +2041,5 @@ def article_detail_by_slug(request, slug):
     except Article.DoesNotExist:
         return Response({"error": "Not found"}, status=404)
     serializer = ArticleSerializer(article, context={'request': request})
+    cache.set(cache_key, serializer.data, 300)
     return Response(serializer.data)

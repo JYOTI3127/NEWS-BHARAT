@@ -427,8 +427,17 @@ News4Bharat
                 new_pass = request.POST.get('password1', '')
                 if new_pass:
                     user = User.objects.get(pk=id)
-                    user.profile.plain_password = new_pass
-                    user.profile.save(update_fields=['plain_password'])
+                    profile, _ = UserProfile.objects.get_or_create(user=user)
+                    profile.plain_password = new_pass
+                    profile.failed_attempts = 0
+                    profile.total_failed_ever = 0
+                    profile.locked_until = None
+                    profile.save(update_fields=[
+                        'plain_password',
+                        'failed_attempts',
+                        'total_failed_ever',
+                        'locked_until',
+                    ])
             except Exception:
                 pass
         return response

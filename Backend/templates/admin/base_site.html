@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}{% trans 'Django site admin' %}{% endblock %}</title>
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}News4Bharat Dashboard{% endblock %}</title>
+<link rel="icon" type="image/png" href="{% static 'images/Fevicon (1).png' %}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -11,215 +13,119 @@
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
 {% block extrastyle %}{% endblock %}
 {% block extrahead %}{% endblock %}
-
-<link rel="stylesheet" href="{% static 'admin/css/media_gallery.css' %}">
 </head>
-
 <body class="{% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}" data-admin-utc-offset="{% now "Z" %}">
-
 {% block body %}
 <div class="admin-wrapper">
-
-  <aside class="admin-sidebar">
-
+  <aside class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-logo">
       <div class="logo-brand">
-        <div class="logo-icon">
+        <a href="{% url 'admin:index' %}" class="logo-icon" title="Go to Overview">
           <img src="{% static 'images/NEWS4BHARAT_LOGO.png' %}" alt="News4Bharat">
-        </div>
+        </a>
       </div>
-      <div class="logo-toggle">
+      <button class="logo-toggle" id="sidebarToggle" title="Toggle Sidebar" onclick="toggleSidebar()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
         </svg>
-      </div>
+      </button>
     </div>
 
     <div class="panel-quick">
-      <div class="quick-item">
-        <div class="quick-item-left">
+      <!-- Quick Search FIRST -->
+      <div class="quick-item quick-search-wrap" data-tooltip="Quick Search">
+        <div class="quick-item-left" id="quickSearchToggle" onclick="toggleQuickSearch()" style="cursor:pointer;width:100%">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          Quick search
+          <span>Quick search</span>
         </div>
+        <input type="text" id="quickSearchInput" class="quick-search-input" placeholder="Search menu..."
+          oninput="runQuickSearch(this.value)" onkeydown="if(event.key==='Escape') closeQuickSearch()" style="display:none">
       </div>
-      <div class="quick-item">
+      <div id="quickSearchResults" class="quick-search-results" style="display:none"></div>
+
+      <!-- Overview SECOND -->
+      <a href="{% url 'admin:index' %}" class="quick-item" id="overviewQuickBtn" data-tooltip="Overview">
+        <div class="quick-item-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span>Overview</span>
+        </div>
+      </a>
+
+      <a href="{% url 'admin_inbox' %}" class="quick-item" data-tooltip="Inbox">
         <div class="quick-item-left">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-          Inbox
+          <span>Inbox</span>
         </div>
-        <span class="quick-badge">12</span>
-      </div>
-      <div class="quick-item">
+        <span class="quick-badge" id="inboxBadge" {% if unread_notifications == 0 %}style="display:none"{% endif %}>
+          {% if unread_messages > 9 %}9+{% else %}{{ unread_messages }}{% endif %}
+        </span>
+      </a>
+      <a href="{% url 'admin_notifications' %}" class="quick-item" data-tooltip="Notifications">
         <div class="quick-item-left">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          Notifications
+          <span>Notifications</span>
         </div>
-        <span class="quick-badge">15+</span>
-      </div>
+        <span class="quick-badge" id="notifBadge" {% if unread_notifications == 0 %}style="display:none"{% endif %}>
+          {% if unread_notifications > 15 %}15+{% else %}{{ unread_notifications }}{% endif %}
+        </span>
+      </a>
     </div>
 
-    <!-- Post Button -->
-    <a href="/admin/newsapp/article/" class="post-article-btn">
+    <a href="/admin/newsapp/article/" class="post-article-btn" data-tooltip="Post">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 3L10 14"/><path d="M21 3C21 3 16 20 15 21C14.5 21.5 13.5 21 13 20L10 14L4 11C3 10.5 3 9.5 4 9L21 3Z"/>
       </svg>
-      Post
+      <span>Post</span>
     </a>
 
-    <!-- Media Button -->
+    <!-- Media button → dedicated page -->
     <div class="media-btn-wrap">
-      <button class="media-post-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>
-        </svg>
-        Media
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
+      <button class="media-post-btn" data-tooltip="Media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Media</span>
+        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <div class="media-dropdown">
-        <a href="#" onclick="openGallery('videos'); return false;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
+        <a href="{% url 'admin_media_library' %}?tab=videos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           Videos
           <span class="dropdown-count" id="dropdownVideoCount">—</span>
         </a>
-        <a href="#" onclick="openGallery('photos'); return false;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
+        <a href="{% url 'admin_media_library' %}?tab=photos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           Photos
           <span class="dropdown-count" id="dropdownPhotoCount">—</span>
         </a>
       </div>
     </div>
 
-    <!-- Social Media Button -->
-    <div class="media-btn-wrap" id="socialBtnWrap">
-      <button class="media-post-btn" style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(236,72,153,0.10));">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-        </svg>
-        Social Media
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;width:13px;height:13px;opacity:0.5;">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-      <div class="media-dropdown">
-        <a href="#" onclick="openSocialPage('all-posts'); return false;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          See All Posts
-          <span class="dropdown-count" id="dropdownSocialCount">—</span>
-        </a>
-        <a href="#" onclick="openSocialPage('make-post'); return false;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-          Make a Post
-        </a>
-      </div>
+    <div class="media-btn-wrap" id="newsletterBtnWrap">
+      <a href="/admin/newsletter/" class="media-post-btn" style="background:linear-gradient(135deg,rgba(25,80,223,0.14),rgba(254,173,23,0.12));text-decoration:none;" data-tooltip="Newsletter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="m22 8-10 6L2 8"/></svg>
+        <span>Newsletter</span>
+      </a>
     </div>
 
     <nav class="sidebar-nav">
       <p class="nav-section-label">MENU</p>
       <ul class="nav-list">
-
-        <li class="nav-item">
-          <a href="{% url 'admin:index' %}" class="nav-link">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
-            <span class="nav-label">Overview</span>
-          </a>
-        </li>
-
         {% for app in available_apps %}{% for model in app.models %}
-
-          {% if model.object_name == "Group" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-              <span class="nav-label">Group</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "User" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <span class="nav-label">User</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "Roles" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-              <span class="nav-label">Roles</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "Permission" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-              <span class="nav-label">Permission</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "Category" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-              <span class="nav-label">Category</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "FactCheck" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-              <span class="nav-label">Fact Check</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "MetalRates" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
-              <span class="nav-label">Metal Rates</span>
-            </a>
-          </li>
-          {% endif %}
-
-          {% if model.object_name == "HomepageSlots" %}
-          <li class="nav-item">
-            <a href="{{ model.admin_url }}" class="nav-link">
-              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
-              <span class="nav-label">Homepage Slots</span>
-            </a>
-          </li>
-          {% endif %}
-
+          {% if model.object_name == "Group" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Group"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Group</span></a></li>{% endif %}
+          {% if model.object_name == "User" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="User"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="nav-label">User</span></a></li>{% endif %}
+          {% if model.object_name == "Roles" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Roles"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="nav-label">Roles</span></a></li>{% endif %}
+          {% if model.object_name == "Permission" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Permission"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="nav-label">Permission</span></a></li>{% endif %}
+          {% if model.object_name == "Category" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Category"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="nav-label">Category</span></a></li>{% endif %}
+          {% if model.object_name == "FactCheck" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Fact Check"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="nav-label">Fact Check</span></a></li>{% endif %}
+          {% if model.object_name == "MetalRates" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Metal Rates"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="nav-label">Metal Rates</span></a></li>{% endif %}
+          {% if model.object_name == "HomepageSlots" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Homepage Slots"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="nav-label">Homepage Slots</span></a></li>{% endif %}
         {% endfor %}{% endfor %}
-
-        <!-- Article Dropdown -->
         <li class="nav-item has-submenu">
-          <div class="nav-link" onclick="toggleSub(this)">
+          <div class="nav-link" onclick="toggleSub(this)" data-tooltip="Article">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
-            <span class="nav-label">Article</span>
-            <span class="submenu-arrow">›</span>
+            <span class="nav-label">Article</span><span class="submenu-arrow">›</span>
           </div>
           <ul class="submenu">
             {% for app in available_apps %}{% for model in app.models %}
@@ -230,13 +136,10 @@
             {% endfor %}{% endfor %}
           </ul>
         </li>
-
-        <!-- Reporter Dropdown -->
         <li class="nav-item has-submenu">
-          <div class="nav-link" onclick="toggleSub(this)">
+          <div class="nav-link" onclick="toggleSub(this)" data-tooltip="Reporter">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></span>
-            <span class="nav-label">Reporter</span>
-            <span class="submenu-arrow">›</span>
+            <span class="nav-label">Reporter</span><span class="submenu-arrow">›</span>
           </div>
           <ul class="submenu">
             {% for app in available_apps %}{% for model in app.models %}
@@ -245,85 +148,47 @@
             {% endfor %}{% endfor %}
           </ul>
         </li>
-
       </ul>
     </nav>
 
     <div class="panel-footer">
       <div class="nav-list">
-        <a href="{% url 'admin:password_change' %}" class="quick-item">
-          <div class="quick-item-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            Settings
-          </div>
-        </a>
-        <a href="{% url 'admin:logout' %}" class="quick-item">
-          <div class="quick-item-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Logout
-          </div>
-        </a>
+        <a href="{% url 'admin:password_change' %}" class="quick-item" data-tooltip="Settings"><div class="quick-item-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg><span>Settings</span></div></a>
+        <a href="{% url 'admin:logout' %}" class="quick-item" data-tooltip="Logout"><div class="quick-item-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Logout</span></div></a>
       </div>
     </div>
 
-    <a href="/admin/auth/user/{{ user.pk }}/profile/" class="panel-user" title="View your profile">
+    <a href="/admin/auth/user/{{ user.pk }}/profile/" class="panel-user" title="View your profile" data-tooltip="Profile">
       <div class="panel-user-avatar">
-        {% if user.profile_picture %}
-          <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
-        {% else %}
-          <svg viewBox="0 0 36 36" fill="none" style="width:100%;height:100%;background:#d1d5db">
-            <circle cx="18" cy="14" r="7" fill="#9ca3af"/>
-            <path d="M4 36c0-8 6-14 14-14s14 6 14 14" fill="#9ca3af"/>
-          </svg>
-        {% endif %}
+        {% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+        {% else %}<svg viewBox="0 0 36 36" fill="none" style="width:100%;height:100%;background:#d1d5db"><circle cx="18" cy="14" r="7" fill="#9ca3af"/><path d="M4 36c0-8 6-14 14-14s14 6 14 14" fill="#9ca3af"/></svg>{% endif %}
       </div>
       <div class="panel-user-info">
         <div class="panel-user-name">{{ user.get_full_name|default:user.username }}</div>
         <div class="panel-user-role">{{ user.is_superuser|yesno:"Superuser,Staff" }}</div>
       </div>
-      <div class="panel-user-chevron">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </div>
+      <div class="panel-user-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     </a>
-
   </aside>
 
-  <main class="admin-main">
+  <main class="admin-main" id="adminMain">
     <header class="admin-topbar">
-      <div class="topbar-left">
-        <h1 class="topbar-title">{% block content_title %}News Admin{% endblock %}</h1>
-      </div>
+      <div class="topbar-left"><h1 class="topbar-title">{% block content_title %}News Admin{% endblock %}</h1></div>
       <div class="topbar-right">
         <div class="topbar-search">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
-          </svg>
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/></svg>
           <input type="search" placeholder="Search articles, authors&#8230;" id="adminSearch">
         </div>
-        <button class="topbar-icon-btn" title="Notifications">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </button>
-        <a href="/" class="topbar-add-btn" onclick="return confirm('Open the site?')">
-          <svg class="topbar-add-btn__icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2"/>
-            <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2"/>
-            <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2"/>
-          </svg>
+        <button class="topbar-icon-btn" title="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2"/></svg></button>
+        <a href="https://news4bharat.com/" class="topbar-add-btn" target="_blank">
+          <svg class="topbar-add-btn__icon" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2"/><polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2"/></svg>
           View Site
         </a>
         <div class="sidebar-user">
           <div class="user-avatar">
-            {% if user.userprofile.gender == "male" %}
-              <img src="{% static 'images/male.jpg' %}" alt="Male Avatar">
-            {% elif user.userprofile.gender == "female" %}
-              <img src="{% static 'images/women.jpg' %}" alt="Female Avatar">
-            {% else %}
-              <img src="{% static 'images/default-avatar.png' %}" alt="Avatar">
-            {% endif %}
+            {% if user.userprofile.gender == "male" %}<img src="{% static 'images/male.jpg' %}" alt="Male Avatar">
+            {% elif user.userprofile.gender == "female" %}<img src="{% static 'images/women.jpg' %}" alt="Female Avatar">
+            {% else %}<img src="{% static 'images/default-avatar.png' %}" alt="Avatar">{% endif %}
           </div>
           <div class="user-info">
             <span class="user-name">{{ user.get_full_name|default:user.username }}</span><br>
@@ -332,152 +197,52 @@
         </div>
       </div>
     </header>
-
     {% if messages %}
-    <div class="admin-messages">
-      {% for message in messages %}
-      <div class="admin-message admin-message--{{ message.tags }}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/>
-          <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <span>{{ message }}</span>
-        <button class="msg-close" onclick="this.parentElement.remove()">&#x00D7;</button>
+      <div class="admin-messages">
+        {% for message in messages %}{% if message.message %}
+          <div class="admin-message admin-message--{{ message.tags }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/></svg>
+            <span>{{ message.message }}</span>
+            <button class="msg-close" onclick="this.parentElement.remove()">&#x00D7;</button>
+          </div>
+        {% endif %}{% endfor %}
       </div>
-      {% endfor %}
-    </div>
     {% endif %}
-
-    <div class="admin-content">
-      {% block content %}{% endblock %}
-    </div>
+    <div class="admin-content">{% block content %}{% endblock %}</div>
   </main>
 </div>
 
-<!-- ════════════════════════════════════ -->
-<!-- GALLERY OVERLAY                     -->
-<!-- ════════════════════════════════════ -->
-<div class="media-gallery-overlay" id="mediaGalleryOverlay">
-  <div class="gallery-header">
-    <div class="gallery-title-wrap">
-      <h2 id="galleryTitle">Photo Library</h2>
-      <span class="gallery-count-pill" id="galleryCountPill">…</span>
-    </div>
-    <div class="gallery-header-tabs">
-      <button class="gallery-tab active" id="tabPhotos" onclick="switchTab('photos')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Photos
-      </button>
-      <button class="gallery-tab" id="tabVideos" onclick="switchTab('videos')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        Videos
-      </button>
-    </div>
-    <button class="gallery-close-btn" onclick="closeGallery()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      Close
-    </button>
-  </div>
-  <div class="gallery-stats" id="galleryStats"></div>
-  <div class="gallery-body">
-    <div class="gallery-grid" id="galleryGrid"></div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════ -->
-<!-- LIGHTBOX                            -->
-<!-- ════════════════════════════════════ -->
-<div class="lightbox" id="lightbox">
-  <button class="lightbox-close" onclick="closeLightbox()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    Close
-  </button>
-  <button class="lightbox-arrow prev" onclick="lightboxPrev()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-  </button>
-  <button class="lightbox-arrow next" onclick="lightboxNext()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </button>
-  <div id="lightboxContent"></div>
-  <div class="lightbox-bottom">
-    <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
-    <div class="lightbox-caption" id="lightboxCaption"></div>
-    <div class="lightbox-nav">
-      <button class="lightbox-btn" onclick="lightboxPrev()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-        Previous
-      </button>
-      <button class="lightbox-btn" onclick="lightboxNext()">
-        Next
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════ -->
-<!-- SOCIAL MEDIA OVERLAY                -->
-<!-- ════════════════════════════════════ -->
+<!-- SOCIAL MEDIA OVERLAY -->
 <div class="media-gallery-overlay" id="socialMediaOverlay">
   <div class="gallery-header">
-    <div class="gallery-title-wrap">
-      <h2 id="socialTitle">Social Media</h2>
-      <span class="gallery-count-pill" id="socialCountPill"></span>
-    </div>
+    <div class="gallery-title-wrap"><h2 id="socialTitle">Social Media</h2><span class="gallery-count-pill" id="socialCountPill"></span></div>
     <div class="gallery-header-tabs">
-      <button class="gallery-tab active" id="stab_all" onclick="switchSocialPage('all-posts')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        All Posts
-      </button>
-      <button class="gallery-tab" id="stab_make" onclick="switchSocialPage('make-post')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        Make a Post
-      </button>
+      <button class="gallery-tab active" id="stab_all" onclick="switchSocialPage('all-posts')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>All Posts</button>
+      <button class="gallery-tab" id="stab_make" onclick="switchSocialPage('make-post')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Make a Post</button>
     </div>
-    <button class="gallery-close-btn" onclick="closeSocialOverlay()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      Close
-    </button>
+    <button class="gallery-close-btn" onclick="closeSocialOverlay()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Close</button>
   </div>
 
   <div class="gallery-body" style="padding:0;overflow-y:auto;">
-
-    <!-- ══ PAGE: ALL POSTS ══ -->
+    <!-- ALL POSTS PAGE -->
     <div id="socialPage_all" class="social-page">
       <div class="social-platform-bar">
-        <button class="soc-plat-btn active" data-plat="all" onclick="filterSocialPlatform('all',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> All
-        </button>
-        <button class="soc-plat-btn" data-plat="instagram" onclick="filterSocialPlatform('instagram',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg> Instagram
-        </button>
-        <button class="soc-plat-btn" data-plat="facebook" onclick="filterSocialPlatform('facebook',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Facebook
-        </button>
-        <button class="soc-plat-btn" data-plat="whatsapp" onclick="filterSocialPlatform('whatsapp',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> WhatsApp
-        </button>
-        <button class="soc-plat-btn" data-plat="linkedin" onclick="filterSocialPlatform('linkedin',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn
-        </button>
-        <button class="soc-plat-btn" data-plat="twitter" onclick="filterSocialPlatform('twitter',this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X/Twitter
-        </button>
+        <button class="soc-plat-btn active" data-plat="all" onclick="filterSocialPlatform('all',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> All</button>
+        <button class="soc-plat-btn" data-plat="instagram" onclick="filterSocialPlatform('instagram',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg> Instagram</button>
+        <button class="soc-plat-btn" data-plat="facebook" onclick="filterSocialPlatform('facebook',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Facebook</button>
+        <button class="soc-plat-btn" data-plat="whatsapp" onclick="filterSocialPlatform('whatsapp',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> WhatsApp</button>
+        <button class="soc-plat-btn" data-plat="linkedin" onclick="filterSocialPlatform('linkedin',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> LinkedIn</button>
+        <button class="soc-plat-btn" data-plat="twitter" onclick="filterSocialPlatform('twitter',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X/Twitter</button>
       </div>
-
       <div class="social-handle-bar">
         <span class="social-handle-label">Handle:</span>
         <div id="socialHandleTabs" class="social-handle-tabs">
           <button class="soc-handle-btn active" data-handle="all" onclick="filterSocialHandle('all',this)">All Handles</button>
         </div>
       </div>
-
       <div class="social-table-wrap">
         <table class="social-table">
-          <thead><tr>
-            <th>Platform</th><th>Handle</th><th>Post Preview</th>
-            <th>Scheduled / Posted</th><th>Status</th><th>Reach</th><th>Actions</th>
-          </tr></thead>
+          <thead><tr><th>Platform</th><th>Handle</th><th>Post Preview</th><th>Scheduled / Posted</th><th>Status</th><th>Reach</th><th>Actions</th></tr></thead>
           <tbody id="socialPostsTbody"></tbody>
         </table>
         <div class="social-table-empty" id="socialTableEmpty" style="display:none">
@@ -487,624 +252,171 @@
       </div>
     </div>
 
-    <!-- ══ PAGE: MAKE A POST ══ -->
+    <!-- MAKE A POST PAGE -->
     <div id="socialPage_make" class="social-page" style="display:none">
-      <div class="make-post-wrap">
-
-        <!-- STEP 1 -->
-        <div class="mp-step">
-          <div class="mp-step-head">
-            <div class="mp-step-num">1</div>
-            <div><div class="mp-step-title">Choose Platforms</div><div class="mp-step-sub">Select where to publish</div></div>
-          </div>
-          <div class="mp-platform-grid">
-            <div class="mp-plat-card" data-plat="instagram" onclick="togglePlatform(this)">
-              <div class="mp-plat-icon" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff" stroke="none"/></svg></div>
-              <span>Instagram</span><div class="mp-plat-check">✓</div>
-            </div>
-            <div class="mp-plat-card" data-plat="facebook" onclick="togglePlatform(this)">
-              <div class="mp-plat-icon" style="background:#1877f2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div>
-              <span>Facebook</span><div class="mp-plat-check">✓</div>
-            </div>
-            <div class="mp-plat-card" data-plat="whatsapp" onclick="togglePlatform(this)">
-              <div class="mp-plat-icon" style="background:#25d366"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
-              <span>WhatsApp</span><div class="mp-plat-check">✓</div>
-            </div>
-            <div class="mp-plat-card" data-plat="linkedin" onclick="togglePlatform(this)">
-              <div class="mp-plat-icon" style="background:#0a66c2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></div>
-              <span>LinkedIn</span><div class="mp-plat-check">✓</div>
-            </div>
-            <div class="mp-plat-card" data-plat="twitter" onclick="togglePlatform(this)">
-              <div class="mp-plat-icon" style="background:#000"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div>
-              <span>X / Twitter</span><div class="mp-plat-check">✓</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- STEP 2 -->
-        <div class="mp-step">
-          <div class="mp-step-head">
-            <div class="mp-step-num">2</div>
-            <div><div class="mp-step-title">Select Accounts / Handles</div><div class="mp-step-sub">Multiple accounts allowed</div></div>
-          </div>
-          <div id="mpHandleList" class="mp-handle-list">
-            <div class="mp-handle-empty">Select platforms above to see available handles.</div>
-          </div>
-        </div>
-
-        <!-- STEP 3: Post Builder -->
-        <div class="mp-step">
-          <div class="mp-step-head">
-            <div class="mp-step-num">3</div>
-            <div><div class="mp-step-title">Create Your Post</div><div class="mp-step-sub">Design using the template builder</div></div>
-          </div>
-          <div class="mp-builder-wrap">
-            <div class="mp-builder-cols">
-              <div class="mp-controls">
-                <div class="mp-upload-area" onclick="document.getElementById('mpImageInput').click()">
-                  <input type="file" id="mpImageInput" accept="image/*" onchange="mpHandleImage(event)" style="display:none">
-                  <div id="mpUploadIcon" style="font-size:22px;">🖼️</div>
-                  <div id="mpUploadText" style="font-size:11px;font-weight:600;color:#888;margin-top:4px;">Click to upload image</div>
-                  <div style="font-size:9px;color:#aaa;margin-top:2px;">JPG, PNG · Square recommended</div>
-                </div>
-                <div class="mp-field"><label>Headline</label><input type="text" id="mpHeadline" placeholder="e.g. Parliament Session Begins" maxlength="100" oninput="mpUpdatePreview()"></div>
-                <div class="mp-field"><label>Short Description</label><textarea id="mpAltText" rows="2" placeholder="Brief description..." oninput="mpUpdatePreview()"></textarea></div>
-                <div class="mp-field-row">
-                  <div class="mp-field"><label>Category</label>
-                    <select id="mpCategory" onchange="mpUpdatePreview()">
-                      <option>⚡ Breaking</option><option>🏛 Politics</option><option>📈 Economy</option>
-                      <option>🏏 Sports</option><option>🛰 Technology</option><option>🌏 World</option>
-                    </select>
-                  </div>
-                  <div class="mp-field"><label>Timestamp</label><input type="text" id="mpTimestamp" placeholder="Today · 9:30 AM IST" oninput="mpUpdatePreview()"></div>
-                </div>
-                <div class="mp-theme-row">
-                  <button class="mp-theme-btn mp-light-btn mp-active-light" id="mpLightBtn" onclick="mpSetTheme('light')">☀ Light</button>
-                  <button class="mp-theme-btn mp-dark-btn" id="mpDarkBtn" onclick="mpSetTheme('dark')">🌙 Dark</button>
-                </div>
-                <div class="mp-field"><label>Accent Color</label>
-                  <div class="mp-accent-row">
-                    <div class="mp-accent-dot active" style="background:#1950DF" onclick="mpSetAccent('#1950DF',this)" title="Blue"></div>
-                    <div class="mp-accent-dot" style="background:#FEAD17" onclick="mpSetAccent('#FEAD17',this)" title="Yellow"></div>
-                    <div class="mp-accent-dot" style="background:#FA2E1A" onclick="mpSetAccent('#FA2E1A',this)" title="Red"></div>
-                    <div class="mp-accent-dot" style="background:#0FBC87" onclick="mpSetAccent('#0FBC87',this)" title="Green"></div>
-                    <div class="mp-accent-dot" style="background:#000;border:1px solid #555" onclick="mpSetAccent('#000',this)" title="Black"></div>
-                    <div class="mp-accent-dot" style="background:#6366f1" onclick="mpSetAccent('#6366f1',this)" title="Indigo"></div>
-                  </div>
-                </div>
+      <div class="mp3-layout">
+        <div class="mp3-sidebar">
+          <div class="mp3-sidebar-scroll">
+            <div class="mp3-section-title">Choose Template</div>
+            <div class="mp3-template-grid">
+              <div class="mp3-tmpl-card active" id="mp3Tmpl1" onclick="mp3SelectTemplate(1)" style="position:relative;">
+                <div class="mp3-tmpl-thumb mp3-tmpl-thumb-1"><span class="mp3-tmpl-thumb-label">Creative 1</span></div>
+                <div class="mp3-tmpl-name">Side Split</div>
+                <div class="mp3-tmpl-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
               </div>
-              <div class="mp-preview-col">
-                <div style="font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:10px;text-align:center;">LIVE PREVIEW</div>
-                <div class="mp-post-card" id="mpPostCard">
-                  <div class="mp-post-image" id="mpPostImage">
-                    <div class="mp-no-image" id="mpNoImage"><div style="font-size:24px;opacity:.4">📰</div><span>Add Image</span></div>
-                  </div>
-                  <div class="mp-post-grad light" id="mpPostGrad"></div>
-                  <div class="mp-post-top">
-                    <div class="mp-logo-badge light" id="mpLogoBadge">
-                      <div class="mp-logo-dots"><div class="mp-ld" style="background:#1950DF"></div><div class="mp-ld" style="background:#FEAD17"></div><div class="mp-ld" style="background:#FA2E1A"></div></div>
-                      <div><div class="mp-logo-wm"><span style="color:#1950DF">News</span><span style="color:#FEAD17">4</span><span style="color:#FA2E1A">Bharat</span></div><div class="mp-logo-tag" id="mpLogoTag" style="color:#999">The Voice of India</div></div>
-                    </div>
-                    <div class="mp-cat-badge" id="mpCatBadge" style="background:#1950DF;color:#fff">Breaking</div>
-                  </div>
-                  <div class="mp-post-bottom">
-                    <div class="mp-accent-line" id="mpAccentLine" style="background:#1950DF"></div>
-                    <div class="mp-post-headline" id="mpPostHeadline" style="color:#000">Your Headline Goes Here</div>
-                    <div class="mp-post-alt" id="mpPostAlt" style="color:#555">Short description will appear here.</div>
-                    <div class="mp-post-footer light" id="mpPostFooter">
-                      <span class="mp-post-handle" id="mpPostHandle" style="color:#bbb">@news4bharat</span>
-                      <span class="mp-post-time" id="mpPostTime" style="color:#ccc">Today · IST</span>
-                    </div>
-                  </div>
-                </div>
+              <div class="mp3-tmpl-card" id="mp3Tmpl2" onclick="mp3SelectTemplate(2)" style="position:relative;">
+                <div class="mp3-tmpl-thumb mp3-tmpl-thumb-2"><span class="mp3-tmpl-thumb-label">Creative 2</span></div>
+                <div class="mp3-tmpl-name">Top Image</div>
+                <div class="mp3-tmpl-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- STEP 4: Schedule -->
-        <div class="mp-step">
-          <div class="mp-step-head">
-            <div class="mp-step-num">4</div>
-            <div><div class="mp-step-title">Schedule or Post Now</div><div class="mp-step-sub">Requires admin approval</div></div>
-          </div>
-          <div class="mp-schedule-row">
-            <div class="mp-sched-option active" id="mpSchedNow" onclick="mpSetSchedule('now')">
-              <div class="mp-sched-radio"></div>
-              <div><div class="mp-sched-title">Post Now</div><div class="mp-sched-sub">Publish immediately after approval</div></div>
+            <div class="mp3-section-title" style="margin-top:4px;">Content</div>
+            <div class="mp3-field">
+              <label class="mp3-label">Background Image</label>
+              <div class="mp3-img-upload-wrap">
+                <div class="mp3-upload" id="mp3UploadZone" onclick="document.getElementById('mp3ImgInput').click()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="3" y="3" width="18" height="13" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Click to upload image
+                  <input type="file" id="mp3ImgInput" accept="image/*" style="display:none" onchange="mp3HandleImage(event)">
+                </div>
+                <button class="mp3-img-change-btn" id="mp3ImgChangeBtn" onclick="mp3ChangeImage()">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Change Image
+                </button>
+              </div>
             </div>
-            <div class="mp-sched-option" id="mpSchedLater" onclick="mpSetSchedule('later')">
-              <div class="mp-sched-radio"></div>
-              <div><div class="mp-sched-title">Schedule</div><div class="mp-sched-sub">Pick a date &amp; time</div></div>
+            <div class="mp3-field">
+              <label class="mp3-label">Category <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#94a3b8;">(Badge auto-sets)</span></label>
+              <select class="mp3-select" id="mp3Cat" onchange="mp3UpdatePreview()">
+                {% for cat in mp3_categories %}
+                  <option value="{{ cat.name }}">{{ cat.name }}</option>
+                {% empty %}
+                  <option>Breaking</option><option>Politics</option><option>Economy</option>
+                  <option>Technology</option><option>Sports</option><option>World</option>
+                  <option>Entertainment</option><option>Explainers</option>
+                {% endfor %}
+              </select>
+              <div style="margin-top:5px;display:flex;align-items:center;gap:6px;font-size:10px;color:#94a3b8;">
+                Badge preview: <span class="mp3-cat-badge-preview" id="mp3BadgePreview">Breaking</span>
+              </div>
+            </div>
+            <div class="mp3-field">
+              <label class="mp3-label">Headline</label>
+              <textarea class="mp3-textarea" id="mp3Title" rows="3" oninput="mp3UpdatePreview()">GREEN HYDROGEN IN AP: CAN COASTAL DISTRICTS LEAD INDIA'S ENERGY TRANSITION?</textarea>
+            </div>
+            <div class="mp3-field">
+              <label class="mp3-label">Description</label>
+              <textarea class="mp3-textarea" id="mp3Desc" rows="4" oninput="mp3UpdatePreview()">Andhra Pradesh is rewriting rules to attract green hydrogen and green ammonia projects — especially in coastal belts like Kakinada and Anakapalle.</textarea>
             </div>
           </div>
-          <div id="mpSchedDatetime" style="display:none;padding:12px 0 0;">
-            <input type="datetime-local" id="mpScheduleAt" class="mp-datetime-inp">
-            <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Same schedule applies to all selected platforms. You can change per-platform after submitting.</div>
-          </div>
-          <div class="mp-approval-box">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <div><strong>Approval Required</strong><br><span id="mpApprovalMsg">Only Superadmin can publish posts. Your request will be sent for review.</span></div>
-          </div>
-          <div class="mp-action-row">
-            <button class="mp-submit-btn" onclick="mpSubmitPost()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 3L10 14"/><path d="M21 3C21 3 16 20 15 21C14.5 21.5 13.5 21 13 20L10 14L4 11C3 10.5 3 9.5 4 9L21 3Z"/></svg>
-              <span id="mpSubmitLabel">Submit for Approval</span>
+          <div class="mp3-actions">
+            <button class="mp3-btn mp3-btn-primary" onclick="mp3Download('png')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download PNG
+            </button>
+            <button class="mp3-btn mp3-btn-outline" onclick="mp3Download('jpeg')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download JPG
             </button>
           </div>
         </div>
-
+        <div class="mp3-preview-panel">
+          <div class="mp3-preview-topbar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="mp3-preview-title">Live Preview</span>
+            <span class="mp3-preview-badge" id="mp3TmplBadge">Creative 1 — Side Split</span>
+            <span style="margin-left:auto;font-size:11px;color:#94a3b8;">540 × auto</span>
+          </div>
+          <div class="mp3-preview-area" id="mp3PreviewArea">
+            <div class="mp3-preview-scaler" id="mp3PreviewScaler">
+              <div id="mp3PreviewContainer"></div>
+            </div>
+          </div>
+        </div>
       </div>
+      <canvas id="mp3Canvas" style="display:none;"></canvas>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 <script>
-// ── Sidebar ──────────────────────────────────────────────────
-function toggleSub(el) { el.closest('.nav-item').classList.toggle('open'); }
-document.querySelectorAll('.nav-link').forEach(function(l) {
-  if (l.href === window.location.href) l.closest('.nav-item').classList.add('active');
+// Sidebar
+function toggleSidebar(){var s=document.getElementById('adminSidebar');s.classList.toggle('collapsed');localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));}
+(function(){if(localStorage.getItem('sidebarCollapsed')==='true'){var s=document.getElementById('adminSidebar');if(s)s.classList.add('collapsed');}})();
+function toggleSub(el){var s=document.getElementById('adminSidebar');if(s.classList.contains('collapsed')){s.classList.remove('collapsed');localStorage.setItem('sidebarCollapsed','false');}el.closest('.nav-item').classList.toggle('open');}
+document.querySelectorAll('.nav-link').forEach(function(l){if(l.href===window.location.href)l.closest('.nav-item').classList.add('active');});
+(function(){var b=document.getElementById('overviewQuickBtn');if(b){var u=b.getAttribute('href');if(window.location.pathname===u||window.location.pathname==='/admin/')b.classList.add('active');}})();
+
+// Prefetch media counts for sidebar badges only
+document.addEventListener('DOMContentLoaded',function(){
+  fetch('/api/media/photos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('dropdownPhotoCount');if(el)el.textContent=(d.items||[]).length;}).catch(function(){});
+  fetch('/api/media/videos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('dropdownVideoCount');if(el)el.textContent=(d.items||[]).length;}).catch(function(){});
+  loadDashboardStats();
 });
 
-// ── State ────────────────────────────────────────────────────
-var currentTab   = 'photos';
-var currentItems = [];
-var currentIndex = 0;
+function loadDashboardStats(){fetch('/api/dashboard/stats/',{credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(data){var map={'stat-drafts':data.drafts,'stat-scheduled':data.scheduled,'stat-archived':data.archived,'stat-rejected':data.rejected,'stat-paid':data.paid,'stat-overdue':data.overdue,'stat-authors':data.authors,'stat-categories':data.categories};Object.keys(map).forEach(function(id){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.textContent=map[id];});var heroMap={'hero-total':data.total_articles,'hero-published':data.published,'hero-pipeline':data.in_pipeline};Object.keys(heroMap).forEach(function(id){var el=document.getElementById(id);if(el&&heroMap[id]!==undefined)el.textContent=heroMap[id];});}).catch(function(err){console.warn('Dashboard stats API not available:',err);});}
+function goToFilteredArticles(status){var u='/admin/newsapp/article/';window.location.href=status?u+'?status__exact='+status:u;}
+function patchRecentArticleCategories(){var rows=document.querySelectorAll('.recent-articles-table tbody tr,#recentArticlesTable tbody tr');if(!rows.length)return;var ids=[];rows.forEach(function(r){var id=r.getAttribute('data-article-id')||r.getAttribute('data-id');if(id)ids.push(id);});if(!ids.length)return;fetch('/api/articles/categories/?ids='+ids.join(','),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){rows.forEach(function(r){var id=r.getAttribute('data-article-id')||r.getAttribute('data-id');if(id&&data[id]){var c=r.querySelector('.col-category,td[data-col="category"]');if(!c){var tds=r.querySelectorAll('td');if(tds.length>1)c=tds[1];}if(c&&(c.textContent.trim()==='—'||c.textContent.trim()===''))c.textContent=data[id];}});}).catch(function(){});}
+document.addEventListener('DOMContentLoaded',function(){patchRecentArticleCategories();var pu=document.querySelector('a.panel-user');if(pu){pu.style.textDecoration='none';pu.style.color='inherit';}});
 
-// ── Gallery open/close ───────────────────────────────────────
-function openGallery(type) {
-  currentTab = type;
-  document.getElementById('mediaGalleryOverlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  renderTabs();
-  loadMedia(type);
-}
-function closeGallery() {
-  document.getElementById('mediaGalleryOverlay').classList.remove('active');
-  document.body.style.overflow = '';
-}
-function switchTab(type) { currentTab = type; renderTabs(); loadMedia(type); }
-function renderTabs() {
-  document.getElementById('tabPhotos').classList.toggle('active', currentTab === 'photos');
-  document.getElementById('tabVideos').classList.toggle('active', currentTab === 'videos');
-  document.getElementById('galleryTitle').textContent =
-    currentTab === 'photos' ? 'Photo Library' : 'Video Library';
-}
-function updateCountPill(n, type) {
-  var pill = document.getElementById('galleryCountPill');
-  if (pill) pill.textContent = n + ' ' + (type === 'photos' ? (n===1?'Photo':'Photos') : (n===1?'Video':'Videos'));
-}
-
-// ── Fetch from Django API ────────────────────────────────────
-function loadMedia(type) {
-  var grid  = document.getElementById('galleryGrid');
-  var stats = document.getElementById('galleryStats');
-
-  // skeleton placeholders
-  grid.innerHTML = '';
-  for (var i = 0; i < 12; i++) {
-    var sk = document.createElement('div');
-    sk.className = 'gallery-skeleton';
-    grid.appendChild(sk);
-  }
-  stats.innerHTML = 'Loading…';
-
-  var url = type === 'photos' ? '/api/media/photos/' : '/api/media/videos/';
-
-  fetch(url, { credentials: 'same-origin' })
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(data) {
-      currentItems = data.items || [];
-      var n = currentItems.length;
-      stats.innerHTML = '';
-      updateCountPill(n, type);
-      // update dropdown badge
-      if (type === 'photos') {
-        var dp = document.getElementById('dropdownPhotoCount');
-        if (dp) dp.textContent = n;
-      } else {
-        var dv = document.getElementById('dropdownVideoCount');
-        if (dv) dv.textContent = n;
-      }
-      renderGrid(currentItems, type);
-    })
-    .catch(function(err) {
-      currentItems = [];
-      stats.innerHTML = '⚠ Could not load ' + type +
-        ' — make sure <code>/api/media/' + type + '/</code> is configured in urls.py';
-      renderGrid([], type);
-    });
-}
-
-// ── Render grid ──────────────────────────────────────────────
-function esc(s) {
-  return String(s || '')
-    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
-    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function renderGrid(items, type) {
-  var grid = document.getElementById('galleryGrid');
-  grid.innerHTML = '';
-
-  if (!items.length) {
-    grid.innerHTML =
-      '<div class="gallery-empty">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">' +
-      '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
-      '<circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
-      '<p>No ' + type + ' uploaded yet.</p></div>';
-    return;
-  }
-
-  items.forEach(function(item, idx) {
-    var div = document.createElement('div');
-    div.className = 'gallery-item';
-    div.title = item.name || '';
-    div.onclick = (function(i){ return function(){ openLightbox(i); }; })(idx);
-
-    if (type === 'videos') {
-      div.innerHTML =
-        '<video src="' + esc(item.url) + '" muted preload="metadata"></video>' +
-        '<div class="video-play-icon"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' +
-        '<div class="gallery-item-overlay"><span class="gallery-item-name">' + esc(item.name || 'Video') + '</span></div>';
-    } else {
-      div.innerHTML =
-        '<img src="' + esc(item.url) + '" alt="' + esc(item.name || 'Photo') + '" loading="lazy">' +
-        '<div class="gallery-item-overlay"><span class="gallery-item-name">' + esc(item.name || 'Photo') + '</span></div>';
-    }
-    grid.appendChild(div);
-  });
-}
-
-// ── Lightbox ─────────────────────────────────────────────────
-function openLightbox(idx) {
-  currentIndex = idx;
-  // blur any focused element — kills the blue search-input outline
-  if (document.activeElement) document.activeElement.blur();
-  document.getElementById('lightbox').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  renderLightbox();
-}
-function closeLightbox() {
-  var v = document.querySelector('#lightboxContent video');
-  if (v) v.pause();
-  document.getElementById('lightbox').classList.remove('active');
-  document.body.style.overflow = '';
-}
-function renderLightbox() {
-  var item  = currentItems[currentIndex];
-  var total = currentItems.length;
-  var box   = document.getElementById('lightboxContent');
-  var oldV  = box.querySelector('video');
-  if (oldV) oldV.pause();
-
-  box.innerHTML = currentTab === 'videos'
-    ? '<video class="lightbox-media" src="' + esc(item.url) + '" controls autoplay></video>'
-    : '<img class="lightbox-media" src="' + esc(item.url) + '" alt="' + esc(item.name || '') + '">';
-
-  document.getElementById('lightboxCaption').textContent = item.name || '';
-  document.getElementById('lightboxCounter').textContent = (currentIndex + 1) + ' / ' + total;
-}
-function lightboxPrev() {
-  if (!currentItems.length) return;
-  currentIndex = (currentIndex - 1 + currentItems.length) % currentItems.length;
-  renderLightbox();
-}
-function lightboxNext() {
-  if (!currentItems.length) return;
-  currentIndex = (currentIndex + 1) % currentItems.length;
-  renderLightbox();
-}
-
-// keyboard
-document.addEventListener('keydown', function(e) {
-  if (document.getElementById('lightbox').classList.contains('active')) {
-    if (e.key==='ArrowLeft')  lightboxPrev();
-    if (e.key==='ArrowRight') lightboxNext();
-    if (e.key==='Escape')     closeLightbox();
-  } else if (document.getElementById('mediaGalleryOverlay').classList.contains('active')) {
-    if (e.key==='Escape') closeGallery();
-  }
-});
-document.getElementById('lightbox').addEventListener('click', function(e) {
-  if (e.target === this) closeLightbox();
-});
-
-// ── Prefetch counts on page load (fills dropdown badges immediately) ──
-document.addEventListener('DOMContentLoaded', function() {
-  // Photos count
-  fetch('/api/media/photos/', { credentials: 'same-origin' })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var n = (d.items || []).length;
-      var el = document.getElementById('dropdownPhotoCount');
-      if (el) el.textContent = n;
-    }).catch(function(){});
-
-  // Videos count
-  fetch('/api/media/videos/', { credentials: 'same-origin' })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var n = (d.items || []).length;
-      var el = document.getElementById('dropdownVideoCount');
-      if (el) el.textContent = n;
-    }).catch(function(){});
-
-  // Social demo posts count badge
-  var sc = document.getElementById('dropdownSocialCount');
-  if (sc) sc.textContent = SOCIAL_DEMO_POSTS.length;
-});
-
-/* ═══════════════════════════════════════════════════
-   SOCIAL MEDIA — DEMO DATA
-═══════════════════════════════════════════════════ */
-var SOCIAL_HANDLES = {
-  instagram: ['@news4bharat', '@n4b_politics', '@n4b_sports'],
-  facebook:  ['News4Bharat Official', 'N4B Politics'],
-  whatsapp:  ['News4Bharat Channel', 'Breaking News'],
-  linkedin:  ['News4Bharat Media', 'N4B Editorial'],
-  twitter:   ['@news4bharat', '@n4b_breaking']
-};
-
-var SOCIAL_DEMO_POSTS = [
-  {id:1, platform:'instagram', handle:'@news4bharat',    preview:'Parliament session begins with key bills on agenda', date:'2026-03-06 10:30', status:'published', reach:'24.5K'},
-  {id:2, platform:'twitter',   handle:'@n4b_breaking',   preview:'Breaking: Budget 2026 key highlights — full coverage', date:'2026-03-05 14:15', status:'published', reach:'18.2K'},
-  {id:3, platform:'facebook',  handle:'News4Bharat Official', preview:'India GDP growth 7.2% — fastest in G20 bloc', date:'2026-03-04 09:00', status:'published', reach:'42.1K'},
-  {id:4, platform:'instagram', handle:'@n4b_sports',     preview:'India wins T20 series 3-1 against Australia', date:'2026-03-07 11:00', status:'scheduled', reach:'—'},
-  {id:5, platform:'linkedin',  handle:'News4Bharat Media', preview:'How India\'s digital economy is reshaping journalism', date:'2026-03-03 16:00', status:'published', reach:'8.9K'},
-  {id:6, platform:'whatsapp',  handle:'News4Bharat Channel', preview:'Morning briefing: Top 5 stories of the day', date:'2026-03-07 08:00', status:'pending', reach:'—'},
-  {id:7, platform:'twitter',   handle:'@news4bharat',    preview:'Election commission announces schedule for 3 states', date:'2026-03-02 12:30', status:'archived', reach:'31.0K'},
-  {id:8, platform:'facebook',  handle:'N4B Politics',    preview:'PM addresses nation on infrastructure push', date:'2026-03-01 18:00', status:'published', reach:'56.7K'},
-];
-
-var socialCurrentPlat = 'all';
-var socialCurrentHandle = 'all';
-var socialCurrentPage = 'all-posts';
-
-/* ── Open / Close ── */
-function openSocialPage(page) {
-  document.getElementById('socialMediaOverlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  switchSocialPage(page);
-}
-function closeSocialOverlay() {
-  document.getElementById('socialMediaOverlay').classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-/* ── Switch between All Posts / Make a Post ── */
-function switchSocialPage(page) {
-  socialCurrentPage = page;
-  document.getElementById('stab_all').classList.toggle('active', page === 'all-posts');
-  document.getElementById('stab_make').classList.toggle('active', page === 'make-post');
-  document.getElementById('socialPage_all').style.display = page === 'all-posts' ? '' : 'none';
-  document.getElementById('socialPage_make').style.display = page === 'make-post' ? '' : 'none';
-  document.getElementById('socialTitle').textContent = page === 'all-posts' ? 'Social Media — All Posts' : 'Create Social Post';
-  if (page === 'all-posts') renderSocialTable();
-}
-
-/* ── Platform filter ── */
-function filterSocialPlatform(plat, btn) {
-  socialCurrentPlat = plat;
-  socialCurrentHandle = 'all';
-  document.querySelectorAll('.soc-plat-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  renderHandleTabs(plat);
-  renderSocialTable();
-}
-
-/* ── Handle tabs ── */
-function filterSocialHandle(handle, btn) {
-  socialCurrentHandle = handle;
-  document.querySelectorAll('.soc-handle-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  renderSocialTable();
-}
-
-function renderHandleTabs(plat) {
-  var container = document.getElementById('socialHandleTabs');
-  var handles = plat === 'all' ? [] : (SOCIAL_HANDLES[plat] || []);
-  var html = '<button class="soc-handle-btn active" data-handle="all" onclick="filterSocialHandle(\'all\',this)">All Handles</button>';
-  handles.forEach(function(h) {
-    html += '<button class="soc-handle-btn" data-handle="' + h + '" onclick="filterSocialHandle(\'' + h + '\',this)">' + h + '</button>';
-  });
-  container.innerHTML = html;
-  socialCurrentHandle = 'all';
-}
-
-/* ── Render posts table ── */
-var PLAT_COLORS = { instagram:'linear-gradient(135deg,#833ab4,#fd1d1d)', facebook:'#1877f2', whatsapp:'#25d366', linkedin:'#0a66c2', twitter:'#000' };
-var PLAT_ICONS = {
-  instagram: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>',
-  facebook:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
-  whatsapp:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
-  linkedin:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>',
-  twitter:   '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622z"/></svg>'
-};
-var STATUS_CSS = { published:'soc-status-published', scheduled:'soc-status-scheduled', pending:'soc-status-pending', archived:'soc-status-archived' };
-
-function renderSocialTable() {
-  var tbody = document.getElementById('socialPostsTbody');
-  var empty = document.getElementById('socialTableEmpty');
-  var filtered = SOCIAL_DEMO_POSTS.filter(function(p) {
-    var platOk = socialCurrentPlat === 'all' || p.platform === socialCurrentPlat;
-    var handleOk = socialCurrentHandle === 'all' || p.handle === socialCurrentHandle;
-    return platOk && handleOk;
-  });
-  tbody.innerHTML = '';
-  if (!filtered.length) {
-    empty.style.display = 'flex'; return;
-  }
-  empty.style.display = 'none';
-  filtered.forEach(function(p) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td><span class="soc-plat-chip" style="background:' + (PLAT_COLORS[p.platform]||'#888') + '">' + PLAT_ICONS[p.platform] + ' ' + p.platform + '</span></td>' +
-      '<td><span class="soc-handle-chip">' + p.handle + '</span></td>' +
-      '<td class="soc-preview-cell"><div class="soc-preview-text">' + escHtml(p.preview) + '</div></td>' +
-      '<td class="soc-date-cell">' + p.date + '</td>' +
-      '<td><span class="soc-status-badge ' + (STATUS_CSS[p.status]||'') + '">' + p.status + '</span></td>' +
-      '<td class="soc-reach-cell">' + p.reach + '</td>' +
-      '<td><div class="soc-actions">' +
-        '<button class="soc-action-btn soc-view-btn" onclick="socViewPost(' + p.id + ')" title="View">👁</button>' +
-        '<button class="soc-action-btn soc-edit-btn" onclick="socEditPost(' + p.id + ')" title="Edit">✏️</button>' +
-        '<button class="soc-action-btn soc-arch-btn" onclick="socArchivePost(' + p.id + ')" title="Archive">📦</button>' +
-      '</div></td>';
-    tbody.appendChild(tr);
-  });
-  var pill = document.getElementById('socialCountPill');
-  if (pill) pill.textContent = filtered.length + ' Posts';
-}
-
-function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function socViewPost(id) { var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id===id;}); if(p) alert('Post #'+id+'\n'+p.preview+'\n\nPlatform: '+p.platform+'\nHandle: '+p.handle+'\nStatus: '+p.status+'\nReach: '+p.reach); }
-function socEditPost(id) { alert('Edit post #'+id+' — connect your API endpoint to implement editing.'); }
-function socArchivePost(id) {
-  var p = SOCIAL_DEMO_POSTS.find(function(x){return x.id===id;});
-  if (p && confirm('Archive "' + p.preview.substring(0,40) + '…"?')) {
-    p.status = 'archived'; renderSocialTable();
-  }
-}
-
-/* ── Make a Post — Platform toggle ── */
-var selectedPlatforms = {};
-var selectedHandles = {};
-
-function togglePlatform(card) {
-  var plat = card.getAttribute('data-plat');
-  if (selectedPlatforms[plat]) {
-    delete selectedPlatforms[plat];
-    card.classList.remove('selected');
-  } else {
-    selectedPlatforms[plat] = true;
-    card.classList.add('selected');
-  }
-  renderHandleList();
-}
-
-function renderHandleList() {
-  var list = document.getElementById('mpHandleList');
-  var plats = Object.keys(selectedPlatforms);
-  if (!plats.length) {
-    list.innerHTML = '<div class="mp-handle-empty">Select platforms above to see available handles.</div>';
-    return;
-  }
-  var html = '';
-  plats.forEach(function(plat) {
-    var handles = SOCIAL_HANDLES[plat] || [];
-    html += '<div class="mp-handle-group"><div class="mp-handle-group-label">' + plat.charAt(0).toUpperCase() + plat.slice(1) + '</div>';
-    handles.forEach(function(h) {
-      var sel = selectedHandles[plat+':'+h];
-      html += '<label class="mp-handle-item"><input type="checkbox" onchange="toggleHandle(\'' + plat + '\',\'' + h + '\',this)" ' + (sel?'checked':'') + '><span class="mp-handle-name">' + h + '</span></label>';
-    });
-    html += '</div>';
-  });
-  list.innerHTML = html;
-}
-
-function toggleHandle(plat, handle, inp) {
-  var key = plat + ':' + handle;
-  if (inp.checked) selectedHandles[key] = true;
-  else delete selectedHandles[key];
-}
-
-/* ── Make a Post — Schedule ── */
-var mpScheduleMode = 'now';
-function mpSetSchedule(mode) {
-  mpScheduleMode = mode;
-  document.getElementById('mpSchedNow').classList.toggle('active', mode === 'now');
-  document.getElementById('mpSchedLater').classList.toggle('active', mode === 'later');
-  document.getElementById('mpSchedDatetime').style.display = mode === 'later' ? 'block' : 'none';
-  document.getElementById('mpSubmitLabel').textContent = mode === 'later' ? 'Schedule Post' : 'Submit for Approval';
-}
-
-/* ── Make a Post — Post builder ── */
-var mpTheme = 'light';
-var mpAccent = '#1950DF';
-
-function mpHandleImage(e) {
-  var file = e.target.files[0]; if (!file) return;
-  var url = URL.createObjectURL(file);
-  var imgEl = document.getElementById('mpPostImage');
-  imgEl.style.backgroundImage = "url('" + url + "')";
-  imgEl.style.backgroundSize = 'cover';
-  imgEl.style.backgroundPosition = 'center';
-  var ni = document.getElementById('mpNoImage'); if (ni) ni.style.display = 'none';
-  document.getElementById('mpUploadIcon').textContent = '✅';
-  document.getElementById('mpUploadText').textContent = file.name;
-}
-
-function mpUpdatePreview() {
-  var headline = document.getElementById('mpHeadline').value || 'Your Headline Goes Here';
-  var alt = document.getElementById('mpAltText').value || 'Short description will appear here.';
-  var cat = document.getElementById('mpCategory').value.replace(/^[^\s]+ /,'');
-  var time = document.getElementById('mpTimestamp').value || 'Today · IST';
-  document.getElementById('mpPostHeadline').textContent = headline;
-  document.getElementById('mpPostAlt').textContent = alt;
-  document.getElementById('mpCatBadge').textContent = cat;
-  document.getElementById('mpPostTime').textContent = time;
-}
-
-function mpSetTheme(t) {
-  mpTheme = t;
-  document.getElementById('mpLightBtn').className = 'mp-theme-btn mp-light-btn' + (t==='light'?' mp-active-light':'');
-  document.getElementById('mpDarkBtn').className  = 'mp-theme-btn mp-dark-btn'  + (t==='dark' ?' mp-active-dark':'');
-  var isDark = t === 'dark';
-  var postCard = document.getElementById('mpPostCard');
-  postCard.style.background = isDark ? '#000' : '#fff';
-  document.getElementById('mpPostGrad').className = 'mp-post-grad ' + t;
-  document.getElementById('mpLogoBadge').className = 'mp-logo-badge ' + t;
-  document.getElementById('mpLogoTag').style.color = isDark ? '#666' : '#999';
-  document.getElementById('mpPostHeadline').style.color = isDark ? '#fff' : '#000';
-  document.getElementById('mpPostAlt').style.color = isDark ? '#aaa' : '#555';
-  document.getElementById('mpPostFooter').className = 'mp-post-footer ' + t;
-  document.getElementById('mpPostHandle').style.color = isDark ? '#444' : '#bbb';
-  document.getElementById('mpPostTime').style.color = isDark ? '#333' : '#ccc';
-  var ni = document.getElementById('mpNoImage');
-  if (ni) { ni.style.background = isDark ? '#111' : '#f0f0f0'; ni.style.color = isDark ? '#333' : '#ccc'; }
-}
-
-function mpSetAccent(color, el) {
-  mpAccent = color;
-  document.querySelectorAll('.mp-accent-dot').forEach(function(d){ d.classList.remove('active'); });
-  el.classList.add('active');
-  document.getElementById('mpCatBadge').style.background = color;
-  document.getElementById('mpCatBadge').style.color = color === '#FEAD17' ? '#000' : '#fff';
-  document.getElementById('mpAccentLine').style.background = color;
-}
-
-/* ── Submit post ── */
-function mpSubmitPost() {
-  var plats = Object.keys(selectedPlatforms);
-  if (!plats.length) { alert('Please select at least one platform.'); return; }
-  var handles = Object.keys(selectedHandles);
-  if (!handles.length) { alert('Please select at least one account/handle.'); return; }
-  var headline = document.getElementById('mpHeadline').value.trim();
-  if (!headline) { alert('Please add a headline for the post.'); return; }
-  var schedTime = mpScheduleMode === 'later' ? document.getElementById('mpScheduleAt').value : 'now';
-  if (mpScheduleMode === 'later' && !schedTime) { alert('Please select a schedule date and time.'); return; }
-  // Show success
-  var btn = document.querySelector('.mp-submit-btn');
-  var origText = btn.innerHTML;
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Submitted!';
-  btn.style.background = '#10b981';
-  // In production: POST to /api/social/posts/
-  setTimeout(function() { btn.innerHTML = origText; btn.style.background = ''; }, 3000);
-}
-
-/* ── Panel-user: make it a real link (CSS fix) ── */
-document.addEventListener('DOMContentLoaded', function() {
-  var pu = document.querySelector('a.panel-user');
-  if (pu) { pu.style.textDecoration = 'none'; pu.style.color = 'inherit'; }
-});
+// Social
+var SOCIAL_HANDLES={instagram:['@news4bharat','@n4b_politics','@n4b_sports'],facebook:['News4Bharat Official','N4B Politics'],whatsapp:['News4Bharat Channel','Breaking News'],linkedin:['News4Bharat Media','N4B Editorial'],twitter:['@news4bharat','@n4b_breaking']};
+var SOCIAL_DEMO_POSTS=[{id:1,platform:'instagram',handle:'@news4bharat',preview:'Parliament session begins with key bills on agenda',date:'2026-03-06 10:30',status:'published',reach:'24.5K'},{id:2,platform:'twitter',handle:'@n4b_breaking',preview:'Breaking: Budget 2026 key highlights',date:'2026-03-05 14:15',status:'published',reach:'18.2K'},{id:3,platform:'facebook',handle:'News4Bharat Official',preview:'India GDP growth 7.2% — fastest in G20 bloc',date:'2026-03-04 09:00',status:'published',reach:'42.1K'},{id:4,platform:'instagram',handle:'@n4b_sports',preview:'India wins T20 series 3-1 against Australia',date:'2026-03-07 11:00',status:'scheduled',reach:'—'},{id:5,platform:'linkedin',handle:'News4Bharat Media',preview:"How India's digital economy is reshaping journalism",date:'2026-03-03 16:00',status:'published',reach:'8.9K'},{id:6,platform:'whatsapp',handle:'News4Bharat Channel',preview:'Morning briefing: Top 5 stories',date:'2026-03-07 08:00',status:'pending',reach:'—'},{id:7,platform:'twitter',handle:'@news4bharat',preview:'Election commission announces schedule for 3 states',date:'2026-03-02 12:30',status:'archived',reach:'31.0K'},{id:8,platform:'facebook',handle:'N4B Politics',preview:'PM addresses nation on infrastructure push',date:'2026-03-01 18:00',status:'published',reach:'56.7K'}];
+var socialCurrentPlat='all',socialCurrentHandle='all';
+function openSocialPage(page){document.getElementById('socialMediaOverlay').classList.add('active');document.body.style.overflow='hidden';switchSocialPage(page);}
+function closeSocialOverlay(){document.getElementById('socialMediaOverlay').classList.remove('active');document.body.style.overflow='';}
+function switchSocialPage(page){document.getElementById('stab_all').classList.toggle('active',page==='all-posts');document.getElementById('stab_make').classList.toggle('active',page==='make-post');document.getElementById('socialPage_all').style.display=page==='all-posts'?'':'none';document.getElementById('socialPage_make').style.display=page==='make-post'?'':'none';document.getElementById('socialTitle').textContent=page==='all-posts'?'Social Media — All Posts':'Create Social Post';if(page==='all-posts')renderSocialTable();if(page==='make-post'){setTimeout(mp3UpdatePreview,50);setTimeout(mp3UpdatePreview,300);}}
+function filterSocialPlatform(plat,btn){socialCurrentPlat=plat;socialCurrentHandle='all';document.querySelectorAll('.soc-plat-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderHandleTabs(plat);renderSocialTable();}
+function filterSocialHandle(handle,btn){socialCurrentHandle=handle;document.querySelectorAll('.soc-handle-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderSocialTable();}
+function renderHandleTabs(plat){var container=document.getElementById('socialHandleTabs');var handles=plat==='all'?[]:(SOCIAL_HANDLES[plat]||[]);var html='<button class="soc-handle-btn active" data-handle="all" onclick="filterSocialHandle(\'all\',this)">All Handles</button>';handles.forEach(function(h){html+='<button class="soc-handle-btn" data-handle="'+h+'" onclick="filterSocialHandle(\''+h+'\',this)">'+h+'</button>';});container.innerHTML=html;socialCurrentHandle='all';}
+var PLAT_COLORS={instagram:'linear-gradient(135deg,#833ab4,#fd1d1d)',facebook:'#1877f2',whatsapp:'#25d366',linkedin:'#0a66c2',twitter:'#000'};
+var PLAT_ICONS={instagram:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>',facebook:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',whatsapp:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',linkedin:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>',twitter:'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622z"/></svg>'};
+var STATUS_CSS={published:'soc-status-published',scheduled:'soc-status-scheduled',pending:'soc-status-pending',archived:'soc-status-archived'};
+function renderSocialTable(){var tbody=document.getElementById('socialPostsTbody');var empty=document.getElementById('socialTableEmpty');var filtered=SOCIAL_DEMO_POSTS.filter(function(p){return(socialCurrentPlat==='all'||p.platform===socialCurrentPlat)&&(socialCurrentHandle==='all'||p.handle===socialCurrentHandle);});tbody.innerHTML='';if(!filtered.length){empty.style.display='flex';return;}empty.style.display='none';filtered.forEach(function(p){var tr=document.createElement('tr');tr.innerHTML='<td><span class="soc-plat-chip" style="background:'+(PLAT_COLORS[p.platform]||'#888')+'">'+PLAT_ICONS[p.platform]+' '+p.platform+'</span></td><td><span class="soc-handle-chip">'+p.handle+'</span></td><td class="soc-preview-cell"><div class="soc-preview-text">'+escH(p.preview)+'</div></td><td class="soc-date-cell">'+p.date+'</td><td><span class="soc-status-badge '+(STATUS_CSS[p.status]||'')+'">'+p.status+'</span></td><td class="soc-reach-cell">'+p.reach+'</td><td><div class="soc-actions"><button class="soc-action-btn soc-view-btn" onclick="socViewPost('+p.id+')" title="View"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="soc-action-btn soc-edit-btn" onclick="socEditPost('+p.id+')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="soc-action-btn soc-arch-btn" onclick="socArchivePost('+p.id+')" title="Archive"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button></div></td>';tbody.appendChild(tr);});var pill=document.getElementById('socialCountPill');if(pill)pill.textContent=filtered.length+' Posts';}
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function socViewPost(id){var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id===id;});if(p)alert('Post #'+id+'\n'+p.preview+'\n\nPlatform: '+p.platform+'\nStatus: '+p.status);}
+function socEditPost(id){alert('Edit post #'+id+' — connect your API endpoint.');}
+function socArchivePost(id){var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id===id;});if(p&&confirm('Archive this post?')){p.status='archived';renderSocialTable();}}
 </script>
 
+<!-- MAKE POST v3 SCRIPT -->
+<script>
+(function(){
+  var MP3={template:1,imageUrl:null};
+  var SITE_URL='https://news4bharat.com';
+  function g(id){return document.getElementById(id);}
+  function v(id){var el=g(id);return el?el.value:'';}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  window.mp3SelectTemplate=function(n){MP3.template=n;g('mp3Tmpl1').classList.toggle('active',n===1);g('mp3Tmpl2').classList.toggle('active',n===2);g('mp3TmplBadge').textContent=n===1?'Creative 1 — Top Image':'Creative 2 — Side Split';var container=g('mp3PreviewContainer');if(container)container.innerHTML='';setTimeout(mp3UpdatePreview,50);};
+  window.mp3HandleImage=function(e){var file=e.target.files[0];if(!file)return;MP3.imageUrl=URL.createObjectURL(file);var zone=g('mp3UploadZone');zone.classList.add('has-img');zone.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg> '+esc(file.name);var changeBtn=g('mp3ImgChangeBtn');if(changeBtn)changeBtn.classList.add('visible');mp3UpdatePreview();};
+  window.mp3ChangeImage=function(){MP3.imageUrl=null;var zone=g('mp3UploadZone');zone.classList.remove('has-img');zone.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="3" y="3" width="18" height="13" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Click to upload image<input type="file" id="mp3ImgInput" accept="image/*" style="display:none" onchange="mp3HandleImage(event)">';var changeBtn=g('mp3ImgChangeBtn');if(changeBtn)changeBtn.classList.remove('visible');mp3UpdatePreview();};
+  window.mp3CatChange=function(){var catVal=v('mp3Cat');var badgePrev=g('mp3BadgePreview');if(badgePrev)badgePrev.textContent=catVal;mp3UpdatePreview();};
+  document.addEventListener('DOMContentLoaded',function(){var catSel=g('mp3Cat');if(catSel){catSel.addEventListener('change',function(){mp3CatChange();});}var bp=g('mp3BadgePreview');if(bp&&catSel)bp.textContent=catSel.value||'Breaking';});
+  function buildSocIcons(){return '<div style="display:flex;gap:5px;align-items:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4" fill="#e9e9e9"/><circle cx="17.5" cy="6.5" r="1" fill="#111"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z"/><polygon fill="#e9e9e9" points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg></div>';}
+  function buildFooter(){return '<div style="margin-top:18px;background:linear-gradient(90deg,#1a1f6e,#2b3498,#1e2b7e);border-radius:40px;padding:10px 6px 10px 22px;display:flex;align-items:center;gap:8px;"><span style="font-style:italic;font-weight:700;font-size:12px;color:#fff;white-space:nowrap;">Read More at :</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span style="font-size:12px;color:#fff;font-weight:600;flex:1;">www.news4bharat.com</span><a href="'+SITE_URL+'" target="_blank" rel="noopener" style="text-decoration:none;display:flex;width:32px;height:32px;border-radius:50%;background:#3a4fcf;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></div>';}
+  function buildBuilding(w,h){return '<svg width="100%" height="100%" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bG'+w+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a3a6a"/><stop offset="100%" stop-color="#0d1a2e"/></linearGradient></defs><rect width="'+w+'" height="'+h+'" fill="url(#bG'+w+')"/><rect x="'+(w*0.14)+'" y="'+(h*0.08)+'" width="'+(w*0.72)+'" height="'+(h*0.88)+'" rx="'+(w*0.07)+'" fill="#2b4a7a" opacity="0.85"/><g stroke="#4a7ab8" stroke-width="0.5" opacity="0.35"><line x1="'+(w*0.27)+'" y1="'+(h*0.08)+'" x2="'+(w*0.27)+'" y2="'+(h*0.96)+'"/><line x1="'+(w*0.5)+'" y1="'+(h*0.08)+'" x2="'+(w*0.5)+'" y2="'+(h*0.96)+'"/><line x1="'+(w*0.73)+'" y1="'+(h*0.08)+'" x2="'+(w*0.73)+'" y2="'+(h*0.96)+'"/><line x1="'+(w*0.14)+'" y1="'+(h*0.28)+'" x2="'+(w*0.86)+'" y2="'+(h*0.28)+'"/><line x1="'+(w*0.14)+'" y1="'+(h*0.48)+'" x2="'+(w*0.86)+'" y2="'+(h*0.48)+'"/><line x1="'+(w*0.14)+'" y1="'+(h*0.68)+'" x2="'+(w*0.86)+'" y2="'+(h*0.68)+'"/></g><g fill="#f0c060" opacity="0.65"><rect x="'+(w*0.29)+'" y="'+(h*0.16)+'" width="'+(w*0.12)+'" height="'+(h*0.1)+'" rx="1"/><rect x="'+(w*0.53)+'" y="'+(h*0.2)+'" width="'+(w*0.12)+'" height="'+(h*0.1)+'" rx="1"/><rect x="'+(w*0.29)+'" y="'+(h*0.36)+'" width="'+(w*0.12)+'" height="'+(h*0.1)+'" rx="1"/><rect x="'+(w*0.53)+'" y="'+(h*0.54)+'" width="'+(w*0.12)+'" height="'+(h*0.1)+'" rx="1"/></g></svg>';}
+  function buildNBLogo(){return '<div style="background:rgba(0,0,0,0.55);padding:4px 8px;border-radius:5px;display:inline-block;"><span style="font-size:9px;font-weight:900;letter-spacing:-0.2px;"><span style="color:#4a90e2;">News</span><span style="color:#f5c842;">4</span><span style="color:#e74c3c;">Bharat</span></span></div>';}
+  function getCatVal(){return v('mp3Cat')||'Breaking';}
+  function buildCreative1HTML(){var imgS=MP3.imageUrl?'background-image:url('+MP3.imageUrl+');background-size:cover;background-position:center;':'background:linear-gradient(180deg,#1a2c4a 0%,#253d5e 40%,#0d1d30 100%);';var cat=getCatVal();return '<div id="mp3ExportNode" style="width:540px;background:#e9e9e9;padding:18px 18px 22px;border-radius:4px;font-family:Montserrat,sans-serif;"><div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:14px;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:700;color:#111;letter-spacing:0.4px;">@NEWS4_BHARAT</span><span style="font-size:11px;color:#555;">|</span>'+buildSocIcons()+'</div></div><div style="width:100%;height:258px;border-radius:20px;overflow:hidden;position:relative;margin-bottom:0;'+imgS+'"><div style="position:absolute;top:12px;left:12px;z-index:3;">'+buildNBLogo()+'</div><div style="position:absolute;top:12px;right:12px;z-index:3;background:#c41c1c;color:#fff;font-size:10.5px;font-weight:700;padding:4px 13px;border-radius:20px;">'+esc(cat)+'</div>'+(MP3.imageUrl?'':buildBuilding(504,258))+'</div><div style="padding-left:56px;"><div style="width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:17px solid #ffc107;"></div></div><div style="background:#ffc107;border-radius:22px;padding:20px 24px 24px;display:flex;flex-direction:column;"><h2 style="font-size:19px;font-weight:900;color:#0a0a0a;line-height:1.22;letter-spacing:-0.3px;text-transform:uppercase;margin-bottom:12px;">'+esc(v('mp3Title'))+'</h2><div style="display:flex;gap:4px;margin-bottom:14px;"><span style="width:44px;height:5px;border-radius:3px;background:#1153a4;display:block;"></span><span style="width:30px;height:5px;border-radius:3px;background:#2a9d6e;display:block;"></span><span style="width:30px;height:5px;border-radius:3px;background:#d94040;display:block;"></span></div><p style="font-size:13px;font-weight:600;color:#0a0a0a;line-height:1.65;margin-bottom:18px;">'+esc(v('mp3Desc'))+'</p><button style="background:#c41c1c;color:#fff;font-size:12.5px;font-weight:700;padding:10px 24px;border-radius:30px;border:none;cursor:pointer;font-family:Montserrat,sans-serif;align-self:center;">Full story in the bio</button></div>'+buildFooter()+'</div>';}
+  function buildCreative2HTML(){var imgS=MP3.imageUrl?'background-image:url('+MP3.imageUrl+');background-size:cover;background-position:center;':'background:linear-gradient(180deg,#1a2c4a 0%,#253d5e 40%,#0d1d30 100%);';var cat=getCatVal();return '<div id="mp3ExportNode" style="width:540px;background:#e9e9e9;padding:18px 18px 22px;border-radius:4px;font-family:Montserrat,sans-serif;"><div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:14px;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:700;color:#111;letter-spacing:0.4px;">@NEWS4_BHARAT</span><span style="font-size:11px;color:#555;">|</span>'+buildSocIcons()+'</div></div><div style="display:flex;gap:12px;align-items:stretch;min-height:410px;"><div style="width:195px;flex-shrink:0;border-radius:18px;overflow:hidden;position:relative;'+imgS+'"><div style="position:absolute;top:12px;left:11px;z-index:3;">'+buildNBLogo()+'</div>'+(MP3.imageUrl?'':buildBuilding(195,430))+'</div><div style="flex:1;display:flex;flex-direction:column;position:relative;"><div style="position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-right:13px solid #ffc107;z-index:1;"></div><div style="background:#ffc107;border-radius:20px;padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;"><div style="display:inline-block;background:#c41c1c;color:#fff;font-size:10.5px;font-weight:700;padding:5px 13px;border-radius:25px;margin-bottom:11px;align-self:flex-end;">'+esc(cat)+'</div><h2 style="font-size:14.5px;font-weight:900;color:#0a0a0a;line-height:1.3;letter-spacing:-0.2px;text-transform:uppercase;margin-bottom:9px;">'+esc(v('mp3Title'))+'</h2><div style="display:flex;gap:3px;margin-bottom:11px;"><span style="width:36px;height:4px;border-radius:2px;background:#1153a4;display:block;"></span><span style="width:24px;height:4px;border-radius:2px;background:#2a9d6e;display:block;"></span><span style="width:24px;height:4px;border-radius:2px;background:#d94040;display:block;"></span></div><p style="font-size:11px;font-weight:600;color:#0a0a0a;line-height:1.65;margin-bottom:14px;flex:1;">'+esc(v('mp3Desc'))+'</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;"><span style="background:#c41c1c;color:#fff;font-size:10px;font-weight:700;padding:7px 13px;border-radius:25px;">Full story in the bio</span><span style="font-size:10px;font-weight:700;color:#c41c1c;">'+esc(cat)+'</span></div></div></div></div>'+buildFooter()+'</div>';}
+  window.mp3UpdatePreview=function(){var page=g('socialPage_make');if(!page||page.style.display==='none'){return;}var html=MP3.template===1?buildCreative1HTML():buildCreative2HTML();var container=g('mp3PreviewContainer');if(!container)return;container.innerHTML=html;var area=g('mp3PreviewArea'),scaler=g('mp3PreviewScaler');if(!area||!scaler)return;var aW=area.offsetWidth>0?area.offsetWidth:600;var scale=Math.min((aW-48)/540,1);if(scale<=0)scale=0.8;scaler.style.transform='scale('+scale+')';scaler.style.transformOrigin='top center';scaler.style.width='540px';var node=g('mp3ExportNode');if(node){var nodeH=node.offsetHeight||500;scaler.style.marginBottom=((nodeH*scale)-nodeH)+'px';}var bp=g('mp3BadgePreview');if(bp)bp.textContent=getCatVal();};
+  window.mp3Download=function(fmt){var node=g('mp3ExportNode');if(!node){alert('Preview not ready.');return;}if(typeof html2canvas==='undefined'){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=function(){mp3DoDownload(node,fmt);};document.head.appendChild(s);return;}mp3DoDownload(node,fmt);};
+  function mp3DoDownload(node,fmt){html2canvas(node,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#e9e9e9'}).then(function(canvas){var mime=fmt==='jpeg'?'image/jpeg':'image/png';var ext=fmt==='jpeg'?'jpg':'png';var link=document.createElement('a');link.download='n4b_creative_'+MP3.template+'_'+Date.now()+'.'+ext;link.href=canvas.toDataURL(mime,fmt==='jpeg'?0.95:1.0);link.click();}).catch(function(err){alert('Download failed: '+err.message);});}
+  window.addEventListener('resize',function(){if(g('socialPage_make')&&g('socialPage_make').style.display!=='none')mp3UpdatePreview();});
+  if(typeof html2canvas==='undefined'){var h2c=document.createElement('script');h2c.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';document.head.appendChild(h2c);}
+  setTimeout(mp3UpdatePreview,200);
+  setTimeout(mp3UpdatePreview,600);
+})();
+</script>
+
+<script>
+// Quick Search
+function buildSearchItems(){var items=[];items.push({label:'Overview',url:'/admin/'});items.push({label:'Inbox',url:"{% url 'admin_inbox' %}"});items.push({label:'Notifications',url:"{% url 'admin_notifications' %}"});items.push({label:'Post Article',url:'/admin/newsapp/article/add/'});items.push({label:'Photos',url:"{% url 'admin_media_library' %}?tab=photos"});items.push({label:'Videos',url:"{% url 'admin_media_library' %}?tab=videos"});items.push({label:'Newsletter',url:'/admin/newsletter/'});items.push({label:'Settings',url:"{% url 'admin:password_change' %}"});items.push({label:'Logout',url:"{% url 'admin:logout' %}"});document.querySelectorAll('.nav-link[href], .submenu li a').forEach(function(el){var label=(el.querySelector('.nav-label')||el).textContent.trim();var url=el.getAttribute('href');if(label&&url&&url!=='#'&&url!=='javascript:void(0)'){var exists=items.some(function(i){return i.url===url;});if(!exists)items.push({label:label,url:url});}});return items;}
+function toggleQuickSearch(){var input=document.getElementById('quickSearchInput');var toggle=document.getElementById('quickSearchToggle');var sidebar=document.getElementById('adminSidebar');if(sidebar.classList.contains('collapsed')){sidebar.classList.remove('collapsed');localStorage.setItem('sidebarCollapsed','false');}if(input.style.display==='none'){toggle.style.display='none';input.style.display='block';input.focus();}else{closeQuickSearch();}}
+function closeQuickSearch(){document.getElementById('quickSearchInput').style.display='none';document.getElementById('quickSearchInput').value='';document.getElementById('quickSearchToggle').style.display='flex';document.getElementById('quickSearchResults').style.display='none';}
+function runQuickSearch(q){var results=document.getElementById('quickSearchResults');if(!q.trim()){results.style.display='none';return;}var items=buildSearchItems();var matches=items.filter(function(item){return item.label.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!matches.length){results.innerHTML='<div class="qs-empty">No results found</div>';results.style.display='block';return;}results.innerHTML=matches.map(function(item){var clickAttr=item.onclick?'onclick="'+item.onclick+'; closeQuickSearch(); return false;"':'';return'<a href="'+item.url+'" class="qs-item" '+clickAttr+'><span class="qs-label">'+item.label+'</span></a>';}).join('');results.style.display='block';}
+document.addEventListener('click',function(e){var wrap=document.querySelector('.quick-search-wrap');var results=document.getElementById('quickSearchResults');if(wrap&&!wrap.contains(e.target)&&results&&!results.contains(e.target)){closeQuickSearch();}});
+</script>
 </body>
 </html>

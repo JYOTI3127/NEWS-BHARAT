@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+from google.oauth2 import service_account
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,13 +26,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7uf(u#&rj5=7ewa&5qt@9$c1*nlg^09f$hyd7t+@0)fr&+ft5p'
+import os
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-7uf(u#&rj5=7ewa&5qt@9$c1*nlg^09f$hyd7t+@0)fr&+ft5p')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://news4bharat.cloud',
+    'https://www.news4bharat.cloud',
+]
 
 # Application definition
 
@@ -41,19 +51,24 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'newsapp',
-    'django_crontab', 
+    'storages', 
+    'django.contrib.sitemaps',
+    # 'django_crontab', 
 
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'newsapp.middleware.ActiveUserMiddleware',
+
 ]
 
 ROOT_URLCONF = 'news.urls'
@@ -81,13 +96,14 @@ WSGI_APPLICATION = 'news.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'newsbharatdb',
-        'USER': 'postgres',
-        'PASSWORD': 'n4b@admin',
-        'HOST': '192.168.1.65',
+        'NAME': 'news4bharat',
+        'USER': 'news4bharat_user',
+        'PASSWORD': 'News@4Bharat#2026',
+        'HOST': '187.127.135.32',
         'PORT': '5432',
     }
 }
@@ -127,56 +143,110 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = '/static/'
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+# MEDIA_URL = "/media/"
+# MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-OPENWEATHER_API_KEY = "bad03cf01c063dcee90194478cda4bff"
-METAL_API_KEY = "776f81dc7c1d552466ac6d57852228ea"
-TWELVE_DATA_API_KEY = "6ed0b8d965e54adeb0b2d75ad62328d2"
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
+METAL_API_KEY = os.environ.get("METAL_API_KEY", "")
+TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
+ALPHA_VANTAGE_API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
+TWELVE_DATA_GOLD_SYMBOLS = ["XAU/USD", "XAUUSD"]
+TWELVE_DATA_SILVER_SYMBOLS = ["XAG/USD", "XAGUSD"]
+TWELVE_DATA_USDINR_SYMBOLS = ["USD/INR", "USDINR"]
+ALPHA_VANTAGE_NIFTY_SYMBOLS = ["NIFTYBEES.BSE", "NIFTYBEES.NSE"]
+ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXETF.BSE", "SENSEXETF.NSE"]
+CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
-CRONJOBS = [
-    ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
-]
+# CRONJOBS = [
+#     ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
+# ]
 
 
 # ── Elasticsearch Connection ─────────────────────────────────────────
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'http://localhost:9200',   # default ES port
+# ELASTICSEARCH_DSL = {
+#     'default': {
+#         'hosts': 'http://localhost:9200',   # default ES port
 
-        # Agar ES 8.x use kar rahe ho aur security enabled hai:
-        # 'http_auth': ('elastic', 'your_password'),
-        # 'use_ssl': True,
-        # 'verify_certs': False,
-    },
-}
+#         # Agar ES 8.x use kar rahe ho aur security enabled hai:
+#         # 'http_auth': ('elastic', 'your_password'),
+#         # 'use_ssl': True,
+#         # 'verify_certs': False,
+#     },
+# }
 
 # Auto update index jab model save ho
-ELASTICSEARCH_DSL_AUTO_REFRESH = True
+# ELASTICSEARCH_DSL_AUTO_REFRESH = True
 
 
 LOGOUT_REDIRECT_URL = '/admin/login/'
 LOGIN_URL = '/admin/login/'
 
-# Development mein — console pe dikhega
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
 # Production mein — real email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'sheeintern@gmail.com'
-EMAIL_HOST_PASSWORD = 'podu mgos mznz ljhs'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
+NEWSLETTER_FROM_NAME = os.environ.get('NEWSLETTER_FROM_NAME', 'News4Bharat')
 
 AUTHENTICATION_BACKENDS = [
     'newsapp.backends.StaffIDBackend',
 ]
+
+TEMPLATES[0]['OPTIONS']['context_processors'] += [
+    'newsapp.context_processors.admin_badges',
+]
+
+
+GS_BUCKET_NAME = 'news4bharat-media-37'
+GS_PROJECT_ID = 'news4bharat-490809'
+GS_DEFAULT_ACL = None         
+GS_QUERYSTRING_AUTH = False
+
+import json
+from google.oauth2 import service_account
+
+import os
+
+GCS_JSON = os.environ.get("GCS_CREDENTIALS", "")
+if GCS_JSON:
+    try:
+        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+            json.loads(GCS_JSON)
+        )
+    except Exception as e:
+        print(f"GCS credentials load failed: {e}")
+        GS_CREDENTIALS = None
+else:
+    GS_CREDENTIALS = None
+
+SEO_SITE_URL = "https://news4bharat.com"
+SEO_SITE_NAME = "news4bharat"
+
+SEO_INDEXNOW_KEY = "abc123xyz"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}

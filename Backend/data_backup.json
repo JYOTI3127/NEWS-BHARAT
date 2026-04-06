@@ -1,0 +1,3103 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$aeKznwdUYiBeUTDKlnNE5g$/+Yr2I2c2wte0FsB38i+QPoXHnN0TKDK3sR7//05H78=",
+    "last_login": "2026-03-12T10:05:55.659Z",
+    "is_superuser": true,
+    "username": "sheenu",
+    "first_name": "",
+    "last_name": "",
+    "email": "sheenaas013@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-02-12T11:24:42.299Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$j4z7eLIlWVh0G0oWObDqdg$hJvbWxJ5IyvIrbJjLlhviK3JSXKCsOiwG5pdjXivWfA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "jyotigautam113127111",
+    "first_name": "Jyoti",
+    "last_name": "",
+    "email": "jyotigautam11312711@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-03-10T09:52:45.396Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Kp55ZGK03kQvEPza3nyPwb$YYLBIluctXjiHY5KsRnuMT89ulsO4gIpEt0nUa7u0vk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "srajana37",
+    "first_name": "Srajan",
+    "last_name": "",
+    "email": "srajana37@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-03-10T12:29:40.947Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$YSN7xNzTo6SBqFU8OvH8rM$crnDjSz8MSUfJR83UMJ4ccqN5DOOtqu36xeAQSUNLqE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "sheeintern",
+    "first_name": "abhishek",
+    "last_name": "",
+    "email": "sheeintern@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-03-11T05:16:17.445Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "4mtjvus3amvbuy05bdqxc32mwet24xp3",
+  "fields": {
+    "session_data": ".eJxVi70KwjAQgN_lZimXv5p0FBdnHyBccndEhFJMi4P47iJ00PX7eUGmbW156_LIN4YJAhx-WaF6l_krZnl2WpZhJ324rqR6OZ_24m9r1BtMoCzek0pVJ2qwSEmhJmRbo4gVRGPxGB175EiGSdNIxsXAo2iSWuH9AbDzNW0:1w0cvT:Mekyfjunu2bzwwadsNULrY1sTJLzPPVxPxTodMdwNoM",
+    "expire_date": "2026-03-26T10:05:55.663Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "kjsn3gasx1qcfs0meeo6214tshj7donq",
+  "fields": {
+    "session_data": ".eJxVi70KwjAQgN_lZim5pPnrKF2cfYCQS-6ICKWYFgfx3UXooOv384KU962lvfMj3SpMYOH0yyiXOy9fsfCz53UdDtKH65ZFLvP5KP62lnuDCTQpIcRCWCLV4CiQ8Sb6oLGMXEMka4QljOikkPKusmYTvdWk0BkL7w-CcDP3:1vzVYo:YKpNA3JoW02PDoLrD8UMtEx7XIsyQ8kudaTmhWI_Hm8",
+    "expire_date": "2026-03-23T08:01:54.959Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "mgbycglv6t4ar2o018lmvldqr0afmq52",
+  "fields": {
+    "session_data": ".eJxVi70KwjAQgN_lZimXv5p0FBdnHyBccndEhFJMi4P47iJ00PX7eUGmbW156_LIN4YJAhx-WaF6l_krZnl2WpZhJ324rqR6OZ_24m9r1BtMoCzek0pVJ2qwSEmhJmRbo4gVRGPxGB175EiGSdNIxsXAo2iSWuH9AbDzNW0:1vzouo:Yra9YboP2HSaf9nFdwh7Rm9YJtX2JDzsRAOQ8PXja_k",
+    "expire_date": "2026-03-24T04:41:54.592Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "zmcpfkhxfurui3005mwq3x92vay6uj65",
+  "fields": {
+    "session_data": ".eJxVjMsKwjAQAP9lzxLydtuj935DSbIbU5UEmvYk_rsUetDrzDBvmMO-lXnvvM4LwQgKLr8shvTkegh6hHpvIrW6rUsURyJO28XUiF-3s_0blNALjCCj83kYMjmUrBVazVkZTZKjJJktJuP81UedHBpMLgeMmB1ZVhSQCD5f3Ss4PQ:1vqUqC:_Nn6eDcVpT7nwOWYwSgcdh5oCi4BPIIOpJgfiEkt1jM",
+    "expire_date": "2026-02-26T11:26:36.780Z"
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 2,
+  "fields": {
+    "name": "Super Admin",
+    "permissions": [
+      5,
+      6
+    ]
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 3,
+  "fields": {
+    "name": "Managing Editor",
+    "permissions": [
+      3
+    ]
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 4,
+  "fields": {
+    "name": "Section Editor",
+    "permissions": []
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 5,
+  "fields": {
+    "name": "Journalist",
+    "permissions": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 6,
+  "fields": {
+    "name": "Contributor",
+    "permissions": []
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 7,
+  "fields": {
+    "name": "Fact Checker",
+    "permissions": []
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 8,
+  "fields": {
+    "name": "Legal Reviewer",
+    "permissions": []
+  }
+},
+{
+  "model": "newsapp.role",
+  "pk": 9,
+  "fields": {
+    "name": "Advertiser",
+    "permissions": []
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 1,
+  "fields": {
+    "code": "create_article",
+    "description": "Can create article"
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 2,
+  "fields": {
+    "code": "edit_own_article",
+    "description": "Can edit own article"
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 3,
+  "fields": {
+    "code": "edit_any_article",
+    "description": "Can edit any article"
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 4,
+  "fields": {
+    "code": "publish_article",
+    "description": "Can publish article"
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 5,
+  "fields": {
+    "code": "view_revenue",
+    "description": "Can view revenue"
+  }
+},
+{
+  "model": "newsapp.permission",
+  "pk": 6,
+  "fields": {
+    "code": "approve_paid_content",
+    "description": "Can approve paid content"
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 1,
+  "fields": {
+    "name": "Trending",
+    "slug": "",
+    "description": "",
+    "status": "archived",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 2,
+  "fields": {
+    "name": "Breaking News",
+    "slug": "breaking-news",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "default": []
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 3,
+  "fields": {
+    "name": "States of Bharat",
+    "slug": "state-of-bharat",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "States of India": [
+        "Andhra Pradesh",
+        "Arunachal Pradesh",
+        "Assam",
+        "Bihar",
+        "Chhattisgarh",
+        "Goa",
+        "Gujarat",
+        "Haryana",
+        "Himachal Pradesh",
+        "Jharkhand",
+        "Karnataka",
+        "Kerala",
+        "Madhya Pradesh",
+        "Maharashtra",
+        "Manipur",
+        "Meghalaya",
+        "Mizoram",
+        "Nagaland",
+        "Odisha",
+        "Punjab",
+        "Rajasthan",
+        "Sikkim",
+        "Tamil Nadu",
+        "Telangana",
+        "Tripura",
+        "Uttar Pradesh",
+        "Uttarakhand",
+        "West Bengal"
+      ],
+      "Union Territories": [
+        "Andaman & Nicobar Islands",
+        "Chandigarh",
+        "Dadra & Nagar Haveli and Daman & Diu",
+        "Delhi (NCT)",
+        "Jammu & Kashmir",
+        "Ladakh",
+        "Lakshadweep",
+        "Puducherry"
+      ]
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 4,
+  "fields": {
+    "name": "Bharat Economy & Business",
+    "slug": "bharat-economy",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "Macro-Economy": [
+        "GDP & Growth",
+        "Inflation",
+        "Fiscal & Monetary",
+        "Employment & Labour Market"
+      ],
+      "Government Policy": [
+        "Union budget",
+        "Economic Reforms",
+        "PLI & Policies",
+        "PSO"
+      ],
+      "Industry & Sectors": [
+        "Manufacturing",
+        "Agriculture & Rural Economy",
+        "Infrastructure & construction",
+        "Energy & Power",
+        "Telecom & digital"
+      ],
+      "Corporate & Companies": [
+        "Corporate News",
+        "Mergers & Acquisition",
+        "Company Results",
+        "Business Leaders & Interview"
+      ],
+      "MSME & Entreprenuership": [
+        "MSME Policies",
+        "Small Business Stories"
+      ]
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 5,
+  "fields": {
+    "name": "Bharat's BFSI",
+    "slug": "bfsi",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "default": [
+        "Banking",
+        "NBFCs",
+        "Fintech",
+        "Stock Market",
+        "Insurance"
+      ]
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 6,
+  "fields": {
+    "name": "Bharat Explainers",
+    "slug": "bharat-explainers",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 7,
+  "fields": {
+    "name": "Bharat Opinions",
+    "slug": "bharat-opinions",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "default": [
+        "Editorials",
+        "Expert Opinions",
+        "Industry Voices",
+        "Articles",
+        "Interviews",
+        "Debates & Counterpoints",
+        "Policy Perspective"
+      ]
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 8,
+  "fields": {
+    "name": "Bharat in Numbers",
+    "slug": "bharat-numbers",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 9,
+  "fields": {
+    "name": "Bharat's Startups",
+    "slug": "bharat-startups",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "default": []
+    }
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 10,
+  "fields": {
+    "name": "Bharat 2047",
+    "slug": "bharat-2047",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 11,
+  "fields": {
+    "name": "Sports",
+    "slug": "sports",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 12,
+  "fields": {
+    "name": "World News",
+    "slug": "world-news",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 13,
+  "fields": {
+    "name": "Entertainment",
+    "slug": "entertainment",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 14,
+  "fields": {
+    "name": "Technology",
+    "slug": "technology",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 15,
+  "fields": {
+    "name": "Artificial Intelligence",
+    "slug": "ai",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 16,
+  "fields": {
+    "name": "60-Second Read",
+    "slug": "60-second-read",
+    "description": "",
+    "status": "active",
+    "sub_categories": {}
+  }
+},
+{
+  "model": "newsapp.category",
+  "pk": 17,
+  "fields": {
+    "name": "Trending",
+    "slug": "trending",
+    "description": "",
+    "status": "active",
+    "sub_categories": {
+      "default": []
+    }
+  }
+},
+{
+  "model": "newsapp.article",
+  "pk": 8,
+  "fields": {
+    "title": "article 4",
+    "subtitle": "ghngjj",
+    "content": "jvhjnhgncgfh",
+    "image": "articles/07-03-2025_Yxr5QAr.jpg",
+    "image_url": null,
+    "author": [
+      "sheenu"
+    ],
+    "author_display_name": "",
+    "author_display_position": "",
+    "author_display_bio": "",
+    "author_display_photo": "",
+    "author_display_twitter": "",
+    "author_display_linkedin": "",
+    "author_display_instagram": "",
+    "author_display_facebook": "",
+    "author_display_articles_count": 0,
+    "slug": "article-4",
+    "canonical_url": "",
+    "meta_description": "",
+    "focus_keyword": "",
+    "noindex": false,
+    "nofollow": false,
+    "in_sitemap": true,
+    "status": "published",
+    "priority": 5,
+    "is_paid": false,
+    "created_at": "2026-03-10T10:37:40.100Z",
+    "published_at": "2026-03-13T06:52:28.856Z",
+    "assigned_to": [
+      "sheenu"
+    ],
+    "deadline": "2026-03-13T16:07:00Z",
+    "categories": [
+      17
+    ]
+  }
+},
+{
+  "model": "newsapp.article",
+  "pk": 10,
+  "fields": {
+    "title": "Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?",
+    "subtitle": "Amaravati capital city development with infrastructure projects and investment updates.",
+    "content": "<div>If you’ve heard “Amaravati is restarting” a dozen times, you’re not alone. The real story in 2025–26 is scale, sequencing, and money flow—because Amaravati’s development is now being framed as a mega infrastructure-and-investment rollout, not just a political headline.</div><div><br></div><div>A major turning point came when the Prime Minister laid the foundation stone and inaugurated/announced development works worth over ₹58,000 crore in Amaravati. That figure matters because it signals project packaging at a level that can attract lenders, EPC contractors, and long-horizon institutional investors—exactly what capital cities require.</div><div><br></div><div>On the budget side, independent budget analysis notes that Andhra Pradesh’s 2025–26 budget included an allocation of ₹6,000 crore for the Amaravati capital city. That’s not the entire funding universe (projects often combine state support, central support, loans, and PPP structures), but it is a measurable line item that indicates the state’s fiscal intent.</div><div><br></div><div>What’s new in the business pitch is the investment narrative. A recent industry interview with the APCRDA leadership reported that Amaravati attracted ₹28,075 crore in investments in 2025, along with MoUs worth ₹45,589 crore and a tender pipeline pegged around ₹58,000 crore. While MoUs are not the same as cash on the ground, they show the kind of investor targeting happening now—finance, real estate, institutional development, and large public works.</div><div><br></div><div>The political economy angle is also clear: the state’s 2026–27 budget coverage references Amaravati works worth ₹57,868 crore and frames Amaravati alongside clean energy and logistics as priority growth drivers. For readers, this means Amaravati is being positioned as a “jobs + construction + services” engine—where procurement, contracting, and supply chains can ripple into nearby districts.</div><div><br></div><div>What to watch next (the practical checklist):</div><div>- Tender awards vs announcements: which packages move from pipeline to signed contracts (track APCRDA notifications/tenders).</div><div>- Disbursement speed: allocations on paper vs expenditure on ground.</div><div>- Livability sequencing: roads, drainage, power, public transport, and government complexes—because “people moving in” is the real proof of a city’s restart.</div><div><br></div><div><br></div><div>Amaravati’s comeback story is no longer about whether projects will be announced. It’s about whether execution remains consistent across quarters—because capital cities aren’t built in speeches; they’re built in invoices.</div>",
+    "image": "articles/Amravati_Image_-_Explainer_1_1.jpg",
+    "image_url": null,
+    "author": [
+      "sheenu"
+    ],
+    "author_display_name": "",
+    "author_display_position": "",
+    "author_display_bio": "",
+    "author_display_photo": "",
+    "author_display_twitter": "",
+    "author_display_linkedin": "",
+    "author_display_instagram": "",
+    "author_display_facebook": "",
+    "author_display_articles_count": 0,
+    "slug": "amaravatis-58000-crore-reset-whats-actually-being-built-funded-and-sold-to-investors",
+    "canonical_url": "",
+    "meta_description": "",
+    "focus_keyword": "",
+    "noindex": false,
+    "nofollow": false,
+    "in_sitemap": true,
+    "status": "published",
+    "priority": 5,
+    "is_paid": false,
+    "created_at": "2026-03-11T12:30:49.048Z",
+    "published_at": null,
+    "assigned_to": [
+      "sheenu"
+    ],
+    "deadline": "2026-03-13T17:59:00Z",
+    "categories": [
+      3,
+      17
+    ]
+  }
+},
+{
+  "model": "newsapp.article",
+  "pk": 11,
+  "fields": {
+    "title": "India Clinches Thrilling Victory in T20 Series Decider Against Australia",
+    "subtitle": "A powerful batting performance and disciplined bowling helped India secure a dramatic win in the final over.",
+    "content": "India secured an exciting victory against Australia in the final match of the T20 series, delivering a performance that kept fans on the edge of their seats. Batting first, India posted a competitive total after a strong partnership in the middle overs. The Australian team attempted a steady chase but struggled to maintain momentum against India's disciplined bowling attack.<br><br>The match reached a dramatic climax in the final over, where Australia needed 12 runs to win. However, the Indian bowler held his nerve and delivered a series of accurate deliveries, restricting the opposition and sealing the victory for India. Cricket fans across the country celebrated the thrilling win as the team successfully clinched the series with an impressive all-round performance.",
+    "image": "articles/worldcup_1_cropped_processed_by_imagy_67Div0M.jpg",
+    "image_url": null,
+    "author": [
+      "sheenu"
+    ],
+    "author_display_name": "News4Bharat",
+    "author_display_position": "Editor",
+    "author_display_bio": "",
+    "author_display_photo": "",
+    "author_display_twitter": "https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ",
+    "author_display_linkedin": "https://www.linkedin.com/company/news4bharat/",
+    "author_display_instagram": "",
+    "author_display_facebook": "",
+    "author_display_articles_count": 0,
+    "slug": "india-clinches-thrilling-victory-in-t20-series-decider-against-australia",
+    "canonical_url": "",
+    "meta_description": "India defeats Australia in a thrilling T20 match after a brilliant batting performance and strong bowling in the final over.",
+    "focus_keyword": "India vs Australia cricket match, India T20 victory, Cricket, Match, india, victory, australia",
+    "noindex": false,
+    "nofollow": false,
+    "in_sitemap": true,
+    "status": "published",
+    "priority": 5,
+    "is_paid": false,
+    "created_at": "2026-03-12T11:19:16.125Z",
+    "published_at": null,
+    "assigned_to": [
+      "sheenu"
+    ],
+    "deadline": "2026-03-13T16:48:00Z",
+    "categories": [
+      11,
+      17
+    ]
+  }
+},
+{
+  "model": "newsapp.articleworkflowlog",
+  "pk": 5,
+  "fields": {
+    "article": 8,
+    "old_status": "draft",
+    "new_status": "published",
+    "changed_by": [
+      "sheenu"
+    ],
+    "changed_at": "2026-03-13T06:52:28.846Z",
+    "remarks": ""
+  }
+},
+{
+  "model": "newsapp.homepageslot",
+  "pk": 1,
+  "fields": {
+    "slot_name": "breaking",
+    "mode": "manual",
+    "article": null,
+    "auto_rule": null,
+    "pin_until": null,
+    "is_active": true,
+    "updated_at": "2026-02-20T07:21:30.207Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 3,
+  "fields": {
+    "metal_type": "gold",
+    "price": 146806.95,
+    "change": 0.0,
+    "percent_change": 0.0,
+    "trend": "up",
+    "created_at": "2026-02-21T05:45:01.275Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 4,
+  "fields": {
+    "metal_type": "silver",
+    "price": 278000.83,
+    "change": 0.0,
+    "percent_change": 0.0,
+    "trend": "down",
+    "created_at": "2026-02-21T05:45:01.282Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 5,
+  "fields": {
+    "metal_type": "gold",
+    "price": 148949.37,
+    "change": 2142.42,
+    "percent_change": 1.46,
+    "trend": "up",
+    "created_at": "2026-02-23T11:01:50.908Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 6,
+  "fields": {
+    "metal_type": "silver",
+    "price": 247166.66,
+    "change": -30834.17,
+    "percent_change": -11.09,
+    "trend": "down",
+    "created_at": "2026-02-23T11:01:50.914Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 7,
+  "fields": {
+    "metal_type": "gold",
+    "price": 148949.37,
+    "change": 0.0,
+    "percent_change": 0.0,
+    "trend": "up",
+    "created_at": "2026-02-23T11:01:52.944Z"
+  }
+},
+{
+  "model": "newsapp.metalrate",
+  "pk": 8,
+  "fields": {
+    "metal_type": "silver",
+    "price": 247166.66,
+    "change": 0.0,
+    "percent_change": 0.0,
+    "trend": "up",
+    "created_at": "2026-02-23T11:01:52.952Z"
+  }
+},
+{
+  "model": "newsapp.reporter",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "employee_id": "1",
+    "phone": "",
+    "designation": "Reporter",
+    "employment_type": "full_time",
+    "is_active": true,
+    "joining_date": "2026-02-23",
+    "assigned_categories": [
+      1
+    ]
+  }
+},
+{
+  "model": "newsapp.reportermonthlyperformance",
+  "pk": 1,
+  "fields": {
+    "reporter": [
+      "sheenu"
+    ],
+    "month": 2,
+    "year": 2026,
+    "articles_assigned": 20,
+    "articles_submitted": 18,
+    "articles_published": 15,
+    "articles_rejected": 3,
+    "rejection_rate": 16.6,
+    "deadline_adherence_rate": 90.0,
+    "avg_views": 3000,
+    "avg_engagement_score": 7.5,
+    "plagiarism_avg_score": 1.2,
+    "performance_score": 85.0,
+    "last_updated": "2026-02-23T09:21:42.966Z"
+  }
+},
+{
+  "model": "newsapp.userprofile",
+  "pk": 5,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "staff_id": "N4B-SAD-001",
+    "plain_password": "2L$HBmUMU*d&",
+    "totp_secret": "",
+    "is_2fa_enabled": false,
+    "failed_attempts": 0,
+    "locked_until": null,
+    "total_failed_ever": 0,
+    "last_failed_at": null,
+    "remember_me": false,
+    "session_timeout_min": 30,
+    "login_attempts_ip": {},
+    "phone": "",
+    "bio": "",
+    "gender": "female",
+    "status": "active",
+    "created_at": "2026-03-09T07:46:40.226Z",
+    "roles": [
+      2
+    ],
+    "extra_permissions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "assigned_categories": [
+      16,
+      15,
+      5,
+      9
+    ]
+  }
+},
+{
+  "model": "newsapp.userprofile",
+  "pk": 7,
+  "fields": {
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "staff_id": "N4B-EDT-001",
+    "plain_password": "%3RwcgMtQ7N0",
+    "totp_secret": "",
+    "is_2fa_enabled": false,
+    "failed_attempts": 0,
+    "locked_until": null,
+    "total_failed_ever": 0,
+    "last_failed_at": null,
+    "remember_me": false,
+    "session_timeout_min": 30,
+    "login_attempts_ip": {},
+    "phone": "",
+    "bio": "",
+    "gender": null,
+    "status": "active",
+    "created_at": "2026-03-10T09:52:48.931Z",
+    "roles": [
+      5
+    ],
+    "extra_permissions": [
+      1,
+      2,
+      3
+    ],
+    "assigned_categories": []
+  }
+},
+{
+  "model": "newsapp.userprofile",
+  "pk": 8,
+  "fields": {
+    "user": [
+      "srajana37"
+    ],
+    "staff_id": "N4B-SAD-002",
+    "plain_password": "viP8J%8Ata3V",
+    "totp_secret": "",
+    "is_2fa_enabled": false,
+    "failed_attempts": 0,
+    "locked_until": null,
+    "total_failed_ever": 0,
+    "last_failed_at": null,
+    "remember_me": false,
+    "session_timeout_min": 30,
+    "login_attempts_ip": {},
+    "phone": "",
+    "bio": "",
+    "gender": null,
+    "status": "active",
+    "created_at": "2026-03-10T12:29:44.545Z",
+    "roles": [
+      2,
+      3
+    ],
+    "extra_permissions": [],
+    "assigned_categories": []
+  }
+},
+{
+  "model": "newsapp.userprofile",
+  "pk": 9,
+  "fields": {
+    "user": [
+      "sheeintern"
+    ],
+    "staff_id": "N4B-REP-001",
+    "plain_password": "vd@u2*Ks&U4s",
+    "totp_secret": "",
+    "is_2fa_enabled": false,
+    "failed_attempts": 0,
+    "locked_until": null,
+    "total_failed_ever": 0,
+    "last_failed_at": null,
+    "remember_me": false,
+    "session_timeout_min": 30,
+    "login_attempts_ip": {},
+    "phone": "",
+    "bio": "",
+    "gender": null,
+    "status": "active",
+    "created_at": "2026-03-11T05:16:21.080Z",
+    "roles": [
+      5
+    ],
+    "extra_permissions": [
+      1,
+      2
+    ],
+    "assigned_categories": []
+  }
+},
+{
+  "model": "newsapp.conversation",
+  "pk": 1,
+  "fields": {
+    "conv_type": "",
+    "name": null,
+    "created_at": "2026-03-10T10:05:25.430Z",
+    "updated_at": "2026-03-10T10:05:25.430Z"
+  }
+},
+{
+  "model": "newsapp.conversation",
+  "pk": 2,
+  "fields": {
+    "conv_type": "private",
+    "name": null,
+    "created_at": "2026-03-10T10:19:09.323Z",
+    "updated_at": "2026-03-10T10:19:09.323Z"
+  }
+},
+{
+  "model": "newsapp.conversation",
+  "pk": 3,
+  "fields": {
+    "conv_type": "private",
+    "name": null,
+    "created_at": "2026-03-10T12:29:56.804Z",
+    "updated_at": "2026-03-10T12:29:56.804Z"
+  }
+},
+{
+  "model": "newsapp.conversation",
+  "pk": 4,
+  "fields": {
+    "conv_type": "private",
+    "name": null,
+    "created_at": "2026-03-11T05:16:32.837Z",
+    "updated_at": "2026-03-11T07:12:29.524Z"
+  }
+},
+{
+  "model": "newsapp.conversation",
+  "pk": 5,
+  "fields": {
+    "conv_type": "group",
+    "name": "Group1",
+    "created_at": "2026-03-11T09:01:28.641Z",
+    "updated_at": "2026-03-11T09:06:29.007Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 1,
+  "fields": {
+    "conversation": 1,
+    "user": [
+      "sheenu"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T10:05:25.438Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 2,
+  "fields": {
+    "conversation": 1,
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T10:05:25.445Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 3,
+  "fields": {
+    "conversation": 2,
+    "user": [
+      "sheenu"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T10:19:09.330Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 4,
+  "fields": {
+    "conversation": 2,
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T10:19:09.330Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 5,
+  "fields": {
+    "conversation": 3,
+    "user": [
+      "sheenu"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T12:29:56.809Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 6,
+  "fields": {
+    "conversation": 3,
+    "user": [
+      "srajana37"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-10T12:29:56.812Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 7,
+  "fields": {
+    "conversation": 4,
+    "user": [
+      "sheenu"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T05:16:32.842Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 8,
+  "fields": {
+    "conversation": 4,
+    "user": [
+      "sheeintern"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T05:16:32.847Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 9,
+  "fields": {
+    "conversation": 5,
+    "user": [
+      "sheenu"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T09:01:28.653Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 10,
+  "fields": {
+    "conversation": 5,
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T09:01:28.673Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 11,
+  "fields": {
+    "conversation": 5,
+    "user": [
+      "srajana37"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T09:01:28.679Z"
+  }
+},
+{
+  "model": "newsapp.conversationmember",
+  "pk": 12,
+  "fields": {
+    "conversation": 5,
+    "user": [
+      "sheeintern"
+    ],
+    "last_read": null,
+    "joined_at": "2026-03-11T09:01:28.686Z"
+  }
+},
+{
+  "model": "newsapp.message",
+  "pk": 1,
+  "fields": {
+    "conversation": 4,
+    "sender": [
+      "sheenu"
+    ],
+    "message_type": "text",
+    "text": "hey",
+    "file": "",
+    "image": "",
+    "receiver": [
+      "sheeintern"
+    ],
+    "created_at": "2026-03-11T07:12:24.624Z",
+    "is_read": false
+  }
+},
+{
+  "model": "newsapp.message",
+  "pk": 2,
+  "fields": {
+    "conversation": 4,
+    "sender": [
+      "sheenu"
+    ],
+    "message_type": "text",
+    "text": "hii",
+    "file": "",
+    "image": "",
+    "receiver": [
+      "sheeintern"
+    ],
+    "created_at": "2026-03-11T07:12:29.512Z",
+    "is_read": false
+  }
+},
+{
+  "model": "newsapp.message",
+  "pk": 3,
+  "fields": {
+    "conversation": 5,
+    "sender": [
+      "sheenu"
+    ],
+    "message_type": "text",
+    "text": "hii",
+    "file": "",
+    "image": "",
+    "receiver": null,
+    "created_at": "2026-03-11T09:06:29.002Z",
+    "is_read": false
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "assign",
+    "title": "New Assignment",
+    "message": "You were assigned \"article 4\"",
+    "icon": "👤",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-10T10:37:40.106Z",
+    "action_url": "/admin/articles/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 2,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "assign",
+    "title": "New Assignment",
+    "message": "You were assigned \"article5\"",
+    "icon": "👤",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-10T12:19:44.278Z",
+    "action_url": "/admin/newsapp/article/9/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 3,
+  "fields": {
+    "user": [
+      "sheeintern"
+    ],
+    "notif_type": "message",
+    "title": "New Message",
+    "message": "sheenu sent a message",
+    "icon": "💬",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T07:12:24.663Z",
+    "action_url": "/admin/inbox/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 4,
+  "fields": {
+    "user": [
+      "sheeintern"
+    ],
+    "notif_type": "message",
+    "title": "New Message",
+    "message": "sheenu sent a message",
+    "icon": "💬",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T07:12:29.532Z",
+    "action_url": "/admin/inbox/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 5,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Super Admin",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T07:39:24.420Z",
+    "action_url": "/admin/yourapp/role/5/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 6,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Section Editor",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-11T07:39:24.425Z",
+    "action_url": "/admin/yourapp/role/5/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 7,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Managing Editor",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-11T07:40:07.015Z",
+    "action_url": "/admin/yourapp/role/5/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 8,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Super Admin",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T07:40:07.023Z",
+    "action_url": "/admin/yourapp/role/5/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 9,
+  "fields": {
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "notif_type": "message",
+    "title": "New Message",
+    "message": "sheenu sent a message",
+    "icon": "💬",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T09:06:29.014Z",
+    "action_url": "/admin/inbox/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 10,
+  "fields": {
+    "user": [
+      "srajana37"
+    ],
+    "notif_type": "message",
+    "title": "New Message",
+    "message": "sheenu sent a message",
+    "icon": "💬",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T09:06:29.017Z",
+    "action_url": "/admin/inbox/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 11,
+  "fields": {
+    "user": [
+      "sheeintern"
+    ],
+    "notif_type": "message",
+    "title": "New Message",
+    "message": "sheenu sent a message",
+    "icon": "💬",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T09:06:29.019Z",
+    "action_url": "/admin/inbox/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 12,
+  "fields": {
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Section Editor",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T09:31:06.600Z",
+    "action_url": "/admin/newsapp/role/7/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 13,
+  "fields": {
+    "user": [
+      "jyotigautam113127111"
+    ],
+    "notif_type": "role",
+    "title": "Role Updated",
+    "message": "Your role has been updated: Journalist",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T09:31:06.606Z",
+    "action_url": "/admin/newsapp/role/7/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 14,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "assign",
+    "title": "New Assignment",
+    "message": "You were assigned \"Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?\"",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-11T12:30:49.081Z",
+    "action_url": "/admin/newsapp/article/10/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 15,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-11T12:30:49.085Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 16,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-11T12:31:34.418Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 17,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'aajtk news' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": false,
+    "created_at": "2026-03-12T06:06:14.601Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 18,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T07:00:17.469Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 19,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T09:34:37.403Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 20,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T11:11:42.082Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 21,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "assign",
+    "title": "New Assignment",
+    "message": "You were assigned \"India Clinches Thrilling Victory in T20 Series Decider Against Australia\"",
+    "icon": "",
+    "is_read": true,
+    "is_archived": false,
+    "created_at": "2026-03-12T11:19:16.135Z",
+    "action_url": "/admin/newsapp/article/11/change/"
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 22,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": false,
+    "is_archived": false,
+    "created_at": "2026-03-12T11:19:16.138Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 23,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T11:22:03.919Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 24,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T11:30:39.522Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 25,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T11:32:17.586Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 26,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T11:48:33.275Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 27,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-12T12:04:04.991Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 28,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T05:23:43.835Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 29,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T05:23:43.872Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 30,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T05:25:22.132Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 31,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T05:33:16.668Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 32,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T05:59:00.478Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 33,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T06:05:26.220Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 34,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T06:48:54.517Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 35,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'India Clinches Thrilling Victory in T20 Series Decider Against Australia' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T06:49:14.341Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 36,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'Amaravati’s ₹58,000 Crore Reset: What’s Actually Being Built, Funded, and Sold to Investors?' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T06:52:06.471Z",
+    "action_url": null
+  }
+},
+{
+  "model": "newsapp.notification",
+  "pk": 37,
+  "fields": {
+    "user": [
+      "sheenu"
+    ],
+    "notif_type": "article",
+    "title": "Article Published",
+    "message": "Your article 'article 4' is now published!",
+    "icon": "",
+    "is_read": true,
+    "is_archived": true,
+    "created_at": "2026-03-13T06:52:28.879Z",
+    "action_url": null
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2026-02-12T11:27:23.071Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 2,
+  "fields": {
+    "action_time": "2026-02-12T11:27:32.156Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 3,
+  "fields": {
+    "action_time": "2026-02-12T11:27:41.967Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 4,
+  "fields": {
+    "action_time": "2026-02-13T06:23:54.147Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "3",
+    "object_repr": "Managing Editor",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 5,
+  "fields": {
+    "action_time": "2026-02-13T06:24:07.153Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "4",
+    "object_repr": "Section Editor",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 6,
+  "fields": {
+    "action_time": "2026-02-13T06:24:08.944Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "4",
+    "object_repr": "Section Editor",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 7,
+  "fields": {
+    "action_time": "2026-02-13T06:24:25.062Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "5",
+    "object_repr": "Journalist",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 8,
+  "fields": {
+    "action_time": "2026-02-13T06:24:40.787Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "6",
+    "object_repr": "Contributor",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 9,
+  "fields": {
+    "action_time": "2026-02-13T06:24:56.218Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "7",
+    "object_repr": "Fact Checker",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 10,
+  "fields": {
+    "action_time": "2026-02-13T06:25:06.934Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "8",
+    "object_repr": "Legal Reviewer",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 11,
+  "fields": {
+    "action_time": "2026-02-13T06:25:15.014Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "9",
+    "object_repr": "Advertiser",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 12,
+  "fields": {
+    "action_time": "2026-02-13T06:40:03.073Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "category"
+    ],
+    "object_id": "1",
+    "object_repr": "Trending",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 17,
+  "fields": {
+    "action_time": "2026-02-14T05:06:14.158Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "permission"
+    ],
+    "object_id": "6",
+    "object_repr": "approve_paid_content",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 18,
+  "fields": {
+    "action_time": "2026-02-14T05:06:18.975Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "permission"
+    ],
+    "object_id": "6",
+    "object_repr": "approve_paid_content",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 20,
+  "fields": {
+    "action_time": "2026-02-14T05:37:33.723Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "9",
+    "object_repr": "Advertiser",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 21,
+  "fields": {
+    "action_time": "2026-02-14T05:37:40.288Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "permission"
+    ],
+    "object_id": "1",
+    "object_repr": "create_article",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 22,
+  "fields": {
+    "action_time": "2026-02-14T05:42:18.925Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "9",
+    "object_repr": "Advertiser",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 23,
+  "fields": {
+    "action_time": "2026-02-14T05:42:49.187Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 24,
+  "fields": {
+    "action_time": "2026-02-14T05:43:12.462Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 25,
+  "fields": {
+    "action_time": "2026-02-14T05:43:40.172Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 26,
+  "fields": {
+    "action_time": "2026-02-14T05:43:49.052Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 27,
+  "fields": {
+    "action_time": "2026-02-14T05:57:27.117Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Permissions\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 28,
+  "fields": {
+    "action_time": "2026-02-14T05:57:27.186Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 29,
+  "fields": {
+    "action_time": "2026-02-14T05:57:53.902Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 30,
+  "fields": {
+    "action_time": "2026-02-14T06:00:45.739Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 31,
+  "fields": {
+    "action_time": "2026-02-14T06:04:08.174Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "2",
+    "object_repr": "Super Admin",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Permissions\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 32,
+  "fields": {
+    "action_time": "2026-02-14T06:04:22.689Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "5",
+    "object_repr": "Journalist",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Permissions\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 33,
+  "fields": {
+    "action_time": "2026-02-14T06:06:24.331Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "3",
+    "object_repr": "Managing Editor",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Permissions\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 34,
+  "fields": {
+    "action_time": "2026-02-14T06:06:24.391Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "role"
+    ],
+    "object_id": "3",
+    "object_repr": "Managing Editor",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 35,
+  "fields": {
+    "action_time": "2026-02-14T06:45:27.215Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 36,
+  "fields": {
+    "action_time": "2026-02-14T06:47:57.346Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Content\", \"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 37,
+  "fields": {
+    "action_time": "2026-02-16T05:19:25.312Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "2",
+    "object_repr": "earthquake",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 38,
+  "fields": {
+    "action_time": "2026-02-16T05:20:31.825Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "2",
+    "object_repr": "earthquake",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 39,
+  "fields": {
+    "action_time": "2026-02-16T05:48:15.040Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 40,
+  "fields": {
+    "action_time": "2026-02-16T05:48:35.757Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 41,
+  "fields": {
+    "action_time": "2026-02-16T06:02:48.168Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 42,
+  "fields": {
+    "action_time": "2026-02-16T06:06:28.764Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 43,
+  "fields": {
+    "action_time": "2026-02-16T06:11:09.883Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 44,
+  "fields": {
+    "action_time": "2026-02-16T06:14:09.208Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 45,
+  "fields": {
+    "action_time": "2026-02-16T06:17:51.034Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 46,
+  "fields": {
+    "action_time": "2026-02-16T06:23:15.563Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 47,
+  "fields": {
+    "action_time": "2026-02-18T09:32:17.140Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 48,
+  "fields": {
+    "action_time": "2026-02-18T09:32:24.586Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 49,
+  "fields": {
+    "action_time": "2026-02-18T09:32:43.270Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 50,
+  "fields": {
+    "action_time": "2026-02-20T07:21:30.211Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "homepageslot"
+    ],
+    "object_id": "1",
+    "object_repr": "breaking (manual)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 51,
+  "fields": {
+    "action_time": "2026-02-20T09:45:25.824Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Gender\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 52,
+  "fields": {
+    "action_time": "2026-02-23T09:40:21.324Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "reporter"
+    ],
+    "object_id": "1",
+    "object_repr": "sheenu (1)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 53,
+  "fields": {
+    "action_time": "2026-02-23T10:51:09.100Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "metalrate"
+    ],
+    "object_id": "4",
+    "object_repr": "silver - 278000.83",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Price\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 54,
+  "fields": {
+    "action_time": "2026-02-23T10:51:50.726Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "metalrate"
+    ],
+    "object_id": "2",
+    "object_repr": "silver - 230086.83",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 55,
+  "fields": {
+    "action_time": "2026-02-23T10:51:50.726Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "metalrate"
+    ],
+    "object_id": "1",
+    "object_repr": "gold - 146806.95",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 56,
+  "fields": {
+    "action_time": "2026-02-23T10:58:27.510Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "factcheck"
+    ],
+    "object_id": "1",
+    "object_repr": "FactCheck - aajtk news",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 57,
+  "fields": {
+    "action_time": "2026-02-23T11:58:37.132Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "factcheck"
+    ],
+    "object_id": "1",
+    "object_repr": "FactCheck - aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 58,
+  "fields": {
+    "action_time": "2026-02-23T11:58:45.349Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "factcheck"
+    ],
+    "object_id": "1",
+    "object_repr": "FactCheck - aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 59,
+  "fields": {
+    "action_time": "2026-02-23T11:58:51.268Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "factcheck"
+    ],
+    "object_id": "1",
+    "object_repr": "FactCheck - aajtk news",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 60,
+  "fields": {
+    "action_time": "2026-03-05T11:34:45.926Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "2",
+    "object_repr": "jyotigautam11312711",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 61,
+  "fields": {
+    "action_time": "2026-03-05T11:45:28.224Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "3",
+    "object_repr": "jyotigautam11312711",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 62,
+  "fields": {
+    "action_time": "2026-03-05T11:46:32.755Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "4",
+    "object_repr": "jyotigautam113127111",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 63,
+  "fields": {
+    "action_time": "2026-03-07T07:37:29.494Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "4",
+    "object_repr": "gfhfhngjh",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 64,
+  "fields": {
+    "action_time": "2026-03-09T05:51:31.901Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "3",
+    "object_repr": "gfhfhngjh",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 65,
+  "fields": {
+    "action_time": "2026-03-10T10:14:50.503Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "6",
+    "object_repr": "jyotigautam11312711",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 66,
+  "fields": {
+    "action_time": "2026-03-10T10:26:41.388Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "5",
+    "object_repr": "article 4",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 67,
+  "fields": {
+    "action_time": "2026-03-10T10:36:58.355Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "7",
+    "object_repr": "article2",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 68,
+  "fields": {
+    "action_time": "2026-03-10T10:37:04.356Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "6",
+    "object_repr": "article2",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 69,
+  "fields": {
+    "action_time": "2026-03-10T11:32:39.335Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Roles\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 70,
+  "fields": {
+    "action_time": "2026-03-10T11:33:00.717Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Gender\", \"Extra permissions\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 71,
+  "fields": {
+    "action_time": "2026-03-10T12:21:16.782Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Roles\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 72,
+  "fields": {
+    "action_time": "2026-03-10T12:22:28.339Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Assigned categories\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 73,
+  "fields": {
+    "action_time": "2026-03-11T07:38:44.045Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 74,
+  "fields": {
+    "action_time": "2026-03-11T07:39:24.431Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Roles\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 75,
+  "fields": {
+    "action_time": "2026-03-11T07:40:07.031Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "5",
+    "object_repr": "sheenu | N4B-SAD-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Roles\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 76,
+  "fields": {
+    "action_time": "2026-03-11T09:31:06.613Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "userprofile"
+    ],
+    "object_id": "7",
+    "object_repr": "jyotigautam113127111 | N4B-EDT-001",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Roles\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 77,
+  "fields": {
+    "action_time": "2026-03-12T11:12:25.233Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "1",
+    "object_repr": "aajtk news",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 78,
+  "fields": {
+    "action_time": "2026-03-12T11:12:36.460Z",
+    "user": [
+      "sheenu"
+    ],
+    "content_type": [
+      "newsapp",
+      "article"
+    ],
+    "object_id": "9",
+    "object_repr": "article5",
+    "action_flag": 3,
+    "change_message": ""
+  }
+}
+]

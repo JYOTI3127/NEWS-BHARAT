@@ -24,13 +24,12 @@ class Permission(models.Model):
 
 from django.utils.text import slugify
 
-
 class Category(models.Model):
     name           = models.CharField(max_length=100)
     slug           = models.SlugField(max_length=100, unique=True, blank=True)
     description    = models.TextField(blank=True)
-    status         = models.CharField(max_length=10, default='active')   # ← ADD
-    sub_categories = models.JSONField(default=dict, blank=True)          # ← ADD
+    status         = models.CharField(max_length=10, default='active')
+    sub_categories = models.JSONField(default=dict, blank=True)
 
     class Meta:
         verbose_name_plural = "categories"
@@ -44,140 +43,189 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
-    def get_articles(self):
-        return self.articles.filter(status='published')
-
-    def get_article_count(self):
-        return self.articles.filter(status='published').count()
-
 class Article(models.Model):
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('review', 'In Review'),
+        ('draft',      'Draft'),
+        ('review',     'In Review'),
         ('fact_check', 'Fact Check'),
-        ('legal', 'Legal Review'),
-        ('approved', 'Approved'),
-        ('scheduled', 'Scheduled'),
-        ('published', 'Published'),
-        ('archived', 'Archived'),
-        ('rejected', 'Rejected'),
+        ('legal',      'Legal Review'),
+        ('approved',   'Approved'),
+        ('scheduled',  'Scheduled'),
+        ('published',  'Published'),
+        ('archived',   'Archived'),
+        ('rejected',   'Rejected'),
     ]
-
-    title = models.CharField(max_length=255)
+ 
+    title    = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255, blank=True)
-    content = models.TextField()
-    # file upload
-    image = models.ImageField(upload_to="articles/", blank=True, null=True)
-
-    # url image
+    content  = models.TextField()
+    image    = models.ImageField(upload_to="articles/", blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
-
+    # FIX 1: image_alt and image_source were already in model — confirmed present
+    image_alt    = models.CharField(max_length=200, blank=True, default='')
+    image_source = models.CharField(max_length=200, blank=True, default='')
+ 
     def get_image(self):
         if self.image:
             return self.image.url
         return self.image_url
-
-    category = models.ForeignKey(
-    'Category',
-    on_delete=models.CASCADE,
-    related_name='articles'
+ 
+    # ── Multi-category (ManyToMany) ──
+    categories = models.ManyToManyField(
+        'Category',
+        related_name='articles',
+        blank=True
     )
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    # ── Selected subcategories (JSON) ──
+    # Format: {"cat_pk": ["Sub Name 1", "Sub Name 2"]}
+    selected_subcategories = models.JSONField(default=dict, blank=True)
+ 
+    # ── Audit: kisne actually post kiya (backend only) ──
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='articles_authored'
+    )
+ 
+    # ── Display: frontend pe article ke neeche jo dikhega ──
+    author_display_name      = models.CharField(max_length=150, blank=True)
+    author_display_position  = models.CharField(max_length=150, blank=True)
+    author_display_bio       = models.TextField(blank=True)
+    author_display_photo     = models.URLField(blank=True)
+    author_display_twitter   = models.CharField(max_length=200, blank=True)
+    author_display_linkedin  = models.CharField(max_length=200, blank=True)
+    author_display_instagram = models.CharField(max_length=200, blank=True)
+    author_display_facebook  = models.CharField(max_length=200, blank=True)
+    author_display_youtube   = models.CharField(max_length=200, blank=True)
+    author_display_reddit    = models.CharField(max_length=200, blank=True)
+    author_display_articles_count = models.PositiveIntegerField(default=0)
+ 
+    # ── SEO fields ──
+    slug             = models.SlugField(max_length=100, unique=True, blank=True)
+    canonical_url    = models.URLField(blank=True)
+    meta_description = models.TextField(blank=True)
+    focus_keyword    = models.CharField(max_length=100, blank=True)
+    # FIX: secondary_keywords field
+    secondary_keywords = models.CharField(max_length=500, blank=True, default='')
+    noindex          = models.BooleanField(default=False)
+    nofollow         = models.BooleanField(default=False)
+    in_sitemap       = models.BooleanField(default=True)
+
+    # ── Tags (comma-separated string stored, exposed as list via serializer) ──
+    tags = models.CharField(max_length=500, blank=True, default='')
+ 
+    status   = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     priority = models.IntegerField(default=5)
-    is_paid = models.BooleanField(default=False)
-
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_paid  = models.BooleanField(default=False)
+ 
+    created_at   = models.DateTimeField(auto_now_add=True)
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
-
+ 
     assigned_to = models.ForeignKey(
-    User,
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='articles_assigned_to'
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='articles_assigned_to'
     )
-
     deadline = models.DateTimeField(null=True, blank=True)
-
+ 
     def clean(self):
-        if self.assigned_to and self.category_id:
+        if self.assigned_to and self.pk:
             profile = self.assigned_to.profile
+            for cat in self.categories.all():
+                if not profile.assigned_categories.filter(id=cat.id).exists():
+                    pass  # raise ValidationError if needed
+ 
+    from django.utils.text import slugify
+import uuid
+from django.utils import timezone
 
-            if not profile.assigned_categories.filter(id=self.category_id).exists():
-                # raise ValidationError("Reporter not allowed for this category")
-                pass
+def save(self, *args, **kwargs):
+    is_update = self.pk is not None
 
+    # ✅ SLUG AUTO GENERATE
+    if not self.slug:
+        self.slug = slugify(self.title) + "-" + str(uuid.uuid4())[:5]
 
-    def save(self, *args, **kwargs):
-        is_update = self.pk is not None
+    if is_update:
+        old_article = Article.objects.get(pk=self.pk)
 
-        if is_update:
-            old_article = Article.objects.get(pk=self.pk)
+        # Versioning Logic (Content Change)
+        if (
+            old_article.title    != self.title or
+            old_article.subtitle != self.subtitle or
+            old_article.content  != self.content
+        ):
+            last_version = self.versions.order_by('-version_number').first()
+            next_version_number = 1 if not last_version else last_version.version_number + 1
 
-            # 🔹 Versioning Logic (Content Change)
-            if (
-                old_article.title != self.title or
-                old_article.subtitle != self.subtitle or
-                old_article.content != self.content
-            ):
-                last_version = self.versions.order_by('-version_number').first()
-                next_version_number = 1 if not last_version else last_version.version_number + 1
+            ArticleVersion.objects.create(
+                article=self,
+                title=old_article.title,
+                subtitle=old_article.subtitle,
+                content=old_article.content,
+                edited_by=self.author,
+                version_number=next_version_number
+            )
 
-                ArticleVersion.objects.create(
-                    article=self,
-                    title=old_article.title,
-                    subtitle=old_article.subtitle,
-                    content=old_article.content,
-                    edited_by=self.author, 
-                    version_number=next_version_number
-                )
+        if old_article.status != self.status:
+            ArticleWorkflowLog.objects.create(
+                article=self,
+                old_status=old_article.status,
+                new_status=self.status,
+                changed_by=self.author,
+                remarks=""
+            )
 
-            if old_article.status != self.status:
-                # Workflow Log Logic (Status Change)
-                ArticleWorkflowLog.objects.create(
-                    article=self,
-                    old_status=old_article.status,
-                    new_status=self.status,
-                    changed_by=self.author,
-                    remarks=""
-                )
+            # ✅ ENSURE published_at set
+            if self.status == "published" and not self.published_at:
+                self.published_at = timezone.now()
 
-                # Auto set published_at
-                if self.status == "published":
-                    self.published_at = timezone.now()
+                from newsapp.signals import ping_google_sitemap
+                ping_google_sitemap()
 
-            if self.assigned_to and self.status != 'draft':
-                if self.assigned_to.profile.status == "suspended":
-                    raise ValidationError("This reporter is suspended.")
+        if self.assigned_to and self.status != 'draft':
+            if self.assigned_to.profile.status == "suspended":
+                raise ValidationError("This reporter is suspended.")
 
-        self.full_clean()  
-        super().save(*args, **kwargs)
+    else:
+        # ✅ NEW OBJECT CASE
+        if self.status == "published" and not self.published_at:
+            self.published_at = timezone.now()
 
+    self.full_clean()
+    super().save(*args, **kwargs)
+ 
     def __str__(self):
         return self.title
 
-class ArticleVersion(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='versions')
-    title = models.CharField(max_length=255)
-    subtitle = models.CharField(max_length=255, blank=True)
-    content = models.TextField()
-    edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    edited_at = models.DateTimeField(auto_now_add=True)
-    version_number = models.IntegerField()
 
+class ArticleVersion(models.Model):
+    article        = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='versions')
+    version_number = models.PositiveIntegerField()
+    title          = models.CharField(max_length=255)
+    subtitle       = models.CharField(max_length=255, blank=True)
+    content        = models.TextField()
+    edited_by      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-version_number']
+ 
     def __str__(self):
-        return f"{self.article.title} - v{self.version_number}"
+        return f"{self.article.title} — v{self.version_number}"
     
 class ArticleWorkflowLog(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='workflow_logs')
+    article    = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='workflow_logs')
     old_status = models.CharField(max_length=20)
     new_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     changed_at = models.DateTimeField(auto_now_add=True)
-    remarks = models.TextField(blank=True)
-
+    remarks    = models.TextField(blank=True)
+ 
     def __str__(self):
         return f"{self.article.title}: {self.old_status} → {self.new_status}"
 
@@ -266,7 +314,7 @@ class MetalRate(models.Model):
     ]
 
     metal_type = models.CharField(max_length=10, choices=METAL_CHOICES)
-    price = models.FloatField()  # store in final display unit
+    price = models.FloatField()
     change = models.FloatField(default=0)
     percent_change = models.FloatField(default=0)
     trend = models.CharField(max_length=10, default="neutral")
@@ -307,13 +355,11 @@ class ReporterMonthlyPerformance(models.Model):
     month = models.IntegerField()
     year = models.IntegerField()
 
-    # Work Stats
     articles_assigned = models.IntegerField(default=0)
     articles_submitted = models.IntegerField(default=0)
     articles_published = models.IntegerField(default=0)
     articles_rejected = models.IntegerField(default=0)
 
-    # Metrics
     rejection_rate = models.FloatField(default=0)
     deadline_adherence_rate = models.FloatField(default=0)
 
@@ -331,29 +377,16 @@ class ReporterMonthlyPerformance(models.Model):
     def __str__(self):
         return f"{self.reporter.username} - {self.month}/{self.year}"
 
-# ============================================================
-#  models.py  —  Full Security System
-#  Features:
-#   - Auto User ID + Password generation
-#   - Failed login attempt tracking
-#   - Account lockout after 3 attempts
-#   - New ID+Pass generation after 6 total attempts
-#   - 2FA token storage
-#   - Session timeout tracking
-#   - Login rate limiting support
-# ============================================================
 
 import random
 import string
-import pyotp                          # pip install pyotp
+import pyotp
 from django.db import models
 from django.contrib.auth.models import User
 
 from django.utils import timezone
 from datetime import timedelta
 
-
-# ── Helpers ──────────────────────────────────────────────────
 
 def generate_user_id():
     while True:
@@ -374,8 +407,6 @@ def generate_password(length=12):
     return ''.join(chars)
 
 
-# ── UserProfile ───────────────────────────────────────────────
-
 class UserProfile(models.Model):
 
     GENDER_CHOICES = [
@@ -390,36 +421,40 @@ class UserProfile(models.Model):
         related_name='profile'
     )
 
-    # ───────── Credentials ─────────
     staff_id = models.CharField(
-    max_length=20,
-    unique=True,
-    blank=True,
-    null=True
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True
     )
     plain_password = models.CharField(max_length=50, blank=True)
 
-    # ───────── 2FA ─────────
     totp_secret = models.CharField(max_length=64, blank=True)
     is_2fa_enabled = models.BooleanField(default=False)
 
-    # ───────── Lockout ─────────
     failed_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     total_failed_ever = models.PositiveIntegerField(default=0)
     last_failed_at = models.DateTimeField(null=True, blank=True)
 
-    # ───────── Session ─────────
     remember_me = models.BooleanField(default=False)
     session_timeout_min = models.PositiveIntegerField(default=30)
 
-    # ───────── Rate limiting ─────────
     login_attempts_ip = models.JSONField(default=dict, blank=True)
 
-    # ───────── Profile Info ─────────
     roles = models.ManyToManyField('Role', blank=True)
     phone = models.CharField(max_length=15, blank=True)
     bio = models.TextField(blank=True)
+
+    # ── Social links for editor profile ──
+    position  = models.CharField(max_length=150, blank=True)
+    photo     = models.URLField(blank=True)
+    twitter   = models.CharField(max_length=200, blank=True)
+    linkedin  = models.CharField(max_length=200, blank=True)
+    instagram = models.CharField(max_length=200, blank=True)
+    facebook  = models.CharField(max_length=200, blank=True)
+    youtube   = models.CharField(max_length=200, blank=True)
+    reddit    = models.CharField(max_length=200, blank=True)
 
     gender = models.CharField(
         max_length=10,
@@ -446,15 +481,21 @@ class UserProfile(models.Model):
         default='active'
     )
 
+    last_seen = models.DateTimeField(null=True, blank=True)
+
+    def is_online(self):
+        from django.utils import timezone
+        if not self.last_seen:
+            return False
+        return (timezone.now() - self.last_seen).total_seconds() < 300
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.username} | {self.staff_id or 'No Staff ID'}"
 
-# ── LoginAttemptLog ───────────────────────────────────────────
 
 class LoginAttemptLog(models.Model):
-    """Audit log — every login attempt recorded."""
     STATUS_CHOICES = [
         ('success',     'Success'),
         ('wrong_pass',  'Wrong Password'),
@@ -480,3 +521,195 @@ class LoginAttemptLog(models.Model):
         ordering            = ['-timestamp']
         verbose_name        = "Login Attempt Log"
         verbose_name_plural = "Login Attempt Logs"
+
+class Conversation(models.Model):
+
+    TYPE_CHOICES = (
+        ("private", "Private"),
+        ("group", "Group"),
+    )
+
+    conv_type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES
+    )
+
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    members = models.ManyToManyField(
+        User,
+        through="ConversationMember",
+        related_name="conversations"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return self.name or f"Conversation {self.id}"
+    
+class ConversationMember(models.Model):
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    last_read = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+
+    joined_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+class Message(models.Model):
+
+    MESSAGE_TYPES = (
+        ("text","Text"),
+        ("image","Image"),
+        ("file","File"),
+    )
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    message_type = models.CharField(
+        max_length=10,
+        choices=MESSAGE_TYPES,
+        default="text"
+    )
+
+    text = models.TextField(blank=True)
+
+    file = models.FileField(
+        upload_to="chat/files/",
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to="chat/images/",
+        blank=True,
+        null=True
+    )
+
+    receiver = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="received_messages",
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    is_read = models.BooleanField(default=False)
+
+
+class Notification(models.Model):
+
+    NOTIF_TYPES = (
+        ("article","Article"),
+        ("assign","Assignment"),
+        ("role","Role"),
+        ("message","Message"),
+        ("social","Social"),
+        ("category","Category"),
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    notif_type = models.CharField(
+        max_length=20,
+        choices=NOTIF_TYPES
+    )
+
+    title = models.CharField(max_length=255)
+
+    message = models.TextField()
+
+    icon = models.CharField(
+        max_length=10,
+        default="🔔"
+    )
+
+    is_read = models.BooleanField(
+        default=False
+    )
+
+    is_archived = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    action_url = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return self.title
+
+class NewsletterLog(models.Model):
+    """Newsletter send history track karta hai"""
+    subject       = models.CharField(max_length=300)
+    recipients    = models.JSONField(default=list)        # list of emails
+    chosen_articles = models.JSONField(default=dict)      # {"hero": "slug", ...}
+    sent_count    = models.IntegerField(default=0)
+    failed_count  = models.IntegerField(default=0)
+    sent_at       = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name = 'Newsletter Log'
+        verbose_name_plural = 'Newsletter Logs'
+ 
+    def __str__(self):
+        return f"{self.subject} — {self.sent_at.strftime('%d %b %Y %H:%M')} ({self.sent_count} sent)"
+class Newsletter(models.Model):
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    source = models.CharField(max_length=50, blank=True, default='email_cta')
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'newsletter'
+        ordering = ['-subscribed_at']
+        verbose_name = 'Newsletter Subscriber'
+        verbose_name_plural = 'Newsletter Subscribers'
+
+    def __str__(self):
+        return self.email

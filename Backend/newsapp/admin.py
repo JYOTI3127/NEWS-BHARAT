@@ -34,15 +34,17 @@ admin.site.index_title = "Welcome to News Bharat Dashboard"
 # ══════════════════════════════════════════════════════════════
 
 class ArticleVersionInline(admin.TabularInline):
-    model = ArticleVersion
-    extra = 0
-    readonly_fields = ('version_number', 'edited_by', 'edited_at')
+    model           = ArticleVersion
+    extra           = 0
+    readonly_fields = ['version_number', 'title', 'subtitle', 'edited_by', 'created_at']
+    can_delete      = False
 
 
 class WorkflowLogInline(admin.TabularInline):
-    model = ArticleWorkflowLog
-    extra = 0
-    readonly_fields = ('old_status', 'new_status', 'changed_by', 'changed_at')
+    model           = ArticleWorkflowLog
+    extra           = 0
+    readonly_fields = ['old_status', 'new_status', 'changed_by', 'changed_at', 'remarks']
+    can_delete      = False
 
 
 # ══════════════════════════════════════════════════════════════
@@ -50,8 +52,8 @@ class WorkflowLogInline(admin.TabularInline):
 # ══════════════════════════════════════════════════════════════
 
 class UserProfileInline(admin.StackedInline):
-    model      = UserProfile
-    can_delete = False
+    model               = UserProfile
+    can_delete          = False
     verbose_name_plural = "Security & Profile"
 
     readonly_fields = (
@@ -82,22 +84,19 @@ class UserProfileInline(admin.StackedInline):
         'created_at',
     )
 
-    # ── Roles + permissions display ──
     def roles_and_permissions_display(self, obj):
         roles = obj.roles.all()
         if not roles.exists():
             return mark_safe('<em style="color:#aaa">No roles assigned</em>')
-
         html = []
         for role in roles:
-            perms = role.permissions.all()
+            perms    = role.permissions.all()
             perm_html = "".join([
                 f'<span style="background:#D8010022;color:#D80100;padding:2px 8px;'
                 f'border-radius:10px;font-size:12px;margin:2px 3px;display:inline-block">'
                 f'{p.description}</span>'
                 for p in perms
             ]) or '<em style="color:#aaa;font-size:12px">No permissions in this role</em>'
-
             html.append(
                 f'<div style="margin-bottom:10px">'
                 f'<strong style="color:#1d4ed8">🎭 {role.name}</strong><br>'
@@ -107,12 +106,10 @@ class UserProfileInline(admin.StackedInline):
         return mark_safe("".join(html))
     roles_and_permissions_display.short_description = "Roles & Their Permissions"
 
-    # ── Extra permissions display ──
     def extra_permissions_display(self, obj):
         perms = obj.extra_permissions.all()
         if not perms.exists():
             return mark_safe('<em style="color:#aaa">No extra permissions</em>')
-
         tags = "".join([
             f'<span style="background:#15803d22;color:#15803d;padding:2px 8px;'
             f'border-radius:10px;font-size:12px;margin:2px 3px;display:inline-block">'
@@ -122,13 +119,11 @@ class UserProfileInline(admin.StackedInline):
         return mark_safe(tags)
     extra_permissions_display.short_description = "Extra Permissions"
 
-    # ── Readonly logic — superuser can edit staff_id ──
     def get_readonly_fields(self, request, obj=None):
         if request.user.is_superuser:
             return tuple(f for f in self.readonly_fields if f != 'staff_id')
         return self.readonly_fields
 
-    # ── Password display — superuser/owner sees it ──
     def masked_password(self, obj):
         request = getattr(self, '_request', None)
         if not request:
@@ -139,7 +134,6 @@ class UserProfileInline(admin.StackedInline):
         return mark_safe('<span style="color:#aaa;font-style:italic;">*** hidden ***</span>')
     masked_password.short_description = "Password"
 
-    # ── Account lock status ──
     @admin.display(description="Account Status")
     def lock_status(self, obj):
         if obj.locked_until and obj.locked_until > timezone.now():
@@ -157,15 +151,14 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
 
-    inlines     = (UserProfileInline,)
+    inlines      = (UserProfileInline,)
     list_display = (
         'username', 'email', 'get_user_id',
         'get_password_display', 'get_lock_status',
         'get_failed_attempts', 'is_staff',
     )
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
+    list_filter  = ('is_staff', 'is_superuser', 'is_active')
 
-    # ── Column: Staff ID ──
     def get_user_id(self, obj):
         try:
             return obj.profile.staff_id or '—'
@@ -173,7 +166,6 @@ class UserAdmin(BaseUserAdmin):
             return '—'
     get_user_id.short_description = "Staff ID"
 
-    # ── Column: Password ──
     def get_password_display(self, obj):
         request = getattr(self, '_current_request', None)
         if request and request.user.is_superuser:
@@ -185,7 +177,6 @@ class UserAdmin(BaseUserAdmin):
         return format_html('<span style="color:#aaa;">*** hidden ***</span>')
     get_password_display.short_description = "Password"
 
-    # ── Column: Lock status ──
     def get_lock_status(self, obj):
         try:
             profile = obj.profile
@@ -196,7 +187,6 @@ class UserAdmin(BaseUserAdmin):
             return '—'
     get_lock_status.short_description = "Status"
 
-    # ── Column: Failed attempts ──
     def get_failed_attempts(self, obj):
         try:
             fa    = obj.profile.failed_attempts
@@ -210,14 +200,12 @@ class UserAdmin(BaseUserAdmin):
             return '—'
     get_failed_attempts.short_description = "Failed Attempts"
 
-    # ── Request tracking ──
     def changelist_view(self, request, extra_context=None):
         self._current_request = request
         extra_context = extra_context or {}
 
         qs = self.get_queryset(request)
 
-        # Search
         q = request.GET.get('q', '')
         if q:
             qs = qs.filter(
@@ -226,7 +214,6 @@ class UserAdmin(BaseUserAdmin):
                 Q(profile__staff_id__icontains=q)
             )
 
-        # Filters
         status = request.GET.get('status')
         if status:
             qs = qs.filter(profile__status=status)
@@ -240,7 +227,6 @@ class UserAdmin(BaseUserAdmin):
         if request.GET.get('locked'):
             qs = qs.filter(profile__locked_until__gt=timezone.now())
 
-        # Pagination
         paginator = Paginator(qs.select_related('profile'), 15)
         page_obj  = paginator.get_page(request.GET.get('page', 1))
 
@@ -259,7 +245,6 @@ class UserAdmin(BaseUserAdmin):
         self._current_request = request
         return super().changeform_view(request, object_id, form_url, extra_context)
 
-    # ── Permissions ──
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if not request.user.is_superuser:
@@ -279,7 +264,6 @@ class UserAdmin(BaseUserAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
-    # ── Admin actions ──
     actions = ['unlock_selected_users', 'reset_failed_attempts']
 
     def unlock_selected_users(self, request, queryset):
@@ -304,7 +288,6 @@ class UserAdmin(BaseUserAdmin):
         self.message_user(request, "Failed attempt counters reset.")
     reset_failed_attempts.short_description = "↺ Reset failed attempt counters"
 
-    # ── Custom URLs ──
     def get_urls(self):
         urls   = super().get_urls()
         custom = [
@@ -315,10 +298,13 @@ class UserAdmin(BaseUserAdmin):
                  self.admin_site.admin_view(self.profile_view),
                  name='user_profile'),
         ]
-        # custom BEFORE default so 'add/' override works
         return custom + urls
 
-    # ── Custom Add User View ──
+    # ══════════════════════════════════════════════════════════════
+    #  CUSTOM ADD USER VIEW
+    #  ✅ FIX: Ek hi password generate hoga, wahi Django mein set
+    #          hoga, wahi profile mein save hoga, wahi email mein jayega
+    # ══════════════════════════════════════════════════════════════
     def custom_add_view(self, request):
         if request.method == 'POST':
             form = CustomUserCreationForm(request.POST)
@@ -328,7 +314,7 @@ class UserAdmin(BaseUserAdmin):
                 roles       = form.cleaned_data['roles']
                 extra_perms = form.cleaned_data['extra_permissions']
 
-                # Unique username
+                # ── Unique username ──
                 base_username = email.split('@')[0]
                 username = base_username
                 counter  = 1
@@ -336,83 +322,85 @@ class UserAdmin(BaseUserAdmin):
                     username = f"{base_username}{counter}"
                     counter += 1
 
-                # Auto-generate password
+                # ── STEP 1: Ek baar password generate karo ──
                 plain_pass = generate_password()
 
-                # Create Django user
+                # ── STEP 2: User banao — create_user() hashing karta hai ──
+                # Signal fire hoga lekin ab woh password nahi badlega
                 user = User.objects.create_user(
                     username=username,
                     email=email,
-                    password=plain_pass,
+                    password=plain_pass,   # ← Yahi hashed hokar Django mein save hoga
+                    first_name=full_name,
                 )
-                user.first_name = full_name
-                user.save()
 
-                # ── FIX: profile already created by post_save signal ──
-                # Explicitly save plain_password using update_fields
-                # so no other signal/save can overwrite it
-                profile = UserProfile.objects.get(user=user)
-                profile.plain_password = plain_pass
-                profile.save(update_fields=['plain_password'])   # ← KEY FIX
+                # ── STEP 3: Profile fetch karo (signal ne banaya hai) ──
+                # aur SAME plain_pass wahan bhi save karo
+                try:
+                    profile = user.profile
+                except UserProfile.DoesNotExist:
+                    profile = UserProfile.objects.create(user=user)
 
-                # Assign roles — staff_id signal triggers here
+                profile.plain_password = plain_pass   # ← Wahi password jo Django mein bhi hai
+                profile.save(update_fields=['plain_password'])
+
+                # ── STEP 4: Roles assign karo ──
                 profile.roles.set(roles)
 
-                # Refresh from DB to get signal-generated staff_id
+                # Staff ID signal mein generate hogi roles set hone ke baad
                 profile.refresh_from_db()
 
-                # Extra permissions
+                # ── STEP 5: Extra permissions ──
                 if extra_perms:
                     profile.extra_permissions.set(extra_perms)
 
-                # Send email
+                # ── STEP 6: Email bhejo — wahi plain_pass jo login mein kaam karega ──
                 role_names = ", ".join([r.name for r in roles])
-                send_mail(
-                    subject='Your News4Bharat Account Credentials',
-                    message=f"""
-Dear {full_name},
+                try:
+                    send_mail(
+                        subject='CMS Access Credentials & Joining Letter – News4Bharat',
+                        message=f"""Dear {full_name},
 
-Welcome to News4Bharat! 🎉
+Welcome to News4Bharat. We are delighted to have you join the team.
 
-We are pleased to inform you that your official CMS account has been successfully created. 
-Below are your login credentials for accessing the News4Bharat Content Management System:
+Your account for the News4Bharat Content Management System (CMS) has been successfully created. Please find your login credentials below:
 
 ──────────────────────────────
-Staff ID : {profile.staff_id}
-Password : {plain_pass}
-Assigned Role(s) : {role_names}
-Login URL : http://127.0.0.1:8000/admin/
+Staff ID       : {profile.staff_id}
+Username       : {username}
+Password       : {plain_pass}
+Assigned Role  : {role_names}
+Login URL      : https://news4bharat.cloud/admin/
 ──────────────────────────────
 
-Please log in using the above credentials and change your password after your first login for security purposes.
+You may use the above credentials to access the CMS. For security reasons, please ensure that you update your password immediately after your first login.
 
-📎 Joining Letter:
-Your official joining letter has been attached below for your reference. 
-Kindly review the document carefully and keep a copy for your records.
+If you encounter any issues while accessing your account or require assistance, please feel free to contact the administrator.
 
-If you face any difficulty accessing your account, please contact the administrator immediately.
+We look forward to your valuable contribution and wish you great success with the News4Bharat team.
 
-We look forward to your valuable contribution to the News4Bharat team.
-
-Best Regards,  
-Admin Team  
+Warm Regards,
+Admin Team
 News4Bharat
 """,
-                    from_email='admin@news4bharat.com',
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
+                        from_email='admin@news4bharat.com',
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                    mail_status = f"Credentials {email} pe bhej diye gaye."
+                except Exception as e:
+                    mail_status = f"⚠️ Email send nahi hua: {e}"
 
                 messages.success(
                     request,
-                    f"✅ User '{full_name}' create ho gaya! Credentials {email} pe bhej diye gaye."
+                    f"✅ User '{full_name}' create ho gaya! {mail_status}"
                 )
                 return redirect('../')
+
         else:
             form = CustomUserCreationForm()
 
-        roles_with_perms = Role.objects.prefetch_related('permissions').all()
-
+        roles_with_perms     = Role.objects.prefetch_related('permissions').all()
         role_permissions_json = {}
         for role in roles_with_perms:
             role_permissions_json[str(role.id)] = [
@@ -421,18 +409,19 @@ News4Bharat
 
         context = {
             **self.admin_site.each_context(request),
-            'form': form,
-            'title': 'Add New User',
-            'opts': self.model._meta,
-            'roles_with_perms': roles_with_perms,
+            'form':                  form,
+            'title':                 'Add New User',
+            'opts':                  self.model._meta,
+            'roles_with_perms':      roles_with_perms,
             'role_permissions_json': json.dumps(role_permissions_json),
         }
         return render(request, 'admin/custom_add_user.html', context)
 
-    # ── Password Change Override — plain_password sync ──
+    # ══════════════════════════════════════════════════════════════
+    #  PASSWORD CHANGE — plain_password sync
+    # ══════════════════════════════════════════════════════════════
     def user_change_password(self, request, id, form_url=''):
         response = super().user_change_password(request, id, form_url)
-        # Agar POST tha aur successfully redirect hua
         if request.method == 'POST' and hasattr(response, 'status_code') and response.status_code == 302:
             try:
                 new_pass = request.POST.get('password1', '')
@@ -444,11 +433,9 @@ News4Bharat
                 pass
         return response
 
-    # ── Profile View ──
     def profile_view(self, request, user_id):
         user    = get_object_or_404(User, pk=user_id)
         profile = get_object_or_404(UserProfile, user=user)
-
         return TemplateResponse(request, 'admin/user_profile.html', {
             **self.admin_site.each_context(request),
             'profile': profile,
@@ -480,9 +467,9 @@ class LoginAttemptLogAdmin(admin.ModelAdmin):
         return format_html('<span style="color:{};">{}</span>', color, label)
     colored_status.short_description = 'Status'
 
-    def has_add_permission(self, request):    return False
-    def has_change_permission(self, request, obj=None): return False
-    def has_delete_permission(self, request, obj=None): return request.user.is_superuser
+    def has_add_permission(self, request):                      return False
+    def has_change_permission(self, request, obj=None):         return False
+    def has_delete_permission(self, request, obj=None):         return request.user.is_superuser
 
 
 # ══════════════════════════════════════════════════════════════
@@ -490,12 +477,29 @@ class LoginAttemptLogAdmin(admin.ModelAdmin):
 # ══════════════════════════════════════════════════════════════
 
 class NewsAdminSite(AdminSite):
-    site_header = "NewsAdmin"
-    site_title  = "News Admin Portal"
-    index_title = "Dashboard"
-    login_template = 'admin/login.html' 
+    site_header    = "NewsAdmin"
+    site_title     = "News Admin Portal"
+    index_title    = "Dashboard"
+    login_template = 'admin/login.html'
 
-    # Logout ke baad login page pe redirect
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'newsletter/',
+                self.admin_view(self.newsletter_view),
+                name='newsletter',
+            ),
+        ]
+        return custom_urls + urls
+
+    def newsletter_view(self, request):
+        context = {
+            **self.each_context(request),
+            'title': 'Newsletter',
+        }
+        return TemplateResponse(request, 'admin/newsletter.html', context)
+
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout
         from django.shortcuts import redirect
@@ -504,6 +508,37 @@ class NewsAdminSite(AdminSite):
 
     def index(self, request, extra_context=None):
         extra_context = extra_context or {}
+
+        try:
+            extra_context['published_articles_for_picker'] = Article.objects.filter(
+                status='published'
+            ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
+        except Exception:
+            extra_context['published_articles_for_picker'] = []
+
+        try:
+            extra_context['categories'] = Category.objects.filter(status='active').order_by('name')
+        except Exception:
+            extra_context['categories'] = []
+
+        try:
+            extra_context['hero_slot'] = HomepageSlot.objects.filter(slot_name='hero').select_related(
+                'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
+            ).first()
+        except Exception:
+            extra_context['hero_slot'] = None
+
+        try:
+            extra_context['latest_slot'] = HomepageSlot.objects.filter(
+                slot_name='latest_news'
+            ).select_related('category_filter').first()
+        except Exception:
+            extra_context['latest_slot'] = None
+
+        try:
+            extra_context['ad_slot'] = HomepageSlot.objects.filter(slot_name='ad_banner').first()
+        except Exception:
+            extra_context['ad_slot'] = None
 
         try:
             now       = timezone.now()
@@ -530,7 +565,7 @@ class NewsAdminSite(AdminSite):
             paid_articles  = Article.objects.filter(is_paid=True).count()
             free_articles  = Article.objects.filter(is_paid=False).count()
 
-            total_authors   = User.objects.filter(article__isnull=False).distinct().count()
+            total_authors   = User.objects.filter(articles_authored__isnull=False).distinct().count()
             active_profiles = UserProfile.objects.filter(status='active').count()
             suspended_users = UserProfile.objects.filter(status='suspended').count()
 
@@ -549,7 +584,7 @@ class NewsAdminSite(AdminSite):
             verified_fact_checks = FactCheck.objects.filter(status='verified').count()
             issues_fact_checks   = FactCheck.objects.filter(status='issues_found').count()
 
-            recent_articles = Article.objects.select_related('author', 'category', 'assigned_to').order_by('-created_at')[:8]
+            recent_articles = Article.objects.select_related('author', 'assigned_to').prefetch_related('categories').order_by('-created_at')[:8]
             recent_logs     = ArticleWorkflowLog.objects.select_related('article', 'changed_by').order_by('-changed_at')[:5]
             top_reporters   = ReporterMonthlyPerformance.objects.filter(
                 month=now.month, year=now.year
@@ -572,19 +607,40 @@ class NewsAdminSite(AdminSite):
             monthly_draft = [row['count'] for row in monthly_draft_qs]
 
             extra_context.update({
-                'total_articles': total_articles, 'published_articles': published_articles,
-                'draft_articles': draft_articles, 'archived_articles': archived_articles,
-                'review_articles': review_articles, 'fact_check_articles': fact_check_articles,
-                'rejected_articles': rejected_articles, 'scheduled_articles': scheduled_articles,
-                'overdue_articles': overdue_articles,
-                'published_this_month': published_this_month, 'published_this_week': published_this_week,
-                'paid_articles': paid_articles, 'free_articles': free_articles,
-                'total_authors': total_authors, 'active_profiles': active_profiles, 'suspended_users': suspended_users,
-                'total_categories': total_categories, 'category_stats': category_stats,
-                'pending_fact_checks': pending_fact_checks, 'verified_fact_checks': verified_fact_checks,
-                'issues_fact_checks': issues_fact_checks,
-                'recent_articles': recent_articles, 'recent_logs': recent_logs, 'top_reporters': top_reporters,
-                'monthly_labels': monthly_labels, 'monthly_pub': monthly_pub, 'monthly_draft': monthly_draft,
+                'total_articles':        total_articles,
+                'published_articles':    published_articles,
+                'draft_articles':        draft_articles,
+                'archived_articles':     archived_articles,
+                'review_articles':       review_articles,
+                'fact_check_articles':   fact_check_articles,
+                'rejected_articles':     rejected_articles,
+                'scheduled_articles':    scheduled_articles,
+                'overdue_articles':      overdue_articles,
+                'published_this_month':  published_this_month,
+                'published_this_week':   published_this_week,
+                'paid_articles':         paid_articles,
+                'free_articles':         free_articles,
+                'total_authors':         total_authors,
+                'active_profiles':       active_profiles,
+                'suspended_users':       suspended_users,
+                'total_categories':      total_categories,
+                'category_stats':        category_stats,
+                'pending_fact_checks':   pending_fact_checks,
+                'verified_fact_checks':  verified_fact_checks,
+                'issues_fact_checks':    issues_fact_checks,
+                'recent_articles':       recent_articles,
+                'recent_logs':           recent_logs,
+                'top_reporters':         top_reporters,
+                'monthly_labels':        monthly_labels,
+                'monthly_pub':           monthly_pub,
+                'monthly_draft':         monthly_draft,
+                'monthly_labels_json':   json.dumps(monthly_labels),
+                'monthly_pub_json':      json.dumps(monthly_pub),
+                'monthly_draft_json':    json.dumps(monthly_draft),
+                'donut_data_json':       json.dumps([
+                    published_articles, draft_articles, review_articles,
+                    archived_articles, rejected_articles, fact_check_articles,
+                ]),
             })
 
         except Exception as e:
@@ -603,9 +659,9 @@ class HomepageSlotAdmin(admin.ModelAdmin):
 
 
 class ReporterAdmin(admin.ModelAdmin):
-    list_display   = ("user", "employee_id", "designation", "employment_type", "is_active", "get_categories")
-    search_fields  = ("user__username", "employee_id")
-    list_filter    = ("employment_type", "is_active")
+    list_display      = ("user", "employee_id", "designation", "employment_type", "is_active", "get_categories")
+    search_fields     = ("user__username", "employee_id")
+    list_filter       = ("employment_type", "is_active")
     filter_horizontal = ("assigned_categories",)
 
     def get_categories(self, obj):
@@ -628,10 +684,10 @@ class ReporterAdmin(admin.ModelAdmin):
             assigned_articles_qs = Article.objects.filter(
                 assigned_to=reporter.user,
                 status__in=['draft', 'review', 'fact_check', 'legal', 'approved', 'scheduled']
-            ).select_related('category').order_by('deadline')
+            ).select_related('author', 'assigned_to').order_by('deadline')
 
             assigned_articles = []
-            reporter_overdue = 0
+            reporter_overdue  = 0
             has_overdue = False
             has_draft   = False
 
@@ -718,20 +774,21 @@ class ReporterMonthlyPerformanceAdmin(admin.ModelAdmin):
             .select_related('reporter').order_by('-performance_score')
         )
         extra_context.update({
-            'top_performer': top, 'ranked_reporters': ranked,
-            'current_month': now.strftime('%B %Y'),
+            'top_performer':  top,
+            'ranked_reporters': ranked,
+            'current_month':  now.strftime('%B %Y'),
         })
         return super().changelist_view(request, extra_context=extra_context)
 
 
 class FCRow:
     def __init__(self, id, article, checked_by, status, remarks, checked_at, is_legal_risk):
-        self.id           = id
-        self.article      = article
-        self.checked_by   = checked_by
-        self.status       = status
-        self.remarks      = remarks
-        self.checked_at   = checked_at
+        self.id            = id
+        self.article       = article
+        self.checked_by    = checked_by
+        self.status        = status
+        self.remarks       = remarks
+        self.checked_at    = checked_at
         self.is_legal_risk = is_legal_risk
 
 
@@ -750,9 +807,12 @@ class FactCheckAdmin(admin.ModelAdmin):
         factcheck_rows = []
         legal_risk_count = 0
 
-        fcs = FactCheck.objects.select_related(
-            'article', 'article__author', 'article__category', 'checked_by'
-        ).order_by('-checked_at')
+        fcs = (
+            FactCheck.objects
+            .select_related('article', 'article__author', 'checked_by')
+            .prefetch_related('article__categories')
+            .order_by('-checked_at')
+        )
 
         for fc in fcs:
             is_legal_risk = (
@@ -768,24 +828,63 @@ class FactCheckAdmin(admin.ModelAdmin):
             ))
 
         extra_context.update({
-            'factcheck_rows': factcheck_rows,
-            'pending_count': pending_count, 'verified_count': verified_count,
-            'issues_count': issues_count, 'legal_risk_count': legal_risk_count,
+            'factcheck_rows':   factcheck_rows,
+            'pending_count':    pending_count,
+            'verified_count':   verified_count,
+            'issues_count':     issues_count,
+            'legal_risk_count': legal_risk_count,
         })
         return super().changelist_view(request, extra_context=extra_context)
 
 
 class ArticleAdmin(admin.ModelAdmin):
-    inlines = [ArticleVersionInline, WorkflowLogInline]
+    inlines      = [ArticleVersionInline, WorkflowLogInline]
+    list_display = ['title', 'status', 'author', 'author_display_name', 'priority', 'created_at']
+    list_filter  = ['status', 'categories', 'is_paid', 'priority']
+    search_fields = ['title', 'author__username', 'author_display_name']
+
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('title', 'subtitle', 'content', 'image', 'image_url', 'categories')
+        }),
+        ('Publish Settings', {
+            'fields': ('status', 'priority', 'is_paid', 'assigned_to', 'deadline')
+        }),
+        ('SEO', {
+            'fields': (
+                'slug', 'canonical_url', 'meta_description',
+                'focus_keyword', 'noindex', 'nofollow', 'in_sitemap'
+            )
+        }),
+        ('Display Author — Frontend pe dikhega', {
+            'fields': (
+                'author_display_name', 'author_display_position',
+                'author_display_bio', 'author_display_photo',
+                'author_display_twitter', 'author_display_linkedin',
+                'author_display_instagram', 'author_display_facebook',
+                'author_display_articles_count',
+            )
+        }),
+        ('Audit Info — Read Only', {
+            'fields': ('author', 'published_at', 'created_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    readonly_fields = ['author', 'published_at', 'created_at']
 
     def save_model(self, request, obj, form, change):
+        if not change:
+            obj.author = request.user
         if change:
             old_status = form.initial.get('status')
             if old_status and obj.status != old_status:
                 if not request.user.is_superuser:
                     allowed = ALLOWED_TRANSITIONS.get(old_status, [])
                     if obj.status not in allowed:
-                        raise ValidationError(f"You can't directly move from {old_status} to {obj.status}")
+                        raise ValidationError(
+                            f"You can't directly move from {old_status} to {obj.status}"
+                        )
         try:
             super().save_model(request, obj, form, change)
         except ValidationError as e:
@@ -796,26 +895,60 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
+        original_get = request.GET.copy()
 
-        articles = Article.objects.select_related('author', 'category', 'assigned_to').order_by('-created_at')
+        articles_qs = Article.objects.prefetch_related('categories').select_related(
+            'author', 'assigned_to'
+        ).order_by('-created_at')
+
+        article_paginator = Paginator(articles_qs, 10)
+        article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))
+
+        page_query_dict = original_get.copy()
+        if 'article_page' in page_query_dict:
+            del page_query_dict['article_page']
+        page_query = page_query_dict.urlencode()
+
         articles_with_images = (
             Article.objects.filter(image__isnull=False).exclude(image='')
-            .select_related('author', 'category').order_by('-created_at')[:12]
+            .select_related('author').prefetch_related('categories')
+            .order_by('-created_at')[:12]
         )
-        recent_activity = ArticleWorkflowLog.objects.select_related('article', 'changed_by').order_by('-changed_at')[:15]
+        recent_activity = ArticleWorkflowLog.objects.select_related(
+            'article', 'changed_by'
+        ).order_by('-changed_at')[:15]
 
         extra_context.update({
-            'articles': articles, 'articles_with_images': articles_with_images,
-            'recent_activity': recent_activity,
-            'total_articles': articles.count(),
-            'published_articles': articles.filter(status='published').count(),
-            'draft_articles': articles.filter(status='draft').count(),
+            'articles':             article_page_obj.object_list,
+            'article_page_obj':     article_page_obj,
+            'article_paginator':    article_paginator,
+            'page_query':           page_query,
+            'articles_with_images': articles_with_images,
+            'recent_activity':      recent_activity,
+            'total_articles':       articles_qs.count(),
+            'published_articles':   articles_qs.filter(status='published').count(),
+            'draft_articles':       articles_qs.filter(status='draft').count(),
         })
+        if 'article_page' in request.GET:
+            cleaned_get = request.GET.copy()
+            del cleaned_get['article_page']
+            request.GET = cleaned_get
         return super().changelist_view(request, extra_context=extra_context)
 
 
 class RoleAdmin(admin.ModelAdmin):
     filter_horizontal = ('permissions',)
+
+
+class PermissionAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'description')
+    search_fields = ('code', 'description')
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['group_count'] = 0
+        extra_context['user_count']  = 0
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -840,3 +973,4 @@ admin_site.register(HomepageSlot,               HomepageSlotAdmin)
 admin_site.register(MetalRate)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
+admin.site.register(NewsletterLog)

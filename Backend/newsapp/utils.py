@@ -12,33 +12,110 @@ def has_permission(user, perm_code):
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
+
 from .models import MetalRate
 
 OZ_TO_GRAM = 31.1035
+ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
+TWELVE_DATA_URL = "https://api.twelvedata.com/time_series"
 
 
-def fetch_and_store_metal_rates():
+def _today_cache_key(prefix):
+    return f"{prefix}:{timezone.localdate().isoformat()}"
 
-    url = "https://api.metalpriceapi.com/v1/latest"
 
-    params = {
-        "api_key": settings.METAL_API_KEY,
-        "base": "INR",
-        "currencies": "XAU,XAG"
-    }
+def _coerce_float(value, default=None):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
-    response = requests.get(url, params=params)
-    data = response.json()
 
-    # Convert correctly
-    gold_per_ounce = 1 / data["rates"]["XAU"]
-    silver_per_ounce = 1 / data["rates"]["XAG"]
+def _normalize_trend(change):
+    return "up" if change > 0 else "down" if change < 0 else "neutral"
 
-    gold_price = (gold_per_ounce / OZ_TO_GRAM) * 10   # per 10g
-    silver_price = (silver_per_ounce / OZ_TO_GRAM) * 1000  # per kg
+
+def fetch_and_store_metal_rates(force_refresh=False):
+    today = timezone.localdate()
+    latest_gold = MetalRate.objects.filter(metal_type="gold").order_by("-created_at").first()
+    latest_silver = MetalRate.objects.filter(metal_type="silver").order_by("-created_at").first()
+
+    if (
+        not force_refresh
+        and latest_gold and latest_silver
+        and latest_gold.created_at.date() == today
+        and latest_silver.created_at.date() == today
+    ):
+        return {
+            "gold": latest_gold.price,
+            "silver": latest_silver.price,
+        }
+
+    api_key = getattr(settings, "TWELVE_DATA_API_KEY", "")
+    if not api_key:
+        raise ValueError("TWELVE_DATA_API_KEY is not configured")
+
+    gold_usd = _fetch_twelve_data_close(
+        getattr(settings, "TWELVE_DATA_GOLD_SYMBOLS", ["XAU/USD"]),
+        api_key,
+    )
+    silver_usd = _fetch_twelve_data_close(
+        getattr(settings, "TWELVE_DATA_SILVER_SYMBOLS", ["XAG/USD"]),
+        api_key,
+    )
+    usd_inr = _fetch_twelve_data_close(
+        getattr(settings, "TWELVE_DATA_USDINR_SYMBOLS", ["USD/INR"]),
+        api_key,
+    )
+
+    gold_price = ((gold_usd * usd_inr) / OZ_TO_GRAM) * 10
+    silver_price = ((silver_usd * usd_inr) / OZ_TO_GRAM) * 1000
 
     save_metal("gold", gold_price)
     save_metal("silver", silver_price)
+
+    return {
+        "gold": round(gold_price, 2),
+        "silver": round(silver_price, 2),
+    }
+
+def _fetch_twelve_data_close(symbols, api_key):
+    last_error = None
+    for symbol in symbols:
+        try:
+            response = requests.get(
+                TWELVE_DATA_URL,
+                params={
+                    "symbol": symbol,
+                    "interval": "1day",
+                    "outputsize": 1,
+                    "apikey": api_key,
+                },
+                timeout=20,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("status") == "error" or data.get("message") or data.get("code"):
+                raise ValueError(data.get("message") or data.get("code") or f"Twelve Data error for {symbol}")
+
+            values = data.get("values") or []
+            if not values:
+                raise ValueError(f"No time series returned for {symbol}")
+
+            close = _coerce_float(values[0].get("close"))
+            if close is None:
+                raise ValueError(f"Could not parse Twelve Data close for {symbol}")
+            return close
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    if last_error:
+        raise last_error
+    raise ValueError("No valid Twelve Data symbol configured")
 
 
 def save_metal(metal_type, new_price):
@@ -64,40 +141,71 @@ def save_metal(metal_type, new_price):
         trend=trend
     )
 
-def fetch_index_data(symbol):
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+def fetch_index_data(symbols, cache_prefix=None, force_refresh=False):
+    cache_key = _today_cache_key(cache_prefix or f"market_index:{symbols[0]}")
+    if not force_refresh:
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
 
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    api_key = getattr(settings, "ALPHA_VANTAGE_API_KEY", "")
+    if not api_key:
+        raise ValueError("ALPHA_VANTAGE_API_KEY is not configured")
 
-    response = requests.get(url, headers=headers)
+    last_error = None
+    for symbol in symbols:
+        try:
+            payload = _fetch_alpha_vantage_daily(symbol, api_key)
+            cache.set(cache_key, payload, 60 * 60 * 24)
+            return payload
+        except Exception as exc:
+            last_error = exc
+            continue
 
-    if response.status_code != 200:
-        print("FAILED:", response.status_code)
-        return None
+    if last_error:
+        raise last_error
+    raise ValueError("No valid market index symbol configured")
 
+
+def _fetch_alpha_vantage_daily(symbol, api_key):
+    response = requests.get(
+        ALPHA_VANTAGE_URL,
+        params={
+            "function": "TIME_SERIES_DAILY",
+            "symbol": symbol,
+            "outputsize": "compact",
+            "apikey": api_key,
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
     data = response.json()
 
-    result = data["chart"]["result"][0]
-    meta = result["meta"]
+    if data.get("Information") or data.get("Note") or data.get("Error Message"):
+        raise ValueError(data.get("Information") or data.get("Note") or data.get("Error Message"))
 
-    current = meta.get("regularMarketPrice")
-    previous = meta.get("previousClose")
+    series = data.get("Time Series (Daily)") or {}
+    dates = sorted(series.keys(), reverse=True)
+    if len(dates) < 2:
+        raise ValueError(f"No daily time series returned for {symbol}")
 
-    if current is None or previous is None:
-        return None
+    latest = series[dates[0]]
+    previous_day = series[dates[1]]
+    current = _coerce_float(latest.get("4. close"))
+    previous = _coerce_float(previous_day.get("4. close"))
+
+    if current is None or previous in (None, 0):
+        raise ValueError(f"Could not parse Alpha Vantage values for {symbol}")
 
     change = current - previous
     percent = (change / previous) * 100
-
-    trend = "up" if change > 0 else "down" if change < 0 else "neutral"
 
     return {
         "price": round(current, 2),
         "change": round(change, 2),
         "percent_change": round(percent, 2),
-        "trend": trend
+        "trend": _normalize_trend(change),
+        "symbol": symbol,
     }
 
 import random

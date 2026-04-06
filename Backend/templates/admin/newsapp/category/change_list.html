@@ -1,6 +1,8 @@
 {% extends "admin/change_list.html" %}
 {% load i18n static %}
 
+{% block title %}Category Management{% endblock %}
+
 {% block extrahead %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
@@ -244,8 +246,8 @@
 <script>
 const ADD_ARTICLE_URL = '/admin/newsapp/article/add/';
 
-let CATS         = [];
-let _csrfToken   = '{{ csrf_token }}';
+let CATS       = [];
+let _csrfToken = '{{ csrf_token }}';
 
 /* STATE */
 let expanded      = {};
@@ -280,7 +282,8 @@ async function loadCategories() {
         const raw  = Array.isArray(data) ? data : (data.categories || []);
         CATS = raw.map(cat => ({
             ...cat,
-            subs: cat.sub_categories || cat.subs || {}
+            // ── FIX: normalise sub_categories to always be a dict ──
+            subs: normaliseSubs(cat.sub_categories || cat.subs)
         }));
         render();
     } catch(e) {
@@ -290,13 +293,78 @@ async function loadCategories() {
 }
 
 /* ================================================================
-   RENDER
+   NORMALISE — converts any format from DB into a clean dict
+   Handles:
+     • null / undefined          → {}
+     • []  (empty list)          → {}
+     • ["a","b"]  (flat list)    → { default: ["a","b"] }
+     • {"default":["a","b"]}     → unchanged
+     • {"Sports":["Cricket",...]}→ unchanged  (sectioned)
 ================================================================ */
-function totalSubCount(cat) {
-    if (!cat.subs || typeof cat.subs !== 'object') return 0;
-    return Object.values(cat.subs).reduce((a, arr) => a + (Array.isArray(arr) ? arr.length : 0), 0);
+function normaliseSubs(raw) {
+    if (!raw) return {};
+    // Already a proper dict
+    if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+    // Plain list → wrap under "default"
+    if (Array.isArray(raw)) {
+        return raw.length ? { default: raw } : {};
+    }
+    return {};
 }
 
+/* ================================================================
+   COUNT all sub items (strings) across all sections
+================================================================ */
+function totalSubCount(cat) {
+    const subs = cat.subs || {};
+    if (typeof subs !== 'object' || Array.isArray(subs)) return 0;
+    let count = 0;
+    Object.values(subs).forEach(function(items) {
+        if (Array.isArray(items)) count += items.length;
+    });
+    return count;
+}
+
+/* ================================================================
+   BUILD the expanded sub-row HTML
+   Works for both single-section (default) and multi-section dicts
+================================================================ */
+function buildSubsHtml(subs) {
+    if (!subs || typeof subs !== 'object') return '';
+
+    const entries  = Object.entries(subs);
+    if (!entries.length) return '';
+
+    const isDefault = entries.length === 1 && entries[0][0] === 'default';
+    let html = '';
+
+    if (isDefault) {
+        // ── Simple flat list — no section heading ──
+        const items = entries[0][1] || [];
+        html = items.map(function(item) {
+            const label = (item && typeof item === 'object') ? (item.name || JSON.stringify(item)) : String(item);
+            return `<span class="cm-sub-tag">${label}</span>`;
+        }).join('');
+    } else {
+        // ── Multi-section — show each section heading + its tags ──
+        entries.forEach(function([heading, items]) {
+            if (!Array.isArray(items) || !items.length) return;
+            html += `<div class="cm-subrow__section">`;
+            html += `<div class="cm-subrow__heading">${heading}</div>`;
+            html += `<div>`;
+            html += items.map(function(item) {
+                const label = (item && typeof item === 'object') ? (item.name || JSON.stringify(item)) : String(item);
+                return `<span class="cm-sub-tag">${label}</span>`;
+            }).join('');
+            html += `</div></div>`;
+        });
+    }
+    return html;
+}
+
+/* ================================================================
+   RENDER
+================================================================ */
 function render() {
     const tbody = document.getElementById('catTbody');
     tbody.innerHTML = '';
@@ -307,13 +375,10 @@ function render() {
         if (currentFilter === 'archived' && cat.status !== 'archived') return;
         serial++;
 
-        const isArc      = cat.status === 'archived';
-        const isExp      = expanded[cat.id];
-        const subCount   = totalSubCount(cat);
-        const subs       = cat.subs || {};
-        const sections   = Object.keys(subs);
-        const hasDefault = sections.length === 1 && sections[0] === 'default';
-        const postCount  = cat.article_count !== undefined ? cat.article_count : (cat.posts || 0);
+        const isArc    = cat.status === 'archived';
+        const isExp    = expanded[cat.id];
+        const subCount = totalSubCount(cat);
+        const postCount = cat.article_count !== undefined ? cat.article_count : (cat.posts || 0);
 
         const tr = document.createElement('tr');
         if (isArc) tr.classList.add('cm-row--archived');
@@ -374,23 +439,11 @@ function render() {
             </td>`;
         tbody.appendChild(tr);
 
-        /* sub-categories expanded row */
+        /* ── expanded sub-categories row ── */
         if (isExp && subCount > 0) {
             const subTr = document.createElement('tr');
             subTr.className = 'cm-subrow';
-            let subsHtml = '';
-            if (hasDefault) {
-                subsHtml = (subs.default || []).map(s => `<span class="cm-sub-tag">${s}</span>`).join('');
-            } else {
-                Object.entries(subs).forEach(([heading, items]) => {
-                    if (!items.length) return;
-                    subsHtml += `
-                        <div class="cm-subrow__section">
-                            <div class="cm-subrow__heading">${heading}</div>
-                            <div>${items.map(s => `<span class="cm-sub-tag">${s}</span>`).join('')}</div>
-                        </div>`;
-                });
-            }
+            const subsHtml = buildSubsHtml(cat.subs);
             subTr.innerHTML = `<td></td><td colspan="5"><div class="cm-subrow__inner">${subsHtml}</div></td>`;
             tbody.appendChild(subTr);
         }
@@ -401,11 +454,11 @@ function render() {
     const arc      = CATS.filter(c => c.status === 'archived').length;
     const subTotal = CATS.reduce((a, c) => a + totalSubCount(c), 0);
     const artTotal = CATS.reduce((a, c) => a + (c.article_count || 0), 0);
-    document.getElementById('statTotal').textContent   = CATS.length;
-    document.getElementById('statSub').textContent     = `${act} active · ${arc} archived`;
-    document.getElementById('statSubs').textContent    = subTotal;
+    document.getElementById('statTotal').textContent    = CATS.length;
+    document.getElementById('statSub').textContent      = `${act} active · ${arc} archived`;
+    document.getElementById('statSubs').textContent     = subTotal;
     document.getElementById('statArticles').textContent = artTotal.toLocaleString();
-    document.getElementById('filterCount').textContent = `Showing ${serial} categor${serial === 1 ? 'y' : 'ies'}`;
+    document.getElementById('filterCount').textContent  = `Showing ${serial} categor${serial === 1 ? 'y' : 'ies'}`;
 }
 
 /* ================================================================
@@ -457,12 +510,12 @@ async function saveCategory() {
         name,
         slug,
         description: document.getElementById('newCatDesc').value.trim(),
-        sub_categories: addCatTags.length ? { default: [...addCatTags] } : { default: [] },
+        sub_categories: addCatTags.length ? { default: [...addCatTags] } : {},
     });
 
     if (newCat.error) { showToast(newCat.error, 'warn'); return; }
 
-    CATS.push({ ...newCat, subs: newCat.sub_categories || {}, article_count: 0 });
+    CATS.push({ ...newCat, subs: normaliseSubs(newCat.sub_categories), article_count: 0 });
     closeModal('addCatModal');
     render();
     showToast(`Category "${name}" created`, 'ok');
@@ -485,26 +538,29 @@ async function saveSubCategories() {
     if (!addSubTags.length) { showToast('Add at least one sub-category', 'warn'); return; }
 
     const cat  = CATS.find(c => c.id === addSubTarget);
-    const subs = cat.subs && typeof cat.subs === 'object' ? { ...cat.subs } : { default: [] };
+    // Deep-copy existing subs dict (already normalised)
+    const subs = JSON.parse(JSON.stringify(cat.subs && typeof cat.subs === 'object' ? cat.subs : {}));
 
-    if (subs.default !== undefined) {
-        subs.default = [...subs.default, ...addSubTags];
+    if (Object.keys(subs).length === 0 || subs.default !== undefined) {
+        // Flat / empty → add to default bucket
+        subs.default = [...(subs.default || []), ...addSubTags];
     } else {
+        // Sectioned → append to first section
         const firstKey = Object.keys(subs)[0];
         subs[firstKey] = [...subs[firstKey], ...addSubTags];
     }
 
     const updated = await apiFetch(`/api/categories/${addSubTarget}/update/`, 'PUT', {
-        name: cat.name,
-        slug: cat.slug,
-        description: cat.description || '',
+        name:           cat.name,
+        slug:           cat.slug,
+        description:    cat.description || '',
         sub_categories: subs,
     });
 
     if (updated.error) { showToast(updated.error, 'warn'); return; }
 
-    const idx = CATS.findIndex(c => c.id === addSubTarget);
-    CATS[idx]  = { ...CATS[idx], ...updated, subs: updated.sub_categories || subs };
+    const idx  = CATS.findIndex(c => c.id === addSubTarget);
+    CATS[idx]  = { ...CATS[idx], ...updated, subs: normaliseSubs(updated.sub_categories) };
     closeModal('addSubModal');
     render();
     showToast(`${addSubTags.length} sub-categor${addSubTags.length > 1 ? 'ies' : 'y'} added to "${cat.name}"`, 'ok');
@@ -522,10 +578,11 @@ function openEditModal(catId) {
     document.getElementById('editCatDesc').value           = cat.description || '';
     document.getElementById('editCatSubtitle').textContent = `Editing: ${cat.name}`;
 
+    // Populate editSections from already-normalised subs dict
     editSections = {};
-    const subs = cat.subs && typeof cat.subs === 'object' ? cat.subs : {};
+    const subs = cat.subs && typeof cat.subs === 'object' && !Array.isArray(cat.subs) ? cat.subs : {};
     Object.entries(subs).forEach(([sec, items]) => {
-        editSections[sec] = [...(Array.isArray(items) ? items : [])];
+        editSections[sec] = Array.isArray(items) ? [...items] : [];
     });
     if (!Object.keys(editSections).length) editSections['default'] = [];
 
@@ -541,22 +598,22 @@ function renderEditSections() {
     container.innerHTML = '';
 
     entries.forEach(([secName, tags], secIdx) => {
-        const secDiv  = document.createElement('div');
+        const secDiv = document.createElement('div');
         secDiv.className   = 'edit-section-block';
         secDiv.dataset.sec = secName;
 
         const inputId = `editSecInp_${secIdx}`;
         const wrapId  = `editSecWrap_${secIdx}`;
 
-        const headerHtml = !isDefault ? `
-            <div class="edit-section-header">
+        const headerHtml = !isDefault
+            ? `<div class="edit-section-header">
                 <input class="edit-section-name-input" value="${secName === 'default' ? '' : secName}"
                     placeholder="Section heading…" onchange="renameSec(${secIdx}, this.value)" />
                 <button class="edit-sec-del-btn" onclick="deleteSection(${secIdx})">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     Remove section
                 </button>
-            </div>`
+               </div>`
             : `<div style="font-size:11px;color:var(--g300);margin-bottom:8px;font-weight:600">SUB-CATEGORIES</div>`;
 
         const pillsHtml = tags.map((t, ti) => `
@@ -609,7 +666,7 @@ function editRemoveTag(secIdx, tagIdx) {
 function renameSec(secIdx, newName) {
     newName = newName.trim();
     if (!newName) return;
-    const keys = Object.keys(editSections);
+    const keys    = Object.keys(editSections);
     const oldName = keys[secIdx];
     if (oldName === newName) return;
     const rebuilt = {};
@@ -622,19 +679,17 @@ function deleteSection(secIdx) {
     if (keys.length === 1) { showToast('At least one section required', 'warn'); return; }
     delete editSections[keys[secIdx]];
     renderEditSections();
-    showToast(`Section removed`, 'warn');
+    showToast('Section removed', 'warn');
 }
 
 function editAddSection() {
     const newKey = `New Section ${Object.keys(editSections).length + 1}`;
-    editSections[newKey] = [];
-    if (editSections['default'] !== undefined && Object.keys(editSections).length > 1) {
+    // If currently in "default" single-section mode, convert it to named sections
+    if (editSections['default'] !== undefined && Object.keys(editSections).length === 1) {
         const defaultItems = editSections['default'];
-        delete editSections['default'];
-        editSections['General'] = defaultItems;
-        const ns = editSections[newKey];
-        delete editSections[newKey];
-        editSections[newKey] = ns;
+        editSections = { 'General': defaultItems, [newKey]: [] };
+    } else {
+        editSections[newKey] = [];
     }
     renderEditSections();
     setTimeout(() => {
@@ -653,14 +708,14 @@ async function saveEdit() {
     const updated = await apiFetch(`/api/categories/${editTarget}/update/`, 'PUT', {
         name,
         slug,
-        description: document.getElementById('editCatDesc').value.trim(),
+        description:    document.getElementById('editCatDesc').value.trim(),
         sub_categories: editSections,
     });
 
     if (updated.error) { showToast(updated.error, 'warn'); return; }
 
     const idx = CATS.findIndex(c => c.id === editTarget);
-    CATS[idx]  = { ...CATS[idx], ...updated, subs: updated.sub_categories || editSections };
+    CATS[idx]  = { ...CATS[idx], ...updated, subs: normaliseSubs(updated.sub_categories) };
     closeModal('editCatModal');
     render();
     showToast(`"${name}" updated successfully`, 'ok');
@@ -711,8 +766,7 @@ async function openPanel(catId) {
     const posts = data.posts || [];
     document.getElementById('panelTitle').textContent = `${cat.name} (${data.total || 0} posts)`;
 
-    const body  = document.getElementById('panelBody');
-    const icons = ['📰', '🗞️', '📋', '📄', '🖊️'];
+    const body = document.getElementById('panelBody');
 
     if (!posts.length) {
         body.innerHTML = `
@@ -722,38 +776,31 @@ async function openPanel(catId) {
                 <span>Click "Add Post" to publish the first article in this category</span>
             </div>`;
     } else {
-    body.innerHTML = posts.map((p, i) => {
-
-        console.log("IMAGE FIELD:", p.image);   // 👈 console me image path dekhne ke liye
-
-        return `
-        <div class="cm-post-item" onclick="openArticle(${p.id})" style="cursor:pointer">
-            
-            <div class="cm-post__thumb">
-                ${p.image 
-                    ? `<img src="${p.image.startsWith('http') || p.image.startsWith('/media') ? p.image : '/media/' + p.image}" 
-                    style="width:40px;height:40px;object-fit:cover;border-radius:6px;">`
-                    : '📰'}
-            </div>
-
-            <div class="cm-post__info">
-                <div class="cm-post__title">${p.title}</div>
-                <div class="cm-post__meta">
-                    <span>${p.date}</span>
-                    <span>${p.author_name || p.author}</span>
+        body.innerHTML = posts.map((p) => {
+            const imgSrc = p.image_url || p.image || '';
+            const thumb  = imgSrc
+                ? `<img src="${imgSrc.startsWith('http') || imgSrc.startsWith('/') ? imgSrc : '/media/' + imgSrc}"
+                       style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />`
+                : '📰';
+            return `
+            <div class="cm-post-item" onclick="openArticle(${p.id})" style="cursor:pointer">
+                <div class="cm-post__thumb">${thumb}</div>
+                <div class="cm-post__info">
+                    <div class="cm-post__title">${p.title}</div>
+                    <div class="cm-post__meta">
+                        <span>${p.date || ''}</span>
+                        <span>${p.author_name || p.author || ''}</span>
+                    </div>
                 </div>
-            </div>
-
-        </div>`;
-        
-    }).join('') 
-    + `<p style="text-align:center;padding:18px 0;font-size:12px;color:var(--g300)">
-       Showing ${posts.length} of ${data.total} articles
-       </p>`;
-}
+            </div>`;
+        }).join('')
+        + `<p style="text-align:center;padding:18px 0;font-size:12px;color:var(--g300)">
+               Showing ${posts.length} of ${data.total} articles
+           </p>`;
+    }
 }
 
-function openArticle(id){
+function openArticle(id) {
     window.location.href = `/admin/newsapp/article/${id}/change/`;
 }
 

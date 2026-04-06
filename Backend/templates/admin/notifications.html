@@ -1,0 +1,399 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Notifications — News4Bharat Admin{% endblock %}
+{% block content_title %}Notifications{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="in-page-wrap">
+
+  <!-- Page Header -->
+  <div class="in-page-header">
+    <div>
+      <div class="in-breadcrumb">Dashboard / <span>Notifications</span></div>
+      <div class="in-page-title">Notifications</div>
+      <div class="in-page-sub">Articles, assignments, roles, messages &amp; more — all in one place</div>
+    </div>
+    <div class="in-header-actions">
+      <button class="btn-outline" onclick="markAllRead()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Mark all read
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div style="padding:16px 24px 13px;background:#fff;border-bottom:1px solid var(--border);">
+    <div class="notif-stats">
+      <div class="nstat">
+        <div class="nstat-ic" style="background:var(--accent-lt);color:var(--accent)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div><div class="nstat-num" id="statTotal">0</div><div class="nstat-lbl">Total</div></div>
+      </div>
+      <div class="nstat">
+        <div class="nstat-ic" style="background:var(--red-lt);color:var(--red)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div><div class="nstat-num" id="statUnread">0</div><div class="nstat-lbl">Unread</div></div>
+      </div>
+      <div class="nstat">
+        <div class="nstat-ic" style="background:var(--green-lt);color:var(--green)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div><div class="nstat-num" id="statRead">0</div><div class="nstat-lbl">Read</div></div>
+      </div>
+      <div class="nstat">
+        <div class="nstat-ic" style="background:var(--yellow-lt);color:#b45309">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div><div class="nstat-num" id="statToday">0</div><div class="nstat-lbl">Today</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter + List -->
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+
+    <div class="notif-filter-bar">
+      <button class="notif-flt-btn active" onclick="filterNotifs('all',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        All
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('article',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Articles
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('assign',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Assignments
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('role',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Roles
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('message',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('social',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Social
+      </button>
+      <button class="notif-flt-btn" onclick="filterNotifs('category',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Category
+      </button>
+      <div class="notif-flt-divider"></div>
+      <button class="notif-flt-btn archived-btn" id="archiveFilterBtn" onclick="filterNotifs('archived',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        Archived
+        <span class="archive-count-badge" id="archiveCountBadge">0</span>
+      </button>
+    </div>
+
+    <div class="notif-wrap" id="notifList"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+var TYPE_SVG = {
+    article:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    assign:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    role:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    category: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    message:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    social:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
+};
+
+var RAW_NOTIFS = [
+{% for n in notifications %}
+{
+    id: {{ n.id }},
+    type: "{{ n.notif_type }}",
+    title: "{{ n.title|escapejs }}",
+    message: "{{ n.message|escapejs }}",
+    is_read: {{ n.is_read|yesno:'true,false' }},
+    is_archived: false,
+    time: "{{ n.created_at|timesince }} ago",
+    action_url: "{{ n.action_url|default:''|escapejs }}"
+},
+{% endfor %}
+{% for n in archived_notifications %}
+{
+    id: {{ n.id }},
+    type: "{{ n.notif_type }}",
+    title: "{{ n.title|escapejs }}",
+    message: "{{ n.message|escapejs }}",
+    is_read: true,
+    is_archived: true,
+    time: "{{ n.created_at|timesince }} ago",
+    action_url: "{{ n.action_url|default:''|escapejs }}"
+}{% if not forloop.last %},{% endif %}
+{% endfor %}
+];
+
+function deduplicateRoles(notifs) {
+    var seen = {};
+    var result = [];
+    var reversed = notifs.slice().reverse();
+    reversed.forEach(function(n) {
+        if (n.type === 'role') {
+            var key = n.message;
+            if (!seen[key]) { seen[key] = true; result.push(n); }
+        } else {
+            result.push(n);
+        }
+    });
+    return result.reverse();
+}
+
+var NOTIFS = deduplicateRoles(RAW_NOTIFS);
+var currentFilter = "all";
+
+function esc(s){
+    return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function updateStats(){
+    var active = NOTIFS.filter(function(n){ return !n.is_archived; });
+    var unread = active.filter(function(n){ return !n.is_read; }).length;
+    document.getElementById("statTotal").textContent  = active.length;
+    document.getElementById("statUnread").textContent = unread;
+    document.getElementById("statRead").textContent   = active.length - unread;
+    document.getElementById("statToday").textContent  = "{{ notifications_today|default:'—' }}";
+
+    var archivedCount = NOTIFS.filter(function(n){ return n.is_archived; }).length;
+    var badge = document.getElementById("archiveCountBadge");
+    if(badge){
+        badge.textContent = archivedCount;
+        badge.style.display = archivedCount > 0 ? '' : 'none';
+    }
+    document.querySelectorAll('.notif-sidebar-badge, [data-notif-badge]').forEach(function(el){
+        if (unread > 0) { el.textContent = unread; el.style.display = ''; }
+        else { el.style.display = 'none'; }
+    });
+}
+
+function filterNotifs(type, btn){
+    currentFilter = type;
+    document.querySelectorAll(".notif-flt-btn").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    renderList();
+}
+
+var ICON_CLS = {
+    article: "article", assign: "assign", role: "role",
+    category: "category", message: "message", social: "social"
+};
+
+function renderList(){
+    var list = document.getElementById("notifList");
+    var isArchiveView = (currentFilter === 'archived');
+
+    var filtered;
+    if(isArchiveView){
+        filtered = NOTIFS.filter(function(n){ return n.is_archived; });
+    } else if(currentFilter === 'all'){
+        filtered = NOTIFS.filter(function(n){ return !n.is_archived; });
+    } else {
+        filtered = NOTIFS.filter(function(n){ return !n.is_archived && n.type === currentFilter; });
+    }
+
+    if(!filtered.length){
+        var emptyMsg = isArchiveView ? 'No archived notifications.' : 'No notifications here.';
+        list.innerHTML = '<div class="notif-empty">' +
+            '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' +
+            '<div>'+emptyMsg+'</div></div>';
+        return;
+    }
+
+    var tagMap = {
+        article: 'Article', assign: 'Assign', role: 'Role',
+        message: 'Message', social: 'Social', category: 'Category'
+    };
+
+    list.innerHTML = filtered.map(function(n){
+        var tag     = tagMap[n.type] || n.type;
+        var iconSvg = TYPE_SVG[n.type] || TYPE_SVG['article'];
+        var cls     = ICON_CLS[n.type] || 'article';
+
+        /* ── Poora card clickable hai —
+           cursor:pointer hamesha dikhega.
+           action_url hai toh click pe open hoga,
+           nahi hai toh sirf read mark hoga. ── */
+        var cursorStyle = 'cursor:pointer;';
+
+        /* Eye button — action_url wale cards pe bhi dikhega
+           lekin ab redundant hai kyunki poora card clickable hai.
+           Phir bhi rakha hai design consistency ke liye. */
+        var eyeBtn = '';
+        if(n.action_url && !isArchiveView){
+            eyeBtn = '<button class="notif-icon-btn view-btn" title="Open" ' +
+                'onclick="event.stopPropagation();openNotif('+n.id+',\''+esc(n.action_url)+'\')">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+                '</button>';
+        }
+
+        var archiveBtn;
+        if(isArchiveView){
+            archiveBtn = '<button class="notif-icon-btn restore-btn" title="Restore" ' +
+                'onclick="event.stopPropagation();unarchiveNotif('+n.id+')">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>' +
+                '</button>';
+        } else {
+            archiveBtn = '<button class="notif-icon-btn archive-btn" title="Archive" ' +
+                'onclick="event.stopPropagation();archiveNotif('+n.id+')">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>' +
+                '</button>';
+        }
+
+        var archivedTag = isArchiveView
+            ? '<span class="notif-tag" style="background:#fef9c3;color:#92400e;">Archived</span>'
+            : '';
+
+        return '<div class="notif-card'+(n.is_read?' ':' unread ')+(isArchiveView?'archived-card':'')+'" '+
+            'id="notif-'+n.id+'" '+
+            'style="'+cursorStyle+'" '+
+            'onclick="cardClick('+n.id+',\''+esc(n.action_url || '')+'\')">'+
+            '<div class="notif-icon-box '+cls+(isArchiveView?' archived-icon':'')+'">'+iconSvg+'</div>'+
+            '<div class="notif-body">'+
+                '<div class="notif-text"><strong>'+esc(n.title)+'</strong> — '+esc(n.message)+'</div>'+
+                '<div class="notif-meta">'+
+                    '<span class="notif-time">'+esc(n.time)+'</span>'+
+                    '<span class="notif-tag">'+esc(tag)+'</span>'+
+                    archivedTag+
+                    (n.action_url && !isArchiveView
+                        ? '<span class="notif-tag" style="background:#e0f2fe;color:#0369a1;">Click to open →</span>'
+                        : '')+
+                '</div>'+
+            '</div>'+
+            (!n.is_read && !isArchiveView ? '<div class="unread-dot"></div>' : '')+
+            '<div class="notif-icon-actions">'+eyeBtn+archiveBtn+'</div>'+
+        '</div>';
+    }).join("");
+}
+
+/* ── cardClick — UPDATED
+   Ab action_url bhi leta hai.
+   action_url hai → read mark karo + redirect karo
+   action_url nahi → sirf read mark karo ── */
+function cardClick(id, url){
+    markRead(id);
+    if(url && url.trim() !== ''){
+        window.location.href = url;
+    }
+}
+
+function openNotif(id, url){
+    markRead(id);
+    if(url){ window.location.href = url; }
+}
+
+function markRead(id){
+    var n = NOTIFS.find(function(x){ return x.id === id; });
+    if(!n || n.is_read) return;
+    n.is_read = true;
+
+    var card = document.getElementById("notif-"+id);
+    if(card){
+        card.classList.remove("unread");
+        var dot = card.querySelector(".unread-dot");
+        if(dot) dot.remove();
+    }
+    updateStats();
+
+    var csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+    csrfToken = csrfToken ? csrfToken[1] : '';
+    fetch('/api/notifications/'+id+'/read/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+    }).catch(function(e){ console.log('Mark read failed:', e); });
+}
+
+function archiveNotif(id){
+    var n = NOTIFS.find(function(x){ return x.id === id; });
+    if(!n) return;
+
+    var card = document.getElementById("notif-"+id);
+    if(card){
+        card.classList.add("removing");
+        card.addEventListener("animationend", function(){ card.remove(); });
+    }
+
+    n.is_archived = true;
+    n.is_read     = true;
+    updateStats();
+    showToast("Notification archived");
+
+    var csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+    csrfToken = csrfToken ? csrfToken[1] : '';
+    fetch('/api/notifications/'+id+'/archive/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+    }).catch(function(e){ console.log('Archive failed:', e); });
+}
+
+function unarchiveNotif(id){
+    var n = NOTIFS.find(function(x){ return x.id === id; });
+    if(!n) return;
+
+    var card = document.getElementById("notif-"+id);
+    if(card){
+        card.classList.add("removing");
+        card.addEventListener("animationend", function(){ card.remove(); });
+    }
+
+    n.is_archived = false;
+    updateStats();
+    showToast("Notification restored");
+
+    var csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+    csrfToken = csrfToken ? csrfToken[1] : '';
+    fetch('/api/notifications/'+id+'/unarchive/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+    }).catch(function(e){ console.log('Unarchive failed:', e); });
+}
+
+function markAllRead(){
+    NOTIFS.forEach(function(n){ n.is_read = true; });
+    renderList();
+    updateStats();
+    showToast("All notifications marked as read");
+
+    var csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+    csrfToken = csrfToken ? csrfToken[1] : '';
+    fetch('/api/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+    }).catch(function(e){ console.log('Mark all read failed:', e); });
+}
+
+function showToast(msg){
+    var stack = document.getElementById("toastStack");
+    if(!stack) return;
+    var t = document.createElement("div");
+    t.className = "toast-item";
+    t.innerHTML = '<div class="toast-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg></div><div class="toast-title">'+esc(msg)+'</div>';
+    stack.appendChild(t);
+    setTimeout(function(){ if(t.parentElement) t.remove(); }, 3000);
+}
+
+renderList();
+updateStats();
+
+</script>
+
+{% endblock %}

@@ -276,8 +276,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Article
         fields = [
-            'id', 'title', 'slug', 'subtitle',
-            'content',                  
+            'id', 'title', 'slug', 'subtitle',                 
             'image_url', 'image_alt',
             'category', 'categories',
             'published_at', 'created_at',

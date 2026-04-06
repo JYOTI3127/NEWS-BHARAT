@@ -127,6 +127,9 @@ def _save_article_from_request(request, article=None):
 
     if is_new:
         article = Article(author=request.user)
+    else:
+        # Business rule: edited article should surface with the latest update date.
+        article.created_at = timezone.now()
 
     article.title    = title
     article.subtitle = subtitle
@@ -178,8 +181,7 @@ def _save_article_from_request(request, article=None):
 
     if article.status == 'published':
         article.scheduled_at = None
-        if not article.published_at:
-            article.published_at = timezone.now()
+        article.published_at = timezone.now()
 
     assigned_id = data.get('assigned_to', '')
     if assigned_id:

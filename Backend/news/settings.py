@@ -230,6 +230,9 @@ GS_BUCKET_NAME = 'news4bharat-media-37'
 GS_PROJECT_ID = 'news4bharat-490809'
 GS_DEFAULT_ACL = None         
 GS_QUERYSTRING_AUTH = False
+GS_OBJECT_PARAMETERS = {
+    "cache_control": "public, max-age=31536000, immutable",
+}
 
 import json
 from google.oauth2 import service_account

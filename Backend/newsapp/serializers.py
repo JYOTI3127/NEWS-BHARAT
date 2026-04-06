@@ -148,9 +148,14 @@ class ArticleSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                mtime = obj.image.storage.get_modified_time(obj.image.name)
+                return f"{base}?v={int(mtime.timestamp())}"
             except Exception:
-                return None
+                try:
+                    return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                except Exception:
+                    return None
         return obj.image_url if obj.image_url else None
 
     def get_tags_list(self, obj):
@@ -287,7 +292,12 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj):
         request = self.context.get('request')
         if obj.image:
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+            try:
+                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                mtime = obj.image.storage.get_modified_time(obj.image.name)
+                return f"{base}?v={int(mtime.timestamp())}"
+            except Exception:
+                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return obj.image_url or None
 
     def get_category(self, obj):

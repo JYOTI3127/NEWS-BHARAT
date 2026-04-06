@@ -43,7 +43,7 @@ User = get_user_model()
 @api_view(['GET'])
 def category_list(request):
     cached = cache.get('categories:all')
-    if cached:
+    if cached is not None:
         return Response(cached)
     categories = Category.objects.all()
     serializer = CategorySerializer(categories, many=True)
@@ -60,14 +60,6 @@ def category_detail_page(request, slug):
         'category': category,
         'page_obj': page_obj,
     })
-
-
-@api_view(['GET'])
-def category_list(request):
-    categories = Category.objects.all()
-    serializer = CategorySerializer(categories, many=True)
-    return Response(serializer.data)
-
 
 @api_view(['POST'])
 def category_create(request):
@@ -317,6 +309,10 @@ def _save_article_from_request(request, article=None):
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
+        cache_key = f"articles:list:{category or 'all'}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         articles = Article.objects.filter(
             status="published"
         ).select_related('author').prefetch_related('categories')
@@ -2032,6 +2028,10 @@ def newsletter_history(request):
 
 @api_view(['GET'])
 def article_detail_by_slug(request, slug):
+    cache_key = f"article:slug:{slug}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
     try:
         article = Article.objects.select_related(
             'author'

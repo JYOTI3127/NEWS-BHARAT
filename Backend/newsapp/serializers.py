@@ -266,3 +266,38 @@ class ArticleMinSerializer(serializers.ModelSerializer):
             except Exception:
                 return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return obj.image_url
+
+class ArticleHomepageSerializer(serializers.ModelSerializer):
+    image_url    = serializers.SerializerMethodField()
+    category     = serializers.SerializerMethodField()
+    author_name  = serializers.SerializerMethodField()
+    categories   = CategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model  = Article
+        fields = [
+            'id', 'title', 'slug', 'subtitle',
+            'content',                  
+            'image_url', 'image_alt',
+            'category', 'categories',
+            'published_at', 'created_at',
+            'author_name', 'tags', 'is_paid',
+            'selected_subcategories',
+        ]
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return obj.image_url or None
+
+    def get_category(self, obj):
+        cat = obj.categories.first()
+        return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
+    def get_author_name(self, obj):
+        if obj.author_display_name and obj.author_display_name.strip():
+            return obj.author_display_name.strip()
+        if obj.author:
+            return obj.author.get_full_name() or obj.author.username
+        return ''

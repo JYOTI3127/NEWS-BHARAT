@@ -18,7 +18,7 @@ import requests
 from django.conf import settings
 from django.core.paginator import Paginator
 from rest_framework import status
-from .serializers import CategorySerializer, ArticleSerializer, ArticleMinSerializer
+from .serializers import *
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -307,7 +307,9 @@ def _save_article_from_request(request, article=None):
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        articles = Article.objects.filter(status="published")
+        articles = Article.objects.filter(
+            status="published"
+        ).select_related('author').prefetch_related('categories')
         if category:
             articles = articles.filter(categories__slug=category).distinct()
         serializer = ArticleSerializer(articles, many=True, context={'request': request})
@@ -378,7 +380,7 @@ def update_article_status(request, article):
     article.save()
 
 
-@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def article_detail(request, pk):
     try:
         article = Article.objects.get(pk=pk)
@@ -399,7 +401,7 @@ def article_detail(request, pk):
         except Exception as e:
             return Response({"error": f"Failed to publish: {str(e)}"}, status=400)
 
-    elif request.method == "PUT":
+    elif request.method in ["PUT", "PATCH"]:
         if not request.user.is_authenticated:
             return Response({"error": "Login required"}, status=401)
         updated_article, error = _save_article_from_request(request, article=article)
@@ -409,6 +411,8 @@ def article_detail(request, pk):
         return Response(serializer.data)
 
     elif request.method == "DELETE":
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return Response({"error": "Login required"}, status=401)
         article.delete()
         return Response(status=204)
 
@@ -878,13 +882,13 @@ def _search_elasticsearch(query, status, limit, request=None):
 def _search_django_orm(query, status, limit, request=None):
     qs = Article.objects.filter(
         Q(title__icontains=query) |
-        Q(slug__icontains=query) |
-        Q(content__icontains=query) |
-        Q(author__username__icontains=query) |
-        Q(categories__name__icontains=query)
+        Q(slug__icontains=query)
+        # content, author, categories hatao
     ).select_related('author').prefetch_related('categories').distinct()
+    
     if status != 'all':
         qs = qs.filter(status=status)
+    
     return [_format_article(a, request) for a in qs.order_by('-published_at', '-created_at')[:limit]]
 
 

@@ -37,9 +37,23 @@ def xml_resp(content: str) -> HttpResponse:
 # Static SEO files
 # ─────────────────────────────────────────────
 
+def robots_txt():
+    return """User-agent: *
+Allow: /
+Sitemap: https://news4bharat.com/sitemap_index.xml
+"""
+
 @require_GET
 def view_robots(request):
-    return HttpResponse(robots_txt(), content_type="text/plain")
+    host = request.get_host()
+    
+    # .cloud domain pe sab disallow karo
+    if 'news4bharat.cloud' in host:
+        content = "User-agent: *\nDisallow: /\n"
+    else:
+        content = robots_txt() 
+    
+    return HttpResponse(content, content_type="text/plain")
 
 
 @require_GET

@@ -42,11 +42,11 @@
 
 <!-- ── FILTER PILLS ───────────────────────────────── -->
 <div class="art-filters">
-  <button class="art-filter art-filter--active" onclick="artFilter(this,'all')">All</button>
-  <button class="art-filter" onclick="artFilter(this,'published')">Published</button>
-  <button class="art-filter" onclick="artFilter(this,'draft')">Draft</button>
-  <button class="art-filter" onclick="artFilter(this,'review')">In Review</button>
-  <button class="art-filter" onclick="artFilter(this,'rejected')">Rejected</button>
+  <button type="button" class="art-filter art-filter--active" onclick="artFilter(this,'all')">All</button>
+  <button type="button" class="art-filter" onclick="artFilter(this,'published')">Published</button>
+  <button type="button" class="art-filter" onclick="artFilter(this,'draft')">Draft</button>
+  <button type="button" class="art-filter" onclick="artFilter(this,'review')">In Review</button>
+  <button type="button" class="art-filter" onclick="artFilter(this,'rejected')">Rejected</button>
 </div>
 
 <!-- ── ARTICLES TABLE ─────────────────────────────── -->
@@ -150,8 +150,13 @@
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </a>
-              <button class="art-action-btn art-action-btn--delete" title="Delete"
-                onclick="confirmDelete({{ article.id }}, '{{ article.title|escapejs|truncatechars:40 }}')">
+              <button
+                type="button"
+                class="art-action-btn art-action-btn--delete"
+                title="Delete"
+                data-article-id="{{ article.id }}"
+                data-article-title="{{ article.title|truncatechars:40|escape }}"
+                onclick="confirmDelete(this.dataset.articleId, this.dataset.articleTitle)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -224,7 +229,9 @@
           <img src="{{ article.image.url }}"
                alt="{{ article.title }}"
                class="art-img-card__img"
-               onclick="openLightbox('{{ article.image.url }}', '{{ article.title|escapejs }}')"
+               data-image-src="{{ article.image.url|escape }}"
+               data-image-title="{{ article.title|truncatechars:60|escape }}"
+               onclick="openLightbox(this.dataset.imageSrc, this.dataset.imageTitle)"
                style="cursor:zoom-in;">
           <div class="art-img-card__overlay">
             <div class="art-img-card__title">{{ article.title|truncatechars:30 }}</div>
@@ -311,15 +318,15 @@
       <span class="del-modal__warn">This action cannot be undone.</span>
     </p>
     <div class="del-modal__actions">
-      <button class="del-modal__cancel" onclick="closeDeleteModal()">Cancel</button>
-      <a class="del-modal__confirm" id="delConfirmLink" href="#">
+      <button type="button" class="del-modal__cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button type="button" class="del-modal__confirm" id="delConfirmBtn" onclick="performDelete()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           <path d="M9 6V4h6v2"/>
         </svg>
         Yes, Delete
-      </a>
+      </button>
     </div>
   </div>
 </div>
@@ -335,6 +342,13 @@
 
 <script>
 /* ── Filter ──────────────────────────────────────── */
+var currentDeleteId = null;
+function getCsrf() {
+  var el = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (el && el.value) return el.value;
+  var match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
 function artFilter(btn, filter) {
   document.querySelectorAll('.art-filter').forEach(b => b.classList.remove('art-filter--active'));
   btn.classList.add('art-filter--active');
@@ -345,14 +359,47 @@ function artFilter(btn, filter) {
 
 /* ── Delete modal ────────────────────────────────── */
 function confirmDelete(id, title) {
+  currentDeleteId = id;
   document.getElementById('delArticleTitle').textContent = title;
-  document.getElementById('delConfirmLink').href = '/admin/newsapp/article/' + id + '/delete/';
   document.getElementById('delBackdrop').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 function closeDeleteModal() {
+  currentDeleteId = null;
   document.getElementById('delBackdrop').classList.remove('active');
   document.body.style.overflow = '';
+}
+async function performDelete() {
+  if (!currentDeleteId) return;
+  var btn = document.getElementById('delConfirmBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+  }
+  try {
+    var res = await fetch('/api/articles/' + currentDeleteId + '/', {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCsrf() }
+    });
+    if (!res.ok) {
+      var message = 'Delete failed.';
+      try {
+        var data = await res.json();
+        if (data && (data.error || data.detail)) message = data.error || data.detail;
+      } catch (e) {}
+      alert(message);
+      return;
+    }
+    closeDeleteModal();
+    window.location.reload();
+  } catch (e) {
+    alert('Server error. Please try again.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>Yes, Delete';
+    }
+  }
 }
 document.getElementById('delBackdrop').addEventListener('click', function(e) {
   if (e.target === this) closeDeleteModal();

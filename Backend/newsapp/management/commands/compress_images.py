@@ -4,32 +4,46 @@ from PIL import Image as PILImage
 import io
 import requests
 from django.core.files.base import ContentFile
+from django.db.models import Q
 
 
 class Command(BaseCommand):
     help = 'Compress all existing article images to WebP'
 
     def handle(self, *args, **kwargs):
-        articles = Article.objects.exclude(image_url__isnull=True).exclude(image_url__exact='')
+        # Dono — image_url wale AND uploaded image wale
+        articles = Article.objects.filter(
+            Q(image_url__isnull=False) & ~Q(image_url__exact='') |
+            Q(image__isnull=False) & ~Q(image__exact='')
+        )
         total = articles.count()
-        self.stdout.write(f"Total articles with image_url: {total}")
+        self.stdout.write(f"Total articles found: {total}")
 
         success = 0
         failed = 0
 
         for i, article in enumerate(articles, 1):
             try:
-                img_url = article.image_url
-                if not img_url or not img_url.startswith('http'):
+                img_data = None
+
+                # Pehle uploaded image check karo
+                if article.image and not str(article.image.name).endswith('.webp'):
+                    try:
+                        img_data = article.image.read()
+                    except Exception:
+                        img_data = None
+
+                # Agar uploaded image nahi toh image_url se download karo
+                if not img_data and article.image_url and article.image_url.startswith('http'):
+                    response = requests.get(article.image_url, timeout=10)
+                    if response.status_code == 200:
+                        img_data = response.content
+
+                if not img_data:
+                    self.stdout.write(f"[{i}/{total}] SKIP (no image): {article.slug}")
                     continue
 
-                response = requests.get(img_url, timeout=10)
-                if response.status_code != 200:
-                    self.stdout.write(f"[{i}/{total}] SKIP: {article.slug}")
-                    failed += 1
-                    continue
-
-                img = PILImage.open(io.BytesIO(response.content))
+                img = PILImage.open(io.BytesIO(img_data))
                 if img.mode in ("RGBA", "P", "LA"):
                     img = img.convert("RGB")
                 if img.width > 1200:
@@ -42,7 +56,8 @@ class Command(BaseCommand):
 
                 filename = f"articles/{article.slug}.webp"
                 article.image = ContentFile(output.read(), name=filename)
-                article.save(update_fields=['image'])
+                article.image_url = ''  # url clear karo
+                article.save(update_fields=['image', 'image_url'])
 
                 self.stdout.write(f"[{i}/{total}] ✅ Done: {article.slug}")
                 success += 1

@@ -312,7 +312,7 @@ def article_list(request):
         ).select_related('author').prefetch_related('categories')
         if category:
             articles = articles.filter(categories__slug=category).distinct()
-        serializer = ArticleSerializer(articles, many=True, context={'request': request})
+        serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})
         return Response(serializer.data)
 
     elif request.method == "POST":
@@ -2018,3 +2018,16 @@ def newsletter_history(request):
         return JsonResponse({'history': list(logs)})
     except Exception as e:
         return JsonResponse({'history': [], 'note': str(e)})
+
+@api_view(['GET'])
+def article_detail_by_slug(request, slug):
+    try:
+        article = Article.objects.select_related(
+            'author'
+        ).prefetch_related('categories').get(
+            slug=slug, status='published'
+        )
+    except Article.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+    serializer = ArticleSerializer(article, context={'request': request})
+    return Response(serializer.data)

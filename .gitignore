@@ -27,3 +27,12 @@ dist-ssr
 __pycache__/
 *.pyc
 db.sqlite3
+
+# Generated / deployment output
+build/
+build.zip
+prerender-failed.txt
+
+# Backend and uploaded media
+Backend/
+articles/

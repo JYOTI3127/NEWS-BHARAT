@@ -6,7 +6,7 @@ urlpatterns = [
     path('categories/', category_list),
     path('articles/', article_list),
     path('articles/<int:pk>/', views.article_detail),
-    path('article/<slug:slug>/', views.article_detail_page),
+    path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
     path('articles/by-state/', views.articles_by_state),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),
@@ -41,7 +41,6 @@ urlpatterns = [
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
     path('admin/media-library/', media_library_view, name='admin_media_library'),
-
     path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
     path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
     path('newsletter/history/', views.newsletter_history, name='newsletter_history'),

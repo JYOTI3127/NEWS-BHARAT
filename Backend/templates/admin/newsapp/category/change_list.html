@@ -98,7 +98,7 @@
     </div>
     <div class="cm-form-group">
       <label class="cm-form-label">Slug (URL)</label>
-      <input class="cm-form-input" id="newCatSlug" placeholder="auto-generated from name" />
+      <input class="cm-form-input" id="newCatSlug" placeholder="auto-generated from name" readonly />
     </div>
     <div class="cm-form-group">
       <label class="cm-form-label">Description</label>
@@ -212,7 +212,7 @@
       </div>
       <div class="cm-form-group" style="margin-bottom:0">
         <label class="cm-form-label">Slug (URL)</label>
-        <input class="cm-form-input" id="editCatSlug" placeholder="category-slug" />
+        <input class="cm-form-input" id="editCatSlug" placeholder="category-slug" readonly />
       </div>
     </div>
     <div class="cm-form-group" style="margin-top:14px">
@@ -493,7 +493,6 @@ function openAddCatModal() {
     renderTagPills('addCatTagWrap', 'addCatTagInp', addCatTags);
     document.getElementById('newCatName').value = '';
     document.getElementById('newCatSlug').value = '';
-    document.getElementById('newCatSlug')._manuallyEdited = false;
     document.getElementById('newCatDesc').value = '';
     document.getElementById('addCatModal').classList.add('open');
     document.getElementById('newCatName').focus();
@@ -702,8 +701,8 @@ async function saveEdit() {
     const name = document.getElementById('editCatName').value.trim();
     if (!name) { showToast('Category name cannot be empty', 'warn'); return; }
 
-    const slug = document.getElementById('editCatSlug').value.trim()
-        || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const cat = CATS.find(c => c.id === editTarget);
+    const slug = cat ? cat.slug : document.getElementById('editCatSlug').value.trim();
 
     const updated = await apiFetch(`/api/categories/${editTarget}/update/`, 'PUT', {
         name,
@@ -885,12 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('newCatName').addEventListener('input', e => {
         const slugEl = document.getElementById('newCatSlug');
-        if (!slugEl._manuallyEdited) {
-            slugEl.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        }
-    });
-    document.getElementById('newCatSlug').addEventListener('input', () => {
-        document.getElementById('newCatSlug')._manuallyEdited = true;
+        slugEl.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     });
 
     loadCategories();

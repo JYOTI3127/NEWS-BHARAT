@@ -60,6 +60,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -165,6 +166,8 @@ STATICFILES_DIRS = [
 # MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 CORS_ALLOWED_ORIGINS = [
+    "https://news4bharat.cloud",
+    "https://www.news4bharat.cloud",
     "https://www.news4bharat.com",
     "https://news4bharat.com",
     "http://localhost:5173",
@@ -180,7 +183,7 @@ TWELVE_DATA_GOLD_SYMBOLS = ["XAU/USD", "XAUUSD"]
 TWELVE_DATA_SILVER_SYMBOLS = ["XAG/USD", "XAGUSD"]
 TWELVE_DATA_USDINR_SYMBOLS = ["USD/INR", "USDINR"]
 ALPHA_VANTAGE_NIFTY_SYMBOLS = ["NIFTYBEES.BSE", "NIFTYBEES.NSE"]
-ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXETF.BSE", "SENSEXETF.NSE"]
+ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXBEES.BSE", "SENSEXBEES.NSE"]
 CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
 # CRONJOBS = [
@@ -230,6 +233,9 @@ GS_BUCKET_NAME = 'news4bharat-media-37'
 GS_PROJECT_ID = 'news4bharat-490809'
 GS_DEFAULT_ACL = None         
 GS_QUERYSTRING_AUTH = False
+GS_OBJECT_PARAMETERS = {
+    "cache_control": "public, max-age=31536000, immutable",
+}
 
 import json
 from google.oauth2 import service_account
@@ -255,6 +261,11 @@ SEO_INDEXNOW_KEY = "abc123xyz"
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+        }
     }
 }

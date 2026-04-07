@@ -398,11 +398,11 @@ label.image-drop {
     <option value="2.5">2.5×</option>
   </select>
   <div class="nb-it-sep"></div>
-  <button class="nb-it-ai-btn" onclick="runSpellCheck()" title="AI Spell Fix">
+  <button type="button" class="nb-it-ai-btn" onclick="runSpellCheck()" title="AI Spell Fix">
     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
     AI Fix
   </button>
-  <button class="ai-spell-btn" onclick="runGrammarCheck()"><div class="ai-dot"></div>&#10022; Grammar Fix</button>
+  <button type="button" class="ai-spell-btn" onclick="runGrammarCheck()"><div class="ai-dot"></div>&#10022; Grammar Fix</button>
 </div>
 
 <div class="nb-editor-wrap">
@@ -516,8 +516,8 @@ label.image-drop {
         <div class="sep"></div>
         <button onclick="fmt('removeFormat')" title="Clear Formatting">&#x2715;</button>
         <div class="sep"></div>
-        <button class="ai-spell-btn" onclick="runSpellCheck()"><div class="ai-dot"></div>&#10022; AI Spell Fix</button>
-        <button class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
+        <button type="button" class="ai-spell-btn" onclick="runSpellCheck()"><div class="ai-dot"></div>&#10022; AI Spell Fix</button>
+        <button type="button" class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
       </div>
 
       <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article...">{{ original.content|default:''|safe }}</div>
@@ -810,7 +810,7 @@ label.image-drop {
         <div class="seo-slug-row">
           <span class="seo-slug-pre">/news/</span>
           <input type="text" class="seo-inp seo-slug-inp" id="ui_slug" placeholder="your-article-slug" value="{{ original.slug|default:'' }}" {% if original.status == 'published' %}readonly{% endif %}>
-          <button class="seo-slug-auto" onclick="generateSlug()" title="Auto-generate from headline">↺</button>
+          <button type="button" class="seo-slug-auto" onclick="generateSlug()" title="Auto-generate from headline">↺</button>
         </div>
       </div>
       <div class="seo-field">
@@ -843,7 +843,7 @@ label.image-drop {
       <div class="seo-field">
         <div class="seo-field-label">AI Keyword Suggestions</div>
         <div class="seo-kw-chips" id="seo_kw_list"><span class="seo-kw-placeholder">Click below to generate…</span></div>
-        <button class="seo-ai-btn" id="seo_ai_btn" onclick="suggestKeywords()"><div class="ai-dot"></div> ✦ Suggest with AI</button>
+        <button type="button" class="seo-ai-btn" id="seo_ai_btn" onclick="suggestKeywords()"><div class="ai-dot"></div> ✦ Suggest with AI</button>
       </div>
     </div>
     <div class="seo-col-card">
@@ -896,7 +896,7 @@ label.image-drop {
             <label class="seo-tag-perm-opt"><input type="radio" name="tag_create_perm" value="reporter" {% if site_settings.tag_create_perm == 'reporter' %}checked{% endif %}><span class="seo-tag-perm-box"></span><div><span class="seo-tag-perm-name">Reporter &amp; above</span><span class="seo-tag-perm-sub">Open — not recommended</span></div></label>
           </div>
           <div class="seo-tag-perm-status" id="tag_perm_status"><span class="seo-tag-status-dot"></span><span id="tag_perm_status_text">Tag creation: Editor+ only</span></div>
-          <button class="seo-tag-save-btn" onclick="saveTagPerm()">Save Permission</button>
+          <button type="button" class="seo-tag-save-btn" onclick="saveTagPerm()">Save Permission</button>
         </div>
       </div>
       <div class="seo-field">

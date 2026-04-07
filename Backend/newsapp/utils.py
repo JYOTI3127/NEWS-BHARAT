@@ -22,6 +22,12 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 TWELVE_DATA_URL = "https://api.twelvedata.com/time_series"
 
 
+def external_get(url, **kwargs):
+    session = requests.Session()
+    session.trust_env = False
+    return session.get(url, **kwargs)
+
+
 def _today_cache_key(prefix):
     return f"{prefix}:{timezone.localdate().isoformat()}"
 
@@ -85,7 +91,7 @@ def _fetch_twelve_data_close(symbols, api_key):
     last_error = None
     for symbol in symbols:
         try:
-            response = requests.get(
+            response = external_get(
                 TWELVE_DATA_URL,
                 params={
                     "symbol": symbol,
@@ -168,7 +174,7 @@ def fetch_index_data(symbols, cache_prefix=None, force_refresh=False):
 
 
 def _fetch_alpha_vantage_daily(symbol, api_key):
-    response = requests.get(
+    response = external_get(
         ALPHA_VANTAGE_URL,
         params={
             "function": "TIME_SERIES_DAILY",

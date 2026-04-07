@@ -32,6 +32,7 @@ from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 
 User = get_user_model()
 
@@ -40,9 +41,15 @@ User = get_user_model()
 # CATEGORY VIEWS
 # ═══════════════════════════════════════════════════════
 
-def category_list_page(request):
+@api_view(['GET'])
+def category_list(request):
+    cached = cache.get('categories:all')
+    if cached is not None:
+        return Response(cached)
     categories = Category.objects.all()
-    return render(request, 'articles/category_list.html', {'categories': categories})
+    serializer = CategorySerializer(categories, many=True)
+    cache.set('categories:all', serializer.data, 3600)  # 1 hour
+    return Response(serializer.data)
 
 
 def category_detail_page(request, slug):
@@ -54,14 +61,6 @@ def category_detail_page(request, slug):
         'category': category,
         'page_obj': page_obj,
     })
-
-
-@api_view(['GET'])
-def category_list(request):
-    categories = Category.objects.all()
-    serializer = CategorySerializer(categories, many=True)
-    return Response(serializer.data)
-
 
 @api_view(['POST'])
 def category_create(request):
@@ -101,9 +100,12 @@ def category_restore(request, cat_id):
 @api_view(['GET'])
 def category_posts(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
+ 
+    # select_related + prefetch_related → N+1 queries khatam
     articles = Article.objects.filter(
         categories=cat, status='published'
-    ).order_by('-created_at')[:10]
+    ).select_related('author').prefetch_related('categories').order_by('-created_at')[:10]
+ 
     serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
     return Response({
         'posts': serializer.data,
@@ -129,6 +131,9 @@ def _save_article_from_request(request, article=None):
 
     if is_new:
         article = Article(author=request.user)
+    else:
+        # Business rule: edited article should surface with the latest update date.
+        article.created_at = timezone.now()
 
     article.title    = title
     article.subtitle = subtitle
@@ -180,8 +185,7 @@ def _save_article_from_request(request, article=None):
 
     if article.status == 'published':
         article.scheduled_at = None
-        if not article.published_at:
-            article.published_at = timezone.now()
+        article.published_at = timezone.now()
 
     assigned_id = data.get('assigned_to', '')
     if assigned_id:
@@ -232,28 +236,23 @@ def _save_article_from_request(request, article=None):
 
             img = PILImage.open(uploaded_file)
 
-            # RGB mein convert karo (WebP ke liye)
             if img.mode in ("RGBA", "P", "LA"):
                 img = img.convert("RGB")
 
-            # 1200px se bada hai toh resize karo
             if img.width > 1200:
                 ratio = 1200 / img.width
                 new_height = int(img.height * ratio)
                 img = img.resize((1200, new_height), PILImage.LANCZOS)
 
-            # WebP mein compress karo
             output = io.BytesIO()
             img.save(output, format='WEBP', quality=75, optimize=True)
             output.seek(0)
 
-            # .webp extension ke saath save karo
             original_name = uploaded_file.name.rsplit('.', 1)[0] + '.webp'
             article.image     = ContentFile(output.read(), name=original_name)
             article.image_url = ''
 
         except Exception:
-            # Compress fail ho toh original file save karo
             article.image     = uploaded_file
             article.image_url = ''
     else:
@@ -300,19 +299,69 @@ def _save_article_from_request(request, article=None):
     elif 'categories' in data:
         article.categories.clear()
 
-    return article, None
+    # ── CACHE INVALIDATE ──
+    try:
+        cache.delete(f"article:slug:{article.slug}")
+        cache.delete('articles:homepage:')
+        cat_slugs = list(article.categories.values_list('slug', flat=True))
+        for cat_slug in cat_slugs:
+            cache.delete(f"articles:homepage:{cat_slug}")
+    except Exception:
+        pass
 
+    return article, None
 
 @api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        articles = Article.objects.filter(
-            status="published"
-        ).select_related('author').prefetch_related('categories')
+        try:
+            limit = max(1, min(int(request.GET.get('limit', 50)), 100))
+        except (TypeError, ValueError):
+            limit = 50
+
+        cache_key = f"articles:list:{category or 'all'}:{limit}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        category_qs = Category.objects.only('id', 'name', 'slug')
+        articles = (
+            Article.objects.filter(status="published")
+            .select_related('author')
+            .prefetch_related(Prefetch('categories', queryset=category_qs))
+            .only(
+                'id',
+                'title',
+                'slug',
+                'subtitle',
+                'image',
+                'image_url',
+                'image_alt',
+                'published_at',
+                'created_at',
+                'canonical_url',
+                'meta_description',
+                'focus_keyword',
+                'secondary_keywords',
+                'noindex',
+                'nofollow',
+                'in_sitemap',
+                'author__username',
+                'author__first_name',
+                'author__last_name',
+                'author_display_name',
+                'tags',
+                'is_paid',
+                'selected_subcategories',
+            )
+            .order_by('-published_at', '-created_at')
+        )
         if category:
             articles = articles.filter(categories__slug=category).distinct()
-        serializer = ArticleSerializer(articles, many=True, context={'request': request})
+
+        serializer = ArticleHomepageSerializer(articles[:limit], many=True, context={'request': request})
+        cache.set(cache_key, serializer.data, 300)
         return Response(serializer.data)
 
     elif request.method == "POST":
@@ -327,27 +376,35 @@ def article_list(request):
 @api_view(['GET'])
 def articles_by_state(request):
     state = request.GET.get('state')
-    
-    # State nahi di → states list return karo
+ 
+    # State nahi di → states list return karo (same as before)
     if not state:
         try:
             category = Category.objects.get(slug='state-of-bharat')
             return Response(category.sub_categories)
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=404)
-    
-    # State di → us state ke articles
+ 
+    # Cache check
+    cache_key = f"articles:state:{state}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+ 
+    # select_related + prefetch_related add kiya → N+1 queries band
     articles = Article.objects.filter(
         status='published',
         categories__slug='state-of-bharat',
-    )
-    
+    ).select_related('author').prefetch_related('categories')
+ 
+    # Filtering logic bilkul same hai
     filtered = [
         a for a in articles
         if state in (a.selected_subcategories or {}).get('subs', {}).get('3', [])
     ]
-    
+ 
     serializer = ArticleMinSerializer(filtered, many=True, context={'request': request})
+    cache.set(cache_key, serializer.data, 300)  # 5 minute cache
     return Response(serializer.data)
 
 
@@ -356,19 +413,27 @@ def dashboard_articles(request):
     user = request.user
     if not user.is_authenticated:
         return Response({"error": "Login required"}, status=401)
-
+ 
+    cache_key = f"dashboard:articles:{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+ 
     if user.is_superuser:
-        articles = Article.objects.all()
+        articles = Article.objects.all().order_by('-created_at')[:50]
     else:
         profile = user.profile
         if profile.roles.filter(name="Reporter").exists():
-            articles = Article.objects.filter(assigned_to=user)
+            articles = Article.objects.filter(
+                assigned_to=user
+            ).order_by('-created_at')[:50]
         elif profile.roles.filter(name="Editor").exists():
-            articles = Article.objects.all()
+            articles = Article.objects.all().order_by('-created_at')[:50]
         else:
             articles = Article.objects.none()
 
-    serializer = ArticleSerializer(articles, many=True)
+    serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
+    cache.set(cache_key, serializer.data, 120) 
     return Response(serializer.data)
 
 
@@ -707,35 +772,51 @@ def update_ad_slot(request):
 
 @api_view(['GET'])
 def weather_api(request):
-    city   = request.GET.get("city", "Delhi")
+    city = (request.GET.get("city") or "Delhi").strip() or "Delhi"
+    cache_key = f"weather:{city.strip().lower() or 'delhi'}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+    api_key = getattr(settings, "OPENWEATHER_API_KEY", "").strip()
+    if not api_key:
+        return Response({"error": "OPENWEATHER_API_KEY is not configured"}, status=503)
     url    = "https://api.openweathermap.org/data/2.5/weather"
-    params = {"q": city, "appid": settings.OPENWEATHER_API_KEY, "units": "metric"}
+    params = {"q": city, "appid": api_key, "units": "metric"}
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = external_get(url, params=params, timeout=5)
         data = response.json()
         if response.status_code != 200:
-            return Response({"error": "City not found"}, status=400)
-        return Response({
+            message = data.get("message") if isinstance(data, dict) else None
+            if response.status_code in (401, 403):
+                return Response({"error": "OpenWeather API key is invalid or unauthorized"}, status=503)
+            return Response({"error": message or "City not found"}, status=400)
+        payload = {
             "city":        city,
             "temperature": data["main"]["temp"],
             "feels_like":  data["main"]["feels_like"],
             "humidity":    data["main"]["humidity"],
             "description": data["weather"][0]["description"],
             "icon":        data["weather"][0]["icon"]
-        })
+        }
+        cache.set(cache_key, payload, 600)
+        return Response(payload)
     except Exception:
         return Response({"error": "Weather service unavailable"}, status=500)
 
 
 @api_view(['GET'])
 def metal_ticker(request):
+    cache_key = "metal_ticker:latest"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
     try:
         fetch_and_store_metal_rates()
     except Exception:
         pass
     gold   = MetalRate.objects.filter(metal_type="gold").order_by('-created_at').first()
     silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
-    return Response({
+    payload = {
         "gold": {
             "price":          gold.price if gold else 0,
             "change":         gold.change if gold else 0,
@@ -748,10 +829,11 @@ def metal_ticker(request):
             "percent_change": silver.percent_change if silver else 0,
             "trend":          silver.trend if silver else "neutral"
         }
-    })
+    }
+    cache.set(cache_key, payload, 600)
+    return Response(payload)
 
-
-from .utils import fetch_and_store_metal_rates, fetch_index_data
+from .utils import external_get, fetch_and_store_metal_rates, fetch_index_data
 
 
 @api_view(['GET'])
@@ -763,7 +845,7 @@ def update_metal_rates(request):
 @api_view(['GET'])
 def market_indices(request):
     nifty_symbols = getattr(settings, 'ALPHA_VANTAGE_NIFTY_SYMBOLS', ['NIFTYBEES.BSE', 'NIFTYBEES.NSE'])
-    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXETF.BSE', 'SENSEXETF.NSE'])
+    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXBEES.BSE', 'SENSEXBEES.NSE'])
     try:
         nifty = fetch_index_data(nifty_symbols, cache_prefix='market_index:nifty')
     except Exception as exc:
@@ -2016,3 +2098,21 @@ def newsletter_history(request):
         return JsonResponse({'history': list(logs)})
     except Exception as e:
         return JsonResponse({'history': [], 'note': str(e)})
+
+@api_view(['GET'])
+def article_detail_by_slug(request, slug):
+    cache_key = f"article:slug:{slug}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+    try:
+        article = Article.objects.select_related(
+            'author'
+        ).prefetch_related('categories').get(
+            slug=slug, status='published'
+        )
+    except Article.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+    serializer = ArticleSerializer(article, context={'request': request})
+    cache.set(cache_key, serializer.data, 300)
+    return Response(serializer.data)

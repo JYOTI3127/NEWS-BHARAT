@@ -735,18 +735,24 @@ def update_ad_slot(request):
 
 @api_view(['GET'])
 def weather_api(request):
-    city   = request.GET.get("city", "Delhi")
+    city = (request.GET.get("city") or "Delhi").strip() or "Delhi"
     cache_key = f"weather:{city.strip().lower() or 'delhi'}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
+    api_key = getattr(settings, "OPENWEATHER_API_KEY", "").strip()
+    if not api_key:
+        return Response({"error": "OPENWEATHER_API_KEY is not configured"}, status=503)
     url    = "https://api.openweathermap.org/data/2.5/weather"
-    params = {"q": city, "appid": settings.OPENWEATHER_API_KEY, "units": "metric"}
+    params = {"q": city, "appid": api_key, "units": "metric"}
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = external_get(url, params=params, timeout=5)
         data = response.json()
         if response.status_code != 200:
-            return Response({"error": "City not found"}, status=400)
+            message = data.get("message") if isinstance(data, dict) else None
+            if response.status_code in (401, 403):
+                return Response({"error": "OpenWeather API key is invalid or unauthorized"}, status=503)
+            return Response({"error": message or "City not found"}, status=400)
         payload = {
             "city":        city,
             "temperature": data["main"]["temp"],
@@ -790,8 +796,7 @@ def metal_ticker(request):
     cache.set(cache_key, payload, 600)
     return Response(payload)
 
-
-from .utils import fetch_and_store_metal_rates, fetch_index_data
+from .utils import external_get, fetch_and_store_metal_rates, fetch_index_data
 
 
 @api_view(['GET'])
@@ -803,7 +808,7 @@ def update_metal_rates(request):
 @api_view(['GET'])
 def market_indices(request):
     nifty_symbols = getattr(settings, 'ALPHA_VANTAGE_NIFTY_SYMBOLS', ['NIFTYBEES.BSE', 'NIFTYBEES.NSE'])
-    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXETF.BSE', 'SENSEXETF.NSE'])
+    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXBEES.BSE', 'SENSEXBEES.NSE'])
     try:
         nifty = fetch_index_data(nifty_symbols, cache_prefix='market_index:nifty')
     except Exception as exc:

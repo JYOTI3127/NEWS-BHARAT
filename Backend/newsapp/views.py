@@ -99,9 +99,12 @@ def category_restore(request, cat_id):
 @api_view(['GET'])
 def category_posts(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
+ 
+    # select_related + prefetch_related → N+1 queries khatam
     articles = Article.objects.filter(
         categories=cat, status='published'
-    ).order_by('-created_at')[:10]
+    ).select_related('author').prefetch_related('categories').order_by('-created_at')[:10]
+ 
     serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
     return Response({
         'posts': serializer.data,
@@ -336,27 +339,35 @@ def article_list(request):
 @api_view(['GET'])
 def articles_by_state(request):
     state = request.GET.get('state')
-    
-    # State nahi di → states list return karo
+ 
+    # State nahi di → states list return karo (same as before)
     if not state:
         try:
             category = Category.objects.get(slug='state-of-bharat')
             return Response(category.sub_categories)
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=404)
-    
-    # State di → us state ke articles
+ 
+    # Cache check
+    cache_key = f"articles:state:{state}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+ 
+    # select_related + prefetch_related add kiya → N+1 queries band
     articles = Article.objects.filter(
         status='published',
         categories__slug='state-of-bharat',
-    )
-    
+    ).select_related('author').prefetch_related('categories')
+ 
+    # Filtering logic bilkul same hai
     filtered = [
         a for a in articles
         if state in (a.selected_subcategories or {}).get('subs', {}).get('3', [])
     ]
-    
+ 
     serializer = ArticleMinSerializer(filtered, many=True, context={'request': request})
+    cache.set(cache_key, serializer.data, 300)  # 5 minute cache
     return Response(serializer.data)
 
 
@@ -365,19 +376,27 @@ def dashboard_articles(request):
     user = request.user
     if not user.is_authenticated:
         return Response({"error": "Login required"}, status=401)
-
+ 
+    cache_key = f"dashboard:articles:{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+ 
     if user.is_superuser:
-        articles = Article.objects.all()
+        articles = Article.objects.all().order_by('-created_at')[:50]
     else:
         profile = user.profile
         if profile.roles.filter(name="Reporter").exists():
-            articles = Article.objects.filter(assigned_to=user)
+            articles = Article.objects.filter(
+                assigned_to=user
+            ).order_by('-created_at')[:50]
         elif profile.roles.filter(name="Editor").exists():
-            articles = Article.objects.all()
+            articles = Article.objects.all().order_by('-created_at')[:50]
         else:
             articles = Article.objects.none()
 
-    serializer = ArticleSerializer(articles, many=True)
+    serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
+    cache.set(cache_key, serializer.data, 120) 
     return Response(serializer.data)
 
 

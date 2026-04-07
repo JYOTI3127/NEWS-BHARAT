@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
-import "../src/style.css";
+import "./style.css" 
 
 
 
@@ -109,6 +109,8 @@ function Layout() {
           <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/tag/:tagName" element={<TagPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
+          <Route path="/news/:categorySlug/:slug" element={<ArticleDetails />} />
+          <Route path="/news/:slug" element={<ArticleDetails />} />
           <Route path="/article/:categorySlug/:slug" element={<ArticleDetails />} />
           <Route path="/article/:slug" element={<ArticleDetails />} />
           <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />

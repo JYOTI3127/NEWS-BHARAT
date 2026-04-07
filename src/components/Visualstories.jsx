@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-    FaChevronLeft,
-    FaChevronRight,
-    FaCirclePlay,
-    FaCircle,
-} from "react-icons/fa6";
+import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
 import { API_BASE, apiUrl } from "../lib/api";
 const CATEGORY_SLUG = "bharat-economy";
 const LIVE_CRICKET_API = apiUrl("/live-cricket/");
@@ -99,7 +94,7 @@ const MatchCard = ({ match, type }) => {
 
     return (
         <>
-            <div className="px-2.5 py-2 border-b border-gray-200 bg-gray-50">
+            <div className="px-2 py-1.5 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-1.5 mb-0.5">
                     {isLive ? (
                         <>
@@ -123,8 +118,8 @@ const MatchCard = ({ match, type }) => {
                 )}
             </div>
 
-            <div className="px-2.5 py-2.5">
-                <div className="flex items-center justify-between gap-1.5">
+            <div className="px-2 py-2">
+                <div className="flex items-center justify-between gap-1">
                     <div className="flex-1">
                         {team1?.img && (
                             <img
@@ -197,7 +192,7 @@ const MultiMatch = ({ matches, type }) => {
         <>
             <MatchCard match={matches[idx]} type={type} />
             {matches.length > 1 && (
-                <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-gray-100">
+                <div className="flex items-center justify-between px-2 py-1 border-t border-gray-100">
                     <button
                         onClick={() => setIdx(i => Math.max(0, i - 1))}
                         disabled={idx === 0}
@@ -344,8 +339,13 @@ export default function VisualStoriesWithScore() {
     const sectionStyle = is2K
         ? { width: "min(1820px, calc(100% - 96px))", margin: "0 auto 24px" }
         : { margin: "0 3% 22px" };
+    const desktopLayoutStyle = isMobile
+        ? undefined
+        : is2K
+            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: "16px", alignItems: "stretch" }
+            : { display: "flex", alignItems: "flex-start", gap: "12px" };
     const storiesWrapStyle = is2K
-        ? { padding: "10px", borderRadius: "12px" }
+        ? { padding: "10px", borderRadius: "12px", minHeight: "430px" }
         : { padding: "8px", borderRadius: "10px" };
     const mobileStoriesWrapStyle = isMobile
         ? {
@@ -364,7 +364,7 @@ export default function VisualStoriesWithScore() {
 
     return (
         <div className="font-sans" style={sectionStyle}>
-            <div className={`flex gap-3 ${isMobile ? "flex-col" : "flex-row items-start"}`}>
+            <div className={isMobile ? "flex flex-col gap-3" : ""} style={desktopLayoutStyle}>
 
                 {/* Left: Visual Stories */}
                 <div className="flex-1 min-w-0">
@@ -457,7 +457,7 @@ export default function VisualStoriesWithScore() {
                                         {/* Title — fixed height neeche */}
                                         <div
                                             style={{
-                                                height: is4K ? 82 : is2K ? 62 : 54,
+                                                height: is4K ? 82 : is2K ? 72 : 54,
                                                 overflow: "hidden",
                                                 padding: is4K ? "10px 10px 0" : is2K ? "8px 8px 0" : "6px 6px 0",
                                             }}
@@ -499,9 +499,9 @@ export default function VisualStoriesWithScore() {
                 <div
                     className="flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden"
                     style={{
-                        width: is2K ? "260px" : scoreCardWidth,
-                        marginTop: isMobile ? "12px" : "3%",
-                        height: is2K ? "430px" : "295px",
+                        width: is2K ? "280px" : scoreCardWidth,
+                        marginTop: isMobile ? "12px" : is2K ? "30px" : "35px",
+                        height: is2K ? "450px" : "295px",
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
@@ -510,7 +510,7 @@ export default function VisualStoriesWithScore() {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(i)}
-                                className={`flex-1 py-1.5 border-none cursor-pointer transition text-center ${activeTab === i
+                                className={`flex-1 py-1 border-none cursor-pointer transition text-center ${activeTab === i
                                     ? "bg-red-600 text-white"
                                     : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                                     }`}

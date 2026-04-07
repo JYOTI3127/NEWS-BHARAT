@@ -26,6 +26,7 @@
     "@eslint/js": "^9.39.1",
     "@prerenderer/prerenderer": "^1.2.5",
     "@prerenderer/renderer-puppeteer": "^1.2.4",
+    "@rollup/plugin-terser": "^1.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -36,6 +37,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
+    "terser": "^5.46.1",
     "vite": "^7.3.1"
   }
 }

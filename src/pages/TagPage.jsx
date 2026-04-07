@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Clock, Newspaper, Tag, ArrowLeft } from "lucide-react";
-import { API_BASE } from "../lib/api";
+import { apiUrl } from "../lib/api";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleString("en-IN", {
@@ -14,30 +14,99 @@ const getArticleImage = (article) => {
   return candidates.find((v) => typeof v === "string" && v.trim().length > 0) || null;
 };
 
+const getArticleTags = (article) => {
+  if (Array.isArray(article?.tags_list)) {
+    return article.tags_list
+      .map((tag) =>
+        typeof tag === "string"
+          ? tag.trim()
+          : String(tag?.name || tag?.tag || tag?.title || "").trim()
+      )
+      .filter(Boolean);
+  }
+
+  return String(article?.tags || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+};
+
+const normalizeTag = (value) =>
+  String(value || "")
+    .replace(/\+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const getArticleList = (data) =>
+  Array.isArray(data)
+    ? data
+    : Array.isArray(data?.value)
+      ? data.value
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
+
+const fetchAllArticles = async (signal) => {
+  const allArticles = [];
+  const seen = new Set();
+  let nextUrl = apiUrl("/articles/?limit=200");
+  let pages = 0;
+
+  while (nextUrl && pages < 10) {
+    const response = await fetch(nextUrl, { signal });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch articles: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const list = getArticleList(data);
+
+    list.forEach((article) => {
+      const key = String(article?.id || article?.slug || "").trim();
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      allArticles.push(article);
+    });
+
+    nextUrl = typeof data?.next === "string" && data.next.trim() ? data.next.trim() : "";
+    pages += 1;
+  }
+
+  return allArticles;
+};
+
 export default function TagPage() {
   const { tagName } = useParams();
   const decoded = decodeURIComponent(tagName || "");
+  const normalizedTag = normalizeTag(decoded);
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     window.scrollTo(0, 0);
     setLoading(true);
-    fetch(`${API_BASE}/articles/`)
-      .then((r) => r.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.results || [];
-        const filtered = list.filter((a) =>
-          Array.isArray(a.tags_list) &&
-          a.tags_list.some(
-            (t) => t.toLowerCase() === decoded.toLowerCase()
-          )
-        );
+    fetchAllArticles(controller.signal)
+      .then((list) => {
+        const filtered = list.filter((a) => {
+          const tags = getArticleTags(a);
+          return tags.some((tag) => normalizeTag(tag) === normalizedTag);
+        });
         setArticles(filtered);
       })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Tag page articles fetch failed:", error);
+          setArticles([]);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [decoded]);
+
+    return () => controller.abort();
+  }, [normalizedTag]);
 
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">

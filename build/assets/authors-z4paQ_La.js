@@ -1,0 +1,1 @@
+const a=a=>String(a?.display_author_name||a?.author_display_name||a?.author_name||a?.posted_by_fullname||a?.author?.username||"News4Bharat").trim(),e=a=>String(a||"").trim().toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""),r=r=>e(a(r));export{a,e as b,r as g};

@@ -186,7 +186,7 @@ export default function NewsBanner() {
         style={{ cursor: "pointer" }}
       >
         <img
-          key={current}
+          // key={current}
           src={slide.image}
           alt={slide.title}
 

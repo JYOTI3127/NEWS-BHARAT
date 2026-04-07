@@ -218,9 +218,9 @@ export default function CategoryPage() {
                     : <div className="w-full h-full flex items-center justify-center bg-[#f0ece8]"><Newspaper size={40} color="#ccc" /></div>
                   }
                   <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[rgba(0,0,0,0.3)] to-transparent" />
-                  <span className="absolute top-3 left-3 bg-[#D80100] text-white text-[10px] font-bold px-[10px] py-[4px] rounded-[4px] uppercase tracking-[1px]">
+                  {/* <span className="absolute top-3 left-3 bg-[#D80100] text-white text-[10px] font-bold px-[10px] py-[4px] rounded-[4px] uppercase tracking-[1px]">
                     Featured
-                  </span>
+                  </span> */}
                 </div>
                 <div className="p-4 sm:p-[20px_24px_24px]">
                   <h2 className="text-[clamp(16px,2.5vw,22px)] font-extrabold text-[#111] mb-2 leading-[1.4] tracking-[-0.3px]">

@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {
-    FiCheck, FiShield, FiEye, FiUsers, FiAlertCircle,
-    FiHeart, FiRefreshCw, FiSearch, FiFileText, FiMail
-} from "react-icons/fi";
+import { FiCheck, FiShield, FiEye, FiUsers, FiAlertCircle, FiHeart, FiRefreshCw, FiSearch, FiFileText, FiMail } from "react-icons/fi";
 import "../style.css";
 
 /* ── FADE IN HOOK ── */

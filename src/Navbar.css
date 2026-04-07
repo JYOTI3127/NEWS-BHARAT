@@ -43,14 +43,33 @@
 
 .main-nav-shell {
   justify-content: space-between;
+  gap: 18px;
 }
 
 .logo-full {
   display: block;
+  position: relative;
 }
 
 .logo-scroll {
   display: block;
+}
+
+.logo-full-link {
+  position: absolute;
+  top: -52px;
+  left: 0;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(11, 42, 95, 0.12);
+  overflow: hidden;
+  padding: 5px;
+  z-index: 999;
 }
 
 /* =============================================
@@ -379,17 +398,13 @@
 }
 
 .logo-full img {
-  height: 110px;
-  width: auto;
-  position: absolute;
-  top: -52px;
-  left: 0;
-  mix-blend-mode: screen;
+  width: 100%;
+  height: 100%;
+  position: static;
   object-fit: contain;
-  z-index: 999;
-  background-color: white !important;
-  border-radius: 50%;
-  padding: 6px;
+  display: block;
+  background: transparent !important;
+  mix-blend-mode: normal;
 }
 
 .logo-scroll img {
@@ -420,11 +435,13 @@
 .nav-links {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   list-style: none;
   overflow-x: auto;
   scrollbar-width: none;
   flex: 1;
   flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nav-links::-webkit-scrollbar {
@@ -1046,8 +1063,15 @@
   }
 
   .logo-full img {
-    height: 92px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .logo-full-link {
     top: -42px;
+    width: 92px;
+    height: 92px;
+    padding: 4px;
   }
 
   .nav-link {
@@ -1322,8 +1346,15 @@
   }
 
   .logo-full img {
-    height: 92px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .logo-full-link {
     top: -42px;
+    width: 92px;
+    height: 92px;
+    padding: 4px;
   }
 
   .nav-link {
@@ -1333,16 +1364,41 @@
 }
 
 @media (min-width: 1441px) and (max-width: 2560px) {
-  .header-shell {
-    width: min(1820px, calc(100% - 24px));
+  .header-wrapper.is-2k .header-shell {
+    width: min(2140px, calc(100% - 72px));
   }
 
-  .main-nav {
+  .header-wrapper.is-2k .main-nav {
     min-height: 44px;
   }
 
-  .nav-left {
-    gap: 22px;
+  .header-wrapper.is-2k .main-nav-shell {
+    gap: 12px;
+  }
+
+  .header-wrapper.is-2k .nav-left {
+    gap: 16px;
+    min-width: 132px;
+  }
+
+  .header-wrapper.is-2k .logo-area {
+    min-width: 96px;
+  }
+
+  .header-wrapper.is-2k .logo-full-link {
+    top: -46px;
+    width: 98px;
+    height: 98px;
+    padding: 4px;
+  }
+
+  .header-wrapper.is-2k .nav-links {
+    gap: 1px;
+  }
+
+  .header-wrapper.is-2k .nav-link {
+    padding: 14px 5px;
+    font-size: 11px;
   }
 
   .search-box {

@@ -9,6 +9,11 @@ import {
 import { API_BASE, apiUrl } from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
 
+const SITE_URL = "https://news4bharat.com";
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
+const SITE_NAME = "News4Bharat";
+const TWITTER_HANDLE = "@news4_bharat";
+
 const toCategoryArray = (categoryDetails) => {
   if (Array.isArray(categoryDetails)) return categoryDetails;
   return categoryDetails ? [categoryDetails] : [];
@@ -31,6 +36,34 @@ const getPlainText = (value) =>
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const normalizePathname = (value) => {
+  const segments = String(value || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments.length > 0 ? `/${segments.join("/")}` : "";
+};
+
+const truncateText = (value, maxLength) => {
+  const text = getPlainText(value);
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+};
+
+const toAbsoluteSiteUrl = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
+
+  try {
+    return new URL(normalized, SITE_URL).toString();
+  } catch {
+    return null;
+  }
+};
 
 const getArticleImage = (article) => {
   const candidates = [article?.image_url, article?.image];
@@ -104,19 +137,34 @@ const isInPrimaryCategory = (candidate, primaryCategory) => {
 
 // ✅ BUG FIX: Pehle apiCanonical valid ho toh use return karo — pehle hamesha fallback return ho raha tha
 const getArticleCanonicalUrl = (article, articlePathSlug) => {
-  const fallback = `https://news4bharat.com/article/${articlePathSlug}`;
+  const fallbackPath = normalizePathname(`/article/${articlePathSlug}`) || "/article";
+  const fallback = `${SITE_URL}${fallbackPath}`;
   const apiCanonical = String(article?.canonical_url || "").trim();
 
   if (!apiCanonical) return fallback;
 
   try {
     const parsed = new URL(apiCanonical);
-    if (parsed.origin !== "https://news4bharat.com") return fallback;
-    if (parsed.pathname === "/" || parsed.pathname === "") return fallback;
-    return apiCanonical; 
+    if (parsed.origin !== SITE_URL) return fallback;
+    const cleanPath = normalizePathname(parsed.pathname);
+    if (!cleanPath || cleanPath === "/") return fallback;
+    return `${parsed.origin}${cleanPath}`;
   } catch {
     return fallback;
   }
+};
+
+const getRobotsContent = (article) => {
+  const parts = [
+    article?.noindex ? "noindex" : "index",
+    article?.nofollow ? "nofollow" : "follow",
+  ];
+
+  if (!article?.noindex) {
+    parts.push("max-snippet:-1", "max-image-preview:large");
+  }
+
+  return parts.join(",");
 };
 
 const XIcon = ({ size = 15 }) => (
@@ -715,11 +763,15 @@ export default function ArticleDetails() {
   }
 
   const date = article.published_at || article.created_at;
+  const modifiedDate = article.updated_at || article.published_at || article.created_at;
   const imageUrl = getArticleImage(article);
   const imageAlt = article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
+  const absoluteImageUrl = toAbsoluteSiteUrl(imageUrl) || DEFAULT_SHARE_IMAGE;
   const normalizedContent = normalizeArticleContent(article.content);
+  const plainArticleContent = getPlainText(article.content);
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
+  const categoryName = primaryCategory?.name?.trim() || "";
   const articlePathSlug = article?.slug || routeParam;
   const canonicalUrl = getArticleCanonicalUrl(article, articlePathSlug);
   const fallbackSidebarArticles = sidebarBaseArticles.slice(0, 3);
@@ -739,27 +791,54 @@ export default function ArticleDetails() {
     article.posted_by_fullname?.trim() ||
     "News4Bharat";
   const authorPosition = article.author_display_position?.trim() || "";
-  const authorBio = article.author_display_bio?.trim() || "";
   const authorPagePath = `/author/${buildAuthorSlug(authorDisplayName)}`;
-  const authorLinks = [
-    { key: "twitter", href: article.author_display_twitter?.trim() || "", label: "X", icon: <XIcon size={14} /> },
-    { key: "linkedin", href: article.author_display_linkedin?.trim() || "", label: "LinkedIn", icon: <Linkedin size={14} /> },
-    { key: "instagram", href: article.author_display_instagram?.trim() || "", label: "Instagram", icon: <Instagram size={14} /> },
-    { key: "facebook", href: article.author_display_facebook?.trim() || "", label: "Facebook", icon: <Facebook size={14} /> },
-    { key: "youtube", href: article.author_display_youtube?.trim() || "", label: "YouTube", icon: <Youtube size={14} /> },
-  ].filter((item) => item.href);
+  const absoluteAuthorUrl =
+    authorDisplayName === SITE_NAME
+      ? SITE_URL
+      : `${SITE_URL}${authorPagePath}`;
+  const authorPhotoUrl = toAbsoluteSiteUrl(article.author_display_photo?.trim());
   const shellStyle = is2K
     ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
     : undefined;
+  const heroImageWrapStyle = is2K
+    ? {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }
+    : undefined;
+  const heroImageCardClassName = is2K
+    ? "w-fit max-w-full mx-auto rounded-xl overflow-hidden mb-7 shadow-sm"
+    : "w-full rounded-xl overflow-hidden mb-7 shadow-sm";
+  const heroImageStyle = is2K
+    ? {
+        width: "min(100%, 1480px)",
+        height: "auto",
+        maxWidth: "100%",
+        maxHeight: "min(72vh, 820px)",
+        objectFit: "contain",
+        objectPosition: "center",
+        margin: "0 auto",
+      }
+    : undefined;
+
+  const articleSummaryText =
+    getPlainText(article.subtitle) ||
+    getPlainText(article.description) ||
+    getPlainText(article.summary) ||
+    getPlainText(article.excerpt);
 
   const visibleSummary =
-    getPlainText(article.subtitle) ||
-    getPlainText(article.content).slice(0, 155) ||
+    articleSummaryText ||
+    truncateText(plainArticleContent, 220) ||
     article.title;
 
+  const seoTitle = `${article.title} | ${SITE_NAME}`;
   const metaDescription =
     getPlainText(article.meta_description) ||
-    visibleSummary;
+    articleSummaryText ||
+    getPlainText(plainArticleContent) ||
+    article.title;
   const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
     ? article.secondary_keywords_list.filter(Boolean)
     : String(article.secondary_keywords || "")
@@ -777,17 +856,75 @@ export default function ArticleDetails() {
         .filter(Boolean)
     )
   ).join(", ");
-  const robotsContent = `${article.noindex ? "noindex" : "index"},${article.nofollow ? "nofollow" : "follow"},max-image-preview:large`;
+  const articleTags = tags.filter(Boolean);
+  const robotsContent = getRobotsContent(article);
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": ["NewsArticle", "Article"],
+    "@id": `${canonicalUrl}#article`,
+    headline: article.title,
+    alternativeHeadline: visibleSummary || article.title,
+    description: metaDescription,
+    articleBody: truncateText(plainArticleContent, 5000),
+    inLanguage: "en-IN",
+    datePublished: date || "",
+    dateModified: modifiedDate || "",
+    url: canonicalUrl,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonicalUrl,
+    },
+    author: {
+      "@type": authorDisplayName === SITE_NAME ? "Organization" : "Person",
+      name: authorDisplayName,
+      url: absoluteAuthorUrl,
+      ...(authorPosition ? { jobTitle: authorPosition } : {}),
+      ...(authorPhotoUrl
+        ? {
+            image: {
+              "@type": "ImageObject",
+              url: authorPhotoUrl,
+            },
+          }
+        : {}),
+    },
+    publisher: {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/Fevicon (1).png`,
+      },
+    },
+    isAccessibleForFree: !article.is_paid,
+    ...(absoluteImageUrl
+      ? {
+          image: {
+            "@type": "ImageObject",
+            url: absoluteImageUrl,
+            caption: imageAlt,
+          },
+          thumbnailUrl: absoluteImageUrl,
+        }
+      : {}),
+    ...(categoryName ? { articleSection: categoryName } : {}),
+    ...(metaKeywords ? { keywords: metaKeywords } : {}),
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
 
       {/* ✅ SEO HELMET */}
       <Helmet>
-        <title>{article.title} | News4Bharat</title>
+        <title>{seoTitle}</title>
         <meta name="description" content={metaDescription} />
+        <meta name="author" content={authorDisplayName} />
         {metaKeywords && <meta name="keywords" content={metaKeywords} />}
-        {tags.length > 0 && <meta name="news_keywords" content={tags.join(", ")} />}
+        {articleTags.length > 0 && (
+          <meta name="news_keywords" content={articleTags.join(", ")} />
+        )}
         {article.focus_keyword && (
           <meta name="focus_keyword" content={article.focus_keyword} />
         )}
@@ -800,53 +937,36 @@ export default function ArticleDetails() {
         <link rel="canonical" href={canonicalUrl} />
         <meta name="robots" content={robotsContent} />
         <meta property="og:type" content="article" />
-        <meta property="og:title" content={article.title} />
+        <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:url" content={canonicalUrl} />
-        {imageUrl && <meta property="og:image" content={imageUrl} />}
-        <meta property="og:site_name" content="News4Bharat" />
+        <meta property="og:image" content={absoluteImageUrl} />
+        <meta property="og:image:alt" content={imageAlt} />
+        <meta property="og:site_name" content={SITE_NAME} />
         <meta property="og:locale" content="en_IN" />
+        <meta property="article:author" content={authorDisplayName} />
+        {categoryName && <meta property="article:section" content={categoryName} />}
+        {articleTags.map((tag) => (
+          <meta key={`article-tag-${tag}`} property="article:tag" content={tag} />
+        ))}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:site" content={TWITTER_HANDLE} />
+        <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={metaDescription} />
-        {imageUrl && <meta name="twitter:image" content={imageUrl} />}
-        {article.published_at && (
-          <meta property="article:published_time" content={article.published_at} />
+        <meta name="twitter:url" content={canonicalUrl} />
+        <meta name="twitter:image" content={absoluteImageUrl} />
+        <meta name="twitter:image:alt" content={imageAlt} />
+        {date && (
+          <meta property="article:published_time" content={date} />
         )}
-        {(article.updated_at || article.published_at) && (
+        {modifiedDate && (
           <meta
             property="article:modified_time"
-            content={article.updated_at || article.published_at}
+            content={modifiedDate}
           />
         )}
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "NewsArticle",
-            "headline": article.title,
-            "description": metaDescription,
-            "image": imageUrl ? [imageUrl] : [],
-            "datePublished": article.published_at || article.created_at || "",
-            "dateModified": article.updated_at || article.published_at || article.created_at || "",
-            "author": {
-              "@type": authorDisplayName === "News4Bharat" ? "Organization" : "Person",
-              "name": authorDisplayName,
-              "url": "https://news4bharat.com",
-            },
-            "publisher": {
-              "@type": "Organization",
-              "name": "News4Bharat",
-              "logo": {
-                "@type": "ImageObject",
-                "url": "https://news4bharat.com/Fevicon (1).png",
-              },
-            },
-            "mainEntityOfPage": {
-              "@type": "WebPage",
-              "@id": canonicalUrl,
-            },
-            "url": canonicalUrl,
-          })}
+          {JSON.stringify(articleSchema)}
         </script>
       </Helmet>
 
@@ -882,7 +1002,7 @@ export default function ArticleDetails() {
           </h1>
 
           {visibleSummary && (
-            <p className="text-[15px] text-gray-500 mb-4 leading-[1.7]">
+            <p className="article-summary text-[15px] text-gray-500 mb-4 leading-[1.7]">
               {visibleSummary}
             </p>
           )}
@@ -907,17 +1027,20 @@ export default function ArticleDetails() {
           </div>
 
           {imageUrl && (
-            <div className="w-full rounded-xl overflow-hidden mb-7 shadow-sm">
-              <img
-                src={imageUrl}
-                alt={imageAlt}
-                className="w-full object-cover max-h-[480px]"
-                loading="eager"
-                decoding="async"
-                fetchPriority="high"
-                width={1200}
-                height={480}
-              />
+            <div className={heroImageCardClassName}>
+              <div style={heroImageWrapStyle}>
+                <img
+                  src={imageUrl}
+                  alt={imageAlt}
+                  className={is2K ? "block" : "w-full object-cover max-h-[480px]"}
+                  style={heroImageStyle}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  width={1200}
+                  height={480}
+                />
+              </div>
               {imageSource && (
                 <div className="bg-white px-4 py-2 text-[12px] text-gray-500 border-t border-gray-100">
                   Source: {imageSource}

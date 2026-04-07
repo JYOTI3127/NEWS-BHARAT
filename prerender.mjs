@@ -23,21 +23,85 @@ const getCleanPathSegments = (value) =>
     .map((segment) => segment.trim())
     .filter(Boolean)
 
+const normalizePathname = (value) => {
+  const segments = getCleanPathSegments(value)
+  return segments.length > 0 ? `/${segments.join('/')}` : ''
+}
+
 const getArticleSlugFromRoute = (route) => {
-  const articlePath = String(route || '').replace(/^\/article\//, '')
+  const articlePath = String(route || '').replace(/^\/(?:article|news)\//, '')
   const segments = getCleanPathSegments(articlePath)
   return segments[segments.length - 1] || ''
 }
 
+const getArticleCanonicalUrl = (article, route) => {
+  const normalizedRoute = normalizePathname(route)
+  const fallback = `https://news4bharat.com${normalizedRoute || '/'}`
+  const apiCanonical = String(article?.canonical_url || '').trim()
+
+  if (!apiCanonical) return fallback
+
+  try {
+    const parsed = new URL(apiCanonical)
+    if (parsed.origin !== 'https://news4bharat.com') return fallback
+    const cleanPath = normalizePathname(parsed.pathname)
+    if (!cleanPath || cleanPath === '/') return fallback
+    return `${parsed.origin}${cleanPath}`
+  } catch {
+    return fallback
+  }
+}
+
+const getRobotsContent = (article) => {
+  const parts = [
+    article?.noindex ? 'noindex' : 'index',
+    article?.nofollow ? 'nofollow' : 'follow',
+  ]
+
+  if (!article?.noindex) {
+    parts.push('max-snippet:-1', 'max-image-preview:large')
+  }
+
+  return parts.join(',')
+}
+
 const getArticleRoutes = (article) => {
   const segments = getCleanPathSegments(article?.slug)
+  const routes = new Set()
+  const canonicalPath = (() => {
+    const apiCanonical = String(article?.canonical_url || '').trim()
+    if (!apiCanonical) return ''
 
-  if (segments.length === 0) return []
-  if (segments.length === 1) return [`/article/${segments[0]}`]
-  if (segments.length === 2) return [`/article/${segments.join('/')}`]
+    try {
+      const parsed = new URL(apiCanonical)
+      if (parsed.origin !== 'https://news4bharat.com') return ''
+      const cleanPath = normalizePathname(parsed.pathname)
+      return cleanPath && cleanPath !== '/' ? cleanPath : ''
+    } catch {
+      return ''
+    }
+  })()
+
+  if (canonicalPath) {
+    routes.add(canonicalPath)
+  }
+
+  if (segments.length === 0) return [...routes]
+  if (segments.length === 1) {
+    routes.add(`/article/${segments[0]}`)
+    routes.add(`/news/${segments[0]}`)
+    return [...routes]
+  }
+  if (segments.length === 2) {
+    routes.add(`/article/${segments.join('/')}`)
+    routes.add(`/news/${segments.join('/')}`)
+    return [...routes]
+  }
 
   // Extra nested slug app routes support nahi karte, isliye safe tail route use karo.
-  return [`/article/${segments[segments.length - 1]}`]
+  routes.add(`/article/${segments[segments.length - 1]}`)
+  routes.add(`/news/${segments[segments.length - 1]}`)
+  return [...routes]
 }
 
 // Retry logic for API calls
@@ -60,11 +124,27 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   const SITE_NAME = 'News4Bharat'
   const DEFAULT_IMAGE = 'https://news4bharat.com/news4bharat-share.png'
   const BASE_URL = 'https://news4bharat.com'
+  const TWITTER_HANDLE = '@news4_bharat'
   const normalizeText = (value) =>
     String(value || '')
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
+  const truncateText = (value, maxLength) => {
+    const text = normalizeText(value)
+    if (!text || text.length <= maxLength) return text
+    return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`
+  }
+  const toAbsoluteUrl = (value) => {
+    const normalized = String(value || '').trim()
+    if (!normalized) return ''
+
+    try {
+      return new URL(normalized, BASE_URL).toString()
+    } catch {
+      return ''
+    }
+  }
 
   // Homepage
   if (route === '/') {
@@ -76,11 +156,12 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       ogType: 'website',
       lcpImage: siteData.homepageHeroImage || DEFAULT_IMAGE,
       robots: 'index,follow,max-image-preview:large',
+      twitterSite: TWITTER_HANDLE,
     }
   }
 
   // Article page
-  if (route.startsWith('/article/')) {
+  if (route.startsWith('/article/') || route.startsWith('/news/')) {
     const slug = getArticleSlugFromRoute(route)
     const article = articleMap.get(slug)
 
@@ -93,13 +174,13 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       const description = (
         article.meta_description ||
         article.subtitle ||
-        normalizeText(article.content).slice(0, 155) ||
+        truncateText(article.content, 160) ||
         rawTitle ||
         `${SITE_NAME} - News As It Is`
       ).trim()
 
-      const image = article.image_url || article.image || DEFAULT_IMAGE
-      const canonical = `${BASE_URL}${route}`
+      const image = toAbsoluteUrl(article.image_url || article.image) || DEFAULT_IMAGE
+      const canonical = getArticleCanonicalUrl(article, route)
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
         ? article.secondary_keywords_list
         : String(article.secondary_keywords || '')
@@ -119,21 +200,40 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
             .filter(Boolean)
         )
       )
-      const robots = `${article.noindex ? 'noindex' : 'index'},${article.nofollow ? 'nofollow' : 'follow'},max-image-preview:large`
+      const robots = getRobotsContent(article)
+      const publishedAt = article.published_at || article.created_at || ''
+      const modifiedAt = article.updated_at || article.published_at || article.created_at || ''
+      const primaryCategory = Array.isArray(article.category_details)
+        ? article.category_details[0]
+        : article.category_details || article.category || null
+      const categoryName = String(primaryCategory?.name || '').trim()
+      const authorName = String(
+        article.display_author_name ||
+          article.author_display_name ||
+          article.author_name ||
+          article.posted_by_fullname ||
+          SITE_NAME
+      ).trim()
+      const articleTags = Array.from(new Set(tagKeywords))
 
       return {
         title,
         description,
         canonical,
         ogImage: image,
+        ogImageAlt: String(article.image_alt || rawTitle || SITE_NAME).trim(),
         ogType: 'article',
         robots,
+        author: authorName,
+        articleSection: categoryName,
+        articleTags,
         keywords: keywords.join(', '),
-        newsKeywords: tagKeywords.join(', '),
+        newsKeywords: articleTags.join(', '),
         focusKeyword: String(article.focus_keyword || '').trim(),
         secondaryKeywords: secondaryKeywords.join(', '),
-        publishedAt: article.published_at || '',
-        modifiedAt: article.updated_at || article.published_at || article.created_at || '',
+        publishedAt,
+        modifiedAt,
+        twitterSite: TWITTER_HANDLE,
       }
     }
 
@@ -144,6 +244,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       ogImage: DEFAULT_IMAGE,
       ogType: 'article',
       robots: 'index,follow,max-image-preview:large',
+      twitterSite: TWITTER_HANDLE,
     }
   }
 
@@ -160,6 +261,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
       robots: 'index,follow,max-image-preview:large',
+      twitterSite: TWITTER_HANDLE,
     }
   }
 
@@ -171,6 +273,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     ogImage: DEFAULT_IMAGE,
     ogType: 'website',
     robots: 'index,follow,max-image-preview:large',
+    twitterSite: TWITTER_HANDLE,
   }
 }
 
@@ -185,10 +288,19 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   const safeFocusKeyword = String(meta.focusKeyword || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
   const safeSecondaryKeywords = String(meta.secondaryKeywords || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
   const safeRobots = String(meta.robots || 'index,follow,max-image-preview:large').replace(/"/g, '&quot;').trim()
+  const safeAuthor = String(meta.author || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
+  const safeArticleSection = String(meta.articleSection || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
+  const safeOgImageAlt = String(meta.ogImageAlt || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
+  const safeTwitterSite = String(meta.twitterSite || '').replace(/"/g, '&quot;').trim()
+  const articleTags = Array.isArray(meta.articleTags) ? meta.articleTags : []
+  const safeArticleTags = articleTags
+    .map((tag) => String(tag || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim())
+    .filter(Boolean)
 
   let cleaned = html
     .replace(/<title>[\s\S]*?<\/title>/gi, '')
     .replace(/<meta[^>]+name=["']description["'][^>]*>\s*/gi, '')
+    .replace(/<meta[^>]+name=["']author["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']keywords["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']news_keywords["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']focus_keyword["'][^>]*>\s*/gi, '')
@@ -203,6 +315,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   const injectedTags = `
   <title>${safeTitle}</title>
   <meta name="description" content="${safeDesc}">
+  ${safeAuthor ? `<meta name="author" content="${safeAuthor}">` : ''}
   ${safeKeywords ? `<meta name="keywords" content="${safeKeywords}">` : ''}
   ${safeNewsKeywords ? `<meta name="news_keywords" content="${safeNewsKeywords}">` : ''}
   ${safeFocusKeyword ? `<meta name="focus_keyword" content="${safeFocusKeyword}">` : ''}
@@ -214,12 +327,19 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   <meta property="og:description" content="${safeDesc}">
   <meta property="og:url" content="${meta.canonical}">
   <meta property="og:image" content="${meta.ogImage}">
+  ${safeOgImageAlt ? `<meta property="og:image:alt" content="${safeOgImageAlt}">` : ''}
   <meta property="og:site_name" content="News4Bharat">
   <meta property="og:locale" content="en_IN">
+  ${safeAuthor ? `<meta property="article:author" content="${safeAuthor}">` : ''}
+  ${safeArticleSection ? `<meta property="article:section" content="${safeArticleSection}">` : ''}
+  ${safeArticleTags.map((tag) => `<meta property="article:tag" content="${tag}">`).join('\n  ')}
   <meta name="twitter:card" content="summary_large_image">
+  ${safeTwitterSite ? `<meta name="twitter:site" content="${safeTwitterSite}">` : ''}
   <meta name="twitter:title" content="${safeTitle}">
   <meta name="twitter:description" content="${safeDesc}">
+  <meta name="twitter:url" content="${meta.canonical}">
   <meta name="twitter:image" content="${meta.ogImage}">
+  ${safeOgImageAlt ? `<meta name="twitter:image:alt" content="${safeOgImageAlt}">` : ''}
   ${meta.publishedAt ? `<meta property="article:published_time" content="${meta.publishedAt}">` : ''}
   ${meta.modifiedAt ? `<meta property="article:modified_time" content="${meta.modifiedAt}">` : ''}`
 

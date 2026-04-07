@@ -151,17 +151,26 @@ export function EntertainmentSection() {
         margin: "0 auto 24px",
       }
     : undefined;
-  const layoutStyle = is2K ? { gap: 24, alignItems: "stretch" } : undefined;
-  const leftMidStyle = is2K
+  const layoutStyle = is2K
     ? {
-        gridTemplateColumns: "620px minmax(0, 1fr)",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) 280px",
         gap: 18,
+        alignItems: "stretch",
       }
     : undefined;
-  const featuredStyle = is2K ? { height: 330, borderRadius: 10 } : undefined;
-  const midColStyle = is2K ? { height: 438, paddingLeft: 18 } : undefined;
-  const sidebarStyle = is2K ? { width: 260, minWidth: 260, height: 452 } : undefined;
-  const sidebarScrollStyle = is2K ? { maxHeight: 408, padding: "8px 10px" } : undefined;
+  const leftMidStyle = is2K
+    ? {
+        display: "grid",
+        gridTemplateColumns: "720px minmax(0, 1fr)",
+        gap: 18,
+        alignItems: "start",
+      }
+    : undefined;
+  const featuredStyle = is2K ? { height: 360, borderRadius: 10, width: "100%" } : undefined;
+  const midColStyle = is2K ? { height: 470, paddingLeft: 18 } : undefined;
+  const sidebarStyle = is2K ? { width: 280, minWidth: 280, height: 470 } : undefined;
+  const sidebarScrollStyle = is2K ? { maxHeight: 426, padding: "8px 10px" } : undefined;
 
   return (
     <div className={`nps-entertainment${is4K ? " nps-4k" : ""}`} style={rootStyle}>

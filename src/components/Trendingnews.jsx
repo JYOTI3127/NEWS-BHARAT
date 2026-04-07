@@ -293,7 +293,8 @@ function TrendingBar({ categories, is2K, is320 }) {
 
 // ── Latest News ───────────────────────────────────────────────
 function LatestNews({ articles, loading }) {
-  const visibleArticles = articles.slice(0, 3);
+  // ✅ FIX 2: slice 3 se 5 kiya — zyada content dikhega
+  const visibleArticles = articles.slice(0, 5);
 
   return (
     <div
@@ -318,7 +319,7 @@ function LatestNews({ articles, loading }) {
 
       {loading ? (
         <div className="tn-latest-scroll">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} style={{ padding: "12px 14px", borderBottom: "1px solid #f0f0f0" }}>
               <Skeleton h="13px" w="85%" mb="7px" />
               <Skeleton h="11px" w="65%" mb="0" />
@@ -353,7 +354,6 @@ function LatestNews({ articles, loading }) {
             const isTop = i === 0;
             const hasImage = !!article.image_url;
 
-            // ✅ Link component — same tab click + right click "Open in new tab" + Ctrl+Click dono
             const Wrapper = hasImage
               ? ({ children }) => (
                   <Link
@@ -473,8 +473,8 @@ function FeatureCards({ articles, loading }) {
             : {}),
         }}
       >
-        {cards.map((card) => (
-          // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
+        {/* ✅ FIX 3: cards.map mein i add kiya — pehli image eager+high priority, baaki lazy+low */}
+        {cards.map((card, i) => (
           <Link
             key={card.id}
             to={`/article/${card.slug || card.id}`}
@@ -485,7 +485,8 @@ function FeatureCards({ articles, loading }) {
               <img
                 src={getArticleImage(card)}
                 alt={card.title}
-                loading="lazy"
+                loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : "low"}
                 decoding="async"
                 width={360}
                 height={220}
@@ -594,7 +595,6 @@ function LiveUpdates() {
               const text = item.subtitle ? item.subtitle : stripHtml(item.content);
               const hasImage = !!item.image_url;
               return hasImage ? (
-                // ✅ Link component — same tab + right click new tab + Ctrl+Click dono
                 <Link
                   key={item.id}
                   to={`/article/${item.slug || item.id}`}

@@ -178,7 +178,9 @@ const navLinks = [
 
 const LogoFull = () => (
   <div className="logo-full">
-    <Link to="/"><img src={logoBig} alt="News4Bharat Logo" width="160" height="160" loading="eager" fetchPriority="high" decoding="async" /></Link>
+    <Link to="/" className="logo-full-link">
+      <img src={logoBig} alt="News4Bharat Logo" width="160" height="160" loading="eager" fetchPriority="high" decoding="async" />
+    </Link>
   </div>
 );
 
@@ -187,6 +189,23 @@ const LogoScroll = () => (
     <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
 );
+
+const useIs2K = () => {
+  const getValue = () =>
+    typeof window !== "undefined" &&
+    window.innerWidth >= 1441 &&
+    window.innerWidth <= 2560;
+
+  const [is2K, setIs2K] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIs2K(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return is2K;
+};
 
 const Header = () => {
   const [isScrolled, setIsScrolled]           = useState(false);
@@ -205,12 +224,25 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [showResults, setShowResults]     = useState(false);
+  const is2K = useIs2K();
   const searchRef         = useRef(null);
   const searchDebounceRef = useRef(null);
   const headerRef         = useRef(null);
   const measuredHeaderHeightRef = useRef(0);
   const navigate          = useNavigate();
   const [headerHeight, setHeaderHeight] = useState(0);
+  const extra2KNavLinks = [
+    { label: "Technology", path: "/category/technology" },
+    { label: "AI", path: "/category/ai" },
+    { label: "BFSI", path: "/category/bfsi" },
+    { label: "Auto", path: "/category/automobile" },
+    { label: "Health", path: "/category/health" },
+    { label: "Education", path: "/category/education" },
+    { label: "Entertainment", path: "/category/entertainment" },
+    { label: "Bharat 2047", path: "/category/bharat-2047" },
+    { label: "Opinions", path: "/category/bharat-opinions" },
+  ];
+  const visibleNavLinks = is2K ? [...navLinks, ...extra2KNavLinks] : navLinks;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -681,7 +713,7 @@ const Header = () => {
       </aside>
 
       {/* ══ HEADER ══ */}
-      <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}`}>
+      <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}${is2K ? " is-2k" : ""}`}>
 
         <div className={tickerBarClasses}>
           <div className="header-shell ticker-shell">
@@ -770,7 +802,7 @@ const Header = () => {
           </div>
 
           <ul className="nav-links">
-            {navLinks.map((link, idx) => (
+            {visibleNavLinks.map((link, idx) => (
               <Link key={`${link.path}-${idx}`} to={link.path} className="nav-link">
                 {link.label}
               </Link>

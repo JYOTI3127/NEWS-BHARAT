@@ -4,16 +4,20 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/Fevicon (1).png" />
 
-  <!-- Preconnect -->
+  <!-- ✅ FIXED: news4bharat.cloud SABSE PEHLE hai ab (API origin priority) -->
+  <link rel="preconnect" href="https://news4bharat.cloud" crossorigin="">
+  <link rel="dns-prefetch" href="https://news4bharat.cloud">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://news4bharat.cloud">
+
+  <!-- DNS prefetch for faster third party resolution -->
+  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
 
   <!-- Fonts: load asynchronously so the Google Fonts stylesheet does not block first paint -->
-  <link rel="stylesheet"
+  <link rel="preload"
     href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
-    media="print"
-    onload="this.media='all'">
+    as="style"
+    onload="this.rel='stylesheet'">
   <noscript>
     <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">

@@ -165,6 +165,8 @@ STATICFILES_DIRS = [
 # MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 CORS_ALLOWED_ORIGINS = [
+    "https://news4bharat.cloud",
+    "https://www.news4bharat.cloud",
     "https://www.news4bharat.com",
     "https://news4bharat.com",
     "http://localhost:5173",

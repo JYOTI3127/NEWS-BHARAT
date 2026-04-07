@@ -32,6 +32,7 @@ from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 
 User = get_user_model()
 
@@ -314,16 +315,52 @@ def _save_article_from_request(request, article=None):
 def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
-        cache_key = f"articles:list:{category or 'all'}"
+        try:
+            limit = max(1, min(int(request.GET.get('limit', 50)), 100))
+        except (TypeError, ValueError):
+            limit = 50
+
+        cache_key = f"articles:list:{category or 'all'}:{limit}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        articles = Article.objects.filter(
-            status="published"
-        ).select_related('author').prefetch_related('categories')
+
+        category_qs = Category.objects.only('id', 'name', 'slug')
+        articles = (
+            Article.objects.filter(status="published")
+            .select_related('author')
+            .prefetch_related(Prefetch('categories', queryset=category_qs))
+            .only(
+                'id',
+                'title',
+                'slug',
+                'subtitle',
+                'image',
+                'image_url',
+                'image_alt',
+                'published_at',
+                'created_at',
+                'canonical_url',
+                'meta_description',
+                'focus_keyword',
+                'secondary_keywords',
+                'noindex',
+                'nofollow',
+                'in_sitemap',
+                'author__username',
+                'author__first_name',
+                'author__last_name',
+                'author_display_name',
+                'tags',
+                'is_paid',
+                'selected_subcategories',
+            )
+            .order_by('-published_at', '-created_at')
+        )
         if category:
             articles = articles.filter(categories__slug=category).distinct()
-        serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})
+
+        serializer = ArticleHomepageSerializer(articles[:limit], many=True, context={'request': request})
         cache.set(cache_key, serializer.data, 300)
         return Response(serializer.data)
 

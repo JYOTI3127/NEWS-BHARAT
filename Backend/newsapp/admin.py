@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
 from datetime import timedelta
@@ -17,6 +18,7 @@ from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html
 from django.urls import path
+from .serializers import ArticleHomepageSerializer
 
 try:
     admin.site.unregister(User)
@@ -503,9 +505,46 @@ class NewsAdminSite(AdminSite):
         return custom_urls + urls
 
     def newsletter_view(self, request):
+        category_qs = Category.objects.only('id', 'name', 'slug')
+        articles = (
+            Article.objects.filter(status='published')
+            .select_related('author')
+            .prefetch_related(Prefetch('categories', queryset=category_qs))
+            .only(
+                'id',
+                'title',
+                'slug',
+                'subtitle',
+                'image',
+                'image_url',
+                'image_alt',
+                'published_at',
+                'created_at',
+                'canonical_url',
+                'meta_description',
+                'focus_keyword',
+                'secondary_keywords',
+                'noindex',
+                'nofollow',
+                'in_sitemap',
+                'author__username',
+                'author__first_name',
+                'author__last_name',
+                'author_display_name',
+                'tags',
+                'is_paid',
+                'selected_subcategories',
+            )
+            .order_by('-published_at', '-created_at')[:80]
+        )
+        articles_json = json.dumps(
+            ArticleHomepageSerializer(articles, many=True, context={'request': request}).data
+        )
         context = {
             **self.each_context(request),
             'title': 'Newsletter',
+            'articles_json': articles_json,
+            'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
         }
         return TemplateResponse(request, 'admin/newsletter.html', context)
 

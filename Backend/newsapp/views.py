@@ -1784,7 +1784,45 @@ def media_library_view(request):
 
 @staff_member_required
 def newsletter_view(request):
-    return render(request, 'admin/newsletter.html')
+    category_qs = Category.objects.only('id', 'name', 'slug')
+    articles = (
+        Article.objects.filter(status='published')
+        .select_related('author')
+        .prefetch_related(Prefetch('categories', queryset=category_qs))
+        .only(
+            'id',
+            'title',
+            'slug',
+            'subtitle',
+            'image',
+            'image_url',
+            'image_alt',
+            'published_at',
+            'created_at',
+            'canonical_url',
+            'meta_description',
+            'focus_keyword',
+            'secondary_keywords',
+            'noindex',
+            'nofollow',
+            'in_sitemap',
+            'author__username',
+            'author__first_name',
+            'author__last_name',
+            'author_display_name',
+            'tags',
+            'is_paid',
+            'selected_subcategories',
+        )
+        .order_by('-published_at', '-created_at')[:80]
+    )
+    articles_json = json.dumps(
+        ArticleHomepageSerializer(articles, many=True, context={'request': request}).data
+    )
+    return render(request, 'admin/newsletter.html', {
+        'articles_json': articles_json,
+        'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
+    })
 
 
 import logging

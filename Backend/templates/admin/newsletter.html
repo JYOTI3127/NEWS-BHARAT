@@ -9,7 +9,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}?v={{ newsletter_asset_version|default:'1' }}">
   {% comment %} newsletter page styles moved to dashboard.css {% endcomment %}
 </head>
 
@@ -356,6 +356,7 @@
     function cc(cat) { return CAT_COLORS[cat] || CAT_COLORS.default; }
     function escapeHTML(v) { return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
+    const PRELOADED_ARTICLES = JSON.parse('{{ articles_json|default:"[]"|escapejs }}');
     let allArticles = [], filteredArts = [], activeSecEl = null, activeSecKey = null, chosen = {};
     let staticEmails = JSON.parse(localStorage.getItem('n4b_static_emails') || '[]');
     let customEmails = [];
@@ -365,6 +366,26 @@
 
     document.getElementById('nl-date').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
     renderEmailLists(); renderTestEmails(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
+
+    function normalizeArticle(a) {
+      return {
+        id: a.id || a.slug,
+        slug: a.slug,
+        title: a.title,
+        category: (a.category_details && a.category_details[0] && (a.category_details[0].name || a.category_details[0].title)) || (a.categories && a.categories[0] && (a.categories[0].name || a.categories[0].title)) || a.category_name || a.category?.name || a.category || 'News',
+        image: a.image_url || a.featured_image || a.image || a.thumbnail || a.cover_image || '',
+        excerpt: a.meta_description || a.excerpt || a.summary || a.description || '',
+        publishedAt: a.published_at || a.created_at || ''
+      };
+    }
+
+    function sortArticlesNewestFirst(items) {
+      return [...items].sort((a, b) => {
+        const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+    }
 
     function renderTestEmails() {
       const el = document.getElementById('test-emails-display');
@@ -379,14 +400,58 @@
 
     async function loadArticles() {
       try {
-        const endpoints = ['https://news4bharat.cloud/api/articles/?page_size=80&status=published', 'https://news4bharat.cloud/api/news/?page_size=80'];
+        if (Array.isArray(PRELOADED_ARTICLES) && PRELOADED_ARTICLES.length) {
+          allArticles = sortArticlesNewestFirst(PRELOADED_ARTICLES.map(normalizeArticle));
+          filteredArts = [...allArticles];
+          renderArtList();
+          return;
+        }
+
+        const endpoints = [
+          '/api/articles/?limit=80',
+          `${window.location.origin}/api/articles/?limit=80`,
+          'https://news4bharat.cloud/api/articles/?limit=80',
+          'https://news4bharat.cloud/api/news/?page_size=80'
+        ];
         let data = null;
-        for (const url of endpoints) { try { const r = await fetch(url, { headers: { 'Accept': 'application/json' } }); if (r.ok) { data = await r.json(); break; } } catch (e) { } }
-        if (!data) throw new Error('No data');
-        const results = data.results || data || [];
-        allArticles = results.map(a => ({ id: a.id || a.slug, slug: a.slug, title: a.title, category: (a.category_details && a.category_details[0] && (a.category_details[0].name || a.category_details[0].title)) || (a.categories && a.categories[0] && (a.categories[0].name || a.categories[0].title)) || a.category_name || a.category || 'News', image: a.featured_image || a.image || a.thumbnail || a.cover_image || '', excerpt: a.meta_description || a.excerpt || a.summary || a.description || '' }));
-        filteredArts = [...allArticles]; renderArtList();
-      } catch (e) { document.getElementById('articles-list').innerHTML = '<div class="art-loading">Could not load articles.<br>Check API at news4bharat.cloud</div>'; }
+
+        for (const url of endpoints) {
+          try {
+            const r = await fetch(url, {
+              headers: { 'Accept': 'application/json' },
+              credentials: 'same-origin'
+            });
+            if (!r.ok) continue;
+            data = await r.json();
+            const candidateResults = Array.isArray(data)
+              ? data
+              : Array.isArray(data.results)
+                ? data.results
+                : Array.isArray(data.articles)
+                  ? data.articles
+                  : [];
+            if (candidateResults.length) {
+              data = candidateResults;
+              break;
+            }
+          } catch (e) { }
+        }
+
+        const results = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.results)
+            ? data.results
+            : Array.isArray(data?.articles)
+              ? data.articles
+              : [];
+
+        allArticles = sortArticlesNewestFirst(results.map(normalizeArticle));
+
+        filteredArts = [...allArticles];
+        renderArtList();
+      } catch (e) {
+        document.getElementById('articles-list').innerHTML = '<div class="art-loading">Could not load articles.<br>Check /api/articles/ response</div>';
+      }
     }
 
     function switchTab(tab, event) {

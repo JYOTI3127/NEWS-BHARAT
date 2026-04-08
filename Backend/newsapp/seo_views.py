@@ -46,10 +46,15 @@ Sitemap: https://news4bharat.com/sitemap_index.xml
 @require_GET
 def view_robots(request):
     host = request.get_host()
-    
-    # .cloud domain pe sab disallow karo
+
     if 'news4bharat.cloud' in host:
-        content = "User-agent: *\nDisallow: /\n"
+        content = (
+            "User-agent: *\n"
+            "Disallow: /\n\n"
+            "User-agent: Googlebot\n"
+            "Allow: /api/\n"
+            "Disallow: /\n"
+        )
     else:
         content = robots_txt() 
     

@@ -16885,14 +16885,16 @@ tr.art-row td:has(.art-cat) {
   padding: 16px;
   border-bottom: 1px solid var(--border);
   background: var(--black);
+  overflow: visible;
 }
 
 .newsletter-builder-page #sb-top p {
   font-size: 10px;
   color: #666;
-  margin-top: 3px;
+  margin-top: 0;
   text-transform: uppercase;
   letter-spacing: 1.5px;
+  line-height: 1.3;
 }
 
 .newsletter-builder-page .sb-logo {
@@ -16900,6 +16902,8 @@ tr.art-row td:has(.art-cat) {
   max-width: 100%;
   height: auto;
   display: block;
+  object-fit: contain;
+  margin-bottom: 8px;
   filter: brightness(0) invert(1);
 }
 
@@ -17342,13 +17346,56 @@ tr.art-row td:has(.art-cat) {
   overflow-y: auto;
   padding: 24px;
   transition: margin-left 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .newsletter-builder-page .email-wrap {
   max-width: 640px;
-  margin: 0 auto;
+  margin: 0;
   background: var(--white);
   box-shadow: 0 2px 40px rgba(0, 0, 0, 0.12);
+}
+
+.newsletter-builder-page .saved-newsletters-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--white);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 24px rgba(0, 0, 0, 0.06);
+    border-radius: 11px;
+    padding: 14px;
+    position: sticky;
+    top: 0px;
+}
+
+.newsletter-builder-page .saved-newsletters-panel__head {
+  margin-bottom: 10px;
+}
+
+.newsletter-builder-page .saved-newsletters-panel__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.newsletter-builder-page .saved-newsletters-panel__sub {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  .newsletter-builder-page #preview-area {
+    flex-direction: column;
+  }
+
+  .newsletter-builder-page .saved-newsletters-panel {
+    width: 100%;
+    position: static;
+  }
 }
 
 .newsletter-builder-page .nl-header {

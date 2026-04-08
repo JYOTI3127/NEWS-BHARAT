@@ -178,6 +178,7 @@
         Newsletter</button>
       <p class="test-note" id="test-note"></p>
       <button type="button" class="send-btn" onclick="sendNewsletter()">Send Newsletter</button>
+      <button type="button" class="copy-btn" onclick="saveNewsletterDraft()">Save Newsletter</button>
       <button type="button" class="copy-btn" onclick="downloadNewsletter()">Download Newsletter</button>
     </div>
   </div>
@@ -199,6 +200,13 @@
 
   <!-- PREVIEW -->
   <div id="preview-area">
+    <aside class="saved-newsletters-panel">
+      <div class="saved-newsletters-panel__head">
+        <div class="saved-newsletters-panel__title">Saved Newsletters</div>
+        <div class="saved-newsletters-panel__sub">Open previous drafts anytime</div>
+      </div>
+      <div id="saved-newsletters"></div>
+    </aside>
     <div class="email-wrap" id="nl-preview">
       <div class="nl-header">
         <div class="nl-header-row">
@@ -359,13 +367,15 @@
     const PRELOADED_ARTICLES = JSON.parse('{{ articles_json|default:"[]"|escapejs }}');
     let allArticles = [], filteredArts = [], activeSecEl = null, activeSecKey = null, chosen = {};
     let staticEmails = JSON.parse(localStorage.getItem('n4b_static_emails') || '[]');
-    let customEmails = [];
+    let customEmails = JSON.parse(localStorage.getItem('n4b_custom_emails') || '[]');
     let testEmails = JSON.parse(localStorage.getItem('n4b_test_emails') || '[]');
     const NEWS_LOGO_URL = "https://news4bharat.cloud/static/images/NEWS4BHARAT_LOGO.png";
     const SUBJECT_STORAGE_KEY = 'n4b_newsletter_subject';
+    const CUSTOM_EMAILS_STORAGE_KEY = 'n4b_custom_emails';
+    const SAVED_NEWSLETTERS_STORAGE_KEY = 'n4b_saved_newsletters';
 
     document.getElementById('nl-date').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-    renderEmailLists(); renderTestEmails(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
+    renderEmailLists(); renderTestEmails(); renderSavedDrafts(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
 
     function normalizeArticle(a) {
       return {
@@ -499,7 +509,7 @@
           persistSubjectLine();
         }
       }
-      renderArtList(); renderAllPreviews();
+      renderArtList(); syncChosenCards(); renderAllPreviews();
     }
 
     function initPreviews() { renderBreakingPrev(); renderFeaturedPrev(); renderSmallPrev(); renderExplainersPrev(); }
@@ -508,7 +518,7 @@
     function renderHeroPrev() {
       const el = document.getElementById('prev-hero'), a = chosen['hero'];
       if (!a) { el.innerHTML = `<div class="ph-box" onclick="openPanel(document.querySelector('[data-sec=hero]'))"><span>+ Click to choose Cover Story</span></div>`; return; }
-      el.innerHTML = `<div style="display:inline-flex;align-items:center;gap:7px;margin-bottom:16px"><div style="width:7px;height:7px;background:#1950DF;border-radius:50%"></div><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1950DF">Cover Story</span></div><div onclick="window.open('https://news4bharat.com/article/${a.slug}','_blank')" style="cursor:pointer">${a.image ? `<img src="${a.image}" style="width:100%;height:280px;object-fit:cover;display:block;margin-bottom:20px;border-radius:2px" onerror="this.style.display='none'"/>` : ''}
+      el.innerHTML = `<div style="display:inline-flex;align-items:center;gap:7px;margin-bottom:16px"><div style="width:7px;height:7px;background:#1950DF;border-radius:50%"></div><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1950DF">Cover Story</span></div><div onclick="window.open('https://news4bharat.com/article/${a.slug}','_blank')" style="cursor:pointer">${a.image ? `<img src="${a.image}" style="width:100%;height:auto;max-height:280px;object-fit:contain;display:block;margin-bottom:20px;border-radius:2px;background:#f5f5f5" onerror="this.style.display='none'"/>` : ''}
     <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;line-height:1.25;color:#0a0a0a;margin-bottom:12px">${a.title}</h1><p style="font-size:13px;color:#6b6b6b;line-height:1.8;margin-bottom:18px">${a.excerpt || 'Read the full story on the website.'}</p></div><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><span style="font-size:10px;color:#aaa">News4Bharat Desk</span><a href="https://news4bharat.com/article/${a.slug}" style="display:inline-block;background:#1d4ed8;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 20px;text-decoration:none;border-radius:2px">Read Full Story →</a></div>`;
     }
     function renderBreakingPrev() {
@@ -539,6 +549,127 @@
       document.getElementById('static-emails').innerHTML = staticEmails.map((e, i) => `<div class="email-tag"><span>${e}</span><button class="email-remove" onclick="removeEmail('static',${i})">×</button></div>`).join('');
       document.getElementById('custom-emails').innerHTML = customEmails.map((e, i) => `<div class="custom-email-row"><span>${e}</span><button class="email-remove" onclick="removeEmail('custom',${i})">×</button></div>`).join('');
     }
+    function persistCustomEmails() {
+      localStorage.setItem(CUSTOM_EMAILS_STORAGE_KEY, JSON.stringify(customEmails));
+    }
+    function getSavedDrafts() {
+      return JSON.parse(localStorage.getItem(SAVED_NEWSLETTERS_STORAGE_KEY) || '[]');
+    }
+    function setSavedDrafts(drafts) {
+      localStorage.setItem(SAVED_NEWSLETTERS_STORAGE_KEY, JSON.stringify(drafts));
+    }
+    function renderSavedDrafts() {
+      const wrap = document.getElementById('saved-newsletters');
+      if (!wrap) return;
+      const drafts = getSavedDrafts();
+      if (!drafts.length) {
+        wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">No saved newsletters yet.</div>';
+        return;
+      }
+      wrap.innerHTML = `<div class="email-section-label" style="margin-top:10px;">Saved Newsletters</div>${drafts.map((draft, index) => `
+        <div class="email-tag" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="flex:1;min-width:140px;">${escapeHTML(draft.name || 'Untitled Newsletter')}</span>
+          <button type="button" class="email-add-btn" style="padding:6px 10px;" onclick="loadNewsletterDraft(${index})">Open</button>
+          <button type="button" class="email-remove" style="position:static;" onclick="deleteNewsletterDraft(${index})">×</button>
+        </div>
+      `).join('')}`;
+    }
+    function syncChosenCards() {
+      document.querySelectorAll('.sec-card').forEach(card => {
+        const key = card.dataset.sec;
+        const chosenEl = document.getElementById('ch-' + key);
+        const emptyEl = card.querySelector('.sec-empty');
+        const article = chosen[key];
+        if (article) {
+          if (chosenEl) {
+            chosenEl.textContent = article.title.substring(0, 50) + (article.title.length > 50 ? '...' : '');
+            chosenEl.classList.add('visible');
+          }
+          if (emptyEl) emptyEl.style.display = 'none';
+        } else {
+          if (chosenEl) {
+            chosenEl.textContent = '';
+            chosenEl.classList.remove('visible');
+          }
+          if (emptyEl) emptyEl.style.display = '';
+        }
+      });
+    }
+    function buildDraftPayload() {
+      const subject = getSubjectLine();
+      return {
+        id: Date.now(),
+        name: subject || `Newsletter ${new Date().toLocaleString('en-IN')}`,
+        saved_at: new Date().toISOString(),
+        subject,
+        chosen,
+        staticEmails,
+        customEmails,
+        testEmails,
+      };
+    }
+    function saveNewsletterDraft() {
+      if (!chosen['hero']) { alert('Please choose a Cover Story before saving.'); return; }
+      const drafts = getSavedDrafts();
+      drafts.unshift(buildDraftPayload());
+      setSavedDrafts(drafts.slice(0, 20));
+      renderSavedDrafts();
+      showStatus('Newsletter saved!');
+    }
+    function loadNewsletterDraft(index) {
+      const draft = getSavedDrafts()[index];
+      if (!draft) return;
+      chosen = draft.chosen || {};
+      staticEmails = Array.isArray(draft.staticEmails) ? draft.staticEmails : [];
+      customEmails = Array.isArray(draft.customEmails) ? draft.customEmails : [];
+      testEmails = Array.isArray(draft.testEmails) ? draft.testEmails : [];
+      localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
+      persistCustomEmails();
+      localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
+      localStorage.setItem(SUBJECT_STORAGE_KEY, normalizeSubjectLine(draft.subject || ''));
+      const subjectInput = document.getElementById('subject-line-input');
+      if (subjectInput) subjectInput.value = normalizeSubjectLine(draft.subject || '');
+      renderEmailLists();
+      renderTestEmails();
+      syncChosenCards();
+      renderAllPreviews();
+      showStatus('Saved newsletter opened!');
+    }
+    function deleteNewsletterDraft(index) {
+      const drafts = getSavedDrafts();
+      drafts.splice(index, 1);
+      setSavedDrafts(drafts);
+      renderSavedDrafts();
+      showStatus('Saved newsletter removed.');
+    }
+    function parseEmailBatch(raw) {
+      return Array.from(new Set(
+        String(raw || '')
+          .replace(/[<>]/g, ' ')
+          .split(/[\s,;\n\r\t]+/)
+          .map(v => v.trim().toLowerCase())
+          .filter(v => v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+      ));
+    }
+    function appendEmails(type, rawValue) {
+      const emails = parseEmailBatch(rawValue);
+      if (!emails.length) return false;
+      if (type === 'static') {
+        emails.forEach(email => { if (!staticEmails.includes(email)) staticEmails.push(email); });
+        localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
+      }
+      else if (type === 'custom') {
+        emails.forEach(email => { if (!customEmails.includes(email)) customEmails.push(email); });
+        persistCustomEmails();
+      }
+      else if (type === 'test') {
+        emails.forEach(email => { if (!testEmails.includes(email)) testEmails.push(email); });
+        localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
+        renderTestEmails();
+      }
+      renderEmailLists();
+      return true;
+    }
     function initEmailInputs() {
       ['static', 'custom', 'test'].forEach(type => {
         const input = document.getElementById(type + '-input');
@@ -547,6 +678,14 @@
           if (event.key === 'Enter') {
             event.preventDefault();
             addEmail(type);
+          }
+        });
+        input.addEventListener('paste', function (event) {
+          const pasted = (event.clipboardData || window.clipboardData)?.getData('text') || '';
+          if (parseEmailBatch(pasted).length > 1) {
+            event.preventDefault();
+            appendEmails(type, pasted);
+            input.value = '';
           }
         });
       });
@@ -596,16 +735,14 @@
       });
     }
     function addEmail(type) {
-      const inp = document.getElementById(type + '-input'), val = inp.value.trim().toLowerCase();
-      if (!val || !val.includes('@')) { alert('Enter a valid email address'); return; }
-      if (type === 'static') { if (!staticEmails.includes(val)) staticEmails.push(val); localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails)); }
-      else if (type === 'custom') { if (!customEmails.includes(val)) customEmails.push(val); }
-      else if (type === 'test') { if (!testEmails.includes(val)) testEmails.push(val); localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails)); renderTestEmails(); }
-      inp.value = ''; renderEmailLists();
+      const inp = document.getElementById(type + '-input');
+      if (!inp) return;
+      if (!appendEmails(type, inp.value)) { alert('Enter a valid email address'); return; }
+      inp.value = '';
     }
     function removeEmail(type, idx) {
       if (type === 'static') { staticEmails.splice(idx, 1); localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails)); }
-      else if (type === 'custom') customEmails.splice(idx, 1);
+      else if (type === 'custom') { customEmails.splice(idx, 1); persistCustomEmails(); }
       else if (type === 'test') { testEmails.splice(idx, 1); localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails)); renderTestEmails(); }
       renderEmailLists();
     }

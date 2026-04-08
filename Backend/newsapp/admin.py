@@ -9,7 +9,7 @@ from django.utils.safestring import mark_safe
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, F
 from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
@@ -944,10 +944,21 @@ class ArticleAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
         original_get = request.GET.copy()
+        selected_status = (original_get.get('status__exact') or '').strip()
 
-        articles_qs = Article.objects.prefetch_related('categories').select_related(
-            'author', 'assigned_to'
-        ).order_by('-created_at')
+        articles_qs = (
+            Article.objects.prefetch_related('categories')
+            .select_related('author', 'assigned_to')
+            .order_by(
+                Case(
+                    When(status='scheduled', then=F('scheduled_at')),
+                    default=F('created_at'),
+                ).desc(nulls_last=True),
+                '-created_at',
+            )
+        )
+        if selected_status:
+            articles_qs = articles_qs.filter(status=selected_status)
 
         article_paginator = Paginator(articles_qs, 10)
         article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))
@@ -976,6 +987,8 @@ class ArticleAdmin(admin.ModelAdmin):
             'total_articles':       articles_qs.count(),
             'published_articles':   articles_qs.filter(status='published').count(),
             'draft_articles':       articles_qs.filter(status='draft').count(),
+            'scheduled_articles':   articles_qs.filter(status='scheduled').count(),
+            'selected_status':      selected_status,
         })
         if 'article_page' in request.GET:
             cleaned_get = request.GET.copy()

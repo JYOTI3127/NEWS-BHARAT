@@ -33,8 +33,25 @@ from django.core.cache import cache
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
+from zoneinfo import ZoneInfo
 
 User = get_user_model()
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def _parse_ist_datetime(raw_value):
+    raw_value = str(raw_value or '').strip()
+    if not raw_value:
+        return None
+
+    parsed_value = parse_datetime(raw_value)
+    if parsed_value is None:
+        return None
+
+    if timezone.is_naive(parsed_value):
+        return timezone.make_aware(parsed_value, IST)
+
+    return parsed_value.astimezone(IST)
 
 
 # ═══════════════════════════════════════════════════════
@@ -47,7 +64,19 @@ def category_list(request):
     if cached is not None:
         return Response(cached)
     categories = Category.objects.all()
-    serializer = CategorySerializer(categories, many=True)
+    now = timezone.now()
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    serializer = CategorySerializer(
+        categories,
+        many=True,
+        context={
+            'unique_total_articles': Article.objects.count(),
+            'published_this_month': Article.objects.filter(
+                status='published',
+                published_at__gte=start_of_month,
+            ).count(),
+        },
+    )
     cache.set('categories:all', serializer.data, 3600)  # 1 hour
     return Response(serializer.data)
 
@@ -145,7 +174,7 @@ def _save_article_from_request(request, article=None):
 
     deadline_val = data.get('deadline', '')
     if deadline_val:
-        article.deadline = parse_datetime(deadline_val)
+        article.deadline = _parse_ist_datetime(deadline_val)
     else:
         article.deadline = None
 
@@ -154,29 +183,18 @@ def _save_article_from_request(request, article=None):
         if not scheduled_at_val:
             return None, {'error': 'Scheduled publish time is required for scheduled articles.'}
 
-        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        parsed_scheduled_at = _parse_ist_datetime(scheduled_at_val)
         if parsed_scheduled_at is None:
-            return None, {'error': 'Invalid scheduled publish time.'}
-
-        if timezone.is_naive(parsed_scheduled_at):
-            parsed_scheduled_at = timezone.make_aware(
-                parsed_scheduled_at,
-                timezone.get_current_timezone(),
-            )
+            return None, {'error': 'Invalid scheduled publish time. Use IST date and time.'}
 
         if parsed_scheduled_at <= timezone.now():
-            return None, {'error': 'Scheduled publish time must be in the future.'}
+            return None, {'error': 'Scheduled publish time must be in the future (IST).'}
 
         article.scheduled_at = parsed_scheduled_at
         article.published_at = None
     elif scheduled_at_val:
-        parsed_scheduled_at = parse_datetime(scheduled_at_val)
+        parsed_scheduled_at = _parse_ist_datetime(scheduled_at_val)
         if parsed_scheduled_at is not None:
-            if timezone.is_naive(parsed_scheduled_at):
-                parsed_scheduled_at = timezone.make_aware(
-                    parsed_scheduled_at,
-                    timezone.get_current_timezone(),
-                )
             article.scheduled_at = parsed_scheduled_at
         else:
             article.scheduled_at = None

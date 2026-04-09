@@ -1,5 +1,5 @@
 {% extends "admin/change_form.html" %}
-{% load i18n admin_urls static %}
+{% load i18n admin_urls static tz %}
 
 {% block title %}Articles Management{% endblock %}
 
@@ -1010,7 +1010,7 @@ label.image-drop {
     <div class="schedule-field">
       <label class="schedule-label">Publish Date &amp; Time</label>
       <input type="datetime-local" class="schedule-datetime-inp" id="ui_scheduled_at"
-             value="{% if original.scheduled_at %}{{ original.scheduled_at|date:'Y-m-d' }}T{{ original.scheduled_at|date:'H:i' }}{% endif %}"
+             value="{% if original.scheduled_at %}{{ original.scheduled_at|localtime|date:'Y-m-d' }}T{{ original.scheduled_at|localtime|date:'H:i' }}{% endif %}"
              oninput="updateScheduleCountdown()" min="">
       <div class="schedule-tz-note">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1559,9 +1559,7 @@ function onStatusChange(val){
       try{ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
       var inp=document.getElementById('ui_scheduled_at');
       if(inp){
-        var now=new Date();
-        now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
-        inp.min=now.toISOString().slice(0,16);
+        inp.min=getNowIstInputValue();
       }
       updateScheduleCountdown();
     }else{
@@ -1609,6 +1607,30 @@ function onStatusChange(val){
     if(secBtn)secBtn.onclick=function(){submitArticle('draft');};
   }
 }
+function pad2(num){
+  return String(num).padStart(2,'0');
+}
+function parseIstDateTimeInput(value){
+  var match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value||'');
+  if(!match)return null;
+  var year=Number(match[1]),
+      monthIndex=Number(match[2])-1,
+      day=Number(match[3]),
+      hour=Number(match[4]),
+      minute=Number(match[5]);
+  return new Date(Date.UTC(year,monthIndex,day,hour,minute) - (330*60000));
+}
+function formatIstInputValue(dateObj){
+  var shifted=new Date(dateObj.getTime() + (330*60000));
+  return shifted.getUTCFullYear()+'-'+
+    pad2(shifted.getUTCMonth()+1)+'-'+
+    pad2(shifted.getUTCDate())+'T'+
+    pad2(shifted.getUTCHours())+':'+
+    pad2(shifted.getUTCMinutes());
+}
+function getNowIstInputValue(){
+  return formatIstInputValue(new Date());
+}
 function updateScheduleCountdown(){
   var inp=document.getElementById('ui_scheduled_at'),
       cd=document.getElementById('schedule_countdown'),
@@ -1617,7 +1639,16 @@ function updateScheduleCountdown(){
     if(cd)cd.style.display='none';
     return;
   }
-  var target=new Date(inp.value),now=new Date(),diff=target-now;
+  var target=parseIstDateTimeInput(inp.value),now=new Date();
+  if(!target){
+    txt.textContent='Invalid IST date/time format.';
+    cd.style.display='flex';
+    cd.style.background='#fff7ed';
+    cd.style.borderColor='#fed7aa';
+    cd.style.color='#c2410c';
+    return;
+  }
+  var diff=target-now;
   if(diff<=0){
     txt.textContent='⚠ Scheduled time is in the past — please pick a future time.';
     cd.style.display='flex';
@@ -1649,6 +1680,51 @@ function updateScheduleCountdown(){
       tzEl.textContent=tz;
     }catch(e){}
   }
+})();
+updateScheduleCountdown=function(){
+  var inp=document.getElementById('ui_scheduled_at'),
+      cd=document.getElementById('schedule_countdown'),
+      txt=document.getElementById('schedule_countdown_text');
+  if(!inp||!cd||!txt||!inp.value){
+    if(cd)cd.style.display='none';
+    return;
+  }
+  var target=parseIstDateTimeInput(inp.value),now=new Date();
+  if(!target){
+    txt.textContent='Invalid IST date/time format.';
+    cd.style.display='flex';
+    cd.style.background='#fff7ed';
+    cd.style.borderColor='#fed7aa';
+    cd.style.color='#c2410c';
+    return;
+  }
+  var diff=target-now;
+  if(diff<=0){
+    txt.textContent='Scheduled time is in the past in IST. Please pick a future time.';
+    cd.style.display='flex';
+    cd.style.background='#fff7ed';
+    cd.style.borderColor='#fed7aa';
+    cd.style.color='#c2410c';
+    return;
+  }
+  cd.style.display='flex';
+  cd.style.background='linear-gradient(135deg,#eff6ff,#f0fdf4)';
+  cd.style.borderColor='#bfdbfe';
+  cd.style.color='#1e40af';
+
+  var days=Math.floor(diff/86400000),
+      hrs=Math.floor((diff%86400000)/3600000),
+      mins=Math.floor((diff%3600000)/60000);
+  var parts=[];
+  if(days>0)parts.push(days+'d');
+  if(hrs>0)parts.push(hrs+'h');
+  parts.push(mins+'m');
+
+  txt.textContent='Publishes in '+parts.join(' ')+' - '+target.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Kolkata'})+' at '+target.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'})+' IST';
+};
+(function(){
+  var tzEl=document.getElementById('schedule_tz_label');
+  if(tzEl)tzEl.textContent='IST (UTC+5:30)';
 })();
 (function(){
   var status='{{ original.status|default:"draft" }}';
@@ -2916,8 +2992,13 @@ async function submitArticle(forceStatus){
       alert('Please select a publish date and time for the scheduled article.');
       return;
     }
-    if(new Date(schedInp.value)<=new Date()){
-      alert('Scheduled time must be in the future.');
+    const scheduledMoment=parseIstDateTimeInput(schedInp.value);
+    if(!scheduledMoment){
+      alert('Scheduled time is invalid. Please enter it in IST.');
+      return;
+    }
+    if(scheduledMoment<=new Date()){
+      alert('Scheduled time must be in the future according to IST.');
       return;
     }
   }

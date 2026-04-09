@@ -23,17 +23,25 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     article_count  = serializers.SerializerMethodField()
+    unique_total_articles = serializers.SerializerMethodField()
+    published_this_month = serializers.SerializerMethodField()
     sub_categories = serializers.JSONField(required=False)
 
     class Meta:
         model  = Category
-        fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count']
+        fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count', 'unique_total_articles', 'published_this_month']
 
     def get_article_count(self, obj):
         try:
             return obj.articles.filter(status='published').count()
         except Exception:
             return 0
+
+    def get_unique_total_articles(self, obj):
+        return self.context.get('unique_total_articles', 0)
+
+    def get_published_this_month(self, obj):
+        return self.context.get('published_this_month', 0)
 
     def validate_sub_categories(self, value):
         if value in (None, ''):

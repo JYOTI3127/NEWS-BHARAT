@@ -259,6 +259,8 @@ let editTarget    = null;
 let addCatTags    = [];
 let addSubTags    = [];
 let editSections  = {};
+let uniqueArticleTotal = 0;
+let publishedThisMonth = 0;
 
 /* ================================================================
    API HELPER
@@ -285,6 +287,8 @@ async function loadCategories() {
             // ── FIX: normalise sub_categories to always be a dict ──
             subs: normaliseSubs(cat.sub_categories || cat.subs)
         }));
+        uniqueArticleTotal = raw.length ? Number(raw[0].unique_total_articles || 0) : 0;
+        publishedThisMonth = raw.length ? Number(raw[0].published_this_month || 0) : 0;
         render();
     } catch(e) {
         console.error('Failed to load categories:', e);
@@ -453,11 +457,15 @@ function render() {
     const act      = CATS.filter(c => c.status === 'active').length;
     const arc      = CATS.filter(c => c.status === 'archived').length;
     const subTotal = CATS.reduce((a, c) => a + totalSubCount(c), 0);
-    const artTotal = CATS.reduce((a, c) => a + (c.article_count || 0), 0);
+    const artTotal = uniqueArticleTotal;
     document.getElementById('statTotal').textContent    = CATS.length;
     document.getElementById('statSub').textContent      = `${act} active · ${arc} archived`;
     document.getElementById('statSubs').textContent     = subTotal;
     document.getElementById('statArticles').textContent = artTotal.toLocaleString();
+    const monthStatEl = document.querySelector('.cm-stat--orange .cm-stat__val');
+    if (monthStatEl) monthStatEl.textContent = publishedThisMonth.toLocaleString();
+    const monthStatSubEl = document.querySelector('.cm-stat--orange .cm-stat__sub');
+    if (monthStatSubEl) monthStatSubEl.textContent = 'Articles published this month';
     document.getElementById('filterCount').textContent  = `Showing ${serial} categor${serial === 1 ? 'y' : 'ies'}`;
 }
 

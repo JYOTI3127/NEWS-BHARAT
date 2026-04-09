@@ -30,7 +30,8 @@ def publish_due_articles(*, now=None):
 
             locked.status = "published"
             locked.published_at = locked.scheduled_at or now
-            locked.save(update_fields=["status", "published_at"])
+            locked.scheduled_at = None
+            locked.save(update_fields=["status", "published_at", "scheduled_at"])
             published_count += 1
 
     return published_count
@@ -42,3 +43,7 @@ def maybe_publish_due_articles(*, now=None):
 
     cache.set(SCHEDULED_PUBLISH_CACHE_KEY, True, SCHEDULED_PUBLISH_CACHE_TTL)
     return publish_due_articles(now=now)
+
+
+def publish_due_articles_cron():
+    return publish_due_articles()

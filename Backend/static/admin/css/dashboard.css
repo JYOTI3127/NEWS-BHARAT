@@ -3271,6 +3271,23 @@ text-decoration: none;
   border-radius: 20px;
 }
 
+.art-category-cell {
+  min-width: 340px;
+}
+
+.art-cat-text {
+  background: rgba(22, 44, 107, 0.07);
+  border-radius: 16px;
+  padding: 8px 10px;
+  color: #162c6b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.art-cat-item {
+  white-space: nowrap;
+}
+
 .art-author {
   display: flex;
   align-items: center;
@@ -15227,30 +15244,21 @@ body {
 }
 
 /* Category td — jo td art-cat ko contain kare */
-tr.art-row td:has(.art-cat) {
+tr.art-row td:has(.art-cat-text) {
   vertical-align: middle !important;
   padding: 6px 8px !important;
 }
 
-/* Multiple chips ka wrap */
-tr.art-row td:has(.art-cat) {
+/* Category text block */
+tr.art-row td:has(.art-cat-text) {
   display: table-cell !important;
-  line-height: 1 !important;
+  line-height: 1.4 !important;
 }
 
-.art-cat {
-  display: inline-flex !important;
-  align-items: center !important;
-  white-space: nowrap !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  color: #162c6b !important;
-  background: rgba(22, 44, 107, 0.07) !important;
-  padding: 3px 8px !important;
-  border-radius: 20px !important;
-  margin: 2px 2px !important;
-  line-height: 1.4 !important;
-  vertical-align: middle !important;
+@media (max-width: 1200px) {
+  .art-category-cell {
+    min-width: 280px;
+  }
 }
 
 /* Subcategory list */

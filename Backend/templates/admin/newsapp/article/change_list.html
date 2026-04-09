@@ -57,7 +57,7 @@
       <thead>
         <tr>
           <th style="width:320px;">Article</th>
-          <th style="width:120px;">Category</th>
+          <th style="width:360px;">Category</th>
           <th style="width:120px;">Author</th>
           <th style="width:130px;">Assigned To</th>
           <th style="width:110px;">Status</th>
@@ -91,12 +91,12 @@
           </td>
 
           <!-- Category -->
-          <td>
-            <span class="art-cat">
+          <td class="art-category-cell">
+            <div class="art-cat-text">
               {% for category in article.categories.all %}
-                {{ category.name }}{% if not forloop.last %}, {% endif %}
-              {% empty %}—{% endfor %}
-            </span>
+                <span class="art-cat-item">{{ category.name }}</span>{% if not forloop.last %}, {% endif %}{% if forloop.counter|divisibleby:4 and not forloop.last %}<br>{% endif %}
+              {% empty %}<span class="art-unassigned">—</span>{% endfor %}
+            </div>
           </td>
 
           <!-- Author -->

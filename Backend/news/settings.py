@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     'newsapp',
     'storages', 
     'django.contrib.sitemaps',
-    # 'django_crontab', 
+    'django_crontab',
 
 ]
 
@@ -136,7 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -186,9 +186,9 @@ ALPHA_VANTAGE_NIFTY_SYMBOLS = ["NIFTYBEES.BSE", "NIFTYBEES.NSE"]
 ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXBEES.BSE", "SENSEXBEES.NSE"]
 CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
-# CRONJOBS = [
-#     ('*/30 * * * *', 'yourapp.utils.fetch_and_store_metal_rates'),
-# ]
+CRONJOBS = [
+    ('*/1 * * * *', 'newsapp.scheduling.publish_due_articles_cron'),
+]
 
 
 # ── Elasticsearch Connection ─────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState, Profiler } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 // Seedhe load honge — har page pe zaroori hain
@@ -7,8 +7,14 @@ import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import "./style.css" 
 
-
-
+// ✅ Profiler Callback — 50ms se zyada = SLOW warning
+const onRenderCallback = (id, phase, actualDuration) => {
+  if (actualDuration > 50) {
+    console.warn(`🐢 SLOW: ${id} | ${phase} | ${actualDuration.toFixed(1)}ms`);
+  } else {
+    console.log(`✅ OK: ${id} | ${phase} | ${actualDuration.toFixed(1)}ms`);
+  }
+};
 
 // Lazy load — sirf tab load honge jab user us page pe jaaye
 const Footer = lazy(() => import("./components/Footer"));
@@ -24,11 +30,12 @@ const CareersPage = lazy(() => import("./pages/Careerspage"));
 const ContactPage = lazy(() => import("./pages/Contactpage"));
 const CommingSoon = lazy(() => import("./pages/ComingSoon"));
 const ArticleDetails = lazy(() => import("./pages/ArticleDetails"));
-const SixtySecondsPage = lazy(() => import("./pages/SixtySecondsPage"));
+const SixtySecondsPage = lazy(() => import("./pages/Sixtysecondspage"));
 const CategoryPage = lazy(() => import("./pages/Categorypage"));
 const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
 const TagPage = lazy(() => import("./pages/TagPage"));
 const AuthorPage = lazy(() => import("./pages/AuthorPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading Spinner
 function PageLoader() {
@@ -93,53 +100,69 @@ function Layout() {
 
   return (
     <>
-      {!hideLayout && <Navbar />}
+      {/* Navbar */}
+      {!hideLayout && (
+        <Profiler id="Navbar" onRender={onRenderCallback}>
+          <Navbar />
+        </Profiler>
+      )}
 
+      {/* Main Page Routes */}
       <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/privacy-policy" element={<Privacy />} />
-          <Route path="/terms-of-service" element={<TermsPage />} />
-          <Route path="/founders-note" element={<FoundersNote />} />
-          <Route path="/editorial-policy" element={<EditorialPolicy />} />
-          <Route path="/careers" element={<CareersPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/CommingSoon" element={<CommingSoon />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/tag/:tagName" element={<TagPage />} />
-          <Route path="/author/:slug" element={<AuthorPage />} />
-          <Route path="/news/:categorySlug/:slug" element={<ArticleDetails />} />
-          <Route path="/news/:slug" element={<ArticleDetails />} />
-          <Route path="/article/:categorySlug/:slug" element={<ArticleDetails />} />
-          <Route path="/article/:slug" element={<ArticleDetails />} />
-          <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
-          <Route path="/disclaimer" element={<DisclaimerPage />} />
+        <Profiler id="MainRoutes" onRender={onRenderCallback}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/privacy-policy" element={<Privacy />} />
+            <Route path="/terms-of-service" element={<TermsPage />} />
+            <Route path="/founders-note" element={<FoundersNote />} />
+            <Route path="/editorial-policy" element={<EditorialPolicy />} />
+            <Route path="/careers" element={<CareersPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/CommingSoon" element={<CommingSoon />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/tag/:tagName" element={<TagPage />} />
+            <Route path="/author/:slug" element={<AuthorPage />} />
+            <Route path="/news/:categorySlug/:slug" element={<ArticleDetails />} />
+            <Route path="/news/:slug" element={<ArticleDetails />} />
+            <Route path="/article/:categorySlug/:slug" element={<ArticleDetails />} />
+            <Route path="/article/:slug" element={<ArticleDetails />} />
+            <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
 
-          {/* <Route path="/NewsletterAgent" element={<NewsletterAgent />} /> */}
+            {/* <Route path="/NewsletterAgent" element={<NewsletterAgent />} /> */}
 
-          {/* Quick Links — CategoryPage pe redirect */}
-          <Route path="/breaking-news" element={<Navigate to="/category/breaking-news" replace />} />
-          <Route path="/state-of-bharat" element={<Navigate to="/category/state-of-bharat" replace />} />
-          <Route path="/bharat-explainers" element={<Navigate to="/category/bharat-explainers" replace />} />
-          <Route path="/bharat-numbers" element={<Navigate to="/category/bharat-in-numbers" replace />} />
-          <Route path="/bharat-startups" element={<Navigate to="/category/bharats-startups" replace />} />
-          <Route path="/60-second-read" element={<Navigate to="/category/60-second-read" replace />} />
-          <Route path="/sports" element={<Navigate to="/category/sports" replace />} />
-          <Route path="/world-news" element={<Navigate to="/category/world-news" replace />} />
-          <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
-          <Route path="/bharat-opinions" element={<Navigate to="/category/bharat-opinions" replace />} />
-        </Routes>
+            {/* Quick Links — CategoryPage pe redirect */}
+            <Route path="/breaking-news" element={<Navigate to="/category/breaking-news" replace />} />
+            <Route path="/state-of-bharat" element={<Navigate to="/category/state-of-bharat" replace />} />
+            <Route path="/bharat-explainers" element={<Navigate to="/category/bharat-explainers" replace />} />
+            <Route path="/bharat-numbers" element={<Navigate to="/category/bharat-in-numbers" replace />} />
+            <Route path="/bharat-startups" element={<Navigate to="/category/bharats-startups" replace />} />
+            <Route path="/60-second-read" element={<Navigate to="/category/60-second-read" replace />} />
+            <Route path="/sports" element={<Navigate to="/category/sports" replace />} />
+            <Route path="/world-news" element={<Navigate to="/category/world-news" replace />} />
+            <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
+            <Route path="/bharat-opinions" element={<Navigate to="/category/bharat-opinions" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Profiler>
       </Suspense>
 
+      {/* Footer */}
       {!hideLayout && showFooter && (
         <Suspense fallback={null}>
-          <Footer />
+          <Profiler id="Footer" onRender={onRenderCallback}>
+            <Footer />
+          </Profiler>
         </Suspense>
       )}
+
+      {/* Bottom Nav (mobile only) */}
       {!hideLayout && (
         <div className="block md:hidden">
-          <BottomNav />
+          <Profiler id="BottomNav" onRender={onRenderCallback}>
+            <BottomNav />
+          </Profiler>
         </div>
       )}
     </>

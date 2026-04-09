@@ -573,10 +573,6 @@ export default function ArticleDetails() {
         const listResponse = await fetch(apiUrl("/articles/?limit=500"), {
           signal: controller.signal,
           cache: "no-store",
-          headers: {
-            Pragma: "no-cache",
-            "Cache-Control": "no-cache",
-          },
         });
 
         if (!listResponse.ok) {

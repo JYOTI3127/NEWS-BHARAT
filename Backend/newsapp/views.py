@@ -60,7 +60,8 @@ def _parse_ist_datetime(raw_value):
 
 @api_view(['GET'])
 def category_list(request):
-    cached = cache.get('categories:all')
+    cache_key = 'categories:all:v2'
+    cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
     categories = Category.objects.all()
@@ -77,7 +78,7 @@ def category_list(request):
             ).count(),
         },
     )
-    cache.set('categories:all', serializer.data, 3600)  # 1 hour
+    cache.set(cache_key, serializer.data, 3600)  # 1 hour
     return Response(serializer.data)
 
 

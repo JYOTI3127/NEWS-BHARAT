@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import {
@@ -6,7 +6,7 @@ import {
   ChevronRight, Newspaper, Tag, ArrowLeft,
   Instagram, Youtube, Linkedin,
 } from "lucide-react";
-import { API_BASE, apiUrl } from "../lib/api";
+import { apiUrl } from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
 
 const SITE_URL = "https://news4bharat.com";
@@ -73,10 +73,37 @@ const getArticleImage = (article) => {
 };
 
 const getArticleCategoryIds = (article) =>
-  Array.isArray(article?.categories) ? article.categories.map((value) => String(value)) : [];
+  Array.isArray(article?.categories)
+    ? article.categories
+        .map((value) =>
+          value && typeof value === "object"
+            ? String(value.id || "").trim()
+            : String(value || "").trim()
+        )
+        .filter(Boolean)
+    : [];
 
-const getArticleCategoryDetails = (article) =>
-  toCategoryArray(article?.category_details || article?.category);
+const getArticleCategoryDetails = (article) => {
+  const candidates = [
+    ...toCategoryArray(article?.category_details),
+    ...toCategoryArray(article?.category),
+    ...(Array.isArray(article?.categories) ? article.categories : []),
+  ].filter((value) => value && typeof value === "object");
+
+  const seen = new Set();
+
+  return candidates.filter((category) => {
+    const key = String(
+      category?.slug || category?.id || category?.name || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 const getArticleCategorySlugs = (article) =>
   getArticleCategoryDetails(article)
@@ -108,6 +135,17 @@ const matchesRouteCandidates = (article, routeCandidates) => {
 
 const findArticleInList = (list, routeCandidates) =>
   list.find((item) => matchesRouteCandidates(item, routeCandidates)) || null;
+
+const getArticleTimestamp = (article) =>
+  new Date(
+    article?.published_at ||
+    article?.created_at ||
+    article?.updated_at ||
+    0
+  ).getTime() || 0;
+
+const sortArticlesByNewest = (list) =>
+  [...list].sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
 
 const sharesCategoryWithArticle = (candidate, currentArticle) => {
   const currentIds = getArticleCategoryIds(currentArticle);
@@ -495,6 +533,9 @@ export default function ArticleDetails() {
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [moreInListMaxHeight, setMoreInListMaxHeight] = useState(null);
+  const mainArticleRef = useRef(null);
+  const moreInListRef = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -512,7 +553,10 @@ export default function ArticleDetails() {
         for (const candidate of apiRouteCandidates) {
           const response = await fetch(
             apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
-            { signal: controller.signal }
+            {
+              signal: controller.signal,
+              cache: "no-store",
+            }
           );
 
           if (!response.ok) continue;
@@ -526,8 +570,13 @@ export default function ArticleDetails() {
           }
         }
 
-        const listResponse = await fetch(`${API_BASE}/articles/`, {
+        const listResponse = await fetch(apiUrl("/articles/?limit=500"), {
           signal: controller.signal,
+          cache: "no-store",
+          headers: {
+            Pragma: "no-cache",
+            "Cache-Control": "no-cache",
+          },
         });
 
         if (!listResponse.ok) {
@@ -540,10 +589,11 @@ export default function ArticleDetails() {
           : Array.isArray(data?.value)
             ? data.value
             : data?.results || [];
-        setAllArticles(list);
+        const sortedList = sortArticlesByNewest(list);
+        setAllArticles(sortedList);
 
         if (!found) {
-          found = findArticleInList(list, normalizedRouteCandidates);
+          found = findArticleInList(sortedList, normalizedRouteCandidates);
         }
 
         if (found) {
@@ -671,6 +721,42 @@ export default function ArticleDetails() {
     return () => window.cancelAnimationFrame(rafId);
   }, [article, loadError, notFound, routeParam]);
 
+  useEffect(() => {
+    if (!article || !mainArticleRef.current || !moreInListRef.current) return;
+
+    const updateMoreInHeight = () => {
+      const mainArticleRect = mainArticleRef.current?.getBoundingClientRect();
+      const moreInRect = moreInListRef.current?.getBoundingClientRect();
+
+      if (!mainArticleRect || !moreInRect) return;
+
+      const articleBottom = mainArticleRect.bottom + window.scrollY;
+      const moreInTop = moreInRect.top + window.scrollY;
+      const availableHeight = Math.floor(articleBottom - moreInTop);
+
+      setMoreInListMaxHeight(availableHeight > 220 ? availableHeight : 220);
+    };
+
+    updateMoreInHeight();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateMoreInHeight())
+        : null;
+
+    if (resizeObserver) {
+      resizeObserver.observe(mainArticleRef.current);
+      resizeObserver.observe(moreInListRef.current);
+    }
+
+    window.addEventListener("resize", updateMoreInHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateMoreInHeight);
+    };
+  }, [article, allArticles.length, fullRouteSlug]);
+
   const sidebarBaseArticles = article
     ? allArticles.filter(
         (a) => String(a?.slug || a?.id || "") !== String(article?.slug || article?.id || "")
@@ -678,7 +764,8 @@ export default function ArticleDetails() {
     : [];
 
   const relatedArticles = article
-    ? sidebarBaseArticles.filter((a) => sharesCategoryWithArticle(a, article)).slice(0, 3)
+    ? sidebarBaseArticles
+        .filter((a) => sharesCategoryWithArticle(a, article))
     : [];
 
   const handleShare = (platform) => {
@@ -774,11 +861,12 @@ export default function ArticleDetails() {
   const categoryName = primaryCategory?.name?.trim() || "";
   const articlePathSlug = article?.slug || routeParam;
   const canonicalUrl = getArticleCanonicalUrl(article, articlePathSlug);
-  const fallbackSidebarArticles = sidebarBaseArticles.slice(0, 3);
+  const fallbackSidebarArticles = sidebarBaseArticles;
   const displayRelatedArticles =
     relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
   const moreCatArticles = primaryCategory
-    ? sidebarBaseArticles.filter((a) => isInPrimaryCategory(a, primaryCategory)).slice(0, 3)
+    ? sidebarBaseArticles
+        .filter((a) => isInPrimaryCategory(a, primaryCategory))
     : [];
   const displayMoreArticles =
     moreCatArticles.length > 0 ? moreCatArticles : fallbackSidebarArticles;
@@ -976,7 +1064,7 @@ export default function ArticleDetails() {
       >
 
         {/* ── MAIN ARTICLE ── */}
-        <article className="min-w-0">
+        <article ref={mainArticleRef} className="min-w-0">
 
           <Link
             to="/"
@@ -984,18 +1072,6 @@ export default function ArticleDetails() {
           >
             <ArrowLeft size={13} /> Back to Home
           </Link>
-
-          {primaryCategory && (
-            <div className="mb-3">
-              <Link
-                to={`/category/${primaryCategory.slug}`}
-                className="inline-flex items-center gap-1 bg-red-600 text-white text-[11px] font-bold uppercase px-3 py-1 rounded tracking-wide hover:bg-red-700 transition-colors"
-              >
-                <Tag size={10} />
-                {primaryCategory.name}
-              </Link>
-            </div>
-          )}
 
           <h1 className="text-[clamp(20px,4vw,36px)] font-extrabold leading-[1.3] text-gray-900 mb-3 tracking-tight">
             {article.title}
@@ -1131,7 +1207,7 @@ export default function ArticleDetails() {
                 <Newspaper size={14} color="#D80100" />
                 <span>Related Articles</span>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="max-h-[540px] overflow-y-auto divide-y divide-slate-100">
                 {displayRelatedArticles.map((rel) => (
                   <Link key={rel.id} to={`/article/${rel.slug || rel.id}`}
                     target="_blank" rel="noopener noreferrer"
@@ -1164,17 +1240,25 @@ export default function ArticleDetails() {
           {displayMoreArticles.length > 0 && (() => {
             return (
               <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
-                  </span>
-                  <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
+              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
+                </span>
+                <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
                     target="_blank" rel="noopener noreferrer"
                     className="text-[11px] text-red-600 font-semibold hover:underline flex items-center gap-0.5">
                     View All <ChevronRight size={11} />
                   </Link>
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div
+                  ref={moreInListRef}
+                  className="overflow-y-auto divide-y divide-slate-100"
+                  style={
+                    moreInListMaxHeight
+                      ? { maxHeight: `${moreInListMaxHeight}px` }
+                      : { maxHeight: "540px" }
+                  }
+                >
                   {displayMoreArticles.map((a) => (
                     <Link key={a.id} to={`/article/${a.slug || a.id}`}
                       target="_blank" rel="noopener noreferrer"

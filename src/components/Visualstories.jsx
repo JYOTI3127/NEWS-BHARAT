@@ -69,6 +69,28 @@ const ensureMatchShape = (match = {}) => ({
 const normalizeMatches = (matches) =>
     Array.isArray(matches) ? matches.map(ensureMatchShape) : [];
 
+const formatArticleDateTime = (article) => {
+    const raw = article?.published_at || article?.created_at || article?.updated_at || "";
+    if (!raw) return "";
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const datePart = date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
+
+    const timePart = date.toLocaleTimeString("en-IN", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+
+    return `${datePart} | ${timePart}`.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+};
+
 const normalizeCricketPayload = (payload) => {
     if (Array.isArray(payload)) {
         return {
@@ -457,7 +479,7 @@ export default function VisualStoriesWithScore() {
                                         {/* Title — fixed height neeche */}
                                         <div
                                             style={{
-                                                height: is4K ? 82 : is2K ? 72 : 54,
+                                                height: is4K ? 108 : is2K ? 92 : 78,
                                                 overflow: "hidden",
                                                 padding: is4K ? "10px 10px 0" : is2K ? "8px 8px 0" : "6px 6px 0",
                                             }}
@@ -473,6 +495,19 @@ export default function VisualStoriesWithScore() {
                                                 }}>
                                                 {article.title}
                                             </p>
+                                            {formatArticleDateTime(article) ? (
+                                                <p
+                                                    className="text-[#6b7280] leading-snug"
+                                                    style={{
+                                                        marginTop: is4K ? "8px" : "6px",
+                                                        fontSize: is4K ? "13px" : is2K ? "12px" : "11px",
+                                                        fontWeight: 600,
+                                                        fontFamily: "Poppins, sans-serif",
+                                                    }}
+                                                >
+                                                    {formatArticleDateTime(article)}
+                                                </p>
+                                            ) : null}
                                         </div>
                                     </div>
                                 ))

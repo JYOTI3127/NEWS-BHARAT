@@ -1224,7 +1224,7 @@ img {
   font-weight: 500;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.15s;
@@ -1512,7 +1512,7 @@ img {
   color: #1a1a1a;
   line-height: 1.6;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   padding: 4px 8px;
@@ -1925,7 +1925,7 @@ img {
 }
 
 .tn-feature-card-body {
-  padding: 20px 10px 12px;
+  padding: 10px 10px 12px;
   background: #fff;
 }
 

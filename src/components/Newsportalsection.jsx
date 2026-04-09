@@ -142,7 +142,7 @@ export function EntertainmentSection() {
 
   const featured     = explainers[0] || null;
   const smallCard    = explainers[1] || null;
-  const midCards     = explainers.slice(2, 6);
+  const midCards     = explainers.slice(2, 7);
   const sidebarItems = numbers.slice(0, 5);
 
   const rootStyle = is2K
@@ -210,7 +210,6 @@ export function EntertainmentSection() {
                   priority={true}
                 />
                 <div className="hs-featured-overlay">
-                  <CategoryTag label={featured.category_details?.[0]?.name || "EXPLAINER"} />
                   <p className="hs-featured-title">{featured.title}</p>
                   <DateLabel date={formatDate(featured.published_at || featured.created_at)} />
                 </div>
@@ -249,7 +248,6 @@ export function EntertainmentSection() {
                 />
               </div>
               <div className="hs-small-text">
-                <CategoryTag label={smallCard.category_details?.[0]?.name || "EXPLAINER"} />
                 <p className="hs-small-title">{smallCard.title}</p>
                 <DateLabel date={formatDate(smallCard.published_at || smallCard.created_at)} />
               </div>
@@ -259,7 +257,7 @@ export function EntertainmentSection() {
           {/* Middle: 4 horizontal cards — lazy load */}
           <div className="hs-mid-col" style={midColStyle}>
             {explainersLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
+              ? Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="hs-mid-card">
                     <div className="hs-mid-img" style={{ background: "#f0ece8" }} />
                     <div className="hs-mid-text">
@@ -285,7 +283,6 @@ export function EntertainmentSection() {
                       />
                     </div>
                     <div className="hs-mid-text">
-                      <CategoryTag label={card.category_details?.[0]?.name || "EXPLAINER"} />
                       <p className="hs-mid-title">{card.title}</p>
                       <DateLabel date={formatDate(card.published_at || card.created_at)} />
                     </div>
@@ -338,9 +335,6 @@ export function EntertainmentSection() {
                       />
                     </div>
                     <div className="nps-health-text-wrap">
-                      <span className="hs-sidebar-cat">
-                        {item.category_details?.[0]?.name || "NUMBERS"}
-                      </span>
                       <p className="nps-health-text">{item.title}</p>
                       <span className="hs-sidebar-date">
                         {formatDate(item.published_at || item.created_at)}

@@ -31,7 +31,15 @@ export default function ArticleCard({ article }) {
     : "";
 
   const articlePath = `/article/${slug}`;
-  const primaryCategory = category_details?.[0];
+  const breakingCategory = Array.isArray(category_details)
+    ? category_details.find((category) => {
+        const slug = String(category?.slug || "").trim().toLowerCase();
+        const name = String(category?.name || "").trim().toLowerCase();
+        return slug === "breaking-news" || name === "breaking news";
+      })
+    : null;
+
+  const primaryCategory = breakingCategory || category_details?.[0];
 
   // ✅ Author: API se aaye toh wahi, warna News4Bharat
   const authorName = display_author_name || author_display_name || "News4Bharat";

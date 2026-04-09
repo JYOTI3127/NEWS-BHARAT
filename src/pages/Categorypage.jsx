@@ -93,7 +93,9 @@ export default function CategoryPage() {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}`);
+        const res = await fetch(
+          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=500`
+        );
         const data = await res.json();
 
         const filtered = Array.isArray(data) ? data : (data.results || []);
@@ -139,6 +141,7 @@ export default function CategoryPage() {
   const heroArticle   = articles[0] || null;
   const gridArticles  = articles.slice(1, visibleCount + 1);
   const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+  const moreInArticles = articles;
   const hasMore       = visibleCount + 1 < articles.length;
   const shellStyle = is2K
     ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
@@ -218,9 +221,6 @@ export default function CategoryPage() {
                     : <div className="w-full h-full flex items-center justify-center bg-[#f0ece8]"><Newspaper size={40} color="#ccc" /></div>
                   }
                   <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[rgba(0,0,0,0.3)] to-transparent" />
-                  {/* <span className="absolute top-3 left-3 bg-[#D80100] text-white text-[10px] font-bold px-[10px] py-[4px] rounded-[4px] uppercase tracking-[1px]">
-                    Featured
-                  </span> */}
                 </div>
                 <div className="p-4 sm:p-[20px_24px_24px]">
                   <h2 className="text-[clamp(16px,2.5vw,22px)] font-extrabold text-[#111] mb-2 leading-[1.4] tracking-[-0.3px]">
@@ -343,8 +343,8 @@ export default function CategoryPage() {
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-slate-900 line-clamp-2">{article.title}</p>
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Eye size={10} />{formatViews(article.views)} views
+                      <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                        <Clock size={10} />{formatDate(article.published_at || article.created_at)}
                       </span>
                     </div>
                   </div>
@@ -387,6 +387,56 @@ export default function CategoryPage() {
               ))}
             </div>
           </div>
+
+          {moreInArticles.length > 0 && (
+            <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  {`More in ${category?.name || slug}`}
+                </span>
+                <span className="text-[11px] text-red-600 font-semibold">
+                  {moreInArticles.length} Posts
+                </span>
+              </div>
+              <div className="max-h-[540px] overflow-y-auto divide-y divide-slate-100">
+                {moreInArticles.map((article) => (
+                  <Link
+                    key={article.id}
+                    to={`/article/${article.slug || article.id}`}
+                    style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                  >
+                    <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">
+                      <div className="flex-shrink-0 w-16 h-12 rounded-md overflow-hidden bg-slate-100">
+                        {article.image ? (
+                          <img
+                            src={article.image}
+                            alt={article.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            width={128}
+                            height={96}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                            <Newspaper size={16} color="#ccc" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+                          {article.title}
+                        </p>
+                        <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                          <Clock size={10} />{formatDate(article.published_at || article.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Newsletter CTA */}
           <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-xl p-5 sm:p-6 text-center">

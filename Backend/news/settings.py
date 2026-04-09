@@ -182,6 +182,14 @@ ALPHA_VANTAGE_API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY", "")
 TWELVE_DATA_GOLD_SYMBOLS = ["XAU/USD", "XAUUSD"]
 TWELVE_DATA_SILVER_SYMBOLS = ["XAG/USD", "XAGUSD"]
 TWELVE_DATA_USDINR_SYMBOLS = ["USD/INR", "USDINR"]
+TWELVE_DATA_NIFTY_SYMBOLS = [
+    {"symbol": "NIFTYBEES", "exchange": "NSE"},
+    {"symbol": "SETFNIF50", "exchange": "NSE"},
+]
+TWELVE_DATA_SENSEX_SYMBOLS = [
+    {"symbol": "SENSEXETF", "exchange": "NSE"},
+    {"symbol": "LICNETFSEN", "exchange": "NSE"},
+]
 ALPHA_VANTAGE_NIFTY_SYMBOLS = ["NIFTYBEES.BSE", "NIFTYBEES.NSE"]
 ALPHA_VANTAGE_SENSEX_SYMBOLS = ["SENSEXBEES.BSE", "SENSEXBEES.NSE"]
 CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
@@ -189,6 +197,25 @@ CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 CRONJOBS = [
     ('*/1 * * * *', 'newsapp.scheduling.publish_due_articles_cron'),
 ]
+
+FRONTEND_BUILD_HOOK_URL = os.environ.get("FRONTEND_BUILD_HOOK_URL", "")
+FRONTEND_BUILD_HOOK_TOKEN = os.environ.get("FRONTEND_BUILD_HOOK_TOKEN", "")
+FRONTEND_BUILD_HOOK_TIMEOUT = int(os.environ.get("FRONTEND_BUILD_HOOK_TIMEOUT", "10"))
+FRONTEND_BUILD_HOOK_DEBOUNCE_SECONDS = int(
+    os.environ.get("FRONTEND_BUILD_HOOK_DEBOUNCE_SECONDS", "120")
+)
+FRONTEND_BUILD_EVENT_PUBLISHED = os.environ.get(
+    "FRONTEND_BUILD_EVENT_PUBLISHED",
+    "article-published",
+)
+FRONTEND_BUILD_EVENT_UPDATED = os.environ.get(
+    "FRONTEND_BUILD_EVENT_UPDATED",
+    "article-updated",
+)
+FRONTEND_BUILD_EVENT_FALLBACK = os.environ.get(
+    "FRONTEND_BUILD_EVENT_FALLBACK",
+    "rebuild-frontend",
+)
 
 
 # ── Elasticsearch Connection ─────────────────────────────────────────

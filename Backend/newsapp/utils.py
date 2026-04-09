@@ -32,6 +32,11 @@ def _today_cache_key(prefix):
     return f"{prefix}:{timezone.localdate().isoformat()}"
 
 
+def _minute_cache_key(prefix):
+    now = timezone.localtime(timezone.now())
+    return f"{prefix}:{now.strftime('%Y%m%d%H%M')}"
+
+
 def _coerce_float(value, default=None):
     try:
         return float(value)
@@ -212,6 +217,130 @@ def _fetch_alpha_vantage_daily(symbol, api_key):
         "percent_change": round(percent, 2),
         "trend": _normalize_trend(change),
         "symbol": symbol,
+    }
+
+
+def fetch_live_index_data(symbols, cache_prefix=None, force_refresh=False):
+    cache_key = _minute_cache_key(cache_prefix or "market_index:live")
+    if not force_refresh:
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+    api_key = getattr(settings, "TWELVE_DATA_API_KEY", "")
+    if not api_key:
+        raise ValueError("TWELVE_DATA_API_KEY is not configured")
+
+    last_error = None
+    for symbol_config in symbols:
+        try:
+            payload = _fetch_twelve_data_index_quote(symbol_config, api_key)
+            cache.set(cache_key, payload, 60)
+            return payload
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    if last_error:
+        raise last_error
+    raise ValueError("No valid live market index symbol configured")
+
+
+def _build_twelve_data_params(symbol_config, *, interval, outputsize, previous_close=False):
+    if isinstance(symbol_config, str):
+        params = {"symbol": symbol_config}
+    else:
+        params = {k: v for k, v in (symbol_config or {}).items() if v}
+
+    params.update({
+        "interval": interval,
+        "outputsize": outputsize,
+        "timezone": "Asia/Kolkata",
+    })
+    if previous_close:
+        params["previous_close"] = "true"
+    return params
+
+
+def _fetch_twelve_data_index_quote(symbol_config, api_key):
+    intraday_response = external_get(
+        TWELVE_DATA_URL,
+        params={
+            **_build_twelve_data_params(
+                symbol_config,
+                interval="1min",
+                outputsize=1,
+                previous_close=True,
+            ),
+            "apikey": api_key,
+        },
+        timeout=20,
+    )
+    intraday_response.raise_for_status()
+    intraday_data = intraday_response.json()
+
+    if intraday_data.get("status") == "error" or intraday_data.get("message") or intraday_data.get("code"):
+        raise ValueError(
+            intraday_data.get("message")
+            or intraday_data.get("code")
+            or f"Twelve Data error for {symbol_config}"
+        )
+
+    intraday_values = intraday_data.get("values") or []
+    if not intraday_values:
+        raise ValueError(f"No intraday series returned for {symbol_config}")
+
+    latest = intraday_values[0]
+    current = _coerce_float(latest.get("close"))
+    previous = _coerce_float(latest.get("previous_close"))
+
+    if current is None:
+        raise ValueError(f"Could not parse Twelve Data close for {symbol_config}")
+
+    if previous in (None, 0):
+        daily_response = external_get(
+            TWELVE_DATA_URL,
+            params={
+                **_build_twelve_data_params(
+                    symbol_config,
+                    interval="1day",
+                    outputsize=2,
+                ),
+                "apikey": api_key,
+            },
+            timeout=20,
+        )
+        daily_response.raise_for_status()
+        daily_data = daily_response.json()
+
+        if daily_data.get("status") == "error" or daily_data.get("message") or daily_data.get("code"):
+            raise ValueError(
+                daily_data.get("message")
+                or daily_data.get("code")
+                or f"Twelve Data daily error for {symbol_config}"
+            )
+
+        daily_values = daily_data.get("values") or []
+        if len(daily_values) < 2:
+            raise ValueError(f"No daily series returned for {symbol_config}")
+
+        previous = _coerce_float(daily_values[1].get("close"))
+
+    if previous in (None, 0):
+        raise ValueError(f"Could not parse Twelve Data previous close for {symbol_config}")
+
+    change = current - previous
+    percent = (change / previous) * 100
+    symbol = symbol_config if isinstance(symbol_config, str) else (symbol_config.get("symbol") or "")
+
+    return {
+        "price": round(current, 2),
+        "change": round(change, 2),
+        "percent_change": round(percent, 2),
+        "trend": _normalize_trend(change),
+        "symbol": symbol,
+        "previous_close": round(previous, 2),
+        "as_of": latest.get("datetime"),
     }
 
 import random

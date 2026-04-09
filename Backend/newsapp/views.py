@@ -852,7 +852,7 @@ def metal_ticker(request):
     cache.set(cache_key, payload, 600)
     return Response(payload)
 
-from .utils import external_get, fetch_and_store_metal_rates, fetch_index_data
+from .utils import external_get, fetch_and_store_metal_rates, fetch_live_index_data
 
 
 @api_view(['GET'])
@@ -863,17 +863,37 @@ def update_metal_rates(request):
 
 @api_view(['GET'])
 def market_indices(request):
-    nifty_symbols = getattr(settings, 'ALPHA_VANTAGE_NIFTY_SYMBOLS', ['NIFTYBEES.BSE', 'NIFTYBEES.NSE'])
-    sensex_symbols = getattr(settings, 'ALPHA_VANTAGE_SENSEX_SYMBOLS', ['SENSEXBEES.BSE', 'SENSEXBEES.NSE'])
+    nifty_symbols = getattr(
+        settings,
+        'TWELVE_DATA_NIFTY_SYMBOLS',
+        [{"symbol": "NIFTYBEES", "exchange": "NSE"}],
+    )
+    sensex_symbols = getattr(
+        settings,
+        'TWELVE_DATA_SENSEX_SYMBOLS',
+        [{"symbol": "SENSEXETF", "exchange": "NSE"}],
+    )
     try:
-        nifty = fetch_index_data(nifty_symbols, cache_prefix='market_index:nifty')
+        nifty = fetch_live_index_data(nifty_symbols, cache_prefix='market_index:nifty')
     except Exception as exc:
-        nifty = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+        nifty = {
+            "error": str(exc),
+            "price": 0,
+            "change": 0,
+            "percent_change": 0,
+            "trend": "neutral",
+        }
 
     try:
-        sensex = fetch_index_data(sensex_symbols, cache_prefix='market_index:sensex')
+        sensex = fetch_live_index_data(sensex_symbols, cache_prefix='market_index:sensex')
     except Exception as exc:
-        sensex = {"error": str(exc), "price": 0, "change": 0, "percent_change": 0, "trend": "neutral"}
+        sensex = {
+            "error": str(exc),
+            "price": 0,
+            "change": 0,
+            "percent_change": 0,
+            "trend": "neutral",
+        }
 
     return Response({"nifty": nifty, "sensex": sensex})
 

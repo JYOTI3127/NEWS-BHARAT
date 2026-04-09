@@ -11,6 +11,7 @@ apps.py mein sirf yeh add karo:
 
 import logging
 from django.db.models.signals import post_save
+from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 def register():
     from newsapp.models import Article
     from newsapp.seo_direct import submit_article_everywhere
+    from newsapp.frontend_build import trigger_frontend_build_on_commit
 
     @receiver(post_save, sender=Article)
     def on_article_publish(sender, instance, created, **kwargs):
@@ -46,3 +48,20 @@ def register():
         except Exception as e:
             # NEVER crash the save — just log
             logger.error(f"[SEO Signal] Failed for '{instance.slug}': {e}")
+
+        trigger_frontend_build_on_commit(
+            reason="article_published" if created else "article_updated",
+            article=instance,
+        )
+
+    @receiver(m2m_changed, sender=Article.categories.through)
+    def on_published_article_categories_changed(sender, instance, action, **kwargs):
+        if action not in {"post_add", "post_remove", "post_clear"}:
+            return
+        if instance.status != "published" or not instance.slug:
+            return
+
+        trigger_frontend_build_on_commit(
+            reason="article_categories_updated",
+            article=instance,
+        )

@@ -34,6 +34,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
+from .seo_direct import article_url, normalized_canonical
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
@@ -996,6 +997,8 @@ def _format_article(article, request=None, highlight=None):
         "status":       article.status,
         "published_at": article.published_at.isoformat() if article.published_at else None,
         "created_at":   article.created_at.isoformat()   if article.created_at   else None,
+        "canonical_url": normalized_canonical(article, article_url(article)),
+        "public_url":    article_url(article),
         "image":        img_url,
         "image_alt":    article.image_alt or '',
         "image_source": article.image_source or '',

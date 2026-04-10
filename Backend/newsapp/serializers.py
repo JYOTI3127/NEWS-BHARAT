@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User
+from .seo_direct import article_url, normalized_canonical
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -88,6 +89,9 @@ class ArticleSerializer(serializers.ModelSerializer):
     )
     primary_category_details = serializers.SerializerMethodField()
     category_details = serializers.SerializerMethodField()
+    canonical_url = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
+    content_html = serializers.SerializerMethodField()
 
     # Audit trail - read only
     author             = UserSerializer(read_only=True)
@@ -142,6 +146,16 @@ class ArticleSerializer(serializers.ModelSerializer):
     def get_primary_category_details(self, obj):
         cat = obj.primary_category or obj.categories.first()
         return CategorySerializer(cat).data if cat else None
+
+    def get_canonical_url(self, obj):
+        final_url = article_url(obj)
+        return normalized_canonical(obj, final_url)
+
+    def get_public_url(self, obj):
+        return article_url(obj)
+
+    def get_content_html(self, obj):
+        return obj.content or ''
 
     def get_posted_by_username(self, obj):
         return obj.author.username if obj.author else None
@@ -255,6 +269,8 @@ class ArticleMinSerializer(serializers.ModelSerializer):
     date        = serializers.SerializerMethodField()
     image_url   = serializers.SerializerMethodField()
     primary_category = serializers.SerializerMethodField()
+    canonical_url = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
     categories  = CategorySerializer(many=True, read_only=True)
     image_alt    = serializers.CharField(read_only=True)
     image_source = serializers.CharField(read_only=True)
@@ -262,7 +278,7 @@ class ArticleMinSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Article
         fields = ['id', 'title', 'image', 'author_name', 'date', 'image_url',
-                  'categories', 'primary_category', 'image_alt', 'image_source']
+                  'categories', 'primary_category', 'canonical_url', 'public_url', 'image_alt', 'image_source']
 
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():
@@ -290,10 +306,19 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
 
+    def get_canonical_url(self, obj):
+        final_url = article_url(obj)
+        return normalized_canonical(obj, final_url)
+
+    def get_public_url(self, obj):
+        return article_url(obj)
+
 class ArticleHomepageSerializer(serializers.ModelSerializer):
     image_url    = serializers.SerializerMethodField()
     category     = serializers.SerializerMethodField()
     primary_category = serializers.SerializerMethodField()
+    canonical_url = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
     categories   = CategorySerializer(many=True, read_only=True)
 
@@ -304,7 +329,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'image_url', 'image_alt',
             'category', 'primary_category', 'categories',
             'published_at', 'created_at',
-            'canonical_url', 'meta_description', 'focus_keyword',
+            'canonical_url', 'public_url', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
             'selected_subcategories',
@@ -328,6 +353,13 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     def get_primary_category(self, obj):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
+    def get_canonical_url(self, obj):
+        final_url = article_url(obj)
+        return normalized_canonical(obj, final_url)
+
+    def get_public_url(self, obj):
+        return article_url(obj)
 
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():

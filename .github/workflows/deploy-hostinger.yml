@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: hostinger-production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -45,7 +45,9 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Deploy build output to Hostinger
+      - name: Deploy build output to Hostinger (attempt 1)
+        id: hostinger_deploy_attempt_1
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
@@ -62,3 +64,27 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
+
+      - name: Deploy build output to Hostinger (attempt 2)
+        if: steps.hostinger_deploy_attempt_1.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_FTP_PORT }}
+          protocol: ${{ secrets.HOSTINGER_FTP_PROTOCOL }}
+          security: loose
+          timeout: 120000
+          log-level: standard
+          local-dir: ./build/
+          server-dir: ${{ secrets.HOSTINGER_SERVER_DIR }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+
+      - name: Note deploy retry
+        if: steps.hostinger_deploy_attempt_1.outcome == 'failure'
+        run: |
+          echo "First Hostinger deploy attempt failed, so a retry was triggered."

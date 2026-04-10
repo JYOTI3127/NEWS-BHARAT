@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchArticles } from "../lib/api";
+import { getAbsoluteArticleUrl, getArticlePath } from "../lib/articleUrl";
 
 const getCategoryLabel = (article) => {
   const details = Array.isArray(article?.category_details) ? article.category_details : [];
@@ -104,6 +105,9 @@ export default function NewsBanner() {
       title: a.title,
       category: getCategoryLabel(a),
       image: a.image_url || a.image || "",
+      category_details: a.category_details,
+      categories: a.categories,
+      canonical_url: a.canonical_url,
     });
   }
 
@@ -113,6 +117,9 @@ export default function NewsBanner() {
     title: a.title,
     time: timeAgo(a.published_at || a.created_at),
     region: getCategoryLabel(a),
+    category_details: a.category_details,
+    categories: a.categories,
+    canonical_url: a.canonical_url,
   }));
 
   useEffect(() => {
@@ -130,8 +137,9 @@ export default function NewsBanner() {
     setTimeout(() => { setCurrent(index); setAnimating(false); }, 600);
   };
 
-  const navigateToArticle = (slug) => {
-    if (slug) navigate(`/article/${slug}/`);
+  const navigateToArticle = (article) => {
+    const path = getArticlePath(article);
+    if (path) navigate(path);
   };
 
   const handleTouchStart = (e) => {
@@ -199,7 +207,7 @@ export default function NewsBanner() {
     <div className="nb-root">
       <div
         className="nb-container"
-        onClick={() => navigateToArticle(slide.slug)}
+        onClick={() => navigateToArticle(slide)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -247,7 +255,7 @@ export default function NewsBanner() {
             <div className="nb-actions">
               <button
                 className="nb-pill"
-                onClick={(e) => { e.stopPropagation(); navigateToArticle(slide.slug); }}
+                onClick={(e) => { e.stopPropagation(); navigateToArticle(slide); }}
               >
                 <ArrowCircleIcon /><span>Read More</span>
               </button>
@@ -256,9 +264,7 @@ export default function NewsBanner() {
                 className="nb-pill"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigator.clipboard?.writeText(
-                    window.location.origin + `/article/${slide.slug || slide.id}/`
-                  );
+                  navigator.clipboard?.writeText(getAbsoluteArticleUrl(slide));
                 }}
               >
                 <ShareCircleIcon /><span>Share</span>
@@ -272,7 +278,7 @@ export default function NewsBanner() {
                 key={item.id}
                 className="nb-news-card"
                 style={{ cursor: item.slug ? "pointer" : "default" }}
-                onClick={(e) => { e.stopPropagation(); navigateToArticle(item.slug); }}
+                onClick={(e) => { e.stopPropagation(); navigateToArticle(item); }}
               >
                 <p className="nb-news-title" style={{ color: "#ffffff" }}>{item.title}</p>
                 <div className="nb-news-meta" style={{ color: "rgba(255,255,255,0.6)" }}>

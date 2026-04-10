@@ -5,6 +5,7 @@ import {
   Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
 import { API_BASE } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 const toCategoryArray = (categoryDetails) => {
   if (Array.isArray(categoryDetails)) return categoryDetails;
@@ -208,7 +209,7 @@ export default function CategoryPage() {
           {/* Hero Article */}
           {heroArticle && (
             <Link
-              to={`/article/${heroArticle.slug || heroArticle.id}/`}
+              to={getArticlePath(heroArticle)}
               style={{ textDecoration: "none", color: "inherit", display: "block" }}
             >
               <div className="bg-white rounded-[12px] overflow-hidden shadow-[0_2px_14px_rgba(0,0,0,0.08)] mb-7 hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)] transition-shadow duration-200">
@@ -265,7 +266,7 @@ export default function CategoryPage() {
               {gridArticles.map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}/`}
+                  to={getArticlePath(article)}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
@@ -334,7 +335,7 @@ export default function CategoryPage() {
               {trendingTop5.map((article, idx) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}/`}
+                  to={getArticlePath(article)}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 min-w-[260px] lg:min-w-0">
@@ -363,7 +364,7 @@ export default function CategoryPage() {
               {articles.slice(0, 4).map((article) => (
                 <Link
                   key={article.id}
-                  to={`/article/${article.slug || article.id}/`}
+                  to={getArticlePath(article)}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">
@@ -402,7 +403,7 @@ export default function CategoryPage() {
                 {moreInArticles.map((article) => (
                   <Link
                     key={article.id}
-                    to={`/article/${article.slug || article.id}/`}
+                    to={getArticlePath(article)}
                     style={{ textDecoration: "none", color: "inherit", display: "block" }}
                   >
                     <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">

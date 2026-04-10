@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import "../Navbar.css";
 import { apiUrl } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 // ─────────────────────────────────────────────
 // ✅ FIX 1: LiveClock — alag component
@@ -110,10 +111,10 @@ const getFinalSlug = (slug, label) => {
 };
 
 const getSearchResultHref = (item) => {
+  const articlePath = getArticlePath(item);
+  if (articlePath) return articlePath;
   if (item?.url)  return item.url;
   if (item?.link) return item.link;
-  if (item?.slug) return `/article/${item.slug}/`;
-  if (item?.id)   return `/article/${item.id}/`;
   return "#";
 };
 

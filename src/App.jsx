@@ -1,5 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState, Profiler } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
+import { apiUrl } from "./lib/api";
+import { getArticlePath } from "./lib/articleUrl";
 
 // Seedhe load honge — har page pe zaroori hain
 import Navbar from "./components/Navbar";
@@ -70,8 +72,67 @@ function PageLoader() {
 }
 
 function LegacyArticleRedirect() {
-  const { slug } = useParams();
-  return <Navigate to={slug ? `/article/${slug}/` : "/"} replace />;
+  const { slug, categorySlug } = useParams();
+  const [targetPath, setTargetPath] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveLegacyPath = async () => {
+      const routeCandidates = Array.from(
+        new Set(
+          [
+            categorySlug && slug ? `${categorySlug}/${slug}` : "",
+            slug,
+          ]
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+        )
+      );
+
+      try {
+        for (const candidate of routeCandidates) {
+          const response = await fetch(
+            apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
+            { cache: "no-store" }
+          );
+
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const article = Array.isArray(data) ? data[0] : data;
+          const nextPath = getArticlePath(article, {
+            fallbackCategorySlug: categorySlug,
+            fallbackSlug: slug,
+          });
+
+          if (!cancelled && nextPath) {
+            setTargetPath(nextPath);
+          }
+          return;
+        }
+      } catch {
+        // Fall back below.
+      }
+
+      if (!cancelled) {
+        const fallbackPath =
+          categorySlug && slug ? `/${categorySlug}/${slug}/` : "/";
+        setTargetPath(fallbackPath);
+      }
+    };
+
+    resolveLegacyPath();
+    return () => {
+      cancelled = true;
+    };
+  }, [categorySlug, slug]);
+
+  if (targetPath) {
+    return <Navigate to={targetPath} replace />;
+  }
+
+  return <PageLoader />;
 }
 
 function Layout() {
@@ -131,7 +192,8 @@ function Layout() {
             <Route path="/news/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/news/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/article/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
-            <Route path="/article/:slug" element={<ArticleDetails />} />
+            <Route path="/article/:slug" element={<LegacyArticleRedirect />} />
+            <Route path="/:categorySlug/:slug" element={<ArticleDetails />} />
             <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
             <Route path="/disclaimer" element={<DisclaimerPage />} />
 

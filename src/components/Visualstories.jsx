@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
 import { API_BASE, apiUrl } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 const CATEGORY_SLUG = "bharat-economy";
 const LIVE_CRICKET_API = apiUrl("/live-cricket/");
 
@@ -441,7 +442,10 @@ export default function VisualStoriesWithScore() {
                                             maxWidth: isMobile ? "calc((100% - 8px) / 2)" : undefined,
                                             scrollSnapAlign: isMobile ? "start" : undefined,
                                         }}
-                                        onClick={() => navigate(`/article/${article.slug || article.id}/`)}
+                                        onClick={() => {
+                                            const articlePath = getArticlePath(article);
+                                            if (articlePath) navigate(articlePath);
+                                        }}
                                     >
                                         {/* Image — fixed aspect ratio */}
                                         <div

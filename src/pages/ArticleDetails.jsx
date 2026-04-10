@@ -8,6 +8,11 @@ import {
 } from "lucide-react";
 import { apiUrl } from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
+import {
+  getAbsoluteArticleUrl,
+  getArticlePath,
+  getArticleSlug,
+} from "../lib/articleUrl";
 
 const SITE_URL = "https://news4bharat.com";
 const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
@@ -175,8 +180,9 @@ const isInPrimaryCategory = (candidate, primaryCategory) => {
 
 // ✅ BUG FIX: Pehle apiCanonical valid ho toh use return karo — pehle hamesha fallback return ho raha tha
 const getArticleCanonicalUrl = (article, articlePathSlug) => {
-  const fallbackPath = normalizePathname(`/article/${articlePathSlug}`) || "/article";
-  const fallback = `${SITE_URL}${fallbackPath}/`;
+  const fallback =
+    getAbsoluteArticleUrl(article, { fallbackSlug: articlePathSlug }) ||
+    `${SITE_URL}/`;
   const apiCanonical = String(article?.canonical_url || "").trim();
 
   if (!apiCanonical) return fallback;
@@ -185,7 +191,11 @@ const getArticleCanonicalUrl = (article, articlePathSlug) => {
     const parsed = new URL(apiCanonical);
     if (parsed.origin !== SITE_URL) return fallback;
     const cleanPath = normalizePathname(parsed.pathname);
-    if (!cleanPath || cleanPath === "/" || !cleanPath.startsWith("/article/")) return fallback;
+    const segments = cleanPath
+      .replace(/^\/+|\/+$/g, "")
+      .split("/")
+      .filter(Boolean);
+    if (!cleanPath || cleanPath === "/" || segments.length < 2) return fallback;
     return `${parsed.origin}${cleanPath}/`;
   } catch {
     return fallback;
@@ -820,7 +830,15 @@ export default function ArticleDetails() {
             content="We could not load this article right now. Please try again shortly."
           />
           <meta name="robots" content="index,follow,max-image-preview:large" />
-          <link rel="canonical" href={`https://news4bharat.com/article/${fullRouteSlug}/`} />
+          <link
+            rel="canonical"
+            href={
+              getAbsoluteArticleUrl(
+                { slug: routeParam, category_details: [{ slug: params.categorySlug }] },
+                { fallbackCategorySlug: params.categorySlug, fallbackSlug: routeParam }
+              )
+            }
+          />
         </Helmet>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <Newspaper size={48} color="#ccc" />
@@ -855,7 +873,7 @@ export default function ArticleDetails() {
   const plainArticleContent = getPlainText(article.content);
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
   const categoryName = primaryCategory?.name?.trim() || "";
-  const articlePathSlug = article?.slug || routeParam;
+  const articlePathSlug = getArticleSlug(article, routeParam);
   const canonicalUrl = getArticleCanonicalUrl(article, articlePathSlug);
   const fallbackSidebarArticles = sidebarBaseArticles;
   const displayRelatedArticles =
@@ -1205,7 +1223,7 @@ export default function ArticleDetails() {
               </div>
               <div className="max-h-[540px] overflow-y-auto divide-y divide-slate-100">
                 {displayRelatedArticles.map((rel) => (
-                  <Link key={rel.id} to={`/article/${rel.slug || rel.id}/`}
+                  <Link key={rel.id} to={getArticlePath(rel)}
                     target="_blank" rel="noopener noreferrer"
                     style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                     <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
@@ -1256,7 +1274,7 @@ export default function ArticleDetails() {
                   }
                 >
                   {displayMoreArticles.map((a) => (
-                    <Link key={a.id} to={`/article/${a.slug || a.id}/`}
+                  <Link key={a.id} to={getArticlePath(a)}
                       target="_blank" rel="noopener noreferrer"
                       style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                       <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo 01 (1) compact.png";
 import { apiUrl } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 const CATEGORY_ICON_MAP = {
   "Breaking News": Flame,
@@ -303,8 +304,8 @@ export default function MenuDrawer({ open, onClose }) {
     onClose();
     setShowBreaking(false);
     setTimeout(() => {
-      if (article?.slug) navigate(`/article/${article.slug}/`);
-      else if (article?.id) navigate(`/article/${article.id}/`);
+      const articlePath = getArticlePath(article);
+      if (articlePath) navigate(articlePath);
     }, 280);
   };
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./MoreStoriesSection.css";
 import { API_BASE } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 const CATEGORY_API = `${API_BASE}/categories/`;
 
 const FEATURED_HOME_SLUGS = new Set([
@@ -181,12 +182,14 @@ function StoryCard({ article }) {
     </>
   );
 
-  if (!slug) {
+  const articlePath = getArticlePath(article);
+
+  if (!articlePath) {
     return <article className="mss-card">{content}</article>;
   }
 
   return (
-    <Link to={`/article/${slug}/`} className="mss-card">
+    <Link to={articlePath} className="mss-card">
       {content}
     </Link>
   );

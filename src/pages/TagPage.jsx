@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Clock, Newspaper, Tag, ArrowLeft } from "lucide-react";
 import { apiUrl } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleString("en-IN", {
@@ -143,7 +144,7 @@ export default function TagPage() {
           {articles.map((a) => (
             <Link
               key={a.id}
-              to={`/article/${a.slug || a.id}/`}
+              to={getArticlePath(a)}
               className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="w-full h-44 bg-slate-100 overflow-hidden">

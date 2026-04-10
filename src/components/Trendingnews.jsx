@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, memo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiUrl } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read");
 
@@ -232,7 +233,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
             );
 
             return hasImage ? (
-              <Link key={article.id || `${article.slug}-${i}`} to={`/article/${article.slug || article.id}/`} className="tn-article-link news-ticker-item" style={itemStyle}>
+              <Link key={article.id || `${article.slug}-${i}`} to={getArticlePath(article)} className="tn-article-link news-ticker-item" style={itemStyle}>
                 {inner}
               </Link>
             ) : (
@@ -304,7 +305,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
       )}
       <div className="tn-feature-cards" style={{ ...transitionStyle, ...(is2K ? { height: 430 } : {}) }}>
         {cards.map((card, i) => (
-          <Link key={card.id} to={`/article/${card.slug || card.id}/`} className="tn-feature-card" style={{ textDecoration: "none", color: "inherit", display: "block", cursor: "pointer" }}>
+          <Link key={card.id} to={getArticlePath(card)} className="tn-feature-card" style={{ textDecoration: "none", color: "inherit", display: "block", cursor: "pointer" }}>
             <div className="tn-feature-card-img-wrap">
               <img
                 src={getArticleImage(card)}
@@ -414,7 +415,7 @@ const LiveUpdates = memo(({ is2K }) => {
                   </>
                 );
                 return hasImage ? (
-                  <Link key={item.id} to={`/article/${item.slug || item.id}/`} className="tn-live-item group cursor-pointer" style={{ textDecoration: "none", color: "inherit", display: "flex" }}>
+                  <Link key={item.id} to={getArticlePath(item)} className="tn-live-item group cursor-pointer" style={{ textDecoration: "none", color: "inherit", display: "flex" }}>
                     {inner}
                   </Link>
                 ) : (

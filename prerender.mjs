@@ -3,6 +3,11 @@ import PuppeteerRenderer from '@prerenderer/renderer-puppeteer'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
+import {
+  getArticlePath,
+  getArticleSlug,
+  isArticlePath,
+} from './src/lib/articleUrl.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const API_BASE = 'https://news4bharat.cloud/api'
@@ -29,15 +34,13 @@ const normalizePathname = (value) => {
   return segments.length > 0 ? `/${segments.join('/')}` : ''
 }
 
-const getArticleSlugFromRoute = (route) => {
-  const articlePath = String(route || '').replace(/^\/article\//, '')
-  const segments = getCleanPathSegments(articlePath)
-  return segments[segments.length - 1] || ''
-}
+const getArticleSlugFromRoute = (route) =>
+  getArticleSlug({ slug: route })
 
 const getArticleCanonicalUrl = (article, route) => {
-  const normalizedRoute = normalizePathname(route)
-  const fallback = `https://news4bharat.com${normalizedRoute ? `${normalizedRoute}/` : '/'}`
+  const fallback = `https://news4bharat.com${getArticlePath(article, {
+    fallbackSlug: route,
+  }) || '/'}`
   const apiCanonical = String(article?.canonical_url || '').trim()
 
   if (!apiCanonical) return fallback
@@ -46,7 +49,7 @@ const getArticleCanonicalUrl = (article, route) => {
     const parsed = new URL(apiCanonical)
     if (parsed.origin !== 'https://news4bharat.com') return fallback
     const cleanPath = normalizePathname(parsed.pathname)
-    if (!cleanPath || cleanPath === '/' || !cleanPath.startsWith('/article/')) return fallback
+    if (!isArticlePath(cleanPath)) return fallback
     return `${parsed.origin}${cleanPath}/`
   } catch {
     return fallback
@@ -67,38 +70,11 @@ const getRobotsContent = (article) => {
 }
 
 const getArticleRoutes = (article) => {
-  const segments = getCleanPathSegments(article?.slug)
   const routes = new Set()
-  const canonicalPath = (() => {
-    const apiCanonical = String(article?.canonical_url || '').trim()
-    if (!apiCanonical) return ''
-
-    try {
-      const parsed = new URL(apiCanonical)
-      if (parsed.origin !== 'https://news4bharat.com') return ''
-      const cleanPath = normalizePathname(parsed.pathname)
-      return cleanPath && cleanPath !== '/' && cleanPath.startsWith('/article/') ? cleanPath : ''
-    } catch {
-      return ''
-    }
-  })()
-
-  if (canonicalPath) {
-    routes.add(canonicalPath)
+  const primaryPath = getArticlePath(article)
+  if (primaryPath) {
+    routes.add(primaryPath)
   }
-
-  if (segments.length === 0) return [...routes]
-  if (segments.length === 1) {
-    routes.add(`/article/${segments[0]}/`)
-    return [...routes]
-  }
-  if (segments.length === 2) {
-    routes.add(`/article/${segments.join('/')}/`)
-    return [...routes]
-  }
-
-  // Extra nested slug app routes support nahi karte, isliye safe tail route use karo.
-  routes.add(`/article/${segments[segments.length - 1]}/`)
   return [...routes]
 }
 
@@ -190,7 +166,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   }
 
   // Article page
-  if (route.startsWith('/article/')) {
+  if (isArticlePath(route)) {
     const slug = getArticleSlugFromRoute(route)
     const article = articleMap.get(slug)
 

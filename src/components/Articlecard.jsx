@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getArticlePath } from "../lib/articleUrl";
 
 export default function ArticleCard({ article }) {
   const {
@@ -30,7 +31,7 @@ export default function ArticleCard({ article }) {
       })
     : "";
 
-  const articlePath = `/article/${slug}/`;
+  const articlePath = getArticlePath(article);
   const breakingCategory = Array.isArray(category_details)
     ? category_details.find((category) => {
         const slug = String(category?.slug || "").trim().toLowerCase();

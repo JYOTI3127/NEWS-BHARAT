@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, memo } from "react";
 import { Link } from "react-router-dom";
 import "./HomeCategorySections.css";
 import { API_BASE } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 const CATEGORY_API = `${API_BASE}/categories/`;
 
@@ -215,9 +216,9 @@ const SectionHeader = memo(({ title, path }) => (
 ));
 
 const StoryLink = memo(({ article, className, children }) => {
-  const slug = article?.slug;
-  if (!slug) return <div className={className}>{children}</div>;
-  return <Link to={`/article/${slug}/`} className={className}>{children}</Link>;
+  const articlePath = getArticlePath(article);
+  if (!articlePath) return <div className={className}>{children}</div>;
+  return <Link to={articlePath} className={className}>{children}</Link>;
 });
 
 const ArticleThumb = memo(({ article, alt, className, priority = false }) => {

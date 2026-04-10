@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 // ── State List ────────────────────────────────────────────────
 const stateList = [
@@ -192,8 +193,8 @@ export default function StateNews() {
   const sidebarItems   = startupArticles.slice(0, 6);
 
   const goToArticle = (article) => {
-    if (article?.slug) navigate(`/article/${article.slug}/`);
-    else if (article?.id) navigate(`/article/${article.id}/`);
+    const articlePath = getArticlePath(article);
+    if (articlePath) navigate(articlePath);
   };
 
   const scroll = (dir) => {

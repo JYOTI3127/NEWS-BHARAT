@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../lib/api";
+import { getArticlePath } from "../lib/articleUrl";
 
 // ✅ Fix 1 — Category slug se seedha fetch, saare articles nahi
 function useCategoryArticles(slug) {
@@ -199,7 +200,10 @@ export function EntertainmentSection() {
             <div
               className="hs-featured-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${featured.slug || featured.id}/`)}
+              onClick={() => {
+                const articlePath = getArticlePath(featured);
+                if (articlePath) navigate(articlePath);
+              }}
             >
               <div className="hs-featured-img-wrap" style={featuredStyle}>
                 <ArticleImg
@@ -237,7 +241,10 @@ export function EntertainmentSection() {
             <div
               className="hs-small-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${smallCard.slug || smallCard.id}/`)}
+              onClick={() => {
+                const articlePath = getArticlePath(smallCard);
+                if (articlePath) navigate(articlePath);
+              }}
             >
               <div className="hs-small-img">
                 <ArticleImg
@@ -272,7 +279,10 @@ export function EntertainmentSection() {
                     key={card.id}
                     className="hs-mid-card"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${card.slug || card.id}/`)}
+                    onClick={() => {
+                      const articlePath = getArticlePath(card);
+                      if (articlePath) navigate(articlePath);
+                    }}
                   >
                     <div className="hs-mid-img">
                       <ArticleImg
@@ -324,7 +334,10 @@ export function EntertainmentSection() {
                     key={item.id}
                     className="nps-health-item"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${item.slug || item.id}/`)}
+                    onClick={() => {
+                      const articlePath = getArticlePath(item);
+                      if (articlePath) navigate(articlePath);
+                    }}
                   >
                     <div className="nps-health-img">
                       <ArticleImg

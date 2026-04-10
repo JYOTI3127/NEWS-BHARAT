@@ -1,5 +1,5 @@
 from django.utils import timezone
-from .scheduling import maybe_publish_due_articles
+from .scheduling import maybe_publish_due_articles, maybe_flush_frontend_build_batch_if_due
 
 class ActiveUserMiddleware:
     def __init__(self, get_response):
@@ -8,6 +8,11 @@ class ActiveUserMiddleware:
     def __call__(self, request):
         try:
             maybe_publish_due_articles()
+        except Exception:
+            pass
+
+        try:
+            maybe_flush_frontend_build_batch_if_due()
         except Exception:
             pass
 

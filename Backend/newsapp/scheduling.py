@@ -8,6 +8,8 @@ from .models import Article
 
 SCHEDULED_PUBLISH_CACHE_KEY = "newsapp:last_scheduled_publish_run"
 SCHEDULED_PUBLISH_CACHE_TTL = 45
+FRONTEND_BUILD_FLUSH_CACHE_KEY = "newsapp:last_frontend_build_flush_run"
+FRONTEND_BUILD_FLUSH_CACHE_TTL = 45
 
 
 def publish_due_articles(*, now=None):
@@ -51,4 +53,12 @@ def publish_due_articles_cron():
 
 
 def flush_frontend_build_batch_cron():
+    return flush_frontend_build_batch_if_due()
+
+
+def maybe_flush_frontend_build_batch_if_due():
+    if cache.get(FRONTEND_BUILD_FLUSH_CACHE_KEY):
+        return False
+
+    cache.set(FRONTEND_BUILD_FLUSH_CACHE_KEY, True, FRONTEND_BUILD_FLUSH_CACHE_TTL)
     return flush_frontend_build_batch_if_due()

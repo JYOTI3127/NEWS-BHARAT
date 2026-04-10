@@ -63,6 +63,9 @@ def _empty_batch_state():
         "previous_statuses": {},
         "first_queued_at": None,
         "last_reason": None,
+        "latest_slug": "",
+        "latest_title": "",
+        "notification_sent_at": None,
     }
 
 
@@ -92,6 +95,16 @@ def _set_batch_state(state):
 
 def _clear_batch_state():
     cache.delete(FRONTEND_BUILD_BATCH_CACHE_KEY)
+
+
+def _batch_window_end_iso(state):
+    first_queued_at = _parse_iso_datetime(state.get("first_queued_at"))
+    if not first_queued_at:
+        return None
+    max_wait = _batch_max_wait_seconds()
+    if max_wait <= 0:
+        return first_queued_at.isoformat()
+    return (first_queued_at + timezone.timedelta(seconds=max_wait)).isoformat()
 
 
 def _batch_should_flush(state, *, now=None):
@@ -133,6 +146,8 @@ def _queue_batch_event(*, reason, article):
         if slug:
             state["statuses"][slug] = current_status
             state["previous_statuses"][slug] = previous_status
+            state["latest_slug"] = slug
+            state["latest_title"] = getattr(article, "title", "") or ""
 
         _set_batch_state(state)
         return state, _batch_should_flush(state, now=now)
@@ -165,6 +180,61 @@ def _build_payload_context(reason, article=None, batch_state=None, batch_trigger
     return event_type, payload
 
 
+def _post_frontend_hook(*, event_type, client_payload):
+    hook_url = getattr(settings, "FRONTEND_BUILD_HOOK_URL", "").strip()
+    if not hook_url:
+        return False
+
+    headers = {"Content-Type": "application/json"}
+    token = getattr(settings, "FRONTEND_BUILD_HOOK_TOKEN", "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    if _is_github_dispatch_url(hook_url):
+        headers["Accept"] = "application/vnd.github+json"
+        payload = {
+            "event_type": event_type,
+            "client_payload": client_payload,
+        }
+    else:
+        if token:
+            headers["X-Build-Hook-Token"] = token
+        payload = client_payload
+
+    timeout = max(3, int(getattr(settings, "FRONTEND_BUILD_HOOK_TIMEOUT", 10) or 10))
+    response = requests.post(hook_url, json=payload, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    return True
+
+
+def _send_scheduled_batch_notification(state):
+    if state.get("notification_sent_at"):
+        return True
+
+    event_type = getattr(settings, "FRONTEND_BUILD_EVENT_SCHEDULED_BATCH", "rebuild-frontend")
+    client_payload = {
+        "reason": "scheduled-batch",
+        "article_count": len(state.get("slugs") or []),
+        "window_start": state.get("first_queued_at") or "",
+        "window_end": _batch_window_end_iso(state) or "",
+        "latest_slug": state.get("latest_slug") or "",
+        "latest_title": state.get("latest_title") or "",
+    }
+
+    _post_frontend_hook(event_type=event_type, client_payload=client_payload)
+    state["notification_sent_at"] = timezone.now().isoformat()
+    _set_batch_state(state)
+    logger.info(
+        "Scheduled batch notification sent. event_type=%s article_count=%s window_start=%s window_end=%s latest_slug=%s",
+        event_type,
+        client_payload["article_count"],
+        client_payload["window_start"],
+        client_payload["window_end"],
+        client_payload["latest_slug"],
+    )
+    return True
+
+
 def trigger_frontend_build(*, reason="article_change", article=None, force=False):
     hook_url = getattr(settings, "FRONTEND_BUILD_HOOK_URL", "").strip()
     if not hook_url:
@@ -182,6 +252,16 @@ def trigger_frontend_build(*, reason="article_change", article=None, force=False
             batch_trigger or "",
             batch_state.get("first_queued_at"),
         )
+        if not batch_state.get("notification_sent_at"):
+            try:
+                _send_scheduled_batch_notification(batch_state)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to send scheduled batch notification. slug=%s pending_articles=%s error=%s",
+                    getattr(article, "slug", ""),
+                    len(batch_state.get("slugs") or []),
+                    exc,
+                )
         if not batch_trigger:
             return False
         reason = "article_batch"
@@ -212,31 +292,12 @@ def trigger_frontend_build(*, reason="article_change", article=None, force=False
             )
             return False
 
-    headers = {"Content-Type": "application/json"}
-    token = getattr(settings, "FRONTEND_BUILD_HOOK_TOKEN", "").strip()
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    if _is_github_dispatch_url(hook_url):
-        headers["Accept"] = "application/vnd.github+json"
-        payload = {
-            "event_type": event_type,
-            "client_payload": client_payload,
-        }
-    else:
-        if token:
-            headers["X-Build-Hook-Token"] = token
-        payload = client_payload
-
-    timeout = max(3, int(getattr(settings, "FRONTEND_BUILD_HOOK_TIMEOUT", 10) or 10))
-
     try:
-        response = requests.post(hook_url, json=payload, headers=headers, timeout=timeout)
-        response.raise_for_status()
+        _post_frontend_hook(event_type=event_type, client_payload=client_payload)
         if batch_state:
             _clear_batch_state()
         logger.info(
-            "Frontend build hook triggered successfully. reason=%s event_type=%s slug=%s previous_status=%s current_status=%s batch_count=%s batch_trigger=%s response_status=%s",
+            "Frontend build hook triggered successfully. reason=%s event_type=%s slug=%s previous_status=%s current_status=%s batch_count=%s batch_trigger=%s",
             reason,
             event_type,
             getattr(article, "slug", ""),
@@ -244,7 +305,6 @@ def trigger_frontend_build(*, reason="article_change", article=None, force=False
             getattr(article, "status", ""),
             client_payload.get("batch_count"),
             client_payload.get("batch_trigger"),
-            response.status_code,
         )
         return True
     except Exception as exc:
@@ -290,34 +350,14 @@ def flush_frontend_build_batch_if_due():
     if not hook_url:
         return False
 
-    headers = {"Content-Type": "application/json"}
-    token = getattr(settings, "FRONTEND_BUILD_HOOK_TOKEN", "").strip()
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    if _is_github_dispatch_url(hook_url):
-        headers["Accept"] = "application/vnd.github+json"
-        payload = {
-            "event_type": event_type,
-            "client_payload": client_payload,
-        }
-    else:
-        if token:
-            headers["X-Build-Hook-Token"] = token
-        payload = client_payload
-
-    timeout = max(3, int(getattr(settings, "FRONTEND_BUILD_HOOK_TIMEOUT", 10) or 10))
-
     try:
-        response = requests.post(hook_url, json=payload, headers=headers, timeout=timeout)
-        response.raise_for_status()
+        _post_frontend_hook(event_type=event_type, client_payload=client_payload)
         _clear_batch_state()
         logger.info(
-            "Frontend build batch flushed successfully. event_type=%s batch_count=%s batch_trigger=%s response_status=%s",
+            "Frontend build batch flushed successfully. event_type=%s batch_count=%s batch_trigger=%s",
             event_type,
             client_payload.get("batch_count"),
             batch_trigger,
-            response.status_code,
         )
         return True
     except Exception as exc:

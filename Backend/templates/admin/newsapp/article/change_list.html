@@ -126,8 +126,13 @@
 
           <!-- Date -->
           <td>
-            <div class="art-date">{{ article.created_at|date:"d M Y" }}</div>
-            <div class="art-timesince">{{ article.created_at|timesince }} ago</div>
+            {% if article.published_at %}
+              <div class="art-date">{{ article.published_at|date:"d M Y" }}</div>
+              <div class="art-timesince">{{ article.published_at|date:"h:i A" }}</div>
+            {% else %}
+              <div class="art-date">{{ article.created_at|date:"d M Y" }}</div>
+              <div class="art-timesince">{{ article.created_at|date:"h:i A" }}</div>
+            {% endif %}
           </td>
 
           <td>

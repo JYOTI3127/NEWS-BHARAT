@@ -48,8 +48,8 @@ const getArticleImage = (article) => article?.image_url || article?.image || '';
 const getArticleTitle = (article) => article?.title || article?.headline || 'Untitled';
 
 const getArticlePath = (article) => {
-  if (article?.slug) return `/article/${article.slug}`;
-  if (article?.id) return `/article/${article.id}`;
+  if (article?.slug) return `/article/${article.slug}/`;
+  if (article?.id) return `/article/${article.id}/`;
   return '';
 };
 

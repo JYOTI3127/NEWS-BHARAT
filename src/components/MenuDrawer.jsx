@@ -303,8 +303,8 @@ export default function MenuDrawer({ open, onClose }) {
     onClose();
     setShowBreaking(false);
     setTimeout(() => {
-      if (article?.slug) navigate(`/article/${article.slug}`);
-      else if (article?.id) navigate(`/article/${article.id}`);
+      if (article?.slug) navigate(`/article/${article.slug}/`);
+      else if (article?.id) navigate(`/article/${article.id}/`);
     }, 280);
   };
 

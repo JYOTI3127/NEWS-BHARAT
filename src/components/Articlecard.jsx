@@ -30,7 +30,7 @@ export default function ArticleCard({ article }) {
       })
     : "";
 
-  const articlePath = `/article/${slug}`;
+  const articlePath = `/article/${slug}/`;
   const breakingCategory = Array.isArray(category_details)
     ? category_details.find((category) => {
         const slug = String(category?.slug || "").trim().toLowerCase();

@@ -217,7 +217,7 @@ const SectionHeader = memo(({ title, path }) => (
 const StoryLink = memo(({ article, className, children }) => {
   const slug = article?.slug;
   if (!slug) return <div className={className}>{children}</div>;
-  return <Link to={`/article/${slug}`} className={className}>{children}</Link>;
+  return <Link to={`/article/${slug}/`} className={className}>{children}</Link>;
 });
 
 const ArticleThumb = memo(({ article, alt, className, priority = false }) => {

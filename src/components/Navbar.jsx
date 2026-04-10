@@ -112,8 +112,8 @@ const getFinalSlug = (slug, label) => {
 const getSearchResultHref = (item) => {
   if (item?.url)  return item.url;
   if (item?.link) return item.link;
-  if (item?.slug) return `/article/${item.slug}`;
-  if (item?.id)   return `/article/${item.id}`;
+  if (item?.slug) return `/article/${item.slug}/`;
+  if (item?.id)   return `/article/${item.id}/`;
   return "#";
 };
 

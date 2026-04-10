@@ -441,7 +441,7 @@ export default function VisualStoriesWithScore() {
                                             maxWidth: isMobile ? "calc((100% - 8px) / 2)" : undefined,
                                             scrollSnapAlign: isMobile ? "start" : undefined,
                                         }}
-                                        onClick={() => navigate(`/article/${article.slug || article.id}`)}
+                                        onClick={() => navigate(`/article/${article.slug || article.id}/`)}
                                     >
                                         {/* Image — fixed aspect ratio */}
                                         <div

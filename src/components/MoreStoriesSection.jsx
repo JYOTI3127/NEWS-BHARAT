@@ -186,7 +186,7 @@ function StoryCard({ article }) {
   }
 
   return (
-    <Link to={`/article/${slug}`} className="mss-card">
+    <Link to={`/article/${slug}/`} className="mss-card">
       {content}
     </Link>
   );

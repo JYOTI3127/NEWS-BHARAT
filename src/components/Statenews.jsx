@@ -192,8 +192,8 @@ export default function StateNews() {
   const sidebarItems   = startupArticles.slice(0, 6);
 
   const goToArticle = (article) => {
-    if (article?.slug) navigate(`/article/${article.slug}`);
-    else if (article?.id) navigate(`/article/${article.id}`);
+    if (article?.slug) navigate(`/article/${article.slug}/`);
+    else if (article?.id) navigate(`/article/${article.id}/`);
   };
 
   const scroll = (dir) => {

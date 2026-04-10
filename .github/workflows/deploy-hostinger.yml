@@ -18,6 +18,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -31,6 +32,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Log trigger context
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "dispatch_type=${{ github.event.action }}"
+          echo 'client_payload=${{ toJson(github.event.client_payload) }}'
 
       - name: Build and prerender
         run: npm run build
@@ -46,6 +53,9 @@ jobs:
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
           port: ${{ secrets.HOSTINGER_FTP_PORT }}
           protocol: ${{ secrets.HOSTINGER_FTP_PROTOCOL }}
+          security: loose
+          timeout: 120000
+          log-level: standard
           local-dir: ./build/
           server-dir: ${{ secrets.HOSTINGER_SERVER_DIR }}
           exclude: |

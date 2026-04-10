@@ -152,7 +152,7 @@ export default function BottomNav() {
                 breakingNewsItems.map((item, i) => (
                   <li
                     key={i}
-                    onClick={() => (item.slug || item.id) && navigate(`/article/${item.slug || item.id}`)}
+                    onClick={() => (item.slug || item.id) && navigate(`/article/${item.slug || item.id}/`)}
                     className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer hover:text-yellow-300 transition-colors duration-200"
                   >
                     <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>

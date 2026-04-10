@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState, Profiler } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 
 // Seedhe load honge — har page pe zaroori hain
 import Navbar from "./components/Navbar";
@@ -69,6 +69,11 @@ function PageLoader() {
   );
 }
 
+function LegacyArticleRedirect() {
+  const { slug } = useParams();
+  return <Navigate to={slug ? `/article/${slug}/` : "/"} replace />;
+}
+
 function Layout() {
   const location = useLocation();
   const hideLayout = location.pathname === "/CommingSoon";
@@ -123,9 +128,9 @@ function Layout() {
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
-            <Route path="/news/:categorySlug/:slug" element={<ArticleDetails />} />
-            <Route path="/news/:slug" element={<ArticleDetails />} />
-            <Route path="/article/:categorySlug/:slug" element={<ArticleDetails />} />
+            <Route path="/news/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
+            <Route path="/news/:slug" element={<LegacyArticleRedirect />} />
+            <Route path="/article/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/article/:slug" element={<ArticleDetails />} />
             <Route path="/60-seconds/:slug" element={<SixtySecondsPage />} />
             <Route path="/disclaimer" element={<DisclaimerPage />} />

@@ -143,7 +143,7 @@ export default function TagPage() {
           {articles.map((a) => (
             <Link
               key={a.id}
-              to={`/article/${a.slug || a.id}`}
+              to={`/article/${a.slug || a.id}/`}
               className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="w-full h-44 bg-slate-100 overflow-hidden">

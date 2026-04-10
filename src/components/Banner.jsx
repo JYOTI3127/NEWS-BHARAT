@@ -3,6 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchArticles } from "../lib/api";
 
+const getCategoryLabel = (article) => {
+  const details = Array.isArray(article?.category_details) ? article.category_details : [];
+  const rawCategory = article?.category;
+  const directCategory =
+    rawCategory && typeof rawCategory === "object"
+      ? String(rawCategory?.name || rawCategory?.slug || "").trim()
+      : String(rawCategory || "").trim();
+
+  const breakingCategory = details.find((cat) => {
+    const slug = String(cat?.slug || "").trim().toLowerCase();
+    const name = String(cat?.name || "").trim().toLowerCase();
+    return slug === "breaking-news" || name === "breaking news";
+  });
+
+  if (breakingCategory?.name) return breakingCategory.name;
+  if (details[0]?.name) return details[0].name;
+  if (directCategory) return directCategory;
+  return "News";
+};
+
 const timeAgo = (dateStr) => {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -80,9 +100,9 @@ export default function NewsBanner() {
     slides.push({
       id: a.id,
       slug: a.slug,
-      author: a.category_details?.[0]?.name || "News",
+      author: getCategoryLabel(a),
       title: a.title,
-      category: a.category_details?.[0]?.name || "News",
+      category: getCategoryLabel(a),
       image: a.image_url || a.image || "",
     });
   }
@@ -92,7 +112,7 @@ export default function NewsBanner() {
     slug: a.slug,
     title: a.title,
     time: timeAgo(a.published_at || a.created_at),
-    region: a.category_details?.[0]?.name || "News",
+    region: getCategoryLabel(a),
   }));
 
   useEffect(() => {
@@ -111,7 +131,7 @@ export default function NewsBanner() {
   };
 
   const navigateToArticle = (slug) => {
-    if (slug) navigate(`/article/${slug}`);
+    if (slug) navigate(`/article/${slug}/`);
   };
 
   const handleTouchStart = (e) => {
@@ -217,7 +237,7 @@ export default function NewsBanner() {
           <div className="nb-hero">
             <div className="nb-author-row">
               <div className="nb-redbar" />
-              <span className="nb-author-name">{slide.author}</span>
+              <span className="nb-author-name">{slide.category}</span>
             </div>
 
             <h1 className="nb-headline">{slide.title}</h1>
@@ -237,7 +257,7 @@ export default function NewsBanner() {
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard?.writeText(
-                    window.location.origin + `/article/${slide.slug || slide.id}`
+                    window.location.origin + `/article/${slide.slug || slide.id}/`
                   );
                 }}
               >

@@ -6,6 +6,7 @@ import fs from 'fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const API_BASE = 'https://news4bharat.cloud/api'
+const GITHUB_EVENT_PATH = process.env.GITHUB_EVENT_PATH || ''
 
 const isValidSlug = (value) =>
   typeof value === 'string' &&
@@ -29,14 +30,14 @@ const normalizePathname = (value) => {
 }
 
 const getArticleSlugFromRoute = (route) => {
-  const articlePath = String(route || '').replace(/^\/(?:article|news)\//, '')
+  const articlePath = String(route || '').replace(/^\/article\//, '')
   const segments = getCleanPathSegments(articlePath)
   return segments[segments.length - 1] || ''
 }
 
 const getArticleCanonicalUrl = (article, route) => {
   const normalizedRoute = normalizePathname(route)
-  const fallback = `https://news4bharat.com${normalizedRoute || '/'}`
+  const fallback = `https://news4bharat.com${normalizedRoute ? `${normalizedRoute}/` : '/'}`
   const apiCanonical = String(article?.canonical_url || '').trim()
 
   if (!apiCanonical) return fallback
@@ -45,8 +46,8 @@ const getArticleCanonicalUrl = (article, route) => {
     const parsed = new URL(apiCanonical)
     if (parsed.origin !== 'https://news4bharat.com') return fallback
     const cleanPath = normalizePathname(parsed.pathname)
-    if (!cleanPath || cleanPath === '/') return fallback
-    return `${parsed.origin}${cleanPath}`
+    if (!cleanPath || cleanPath === '/' || !cleanPath.startsWith('/article/')) return fallback
+    return `${parsed.origin}${cleanPath}/`
   } catch {
     return fallback
   }
@@ -76,7 +77,7 @@ const getArticleRoutes = (article) => {
       const parsed = new URL(apiCanonical)
       if (parsed.origin !== 'https://news4bharat.com') return ''
       const cleanPath = normalizePathname(parsed.pathname)
-      return cleanPath && cleanPath !== '/' ? cleanPath : ''
+      return cleanPath && cleanPath !== '/' && cleanPath.startsWith('/article/') ? cleanPath : ''
     } catch {
       return ''
     }
@@ -88,19 +89,16 @@ const getArticleRoutes = (article) => {
 
   if (segments.length === 0) return [...routes]
   if (segments.length === 1) {
-    routes.add(`/article/${segments[0]}`)
-    routes.add(`/news/${segments[0]}`)
+    routes.add(`/article/${segments[0]}/`)
     return [...routes]
   }
   if (segments.length === 2) {
-    routes.add(`/article/${segments.join('/')}`)
-    routes.add(`/news/${segments.join('/')}`)
+    routes.add(`/article/${segments.join('/')}/`)
     return [...routes]
   }
 
   // Extra nested slug app routes support nahi karte, isliye safe tail route use karo.
-  routes.add(`/article/${segments[segments.length - 1]}`)
-  routes.add(`/news/${segments[segments.length - 1]}`)
+  routes.add(`/article/${segments[segments.length - 1]}/`)
   return [...routes]
 }
 
@@ -116,6 +114,37 @@ async function fetchWithRetry(url, retries = 3) {
       console.log(`  Retry ${i + 1}/${retries} for ${url}`)
       await new Promise((r) => setTimeout(r, 2000 * (i + 1)))
     }
+  }
+}
+
+const getListFromApiResponse = (data) =>
+  Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : data?.results || []
+
+const getGithubDispatchPayload = () => {
+  if (!GITHUB_EVENT_PATH || !fs.existsSync(GITHUB_EVENT_PATH)) return null
+
+  try {
+    const event = JSON.parse(fs.readFileSync(GITHUB_EVENT_PATH, 'utf8'))
+    const payload = event?.client_payload
+
+    if (!payload || typeof payload !== 'object') return null
+
+    const slug = String(
+      payload.slug ||
+      payload.article_slug ||
+      payload.articleSlug ||
+      ''
+    ).trim()
+
+    return {
+      eventType: String(event?.action || '').trim(),
+      slug,
+      title: String(payload.title || payload.article_title || '').trim(),
+      raw: payload,
+    }
+  } catch (error) {
+    console.log(`Could not read GitHub event payload: ${error.message}`)
+    return null
   }
 }
 
@@ -161,7 +190,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   }
 
   // Article page
-  if (route.startsWith('/article/') || route.startsWith('/news/')) {
+  if (route.startsWith('/article/')) {
     const slug = getArticleSlugFromRoute(route)
     const article = articleMap.get(slug)
 
@@ -362,14 +391,16 @@ async function getRoutesAndData() {
   const routeSet = new Set(['/'])
   const articleMap = new Map()
   const categoryMap = new Map()
+  const dispatchPayload = getGithubDispatchPayload()
   const siteData = {
     homepageHeroImage: '',
   }
 
   // Articles
   try {
-    const data = await fetchWithRetry(`${API_BASE}/articles/`)
-    const articles = Array.isArray(data) ? data : Array.isArray(data.value) ? data.value : data.results || []
+    const cacheBust = `_=${Date.now()}`
+    const data = await fetchWithRetry(`${API_BASE}/articles/?limit=100&${cacheBust}`)
+    const articles = getListFromApiResponse(data)
     const sortedArticles = [...articles].sort(
       (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
     )
@@ -390,7 +421,7 @@ async function getRoutesAndData() {
         articleMap.set(articleSlug, a)
         if (articleSlug) {
           detailTasks.push(
-            fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(articleSlug)}/`)
+            fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(articleSlug)}/?${cacheBust}`)
               .then((detail) => {
                 const finalDetail = Array.isArray(detail) ? detail[0] : detail
                 if (finalDetail) {
@@ -405,13 +436,39 @@ async function getRoutesAndData() {
     })
     await Promise.allSettled(detailTasks)
     console.log(`Added ${added}/${articles.length} article routes`)
+
+    if (dispatchPayload?.slug) {
+      try {
+        const forcedDetail = await fetchWithRetry(
+          `${API_BASE}/articles/slug/${encodeURIComponent(dispatchPayload.slug)}?${cacheBust}`
+        )
+        const forcedArticle = Array.isArray(forcedDetail) ? forcedDetail[0] : forcedDetail
+
+        if (forcedArticle && (forcedArticle.slug || forcedArticle.id)) {
+          const forcedRoutes = getArticleRoutes(forcedArticle)
+          const forcedSlug = getArticleSlugFromRoute(forcedRoutes[0] || forcedArticle.slug || '')
+
+          forcedRoutes.forEach((route) => routeSet.add(route))
+
+          if (forcedSlug) {
+            articleMap.set(forcedSlug, forcedArticle)
+          }
+
+          console.log(
+            `Forced prerender article from dispatch payload: ${dispatchPayload.slug} (${forcedRoutes.join(', ')})`
+          )
+        }
+      } catch (error) {
+        console.log(`Dispatch payload article fetch failed for ${dispatchPayload.slug}: ${error.message}`)
+      }
+    }
   } catch (e) {
     console.log('Articles fetch error:', e.message)
   }
 
   // Categories
   try {
-    const data = await fetchWithRetry(`${API_BASE}/categories/`)
+    const data = await fetchWithRetry(`${API_BASE}/categories/?_=${Date.now()}`)
     const categories = Array.isArray(data) ? data : []
 
     let added = 0

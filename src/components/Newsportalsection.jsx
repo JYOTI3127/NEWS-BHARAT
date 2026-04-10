@@ -199,7 +199,7 @@ export function EntertainmentSection() {
             <div
               className="hs-featured-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${featured.slug || featured.id}`)}
+              onClick={() => navigate(`/article/${featured.slug || featured.id}/`)}
             >
               <div className="hs-featured-img-wrap" style={featuredStyle}>
                 <ArticleImg
@@ -237,7 +237,7 @@ export function EntertainmentSection() {
             <div
               className="hs-small-card"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/article/${smallCard.slug || smallCard.id}`)}
+              onClick={() => navigate(`/article/${smallCard.slug || smallCard.id}/`)}
             >
               <div className="hs-small-img">
                 <ArticleImg
@@ -272,7 +272,7 @@ export function EntertainmentSection() {
                     key={card.id}
                     className="hs-mid-card"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${card.slug || card.id}`)}
+                    onClick={() => navigate(`/article/${card.slug || card.id}/`)}
                   >
                     <div className="hs-mid-img">
                       <ArticleImg
@@ -324,7 +324,7 @@ export function EntertainmentSection() {
                     key={item.id}
                     className="nps-health-item"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/article/${item.slug || item.id}`)}
+                    onClick={() => navigate(`/article/${item.slug || item.id}/`)}
                   >
                     <div className="nps-health-img">
                       <ArticleImg

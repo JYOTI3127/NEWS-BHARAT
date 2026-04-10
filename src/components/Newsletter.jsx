@@ -13,31 +13,33 @@ export default function Newsletter() {
   useEffect(() => {
     if (window.location.hash !== "#newsletter") return;
 
-    const scrollToNewsletter = () => {
-      const section = document.getElementById("newsletter");
-      if (!section) return;
+    const tryScroll = (delay = 0) => {
+      setTimeout(() => {
+        const section = document.getElementById("newsletter");
+        if (!section) return;
 
-      const header = document.querySelector(".header-wrapper");
-      const headerHeight = header ? header.getBoundingClientRect().height : 90;
+        const headerHeight = document.querySelector(".header-wrapper")?.getBoundingClientRect().height || 90;
 
-      const top = section.getBoundingClientRect().top + window.scrollY - (headerHeight + 20);
+        section.scrollIntoView({
+          behavior: "smooth",
+          block: "start"        // top pe aaye
+        });
 
-      window.scrollTo({
-        top,
-        behavior: "smooth"
-      });
+        // Extra adjustment after scrollIntoView
+        setTimeout(() => {
+          const currentScroll = window.scrollY;
+          window.scrollTo({
+            top: currentScroll - (headerHeight + 25),
+            behavior: "instant"
+          });
+        }, 450);
+      }, delay);
     };
 
-    // Thoda zyada reliable timing
-    const timer = setTimeout(scrollToNewsletter, 180);
+    tryScroll(100);
+    tryScroll(600);
+    tryScroll(1200);  
 
-    // Extra safety - load hone ke baad bhi ek baar aur try karo
-    window.addEventListener("load", scrollToNewsletter);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("load", scrollToNewsletter);
-    };
   }, []);
 
   const handleSubmit = () => {

@@ -46,7 +46,9 @@ jobs:
         run: |
           echo "event_name=${{ github.event_name }}"
           echo "dispatch_type=${{ github.event.action }}"
-          echo 'client_payload=${{ toJson(github.event.client_payload) }}'
+          cat <<'EOF'
+          client_payload=${{ toJson(github.event.client_payload) }}
+          EOF
 
       - name: Log scheduled batch notification
         if: steps.dispatch_mode.outputs.should_build == 'false'

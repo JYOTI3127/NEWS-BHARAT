@@ -683,7 +683,7 @@ label.image-drop {
 
           <div class="cat-item {% if original and cat in original.categories.all %}selected{% endif %}"
                onclick="toggleCat(this,'{{ cat.pk }}','main')"
-               data-id="{{ cat.pk }}" data-type="main">
+               data-id="{{ cat.pk }}" data-type="main" data-slug="{{ cat.slug|default:'' }}">
             <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
             <span class="cat-name">{{ cat.name }}</span>
             {% if cat.sub_categories %}
@@ -705,6 +705,7 @@ label.image-drop {
                      data-id="{{ cat.pk }}__{{ item|slugify }}"
                      data-parent="{{ cat.pk }}"
                      data-subname="{{ item }}"
+                     data-subslug="{{ item|slugify }}"
                      data-section="{{ section_key }}"
                      data-type="sub">
                   <div class="cat-checkbox"><span class="cat-check-icon">✓</span></div>
@@ -722,10 +723,18 @@ label.image-drop {
 
       <input type="hidden" id="ui_category"
              value="{% if original %}{% for cat in original.categories.all %}{{ cat.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+      <input type="hidden" id="ui_primary_category"
+             value="{% if original and original.primary_category_id %}{{ original.primary_category_id }}{% endif %}">
       <input type="hidden" id="ui_subcategory"
              value="{% if original %}{{ original.selected_subcategories|default:'{}'|safe }}{% else %}{}{% endif %}">
       <div id="cat_count_label" style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px;">
         <span id="cat_selected_count">0</span> selected
+      </div>
+      <div class="seo-field" style="margin-top:10px;">
+        <div class="seo-field-label">Primary Category for URL <span class="seo-tag seo-tag--auto">Used in Canonical & Routing</span></div>
+        <select class="seo-inp" id="ui_primary_category_select">
+          <option value="">Select a category</option>
+        </select>
       </div>
     </div>
 
@@ -808,7 +817,7 @@ label.image-drop {
           </span>
         </div>
         <div class="seo-slug-row">
-          <span class="seo-slug-pre">/article/</span>
+          <span class="seo-slug-pre" id="ui_slug_prefix">/category-slug/</span>
           <input type="text" class="seo-inp seo-slug-inp" id="ui_slug" placeholder="your-article-slug" value="{{ original.slug|default:'' }}" {% if original.status == 'published' %}readonly{% endif %}>
           <button type="button" class="seo-slug-auto" onclick="generateSlug()" title="Auto-generate from headline">↺</button>
         </div>
@@ -816,7 +825,7 @@ label.image-drop {
       <div class="seo-field">
         <div class="seo-field-label">Canonical URL <span class="seo-tag seo-tag--auto">Auto — Read Only</span></div>
         <input type="url" class="seo-inp canonical-readonly" id="ui_canonical"
-               placeholder="https://yourdomain.com/article/article-slug/"
+               placeholder="https://yourdomain.com/category-slug/article-slug/"
                value="{{ original.canonical_url|default:'' }}" readonly tabindex="-1">
       </div>
       <div class="seo-field">
@@ -990,7 +999,7 @@ label.image-drop {
         </div>
       </div>
       <div class="ed-preview-frame" id="preview_desktop">
-        <div class="prev-card-outer"><div class="prev-card"><div class="prev-card-topbar"><div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">news4bharat.com › news › <span id="prev_card_slug">article-slug</span></span></div></div><div class="prev-card-source-badge">news4bharat.com</div></div><div class="prev-card-body"><div class="prev-card-text"><div class="prev-card-category" id="prev_card_cat">Category</div><h2 class="prev-card-headline" id="prev_card_headline">Article headline will appear here as you type…</h2><p class="prev-card-summary" id="prev_card_summary">Article summary will be taken from your content.</p></div><div class="prev-card-img-wrap"><img id="prev_card_img" src="" alt="" style="display:none"><div class="prev-card-img-ph" id="prev_card_img_ph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div><div class="prev-card-footer"><div class="prev-card-author"><div class="prev-card-avatar" id="prev_card_avatar"><span id="prev_card_initials">?</span><img id="prev_card_avatar_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="prev-card-author-info"><span class="prev-card-author-name" id="prev_card_author_name">Editor Name</span><span class="prev-card-author-dot">·</span><span class="prev-card-author-pos" id="prev_card_author_pos">Position</span></div></div><div class="prev-card-time" id="prev_card_time">Just now</div></div></div></div>
+        <div class="prev-card-outer"><div class="prev-card"><div class="prev-card-topbar"><div class="prev-card-logo-wrap"><div class="prev-card-logo-icon">N</div><div class="prev-card-site-info"><span class="prev-card-site-name">NewsPortal</span><span class="prev-card-site-link">news4bharat.com › <span id="prev_card_slug">category-slug/article-slug</span></span></div></div><div class="prev-card-source-badge">news4bharat.com</div></div><div class="prev-card-body"><div class="prev-card-text"><div class="prev-card-category" id="prev_card_cat">Category</div><h2 class="prev-card-headline" id="prev_card_headline">Article headline will appear here as you type…</h2><p class="prev-card-summary" id="prev_card_summary">Article summary will be taken from your content.</p></div><div class="prev-card-img-wrap"><img id="prev_card_img" src="" alt="" style="display:none"><div class="prev-card-img-ph" id="prev_card_img_ph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div><div class="prev-card-footer"><div class="prev-card-author"><div class="prev-card-avatar" id="prev_card_avatar"><span id="prev_card_initials">?</span><img id="prev_card_avatar_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="prev-card-author-info"><span class="prev-card-author-name" id="prev_card_author_name">Editor Name</span><span class="prev-card-author-dot">·</span><span class="prev-card-author-pos" id="prev_card_author_pos">Position</span></div></div><div class="prev-card-time" id="prev_card_time">Just now</div></div></div></div>
       </div>
       <div class="ed-preview-frame ed-preview-mobile" id="preview_mobile" style="display:none">
         <div class="prev-mobile-scene"><div class="prev-mobile-phone"><div class="prev-mobile-notch"></div><div class="prev-mobile-screen"><div class="prev-mob-card"><div class="prev-mob-topbar"><div class="prev-mob-logo">N</div><div class="prev-mob-site">NewsPortal</div><div class="prev-mob-url">news4bharat.com</div></div><div class="prev-mob-body"><div class="prev-mob-text"><div class="prev-mob-cat-tag" id="prev_mob_cat_tag">Category</div><div class="prev-mob-hl" id="prev_mob_hl">Article headline here…</div><div class="prev-mob-sum" id="prev_mob_sum">Summary preview…</div></div><div class="prev-mob-thumb" id="prev_mob_thumb"><img id="prev_mob_thumb_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:5px"><svg id="prev_mob_thumb_ph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div><div class="prev-mob-footer"><div class="prev-mob-av" id="prev_mob_av"><span id="prev_mob_av_init">?</span><img id="prev_mob_av_img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%"></div><span class="prev-mob-aname" id="prev_mob_aname">Editor</span><span class="prev-mob-dot">·</span><span class="prev-mob-time" id="prev_mob_time">Just now</span></div></div></div></div></div>
@@ -1813,12 +1822,14 @@ function updateCanonicalFromSlug(){
   var slugEl=document.getElementById('ui_slug'),
       canonEl=document.getElementById('ui_canonical');
   if(!canonEl||!slugEl)return;
+  var catSlug=_getPrimaryCategorySlug()||'category-slug';
   var slugVal=slugEl.value.trim();
-  if(slugVal)canonEl.value=SITE_BASE_URL+'/article/'+slugVal+'/';
+  if(slugVal)canonEl.value=SITE_BASE_URL+'/'+catSlug+'/'+slugVal+'/';
   else{
     canonEl.value='';
-    canonEl.placeholder=SITE_BASE_URL+'/article/article-slug/';
+    canonEl.placeholder=SITE_BASE_URL+'/'+catSlug+'/article-slug/';
   }
+  updateSlugPrefix();
 }
 (function(){
   var slug=document.getElementById('ui_slug');
@@ -1827,7 +1838,8 @@ function updateCanonicalFromSlug(){
 (function initCanonical(){
   var slugInp=document.getElementById('ui_slug'),
       canonEl=document.getElementById('ui_canonical');
-  if(canonEl&&!canonEl.value&&slugInp&&slugInp.value)updateCanonicalFromSlug();
+  updateSlugPrefix();
+  if(canonEl&&slugInp&&slugInp.value)updateCanonicalFromSlug();
 })();
 
 /* ══════════════════════════════════════════════
@@ -1835,6 +1847,7 @@ function updateCanonicalFromSlug(){
 ══════════════════════════════════════════════ */
 var selectedCats = new Set();
 var selectedSubs = {};
+var selectedPrimaryCat = '';
 
 (function initCats(){
   var categoryInput=document.getElementById('ui_category');
@@ -1842,6 +1855,8 @@ var selectedSubs = {};
   if(existing)existing.split(',').filter(Boolean).forEach(function(id){
     selectedCats.add(id.trim());
   });
+  var primaryInput=document.getElementById('ui_primary_category');
+  selectedPrimaryCat=primaryInput?String(primaryInput.value||'').trim():'';
 
   var subInput=document.getElementById('ui_subcategory');
   var subRaw=subInput?subInput.value:'';
@@ -1872,7 +1887,68 @@ var selectedSubs = {};
   });
 
   syncCatInput();
+  syncPrimaryCategory();
   updateSelectAllBtn();
+})();
+
+function _getMainCategoryMeta(catId){
+  var el=document.querySelector('.cat-item[data-type="main"][data-id="'+String(catId)+'"]');
+  if(!el)return null;
+  var nameEl=el.querySelector('.cat-name');
+  return {
+    id:String(catId),
+    slug:String(el.getAttribute('data-slug')||'').trim(),
+    name:nameEl?nameEl.textContent.trim():''
+  };
+}
+
+function syncPrimaryCategory(){
+  var hiddenInput=document.getElementById('ui_primary_category');
+  var selectEl=document.getElementById('ui_primary_category_select');
+  var selectedIds=Array.from(selectedCats);
+
+  if(selectedPrimaryCat && selectedIds.indexOf(selectedPrimaryCat)===-1){
+    selectedPrimaryCat='';
+  }
+  if(!selectedPrimaryCat && selectedIds.length){
+    selectedPrimaryCat=selectedIds[0];
+  }
+
+  if(hiddenInput)hiddenInput.value=selectedPrimaryCat||'';
+  if(!selectEl)return;
+
+  var currentValue=selectedPrimaryCat||'';
+  selectEl.innerHTML='';
+  var placeholder=document.createElement('option');
+  placeholder.value='';
+  placeholder.textContent=selectedIds.length?'Choose primary category':'Select at least one category first';
+  selectEl.appendChild(placeholder);
+
+  selectedIds.forEach(function(catId){
+    var meta=_getMainCategoryMeta(catId);
+    if(!meta)return;
+    var option=document.createElement('option');
+    option.value=meta.id;
+    option.textContent=meta.name+(meta.slug?' ('+meta.slug+')':'');
+    if(meta.id===currentValue)option.selected=true;
+    selectEl.appendChild(option);
+  });
+
+  selectEl.disabled=!selectedIds.length;
+  if(!currentValue)selectEl.value='';
+}
+
+(function(){
+  var selectEl=document.getElementById('ui_primary_category_select');
+  if(selectEl){
+    selectEl.addEventListener('change',function(){
+      selectedPrimaryCat=String(this.value||'').trim();
+      syncPrimaryCategory();
+      updateSlugPrefix();
+      updateCanonicalFromSlug();
+      updateEditorPreview();
+    });
+  }
 })();
 
 function toggleCat(el,id,type){
@@ -1907,7 +1983,11 @@ function toggleCat(el,id,type){
     }
   }
   syncCatInput();
+  syncPrimaryCategory();
   updateSelectAllBtn();
+  updateCanonicalFromSlug();
+  var slugInp=document.getElementById('ui_slug');
+  if(slugInp&&!slugInp.readOnly&&!slugInp.value.trim())setTimeout(generateSlug,50);
   setTimeout(updateEditorPreview,50);
 }
 function syncCatInput(){
@@ -1952,7 +2032,9 @@ function toggleSelectAllCats(){
   }
 
   syncCatInput();
+  syncPrimaryCategory();
   updateSelectAllBtn();
+  updateCanonicalFromSlug();
   setTimeout(updateEditorPreview,50);
 }
 function updateSelectAllBtn(){
@@ -2719,6 +2801,25 @@ updateTagPermStatus();
 function _buildBaseSlug(title){
   return title.toLowerCase().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,'').substring(0,55);
 }
+function _getPrimaryCategorySlug(){
+  var primaryId=String(selectedPrimaryCat||'').trim();
+  if(primaryId){
+    var primaryMeta=_getMainCategoryMeta(primaryId);
+    if(primaryMeta&&primaryMeta.slug)return primaryMeta.slug;
+  }
+  var mainItem=document.querySelector('.cat-item[data-type="main"].selected');
+  if(!mainItem)return '';
+  var slug=String(mainItem.getAttribute('data-slug')||'').trim();
+  return slug||'';
+}
+function _getSlugPrefixPath(){
+  var catSlug=_getPrimaryCategorySlug();
+  return '/'+(catSlug||'category-slug')+'/';
+}
+function updateSlugPrefix(){
+  var prefixEl=document.getElementById('ui_slug_prefix');
+  if(prefixEl)prefixEl.textContent=_getSlugPrefixPath();
+}
 function _slugSuffix(){
   var now=new Date();
   var ymd=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
@@ -3023,6 +3124,7 @@ async function submitArticle(forceStatus){
 
   formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');
   formData.append('canonical_url',document.getElementById('ui_canonical')?document.getElementById('ui_canonical').value:'');
+  formData.append('primary_category',document.getElementById('ui_primary_category')?document.getElementById('ui_primary_category').value:'');
   formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');
   formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
   formData.append('secondary_keywords',document.getElementById('ui_secondary_keywords')?document.getElementById('ui_secondary_keywords').value:'');
@@ -3226,7 +3328,9 @@ function updateEditorPreview(){
   const content=(document.getElementById('ui_content')?(document.getElementById('ui_content').innerText||'').trim():''),
         slug=document.getElementById('ui_slug')?document.getElementById('ui_slug').value.trim():'';
   const firstSelectedCat=document.querySelector('.cat-item.selected .cat-name'),
-        catName=firstSelectedCat?firstSelectedCat.textContent:'Category';
+        primaryMeta=_getMainCategoryMeta(selectedPrimaryCat),
+        catName=primaryMeta&&primaryMeta.name?primaryMeta.name:(firstSelectedCat?firstSelectedCat.textContent:'Category'),
+        catSlug=_getPrimaryCategorySlug()||'category-slug';
   const initials=getInitials(name),
         now=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
 
@@ -3249,7 +3353,7 @@ function updateEditorPreview(){
   const words=content.split(/\s+/).filter(Boolean),
         summary=words.slice(0,25).join(' ')+(words.length>25?'…':'');
   const slugEl=document.getElementById('prev_card_slug');
-  if(slugEl)slugEl.textContent=slug||'article-slug';
+  if(slugEl)slugEl.textContent=catSlug+'/'+(slug||'article-slug');
 
   const cardCat=document.getElementById('prev_card_cat');
   if(cardCat)cardCat.textContent=catName;

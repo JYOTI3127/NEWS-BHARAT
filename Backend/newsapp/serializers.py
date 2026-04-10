@@ -86,6 +86,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         many=True,
         required=False
     )
+    primary_category_details = serializers.SerializerMethodField()
     category_details = serializers.SerializerMethodField()
 
     # Audit trail - read only
@@ -137,6 +138,10 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_category_details(self, obj):
         return CategorySerializer(obj.categories.all(), many=True).data
+
+    def get_primary_category_details(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return CategorySerializer(cat).data if cat else None
 
     def get_posted_by_username(self, obj):
         return obj.author.username if obj.author else None
@@ -249,6 +254,7 @@ class ArticleMinSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
     date        = serializers.SerializerMethodField()
     image_url   = serializers.SerializerMethodField()
+    primary_category = serializers.SerializerMethodField()
     categories  = CategorySerializer(many=True, read_only=True)
     image_alt    = serializers.CharField(read_only=True)
     image_source = serializers.CharField(read_only=True)
@@ -256,7 +262,7 @@ class ArticleMinSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Article
         fields = ['id', 'title', 'image', 'author_name', 'date', 'image_url',
-                  'categories', 'image_alt', 'image_source']
+                  'categories', 'primary_category', 'image_alt', 'image_source']
 
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():
@@ -280,9 +286,14 @@ class ArticleMinSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return obj.image_url
 
+    def get_primary_category(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
 class ArticleHomepageSerializer(serializers.ModelSerializer):
     image_url    = serializers.SerializerMethodField()
     category     = serializers.SerializerMethodField()
+    primary_category = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
     categories   = CategorySerializer(many=True, read_only=True)
 
@@ -291,7 +302,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'slug', 'subtitle',                 
             'image_url', 'image_alt',
-            'category', 'categories',
+            'category', 'primary_category', 'categories',
             'published_at', 'created_at',
             'canonical_url', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
@@ -311,7 +322,11 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         return obj.image_url or None
 
     def get_category(self, obj):
-        cat = obj.categories.first()
+        cat = obj.primary_category or obj.categories.first()
+        return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
+    def get_primary_category(self, obj):
+        cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
 
     def get_author_name(self, obj):

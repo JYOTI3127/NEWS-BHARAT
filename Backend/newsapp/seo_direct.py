@@ -92,13 +92,31 @@ def _cached(key, fn, ttl):
     return result
 
 
-def article_path(slug: str) -> str:
+def primary_category(article):
+    if getattr(article, "primary_category_id", None):
+        return getattr(article, "primary_category", None)
+    return article.categories.first() if hasattr(article, "categories") else None
+
+
+def primary_category_slug(article) -> str:
+    primary_cat = primary_category(article)
+    return getattr(primary_cat, "slug", "") or ""
+
+
+def article_path(article_or_slug, category_slug: str = None) -> str:
+    if hasattr(article_or_slug, "slug"):
+        slug = article_or_slug.slug
+        category_slug = category_slug or primary_category_slug(article_or_slug)
+    else:
+        slug = str(article_or_slug)
+    if category_slug:
+        return f"/{category_slug}/{slug}/"
     return f"/article/{slug}/"
 
 
-def article_url(slug: str, base: str = None) -> str:
+def article_url(article_or_slug, base: str = None, category_slug: str = None) -> str:
     base = (base or SEO["SITE_URL"]).rstrip("/")
-    return f"{base}{article_path(slug)}"
+    return f"{base}{article_path(article_or_slug, category_slug)}"
 
 
 def normalized_canonical(article, default_url: str) -> str:
@@ -109,7 +127,11 @@ def normalized_canonical(article, default_url: str) -> str:
     site_base = SEO["SITE_URL"].rstrip("/")
     legacy_url = f"{site_base}/news/{article.slug}"
     if canonical.rstrip("/") == legacy_url.rstrip("/"):
-        return article_url(article.slug, site_base)
+        return article_url(article, site_base)
+
+    legacy_article_url = f"{site_base}/article/{article.slug}"
+    if canonical.rstrip("/") == legacy_article_url.rstrip("/"):
+        return article_url(article, site_base)
 
     return canonical
 
@@ -234,7 +256,7 @@ class SitemapEngine:
 
         for a in articles:
             url = ET.SubElement(root, "url")
-            ET.SubElement(url, "loc").text     = article_url(a.slug, base)
+            ET.SubElement(url, "loc").text     = article_url(a, base)
             ET.SubElement(url, "lastmod").text = _iso(a.published_at)
 
             news_el = ET.SubElement(url, "news:news")
@@ -300,7 +322,7 @@ class SitemapEngine:
                 priority = 0.5
 
             url_el = ET.SubElement(root, "url")
-            ET.SubElement(url_el, "loc").text        = article_url(a.slug, base)
+            ET.SubElement(url_el, "loc").text        = article_url(a, base)
             ET.SubElement(url_el, "lastmod").text    = _iso(a.published_at)
             ET.SubElement(url_el, "changefreq").text = "weekly"
             ET.SubElement(url_el, "priority").text   = f"{priority:.1f}"
@@ -317,8 +339,8 @@ class SitemapEngine:
 
             # Hreflang
             for hreflang, href in [
-                ("en-in",     article_url(a.slug, base)),
-                ("x-default", article_url(a.slug, base)),
+                ("en-in",     article_url(a, base)),
+                ("x-default", article_url(a, base)),
             ]:
                 ET.SubElement(url_el, "xhtml:link", {
                     "rel": "alternate", "hreflang": hreflang, "href": href
@@ -416,7 +438,7 @@ class SchemaEngine:
         Tera model ke fields seedha use karta hai.
         """
         base    = SEO["SITE_URL"]
-        url     = article_url(article.slug, base)
+        url     = article_url(article, base)
         img_url = article.get_image()
         if img_url and not img_url.startswith("http"):
             img_url = f"{base}{img_url}"
@@ -441,8 +463,8 @@ class SchemaEngine:
         author_pos = article.author_display_position or ""
 
         # Category
-        first_cat = article.categories.first()
-        cat_name  = str(first_cat) if first_cat else ""
+        primary_cat = primary_category(article)
+        cat_name  = str(primary_cat) if primary_cat else ""
 
         schema = {
             "@context": "https://schema.org",
@@ -492,13 +514,13 @@ class SchemaEngine:
     @staticmethod
     def breadcrumb(article) -> dict:
         base     = SEO["SITE_URL"]
-        first_cat = article.categories.first()
+        first_cat = primary_category(article)
         items    = [{"id": 1, "name": "Home", "url": base}]
         if first_cat:
             items.append({"id": 2, "name": str(first_cat),
                           "url": f"{base}/category/{first_cat.slug}"})
         items.append({"id": len(items) + 1, "name": article.title,
-                      "url": article_url(article.slug, base)})
+                      "url": article_url(article, base)})
         return {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
@@ -529,7 +551,7 @@ class MetaEngine:
     @staticmethod
     def for_article(article) -> dict:
         base    = SEO["SITE_URL"]
-        url     = article_url(article.slug, base)
+        url     = article_url(article, base)
         title   = article.title
         desc    = article.meta_description or _strip(article.content, 160)
         img_url = article.get_image()
@@ -558,8 +580,8 @@ class MetaEngine:
             robots_parts.append("max-snippet:-1, max-image-preview:large")
         robots = ", ".join(robots_parts)
 
-        first_cat = article.categories.first()
-        cat_name  = str(first_cat) if first_cat else ""
+        primary_cat = primary_category(article)
+        cat_name  = str(primary_cat) if primary_cat else ""
 
         author_name = (
             article.author_display_name.strip()
@@ -698,11 +720,12 @@ def _build_rss(category_slug: str = None) -> str:
     ]
 
     for a in articles:
-        article_url_value = article_url(a.slug, base)
+        article_url_value = article_url(a, base)
         excerpt = _strip(a.content or "", 300)
         pub_date = a.published_at.strftime("%a, %d %b %Y %H:%M:%S +0000") if a.published_at else ""
         author_name = a.author_display_name.strip() or a.author.get_full_name() or a.author.username
-        cat_name = str(a.categories.first()) if a.categories.exists() else ""
+        primary_cat = primary_category(a)
+        cat_name = str(primary_cat) if primary_cat else ""
         img_url = a.get_image()
         if img_url and not img_url.startswith("http"):
             img_url = f"{base}{img_url}"
@@ -782,7 +805,7 @@ class GoogleIndexingAPI:
     def submit_article(cls, article) -> dict:
         base = SEO["SITE_URL"]
         return {
-            "article": cls.submit(article_url(article.slug, base)),
+            "article": cls.submit(article_url(article, base)),
         }
 
 
@@ -847,7 +870,7 @@ def submit_article_everywhere(article) -> dict:
     slug = article.slug
 
     google   = GoogleIndexingAPI.submit_article(article)
-    indexnow = IndexNow.submit([article_url(slug, base)])
+    indexnow = IndexNow.submit([article_url(article, base)])
     pings    = ping_search_engines()
 
     # Sitemap cache invalidate

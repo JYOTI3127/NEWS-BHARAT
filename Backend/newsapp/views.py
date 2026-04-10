@@ -152,6 +152,42 @@ def _save_article_from_request(request, article=None):
     files = request.FILES
     is_new = article is None
 
+    category_ids_raw = data.get('categories', '')
+    category_list_raw = data.getlist('categories')
+
+    cat_ids = []
+    if len(category_list_raw) > 1:
+        for c in category_list_raw:
+            for part in str(c).split(','):
+                part = part.strip()
+                if part:
+                    try:
+                        cat_ids.append(int(part))
+                    except (ValueError, TypeError):
+                        pass
+    elif category_ids_raw:
+        for part in str(category_ids_raw).split(','):
+            part = part.strip()
+            if part:
+                try:
+                    cat_ids.append(int(part))
+                except (ValueError, TypeError):
+                    pass
+
+    primary_category_id = None
+    raw_primary_category = str(data.get('primary_category', '')).strip()
+    if raw_primary_category:
+        try:
+            primary_category_id = int(raw_primary_category)
+        except (ValueError, TypeError):
+            primary_category_id = None
+
+    if cat_ids:
+        if primary_category_id not in cat_ids:
+            primary_category_id = cat_ids[0]
+    else:
+        primary_category_id = None
+
     title    = data.get('title', '').strip()
     subtitle = data.get('subtitle', '').strip()
     content  = data.get('content', '').strip()
@@ -287,36 +323,21 @@ def _save_article_from_request(request, article=None):
         article.selected_subcategories = {}
 
     try:
+        article.primary_category_id = primary_category_id
         article.save()
     except Exception as e:
         return None, {'error': str(e)}
 
-    category_ids_raw  = data.get('categories', '')
-    category_list_raw = data.getlist('categories')
-
-    cat_ids = []
-    if len(category_list_raw) > 1:
-        for c in category_list_raw:
-            for part in str(c).split(','):
-                part = part.strip()
-                if part:
-                    try:
-                        cat_ids.append(int(part))
-                    except (ValueError, TypeError):
-                        pass
-    elif category_ids_raw:
-        for part in str(category_ids_raw).split(','):
-            part = part.strip()
-            if part:
-                try:
-                    cat_ids.append(int(part))
-                except (ValueError, TypeError):
-                    pass
-
     if cat_ids:
         article.categories.set(cat_ids)
+        if article.primary_category_id != primary_category_id:
+            article.primary_category_id = primary_category_id
+            article.save(update_fields=['primary_category'])
     elif 'categories' in data:
         article.categories.clear()
+        if article.primary_category_id is not None:
+            article.primary_category = None
+            article.save(update_fields=['primary_category'])
 
     # ── CACHE INVALIDATE ──
     try:
@@ -510,12 +531,18 @@ def normalize_article_canonical(raw_value, slug):
         return canonical
 
     legacy_url = f"https://news4bharat.com/news/{slug}"
-    if canonical.rstrip('/') == legacy_url.rstrip('/'):
-        return f"https://news4bharat.com/article/{slug}/"
+    legacy_article_url = f"https://news4bharat.com/article/{slug}"
+    if canonical.rstrip('/') == legacy_url.rstrip('/') or canonical.rstrip('/') == legacy_article_url.rstrip('/'):
+        return ""
     return canonical
 
-def article_detail_page(request, slug):
+def article_detail_page(request, slug, category_slug=None):
     article = get_object_or_404(Article, slug=slug, status="published")
+
+    first_cat = article.primary_category or article.categories.first()
+    canonical_category = first_cat.slug if first_cat else None
+    if category_slug and canonical_category and category_slug != canonical_category:
+        return redirect(f"/{canonical_category}/{article.slug}/", permanent=True)
 
     meta = MetaEngine.for_article(article)
     schemas = [
@@ -945,7 +972,7 @@ def _format_article(article, request=None, highlight=None):
         except Exception:
             img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
 
-    first_cat = article.categories.first()
+    first_cat = article.primary_category or article.categories.first()
 
     author_name = ''
     if article.author_display_name and article.author_display_name.strip():
@@ -959,6 +986,11 @@ def _format_article(article, request=None, highlight=None):
         "slug":         getattr(article, 'slug', str(article.id)),
         "category":     first_cat.name if first_cat else None,
         "category_id":  first_cat.id   if first_cat else None,
+        "primary_category": {
+            "id": first_cat.id,
+            "name": first_cat.name,
+            "slug": first_cat.slug,
+        } if first_cat else None,
         "categories":   list(article.categories.values('id', 'name')),
         "author":       author_name,
         "status":       article.status,
@@ -2196,7 +2228,7 @@ def article_detail_by_slug(request, slug):
         return Response(cached)
     try:
         article = Article.objects.select_related(
-            'author'
+            'author', 'primary_category'
         ).prefetch_related('categories').get(
             slug=slug, status='published'
         )

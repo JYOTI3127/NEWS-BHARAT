@@ -26,6 +26,7 @@ from newsapp.seo_direct import (
     IndexNow,
     ping_search_engines,
     submit_article_everywhere,
+    article_path,
 )
 
 
@@ -133,14 +134,23 @@ def view_rss_category(request, category_slug):
 
 
 @require_GET
-def view_article_detail(request, slug):
+def view_article_detail(request, category_slug, slug):
     from newsapp.views import article_detail_page
-    return article_detail_page(request, slug)
+    return article_detail_page(request, slug, category_slug=category_slug)
 
 
 @require_GET
 def redirect_legacy_news_article(request, slug):
-    return redirect("article_detail_page", slug=slug, permanent=True)
+    from newsapp.models import Article
+    article = get_object_or_404(Article.objects.prefetch_related("categories"), slug=slug, status="published")
+    return redirect(article_path(article), permanent=True)
+
+
+@require_GET
+def redirect_legacy_article(request, slug):
+    from newsapp.models import Article
+    article = get_object_or_404(Article.objects.prefetch_related("categories"), slug=slug, status="published")
+    return redirect(article_path(article), permanent=True)
 
 
 # ─────────────────────────────────────────────

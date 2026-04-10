@@ -79,6 +79,13 @@ class Article(models.Model):
 
     # ── Selected subcategories (JSON) ──
     # Format: {"cat_pk": ["Sub Name 1", "Sub Name 2"]}
+    primary_category = models.ForeignKey(
+        'Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='primary_articles'
+    )
     selected_subcategories = models.JSONField(default=dict, blank=True)
  
     # ── Audit: kisne actually post kiya (backend only) ──

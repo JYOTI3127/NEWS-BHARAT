@@ -1,5 +1,6 @@
 from django.contrib.sitemaps import Sitemap
 from .models import Article, Category
+from .seo_direct import article_path, article_url
 
 class ArticleSitemap(Sitemap):
     changefreq = "hourly"
@@ -15,7 +16,7 @@ class ArticleSitemap(Sitemap):
         return obj.published_at or obj.created_at
 
     def location(self, obj):
-        return f"/article/{obj.slug}/"
+        return article_path(obj)
 
     def get_urls(self, page=1, site=None, protocol=None):
         urls = super().get_urls(page=page, site=site, protocol=protocol)
@@ -47,7 +48,7 @@ class ArticleSitemap(Sitemap):
             ).exclude(id=obj.id).distinct()[:3]
 
             url_info['alternates'] = [
-                {'location': f"https://news4bharat.com/article/{r.slug}/"}
+                {'location': article_url(r, "https://news4bharat.com")}
                 for r in related
             ]
 

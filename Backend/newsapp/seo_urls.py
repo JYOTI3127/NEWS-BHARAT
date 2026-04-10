@@ -8,7 +8,7 @@ from django.urls import path, re_path
 from newsapp import seo_views
 
 urlpatterns = [
-    path("article/<slug:slug>/", seo_views.view_article_detail, name="article_detail_page"),
+    path("article/<slug:slug>/", seo_views.redirect_legacy_article, name="legacy_article_redirect"),
     path("news/<slug:slug>/", seo_views.redirect_legacy_news_article, name="legacy_news_article_redirect"),
 
     # Static SEO files
@@ -32,4 +32,6 @@ urlpatterns = [
     # JSON API
     path("api/seo/article/<slug:slug>/", seo_views.api_seo_article, name="api_seo_article"),
     path("api/seo/submit/",              seo_views.api_seo_submit,   name="api_seo_submit"),
+
+    path("<slug:category_slug>/<slug:slug>/", seo_views.view_article_detail, name="article_detail_page"),
 ]

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import fs from 'fs'
 import {
   getArticlePath,
-  getArticleSlug,
+  getCanonicalArticleUrl,
   isArticlePath,
 } from './src/lib/articleUrl.js'
 
@@ -29,32 +29,8 @@ const getCleanPathSegments = (value) =>
     .map((segment) => segment.trim())
     .filter(Boolean)
 
-const normalizePathname = (value) => {
-  const segments = getCleanPathSegments(value)
-  return segments.length > 0 ? `/${segments.join('/')}` : ''
-}
-
 const getArticleSlugFromRoute = (route) =>
-  getArticleSlug({ slug: route })
-
-const getArticleCanonicalUrl = (article, route) => {
-  const fallback = `https://news4bharat.com${getArticlePath(article, {
-    fallbackSlug: route,
-  }) || '/'}`
-  const apiCanonical = String(article?.canonical_url || '').trim()
-
-  if (!apiCanonical) return fallback
-
-  try {
-    const parsed = new URL(apiCanonical)
-    if (parsed.origin !== 'https://news4bharat.com') return fallback
-    const cleanPath = normalizePathname(parsed.pathname)
-    if (!isArticlePath(cleanPath)) return fallback
-    return `${parsed.origin}${cleanPath}/`
-  } catch {
-    return fallback
-  }
-}
+  getCleanPathSegments(route).pop() || ''
 
 const getRobotsContent = (article) => {
   const parts = [
@@ -167,8 +143,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
 
   // Article page
   if (isArticlePath(route)) {
-    const slug = getArticleSlugFromRoute(route)
-    const article = articleMap.get(slug)
+    const article = articleMap.get(route)
 
     if (article) {
       const rawTitle = (article.title || '').trim()
@@ -179,13 +154,15 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       const description = (
         article.meta_description ||
         article.subtitle ||
-        truncateText(article.content, 160) ||
+        article.summary ||
+        article.excerpt ||
+        article.description ||
         rawTitle ||
         `${SITE_NAME} - News As It Is`
       ).trim()
 
       const image = toAbsoluteUrl(article.image_url || article.image) || DEFAULT_IMAGE
-      const canonical = getArticleCanonicalUrl(article, route)
+      const canonical = getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
         ? article.secondary_keywords_list
         : String(article.secondary_keywords || '')
@@ -393,15 +370,19 @@ async function getRoutesAndData() {
       const articleRoutes = getArticleRoutes(a)
       if (articleRoutes.length > 0) {
         const articleSlug = getArticleSlugFromRoute(articleRoutes[0])
-        articleRoutes.forEach((route) => routeSet.add(route))
-        articleMap.set(articleSlug, a)
+        articleRoutes.forEach((route) => {
+          routeSet.add(route)
+          articleMap.set(route, a)
+        })
         if (articleSlug) {
           detailTasks.push(
             fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(articleSlug)}/?${cacheBust}`)
               .then((detail) => {
                 const finalDetail = Array.isArray(detail) ? detail[0] : detail
                 if (finalDetail) {
-                  articleMap.set(articleSlug, finalDetail)
+                  articleRoutes.forEach((route) => {
+                    articleMap.set(route, finalDetail)
+                  })
                 }
               })
               .catch(() => {})
@@ -422,13 +403,11 @@ async function getRoutesAndData() {
 
         if (forcedArticle && (forcedArticle.slug || forcedArticle.id)) {
           const forcedRoutes = getArticleRoutes(forcedArticle)
-          const forcedSlug = getArticleSlugFromRoute(forcedRoutes[0] || forcedArticle.slug || '')
 
           forcedRoutes.forEach((route) => routeSet.add(route))
-
-          if (forcedSlug) {
-            articleMap.set(forcedSlug, forcedArticle)
-          }
+          forcedRoutes.forEach((route) => {
+            articleMap.set(route, forcedArticle)
+          })
 
           console.log(
             `Forced prerender article from dispatch payload: ${dispatchPayload.slug} (${forcedRoutes.join(', ')})`

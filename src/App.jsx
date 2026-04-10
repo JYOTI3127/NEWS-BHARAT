@@ -101,10 +101,7 @@ function LegacyArticleRedirect() {
 
           const data = await response.json();
           const article = Array.isArray(data) ? data[0] : data;
-          const nextPath = getArticlePath(article, {
-            fallbackCategorySlug: categorySlug,
-            fallbackSlug: slug,
-          });
+          const nextPath = getArticlePath(article);
 
           if (!cancelled && nextPath) {
             setTargetPath(nextPath);
@@ -116,9 +113,7 @@ function LegacyArticleRedirect() {
       }
 
       if (!cancelled) {
-        const fallbackPath =
-          categorySlug && slug ? `/${categorySlug}/${slug}/` : "/";
-        setTargetPath(fallbackPath);
+        setTargetPath("/");
       }
     };
 

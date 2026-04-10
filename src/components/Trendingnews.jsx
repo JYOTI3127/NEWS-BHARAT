@@ -203,7 +203,12 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
             <div style={{ width: "100%", height: "100%", background: "#D80100" }} />
           </div>
           {visibleArticles.map((article, i) => {
-            const desc    = article.subtitle ? article.subtitle : stripHtml(article.content);
+            const desc =
+              article.subtitle ||
+              article.summary ||
+              article.excerpt ||
+              article.description ||
+              "";
             const isTop   = i === 0;
             const hasImage = !!article.image_url;
             const itemStyle = {

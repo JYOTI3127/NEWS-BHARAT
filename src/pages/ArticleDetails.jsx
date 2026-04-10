@@ -9,9 +9,8 @@ import {
 import { apiUrl } from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
 import {
-  getAbsoluteArticleUrl,
+  getCanonicalArticleUrl,
   getArticlePath,
-  getArticleSlug,
 } from "../lib/articleUrl";
 
 const SITE_URL = "https://news4bharat.com";
@@ -126,21 +125,6 @@ const getArticleTags = (article) => {
     .filter(Boolean);
 };
 
-const matchesRouteCandidates = (article, routeCandidates) => {
-  const articleSlug = String(article?.slug || "").trim().toLowerCase();
-  const articleId = String(article?.id || "").trim().toLowerCase();
-  const articleSlugTail = articleSlug.split("/").filter(Boolean).pop() || "";
-
-  return (
-    routeCandidates.includes(articleSlug) ||
-    routeCandidates.includes(articleSlugTail) ||
-    routeCandidates.includes(articleId)
-  );
-};
-
-const findArticleInList = (list, routeCandidates) =>
-  list.find((item) => matchesRouteCandidates(item, routeCandidates)) || null;
-
 const getArticleTimestamp = (article) =>
   new Date(
     article?.published_at ||
@@ -179,29 +163,6 @@ const isInPrimaryCategory = (candidate, primaryCategory) => {
 };
 
 // ✅ BUG FIX: Pehle apiCanonical valid ho toh use return karo — pehle hamesha fallback return ho raha tha
-const getArticleCanonicalUrl = (article, articlePathSlug) => {
-  const fallback =
-    getAbsoluteArticleUrl(article, { fallbackSlug: articlePathSlug }) ||
-    `${SITE_URL}/`;
-  const apiCanonical = String(article?.canonical_url || "").trim();
-
-  if (!apiCanonical) return fallback;
-
-  try {
-    const parsed = new URL(apiCanonical);
-    if (parsed.origin !== SITE_URL) return fallback;
-    const cleanPath = normalizePathname(parsed.pathname);
-    const segments = cleanPath
-      .replace(/^\/+|\/+$/g, "")
-      .split("/")
-      .filter(Boolean);
-    if (!cleanPath || cleanPath === "/" || segments.length < 2) return fallback;
-    return `${parsed.origin}${cleanPath}/`;
-  } catch {
-    return fallback;
-  }
-};
-
 const getRobotsContent = (article) => {
   const parts = [
     article?.noindex ? "noindex" : "index",
@@ -514,28 +475,6 @@ const normalizeArticleContent = (html) => {
 export default function ArticleDetails() {
   const params = useParams();
   const routeParam = params.slug || params.id;
-  const fullRouteSlug =
-    params.categorySlug && params.slug
-      ? `${params.categorySlug}/${params.slug}`
-      : routeParam;
-  const routeCandidates = Array.from(
-    new Set(
-      [routeParam, fullRouteSlug]
-        .map((value) => String(value || "").trim())
-        .filter(Boolean)
-    )
-  );
-  const normalizedRouteCandidates = routeCandidates.map((value) =>
-    value.toLowerCase()
-  );
-  const apiRouteCandidates = Array.from(
-    new Set(
-      routeCandidates.flatMap((value) => {
-        const normalized = value.toLowerCase();
-        return normalized === value ? [value] : [normalized, value];
-      })
-    )
-  );
   const is2K = useIs2K();
 
   const [article, setArticle] = useState(null);
@@ -558,55 +497,44 @@ export default function ArticleDetails() {
 
     const loadArticle = async () => {
       try {
-        let found = null;
-
-        for (const candidate of apiRouteCandidates) {
-          const response = await fetch(
-            apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
-            {
-              signal: controller.signal,
-              cache: "no-store",
-            }
-          );
-
-          if (!response.ok) continue;
-
-          const data = await response.json();
-          const candidateArticle = Array.isArray(data) ? data[0] : data;
-
-          if (candidateArticle && (candidateArticle.slug || candidateArticle.id)) {
-            found = candidateArticle;
-            break;
-          }
-        }
-
-        const listResponse = await fetch(apiUrl("/articles/?limit=500"), {
-          signal: controller.signal,
-          cache: "no-store",
-        });
+        const [detailResponse, listResponse] = await Promise.all([
+          fetch(apiUrl(`/articles/slug/${encodeURIComponent(routeParam)}/`), {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+          fetch(apiUrl("/articles/?limit=500"), {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+        ]);
 
         if (!listResponse.ok) {
           throw new Error("Failed to fetch articles");
         }
 
-        const data = await listResponse.json();
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.value)
-            ? data.value
-            : data?.results || [];
+        const listData = await listResponse.json();
+        const list = Array.isArray(listData)
+          ? listData
+          : Array.isArray(listData?.value)
+            ? listData.value
+            : listData?.results || [];
         const sortedList = sortArticlesByNewest(list);
         setAllArticles(sortedList);
 
-        if (!found) {
-          found = findArticleInList(sortedList, normalizedRouteCandidates);
+        if (!detailResponse.ok) {
+          setNotFound(true);
+          return;
         }
 
-        if (found) {
+        const detailData = await detailResponse.json();
+        const found = Array.isArray(detailData) ? detailData[0] : detailData;
+
+        if (found && (found.slug || found.id)) {
           setArticle(found);
-        } else {
-          setNotFound(true);
+          return;
         }
+
+        setNotFound(true);
       } catch (error) {
         if (error.name === "AbortError") return;
         setLoadError(true);
@@ -616,7 +544,7 @@ export default function ArticleDetails() {
     loadArticle();
 
     return () => controller.abort();
-  }, [fullRouteSlug, routeParam]);
+  }, [routeParam]);
 
   // ✅ BUG FIX: Browser tab title React hydration ke baad bhi sahi rahe
   useEffect(() => {
@@ -635,8 +563,11 @@ export default function ArticleDetails() {
     const embeds = Array.from(document.querySelectorAll(
       ".article-twitter-embed[data-tweet-id]"
     ));
+    const existingBlockquotes = Array.from(
+      document.querySelectorAll("blockquote.twitter-tweet")
+    );
 
-    if (embeds.length === 0) return;
+    if (embeds.length === 0 && existingBlockquotes.length === 0) return;
 
     embeds.forEach((el) => {
       const tweetUrl = el.getAttribute("data-tweet-url");
@@ -710,6 +641,7 @@ export default function ArticleDetails() {
     );
 
     embeds.forEach((embed) => observer.observe(embed));
+    existingBlockquotes.forEach((embed) => observer.observe(embed));
 
     return () => {
       cancelled = true;
@@ -761,7 +693,7 @@ export default function ArticleDetails() {
       resizeObserver?.disconnect();
       window.removeEventListener("resize", updateMoreInHeight);
     };
-  }, [article, allArticles.length, fullRouteSlug]);
+  }, [article, allArticles.length, routeParam]);
 
   const sidebarBaseArticles = article
     ? allArticles.filter(
@@ -830,15 +762,6 @@ export default function ArticleDetails() {
             content="We could not load this article right now. Please try again shortly."
           />
           <meta name="robots" content="index,follow,max-image-preview:large" />
-          <link
-            rel="canonical"
-            href={
-              getAbsoluteArticleUrl(
-                { slug: routeParam, category_details: [{ slug: params.categorySlug }] },
-                { fallbackCategorySlug: params.categorySlug, fallbackSlug: routeParam }
-              )
-            }
-          />
         </Helmet>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <Newspaper size={48} color="#ccc" />
@@ -869,12 +792,12 @@ export default function ArticleDetails() {
   const imageAlt = article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
   const absoluteImageUrl = toAbsoluteSiteUrl(imageUrl) || DEFAULT_SHARE_IMAGE;
-  const normalizedContent = normalizeArticleContent(article.content);
-  const plainArticleContent = getPlainText(article.content);
+  const articleBodyHtml = article.content_html || article.content || "";
+  const normalizedContent = normalizeArticleContent(articleBodyHtml);
+  const plainArticleContent = getPlainText(articleBodyHtml);
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
   const categoryName = primaryCategory?.name?.trim() || "";
-  const articlePathSlug = getArticleSlug(article, routeParam);
-  const canonicalUrl = getArticleCanonicalUrl(article, articlePathSlug);
+  const canonicalUrl = getCanonicalArticleUrl(article) || "";
   const fallbackSidebarArticles = sidebarBaseArticles;
   const displayRelatedArticles =
     relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
@@ -963,7 +886,7 @@ export default function ArticleDetails() {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": ["NewsArticle", "Article"],
-    "@id": `${canonicalUrl}#article`,
+    ...(canonicalUrl ? { "@id": `${canonicalUrl}#article` } : {}),
     headline: article.title,
     alternativeHeadline: visibleSummary || article.title,
     description: metaDescription,
@@ -971,11 +894,15 @@ export default function ArticleDetails() {
     inLanguage: "en-IN",
     datePublished: date || "",
     dateModified: modifiedDate || "",
-    url: canonicalUrl,
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": canonicalUrl,
-    },
+    ...(canonicalUrl ? { url: canonicalUrl } : {}),
+    ...(canonicalUrl
+      ? {
+          mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": canonicalUrl,
+          },
+        }
+      : {}),
     author: {
       "@type": authorDisplayName === SITE_NAME ? "Organization" : "Person",
       name: authorDisplayName,
@@ -1036,12 +963,12 @@ export default function ArticleDetails() {
             content={secondaryKeywords.join(", ")}
           />
         )}
-        <link rel="canonical" href={canonicalUrl} />
+        {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
         <meta name="robots" content={robotsContent} />
         <meta property="og:type" content="article" />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={metaDescription} />
-        <meta property="og:url" content={canonicalUrl} />
+        {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
         <meta property="og:image" content={absoluteImageUrl} />
         <meta property="og:image:alt" content={imageAlt} />
         <meta property="og:site_name" content={SITE_NAME} />
@@ -1055,7 +982,7 @@ export default function ArticleDetails() {
         <meta name="twitter:site" content={TWITTER_HANDLE} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={metaDescription} />
-        <meta name="twitter:url" content={canonicalUrl} />
+        {canonicalUrl && <meta name="twitter:url" content={canonicalUrl} />}
         <meta name="twitter:image" content={absoluteImageUrl} />
         <meta name="twitter:image:alt" content={imageAlt} />
         {date && (

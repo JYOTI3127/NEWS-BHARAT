@@ -24,14 +24,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+      - name: Classify dispatch mode
+        id: dispatch_mode
+        shell: bash
+        run: |
+          EVENT_NAME="${{ github.event_name }}"
+          DISPATCH_TYPE="${{ github.event.action }}"
+          REASON="${{ github.event.client_payload.reason }}"
 
-      - name: Install dependencies
-        run: npm ci
+          echo "event_name=$EVENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "dispatch_type=$DISPATCH_TYPE" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT_NAME" = "repository_dispatch" ] && [ "$REASON" = "scheduled-batch" ]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Log trigger context
         run: |
@@ -39,13 +48,36 @@ jobs:
           echo "dispatch_type=${{ github.event.action }}"
           echo 'client_payload=${{ toJson(github.event.client_payload) }}'
 
+      - name: Log scheduled batch notification
+        if: steps.dispatch_mode.outputs.should_build == 'false'
+        run: |
+          echo "Articles have been queued for the next frontend build window"
+          echo "article_count=${{ github.event.client_payload.article_count }}"
+          echo "window_start=${{ github.event.client_payload.window_start }}"
+          echo "window_end=${{ github.event.client_payload.window_end }}"
+          echo "latest_slug=${{ github.event.client_payload.latest_slug }}"
+          echo "latest_title=${{ github.event.client_payload.latest_title }}"
+
+      - name: Setup Node.js
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        run: npm ci
+
       - name: Build and prerender
+        if: steps.dispatch_mode.outputs.should_build == 'true'
         run: npm run build
         env:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
       - name: Deploy build output to Hostinger (attempt 1)
+        if: steps.dispatch_mode.outputs.should_build == 'true'
         id: hostinger_deploy_attempt_1
         continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -66,7 +98,7 @@ jobs:
             **/node_modules/**
 
       - name: Deploy build output to Hostinger (attempt 2)
-        if: steps.hostinger_deploy_attempt_1.outcome == 'failure'
+        if: steps.dispatch_mode.outputs.should_build == 'true' && steps.hostinger_deploy_attempt_1.outcome == 'failure'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
@@ -85,6 +117,6 @@ jobs:
             **/node_modules/**
 
       - name: Note deploy retry
-        if: steps.hostinger_deploy_attempt_1.outcome == 'failure'
+        if: steps.dispatch_mode.outputs.should_build == 'true' && steps.hostinger_deploy_attempt_1.outcome == 'failure'
         run: |
           echo "First Hostinger deploy attempt failed, so a retry was triggered."

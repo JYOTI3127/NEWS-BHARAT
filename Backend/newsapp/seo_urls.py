@@ -8,6 +8,9 @@ from django.urls import path, re_path
 from newsapp import seo_views
 
 urlpatterns = [
+    path("article/<slug:slug>/", seo_views.view_article_detail, name="article_detail_page"),
+    path("news/<slug:slug>/", seo_views.redirect_legacy_news_article, name="legacy_news_article_redirect"),
+
     # Static SEO files
     path("robots.txt",           seo_views.view_robots,           name="seo_robots"),
     path("manifest.webmanifest", seo_views.view_manifest,         name="seo_manifest"),

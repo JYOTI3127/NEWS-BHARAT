@@ -216,7 +216,7 @@ def _save_article_from_request(request, article=None):
         article.assigned_to = None
 
     article.slug               = data.get('slug', '').strip()
-    article.canonical_url      = data.get('canonical_url', '').strip()
+    article.canonical_url      = normalize_article_canonical(data.get('canonical_url', ''), article.slug)
     article.meta_description   = data.get('meta_description', '').strip()
     article.focus_keyword      = data.get('focus_keyword', '').strip()
     article.secondary_keywords = data.get('secondary_keywords', '').strip()
@@ -503,6 +503,16 @@ def article_detail(request, pk):
 from django.shortcuts import render, get_object_or_404
 from newsapp.models import Article
 from newsapp.seo_direct import MetaEngine, SchemaEngine
+
+def normalize_article_canonical(raw_value, slug):
+    canonical = (raw_value or '').strip()
+    if not canonical or not slug:
+        return canonical
+
+    legacy_url = f"https://news4bharat.com/news/{slug}"
+    if canonical.rstrip('/') == legacy_url.rstrip('/'):
+        return f"https://news4bharat.com/article/{slug}/"
+    return canonical
 
 def article_detail_page(request, slug):
     article = get_object_or_404(Article, slug=slug, status="published")

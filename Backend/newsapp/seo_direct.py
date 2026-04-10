@@ -92,6 +92,28 @@ def _cached(key, fn, ttl):
     return result
 
 
+def article_path(slug: str) -> str:
+    return f"/article/{slug}/"
+
+
+def article_url(slug: str, base: str = None) -> str:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    return f"{base}{article_path(slug)}"
+
+
+def normalized_canonical(article, default_url: str) -> str:
+    canonical = (article.canonical_url or "").strip()
+    if not canonical:
+        return default_url
+
+    site_base = SEO["SITE_URL"].rstrip("/")
+    legacy_url = f"{site_base}/news/{article.slug}"
+    if canonical.rstrip("/") == legacy_url.rstrip("/"):
+        return article_url(article.slug, site_base)
+
+    return canonical
+
+
 # ════════════════════════════════════════════════════════════
 # MODULE 1 — ROBOTS.TXT
 # ════════════════════════════════════════════════════════════
@@ -212,7 +234,7 @@ class SitemapEngine:
 
         for a in articles:
             url = ET.SubElement(root, "url")
-            ET.SubElement(url, "loc").text     = f"{base}/article/{a.slug}"
+            ET.SubElement(url, "loc").text     = article_url(a.slug, base)
             ET.SubElement(url, "lastmod").text = _iso(a.published_at)
 
             news_el = ET.SubElement(url, "news:news")
@@ -278,7 +300,7 @@ class SitemapEngine:
                 priority = 0.5
 
             url_el = ET.SubElement(root, "url")
-            ET.SubElement(url_el, "loc").text        = f"{base}/article/{a.slug}"
+            ET.SubElement(url_el, "loc").text        = article_url(a.slug, base)
             ET.SubElement(url_el, "lastmod").text    = _iso(a.published_at)
             ET.SubElement(url_el, "changefreq").text = "weekly"
             ET.SubElement(url_el, "priority").text   = f"{priority:.1f}"
@@ -295,8 +317,8 @@ class SitemapEngine:
 
             # Hreflang
             for hreflang, href in [
-                ("en-in",     f"{base}/article/{a.slug}"),
-                ("x-default", f"{base}/article/{a.slug}"),
+                ("en-in",     article_url(a.slug, base)),
+                ("x-default", article_url(a.slug, base)),
             ]:
                 ET.SubElement(url_el, "xhtml:link", {
                     "rel": "alternate", "hreflang": hreflang, "href": href
@@ -394,7 +416,7 @@ class SchemaEngine:
         Tera model ke fields seedha use karta hai.
         """
         base    = SEO["SITE_URL"]
-        url     = f"{base}/article/{article.slug}"
+        url     = article_url(article.slug, base)
         img_url = article.get_image()
         if img_url and not img_url.startswith("http"):
             img_url = f"{base}{img_url}"
@@ -476,7 +498,7 @@ class SchemaEngine:
             items.append({"id": 2, "name": str(first_cat),
                           "url": f"{base}/category/{first_cat.slug}"})
         items.append({"id": len(items) + 1, "name": article.title,
-                      "url": f"{base}/article/{article.slug}"})
+                      "url": article_url(article.slug, base)})
         return {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
@@ -507,7 +529,7 @@ class MetaEngine:
     @staticmethod
     def for_article(article) -> dict:
         base    = SEO["SITE_URL"]
-        url     = f"{base}/article/{article.slug}"
+        url     = article_url(article.slug, base)
         title   = article.title
         desc    = article.meta_description or _strip(article.content, 160)
         img_url = article.get_image()
@@ -526,7 +548,7 @@ class MetaEngine:
         keywords = ", ".join(dict.fromkeys(filter(None, kw_parts)))
 
         # Canonical
-        canonical = article.canonical_url or url
+        canonical = normalized_canonical(article, url)
 
         # Robots
         robots_parts = []
@@ -676,7 +698,7 @@ def _build_rss(category_slug: str = None) -> str:
     ]
 
     for a in articles:
-        article_url = f"{base}/article/{a.slug}"
+        article_url_value = article_url(a.slug, base)
         excerpt = _strip(a.content or "", 300)
         pub_date = a.published_at.strftime("%a, %d %b %Y %H:%M:%S +0000") if a.published_at else ""
         author_name = a.author_display_name.strip() or a.author.get_full_name() or a.author.username
@@ -688,8 +710,8 @@ def _build_rss(category_slug: str = None) -> str:
         lines += [
             '    <item>',
             f'      <title><![CDATA[{a.title}]]></title>',
-            f'      <link>{article_url}</link>',
-            f'      <guid isPermaLink="true">{article_url}</guid>',
+            f'      <link>{article_url_value}</link>',
+            f'      <guid isPermaLink="true">{article_url_value}</guid>',
             f'      <description><![CDATA[{excerpt}]]></description>',
             f'      <pubDate>{pub_date}</pubDate>',
             f'      <dc:creator><![CDATA[{author_name}]]></dc:creator>',
@@ -760,7 +782,7 @@ class GoogleIndexingAPI:
     def submit_article(cls, article) -> dict:
         base = SEO["SITE_URL"]
         return {
-            "article": cls.submit(f"{base}/article/{article.slug}"),
+            "article": cls.submit(article_url(article.slug, base)),
         }
 
 
@@ -825,7 +847,7 @@ def submit_article_everywhere(article) -> dict:
     slug = article.slug
 
     google   = GoogleIndexingAPI.submit_article(article)
-    indexnow = IndexNow.submit([f"{base}/article/{slug}"])
+    indexnow = IndexNow.submit([article_url(slug, base)])
     pings    = ping_search_engines()
 
     # Sitemap cache invalidate

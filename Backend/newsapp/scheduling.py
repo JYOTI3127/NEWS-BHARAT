@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 
+from .frontend_build import flush_frontend_build_batch_if_due
 from .models import Article
 
 
@@ -47,3 +48,7 @@ def maybe_publish_due_articles(*, now=None):
 
 def publish_due_articles_cron():
     return publish_due_articles()
+
+
+def flush_frontend_build_batch_cron():
+    return flush_frontend_build_batch_if_due()

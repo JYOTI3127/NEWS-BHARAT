@@ -196,6 +196,7 @@ CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
 CRONJOBS = [
     ('*/1 * * * *', 'newsapp.scheduling.publish_due_articles_cron'),
+    ('*/1 * * * *', 'newsapp.scheduling.flush_frontend_build_batch_cron'),
 ]
 
 FRONTEND_BUILD_HOOK_URL = os.environ.get("FRONTEND_BUILD_HOOK_URL", "")
@@ -215,6 +216,16 @@ FRONTEND_BUILD_EVENT_UPDATED = os.environ.get(
 FRONTEND_BUILD_EVENT_FALLBACK = os.environ.get(
     "FRONTEND_BUILD_EVENT_FALLBACK",
     "rebuild-frontend",
+)
+FRONTEND_BUILD_EVENT_BATCH = os.environ.get(
+    "FRONTEND_BUILD_EVENT_BATCH",
+    FRONTEND_BUILD_EVENT_FALLBACK,
+)
+FRONTEND_BUILD_BATCH_THRESHOLD = int(
+    os.environ.get("FRONTEND_BUILD_BATCH_THRESHOLD", "3")
+)
+FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS = int(
+    os.environ.get("FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS", "1800")
 )
 
 

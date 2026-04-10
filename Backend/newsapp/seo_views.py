@@ -12,7 +12,7 @@ urls.py mein mount karo:
 import json
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.core.cache import cache
 
 from newsapp.seo_direct import (
@@ -130,6 +130,17 @@ def view_rss(request):
 @require_GET
 def view_rss_category(request, category_slug):
     return HttpResponse(generate_rss(category_slug), content_type="application/rss+xml; charset=utf-8")
+
+
+@require_GET
+def view_article_detail(request, slug):
+    from newsapp.views import article_detail_page
+    return article_detail_page(request, slug)
+
+
+@require_GET
+def redirect_legacy_news_article(request, slug):
+    return redirect("article_detail_page", slug=slug, permanent=True)
 
 
 # ─────────────────────────────────────────────

@@ -11,6 +11,7 @@ apps.py mein sirf yeh add karo:
 
 import logging
 from django.db.models.signals import post_save
+from django.db.models.signals import pre_save
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
@@ -21,6 +22,18 @@ def register():
     from newsapp.models import Article
     from newsapp.seo_direct import submit_article_everywhere
     from newsapp.frontend_build import trigger_frontend_build_on_commit
+
+    @receiver(pre_save, sender=Article)
+    def capture_previous_article_status(sender, instance, **kwargs):
+        if not instance.pk:
+            instance._previous_status = None
+            return
+
+        try:
+            previous = sender.objects.only("status").get(pk=instance.pk)
+            instance._previous_status = previous.status
+        except sender.DoesNotExist:
+            instance._previous_status = None
 
     @receiver(post_save, sender=Article)
     def on_article_publish(sender, instance, created, **kwargs):
@@ -49,8 +62,23 @@ def register():
             # NEVER crash the save — just log
             logger.error(f"[SEO Signal] Failed for '{instance.slug}': {e}")
 
+        previous_status = getattr(instance, "_previous_status", None)
+        if instance.status == "published" and previous_status != "published":
+            build_reason = "article_published"
+        else:
+            build_reason = "article_updated"
+
+        instance._build_previous_status = previous_status
+        logger.info(
+            "[SEO Signal] Frontend build queued. slug=%s previous_status=%s current_status=%s reason=%s",
+            instance.slug,
+            previous_status,
+            instance.status,
+            build_reason,
+        )
+
         trigger_frontend_build_on_commit(
-            reason="article_published" if created else "article_updated",
+            reason=build_reason,
             article=instance,
         )
 

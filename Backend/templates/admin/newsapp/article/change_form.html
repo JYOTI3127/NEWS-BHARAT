@@ -808,7 +808,7 @@ label.image-drop {
           </span>
         </div>
         <div class="seo-slug-row">
-          <span class="seo-slug-pre">/news/</span>
+          <span class="seo-slug-pre">/article/</span>
           <input type="text" class="seo-inp seo-slug-inp" id="ui_slug" placeholder="your-article-slug" value="{{ original.slug|default:'' }}" {% if original.status == 'published' %}readonly{% endif %}>
           <button type="button" class="seo-slug-auto" onclick="generateSlug()" title="Auto-generate from headline">↺</button>
         </div>
@@ -816,7 +816,7 @@ label.image-drop {
       <div class="seo-field">
         <div class="seo-field-label">Canonical URL <span class="seo-tag seo-tag--auto">Auto — Read Only</span></div>
         <input type="url" class="seo-inp canonical-readonly" id="ui_canonical"
-               placeholder="https://yourdomain.com/news/article-slug"
+               placeholder="https://yourdomain.com/article/article-slug/"
                value="{{ original.canonical_url|default:'' }}" readonly tabindex="-1">
       </div>
       <div class="seo-field">
@@ -1814,10 +1814,10 @@ function updateCanonicalFromSlug(){
       canonEl=document.getElementById('ui_canonical');
   if(!canonEl||!slugEl)return;
   var slugVal=slugEl.value.trim();
-  if(slugVal)canonEl.value=SITE_BASE_URL+'/news/'+slugVal;
+  if(slugVal)canonEl.value=SITE_BASE_URL+'/article/'+slugVal+'/';
   else{
     canonEl.value='';
-    canonEl.placeholder=SITE_BASE_URL+'/news/article-slug';
+    canonEl.placeholder=SITE_BASE_URL+'/article/article-slug/';
   }
 }
 (function(){

@@ -76,47 +76,31 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Deploy build output to Hostinger (attempt 1)
+      - name: Ensure Hostinger target directory exists
         if: steps.dispatch_mode.outputs.should_build == 'true'
-        id: hostinger_deploy_attempt_1
-        continue-on-error: true
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: appleboy/ssh-action@v1
         with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: ${{ secrets.HOSTINGER_FTP_PORT }}
-          protocol: ${{ secrets.HOSTINGER_FTP_PROTOCOL }}
-          security: loose
-          timeout: 120000
-          log-level: standard
-          local-dir: ./build/
-          server-dir: ${{ secrets.HOSTINGER_SERVER_DIR }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          command_timeout: 20m
+          script: |
+            set -e
+            mkdir -p "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
 
-      - name: Deploy build output to Hostinger (attempt 2)
-        if: steps.dispatch_mode.outputs.should_build == 'true' && steps.hostinger_deploy_attempt_1.outcome == 'failure'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Deploy build output to Hostinger over SSH
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        uses: appleboy/scp-action@v1
         with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: ${{ secrets.HOSTINGER_FTP_PORT }}
-          protocol: ${{ secrets.HOSTINGER_FTP_PROTOCOL }}
-          security: loose
-          timeout: 120000
-          log-level: standard
-          local-dir: ./build/
-          server-dir: ${{ secrets.HOSTINGER_SERVER_DIR }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-
-      - name: Note deploy retry
-        if: steps.dispatch_mode.outputs.should_build == 'true' && steps.hostinger_deploy_attempt_1.outcome == 'failure'
-        run: |
-          echo "First Hostinger deploy attempt failed, so a retry was triggered."
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          timeout: 120s
+          command_timeout: 20m
+          source: "build/*"
+          target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
+          strip_components: 1
+          overwrite: true
+          tar_dereference: true

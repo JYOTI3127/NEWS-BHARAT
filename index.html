@@ -93,15 +93,15 @@
     NOTE: These are default homepage tags.
     Article and category pages get their final SEO values from the prerender script.
   -->
-  <title>News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained</title>
-  <meta name="description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <title>News4Bharat - India News, Economy, Politics &amp; Explainers</title>
+  <meta name="description" content="News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers." />
   <meta name="robots" content="index,follow,max-image-preview:large" />
 
   <!-- Default OG tags -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="News4Bharat" />
-  <meta property="og:title" content="News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained" />
-  <meta property="og:description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <meta property="og:title" content="News4Bharat - India News, Economy, Politics &amp; Explainers" />
+  <meta property="og:description" content="News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers." />
   <meta property="og:url" content="https://news4bharat.com/" />
   <meta property="og:image" content="https://news4bharat.com/news4bharat-share.png" />
   <meta property="og:locale" content="en_IN" />
@@ -109,8 +109,9 @@
   <!-- Twitter card defaults -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@news4_bharat" />
-  <meta name="twitter:title" content="News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education &amp; Business Updates Explained" />
-  <meta name="twitter:description" content="Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates." />
+  <meta name="twitter:title" content="News4Bharat - India News, Economy, Politics &amp; Explainers" />
+  <meta name="twitter:description" content="News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers." />
+  <meta name="twitter:url" content="https://news4bharat.com/" />
   <meta name="twitter:image" content="https://news4bharat.com/news4bharat-share.png" />
 
   <!--
@@ -128,7 +129,7 @@
 
         if (
           ogTitle &&
-          ogTitle !== 'News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education & Business Updates Explained' &&
+          ogTitle !== 'News4Bharat - India News, Economy, Politics & Explainers' &&
           ogTitle.length > 0
         ) {
           document.title = ogTitle.includes('News4Bharat')
@@ -141,26 +142,33 @@
     })();
   </script>
 
-  <!-- NewsMediaOrganization Schema — site-wide, static -->
+  <!-- NewsMediaOrganization Schema -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "NewsMediaOrganization",
     "name": "News4Bharat",
     "alternateName": "N4B",
-    "url": "https://www.news4bharat.com",
+    "url": "https://news4bharat.com/",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://www.news4bharat.com/assets/news4bharat-logo.png",
-      "width": 600,
-      "height": 60
+      "url": "https://news4bharat.com/Fevicon (1).png"
     },
-    "description": "News4Bharat (N4B) is an independent Indian digital news portal covering breaking news, economy, politics, startups, and explainers with credibility and clarity.",
+    "description": "News4Bharat is an independent Indian digital news platform covering breaking news, economy, politics, startups, states, and explainers with credibility and clarity.",
     "foundingDate": "2024",
     "countryOfOrigin": "IN",
+    "publishingPrinciples": "https://news4bharat.com/editorial-policy",
+    "ethicsPolicy": "https://news4bharat.com/editorial-policy",
+    "correctionsPolicy": "https://news4bharat.com/editorial-policy",
+    "missionCoveragePrioritiesPolicy": "https://news4bharat.com/founders-note",
+    "about": "https://news4bharat.com/about",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "url": "https://news4bharat.com/contact"
+    },
     "sameAs": [
-      "https://twitter.com/news4_bharat",
-      "https://www.facebook.com/news4bharat"
+      "https://x.com/news4_bharat"
     ]
   }
   </script>

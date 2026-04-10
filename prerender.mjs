@@ -178,8 +178,8 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   // Homepage
   if (route === '/') {
     return {
-      title: 'News4Bharat: N4B - Breaking News, India News, Perspectives, Politics, Education & Business Updates Explained',
-      description: "Breaking news, explained simply. News4Bharat Bharat Explainers covers India's politics, policy, economy, and education with clear, insightful updates.",
+      title: 'News4Bharat - India News, Economy, Politics & Explainers',
+      description: 'News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers.',
       canonical: `${BASE_URL}/`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
@@ -531,6 +531,27 @@ async function renderInBatches(prerenderer, routes, articleMap, categoryMap, sit
   return { success, failed, failedRoutes }
 }
 
+function generateSitemap(routes, articleMap, categoryMap) {
+  const urls = Array.from(
+    new Set(
+      routes
+        .map((route) => buildMetaForRoute(route, articleMap, categoryMap).canonical)
+        .filter(Boolean)
+    )
+  )
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls
+  .map((url) => `  <url>\n    <loc>${url}</loc>\n  </url>`)
+  .join('\n')}
+</urlset>
+`
+
+  fs.writeFileSync(path.join(__dirname, 'build', 'sitemap.xml'), xml, 'utf8')
+  console.log(`Generated sitemap.xml with ${urls.length} URLs`)
+}
+
 console.log('Fetching routes and API data...')
 const { routes, articleMap, categoryMap, siteData } = await getRoutesAndData()
 console.log(`\nTotal ${routes.length} routes will be prerendered\n`)
@@ -558,6 +579,8 @@ const { success, failed, failedRoutes } = await renderInBatches(
 )
 
 await prerenderer.destroy()
+
+generateSitemap(routes, articleMap, categoryMap)
 
 console.log('\n' + '-'.repeat(50))
 console.log('Prerendering complete!')

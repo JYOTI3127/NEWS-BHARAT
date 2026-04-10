@@ -94,7 +94,11 @@ const Home = () => {
         <NewsBanner articles={allArticles} loading={articlesLoading} />
       </Profiler>
 
-
+      <section className="w-full px-4 sm:px-6 pt-5">
+        <div className="mx-auto max-w-[1240px] rounded-2xl border border-[#ece5dd] bg-white/80 px-4 py-4 text-sm leading-7 text-[#5f5a53] shadow-[0_1px_4px_rgba(0,0,0,0.03)] sm:px-6">
+          News4Bharat brings breaking India news, economy coverage, politics updates, startup stories, state reporting, and Bharat explainers with verified reporting and clear context for everyday readers.
+        </div>
+      </section>
 
       <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
         <BreakingNewsSection articles={allArticles} />

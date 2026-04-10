@@ -572,9 +572,6 @@ export default function TrendingNews({ articles: passedArticles = [], categories
           )}
         </div>
 
-        {/* ✅ Banner — alag memo, sirf woh re-render hoga */}
-        <Banner />
-
         {is320 && (
           <div className="tn-live-mobile">
             <LiveUpdates />

@@ -2486,14 +2486,11 @@ function nbInsertTwitterEmbed() {
   var tweetId  = urlMatch[3];
 
   var finalHtml =
-    '<div class="article-twitter-embed"' +
+    '<blockquote class="twitter-tweet article-twitter-embed"' +
          ' data-tweet-id="' + tweetId + '"' +
-         ' data-tweet-url="' + tweetUrl + '"' +
-         ' style="border:1px dashed #2563eb;border-radius:8px;' +
-                'padding:10px 14px;margin:12px 0;background:#eff6ff;' +
-                'color:#1e40af;font-size:12px;font-weight:600;">' +
-      'Tweet: ' + tweetUrl +
-    '</div>' +
+         ' data-tweet-url="' + tweetUrl + '">' +
+      '<a href="' + tweetUrl + '"></a>' +
+    '</blockquote>' +
     '<p><br></p>';
 
   var editor = document.getElementById('ui_content');

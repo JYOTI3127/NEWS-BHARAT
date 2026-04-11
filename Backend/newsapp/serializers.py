@@ -2,6 +2,26 @@ from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User
 from .seo_direct import article_url, normalized_canonical
+import html
+import re
+
+
+_TWITTER_PLACEHOLDER_RE = re.compile(
+    r'<div\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="([^"]+)")[^>]*>[\s\S]*?</div>',
+    re.IGNORECASE,
+)
+
+
+def normalize_twitter_embeds(content):
+    def replace_placeholder(match):
+        tweet_url = html.escape(match.group(1), quote=True)
+        return (
+            '<blockquote class="twitter-tweet article-twitter-embed">'
+            f'<a href="{tweet_url}"></a>'
+            '</blockquote>'
+        )
+
+    return _TWITTER_PLACEHOLDER_RE.sub(replace_placeholder, content or '')
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -155,7 +175,12 @@ class ArticleSerializer(serializers.ModelSerializer):
         return article_url(obj)
 
     def get_content_html(self, obj):
-        return obj.content or ''
+        return normalize_twitter_embeds(obj.content)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['content'] = normalize_twitter_embeds(data.get('content', ''))
+        return data
 
     def get_posted_by_username(self, obj):
         return obj.author.username if obj.author else None

@@ -35,6 +35,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_url, normalized_canonical
+from django.utils.text import slugify
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
@@ -252,7 +253,8 @@ def _save_article_from_request(request, article=None):
     else:
         article.assigned_to = None
 
-    article.slug               = data.get('slug', '').strip()
+    raw_slug = data.get('slug', '').strip()
+    article.slug = slugify(raw_slug.strip('/').split('/')[-1])
     article.canonical_url      = normalize_article_canonical(data.get('canonical_url', ''), article.slug)
     article.meta_description   = data.get('meta_description', '').strip()
     article.focus_keyword      = data.get('focus_keyword', '').strip()

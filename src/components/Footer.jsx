@@ -13,11 +13,17 @@ const WhatsAppIcon = ({ size = 17 }) => (
 const footerLinks = {
   NEWS: [
     "Breaking News",
-    "Trending",
-    "Sports",
     "World News",
-    { name: "Artificial Intelligence", slug: "ai" },
-    "Technology"
+    "Business",
+    "Technology",
+    "Sports",
+    "Entertainment",
+    "Health",
+    "Education",
+    "Automobile",
+    "National",
+    "Political",
+    "Trending"
   ],
   All_About_Bharat: [
     "Bharat Opinions",

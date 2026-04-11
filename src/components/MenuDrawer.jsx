@@ -11,20 +11,24 @@ import { getArticlePath } from "../lib/articleUrl";
 
 const CATEGORY_ICON_MAP = {
   "Breaking News": Flame,
+  "World News": Globe,
+  "Business": TrendingUp,
+  "Technology": Cpu,
+  "Sports": Trophy,
+  "Entertainment": Film,
+  "Health": PenLine, // or Heart, but PenLine is available
+  "Education": FileText, // or GraduationCap, but FileText
+  "Automobile": BarChart2, // or Video
+  "National": Globe,
+  "Political": PenLine,
   "States of Bharat": Globe,
-  "Bharat Economy & Business": TrendingUp,
   "Bharat's BFSI": BarChart2,
-  "Bharat Explainers": FileText,
   "Bharat in Numbers": BarChart2,
   "Bharat Opinions": PenLine,
   "Bharat's Startups": Zap,
   "Bharat 2047": Flame,
   "Bharat By 2047": Flame,
-  "Technology": Cpu,
   "Artificial Intelligence": Cpu,
-  "Sports": Trophy,
-  "World News": Globe,
-  "Entertainment": Film,
   "Trending": TrendingUp,
   "60-Second Read": Zap,
 };
@@ -85,14 +89,17 @@ const getFinalSlug = (slug, label) => {
 // ── All nav links ──
 const navLinks = [
   { label: "Breaking News",     path: "/category/breaking-news",    isBreaking: true },
-  { label: "States of Bharat",  path: "/category/state-of-bharat" },
-  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
-  { label: "Bharat in Numbers", path: "/category/bharat-in-numbers" },
-  { label: "Bharat's Startups", path: "/category/bharat-startups" },
-  { label: "60-Second Read",    path: "/category/60-second-read" },
-  { label: "Sports",            path: "/category/sports" },
   { label: "World News",        path: "/category/world-news" },
+  { label: "Business",          path: "/category/bharat-economy" },
+  { label: "Technology",        path: "/category/technology" },
+  { label: "Sports",            path: "/category/sports" },
   { label: "Entertainment",     path: "/category/entertainment" },
+  { label: "Health",            path: "/category/health" },
+  { label: "Education",         path: "/category/education" },
+  { label: "Automobile",        path: "/category/automobile" },
+  { label: "National",          path: "/category/national" },
+  { label: "Political",         path: "/category/politics" },
+  { label: "Trending",          path: "/category/trending" },
   { label: "Founder's Note",    path: "/founders-note" },
   { label: "Editorial Policy",  path: "/editorial-policy" },
   { label: "Career",            path: "/careers" },
@@ -103,7 +110,7 @@ const navLinks = [
 // ── NAV_SECTIONS ──
 const NAV_SECTIONS = [
   {
-    label: "Bharat Economy & Business",
+    label: "Business",
     slug: "bharat-economy",
     Icon: TrendingUp,
     subcategories: [

@@ -36,6 +36,18 @@ const timeAgo = (dateStr) => {
   return "Just now";
 };
 
+const isTodayArticle = (dateStr) => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+};
+
 const ArrowCircleIcon = () => (
   <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
     stroke="rgba(255,255,255,0.82)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -63,12 +75,14 @@ export default function NewsBanner() {
   const navigate = useNavigate();
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
+  const isSwipeRef = useRef(false);
   const hasDispatchedReadyRef = useRef(false);
 
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState("next");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 425);
+  const supportsPointerEvents = typeof window !== "undefined" && !!window.PointerEvent;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 425);
@@ -91,9 +105,22 @@ export default function NewsBanner() {
     .filter((a) => a.status === "published" || a.image_url)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+  const todayArticles = sorted.filter((a) =>
+    isTodayArticle(a.published_at || a.created_at)
+  );
+
+  const featuredArticles =
+    todayArticles.length >= 6
+      ? todayArticles
+      : [
+          ...todayArticles,
+          ...sorted.filter((a) => !todayArticles.includes(a)).slice(0, 6 - todayArticles.length),
+        ];
+  const topSix = featuredArticles.slice(0, 6);
+
   const usedImages = new Set();
   const slides = [];
-  for (const a of sorted) {
+  for (const a of topSix) {
     const img = a.image_url || a.image || "";
     if (!img) continue;
     if (usedImages.has(img)) continue;
@@ -104,15 +131,16 @@ export default function NewsBanner() {
       author: getCategoryLabel(a),
       title: a.title,
       category: getCategoryLabel(a),
-      image: a.image_url || a.image || "",
+      image: img,
       public_url: a.public_url,
       category_details: a.category_details,
       categories: a.categories,
       canonical_url: a.canonical_url,
     });
+    if (slides.length >= 3) break;
   }
 
-  const allArticles = sorted.map((a) => ({
+  const bottomNews = topSix.slice(3, 6).map((a) => ({
     id: a.id,
     slug: a.slug,
     title: a.title,
@@ -144,17 +172,29 @@ export default function NewsBanner() {
     if (path) navigate(path);
   };
 
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0]?.clientX ?? null;
+  const handlePointerStart = (e) => {
+    const clientX = e.touches ? e.touches[0]?.clientX : e.clientX;
+    touchStartX.current = clientX ?? null;
     touchCurrentX.current = null;
   };
 
-  const handleTouchMove = (e) => {
-    touchCurrentX.current = e.touches[0]?.clientX ?? null;
+  const handlePointerMove = (e) => {
+    if (touchStartX.current == null) return;
+    const clientX = e.touches ? e.touches[0]?.clientX : e.clientX;
+    if (clientX != null) {
+      touchCurrentX.current = clientX;
+      if (Math.abs(clientX - touchStartX.current) > 10) {
+        isSwipeRef.current = true;
+      }
+    }
   };
 
-  const handleTouchEnd = () => {
-    if (slides.length === 0 || touchStartX.current == null || touchCurrentX.current == null) return;
+  const handlePointerEnd = () => {
+    if (slides.length === 0 || touchStartX.current == null || touchCurrentX.current == null) {
+      touchStartX.current = null;
+      touchCurrentX.current = null;
+      return;
+    }
 
     const diff = touchStartX.current - touchCurrentX.current;
     const threshold = 45;
@@ -173,16 +213,6 @@ export default function NewsBanner() {
     touchCurrentX.current = null;
   };
 
-  const getBottomNews = () => {
-    if (allArticles.length === 0) return [];
-    const visibleCount = isMobile ? 2 : 3;
-    const startIndex = (current * visibleCount) % allArticles.length;
-    return Array.from({ length: Math.min(visibleCount, allArticles.length) }, (_, offset) => {
-      const idx = (startIndex + offset) % allArticles.length;
-      return allArticles[idx];
-    });
-  };
-
   const getVisibleDotIndexes = () => {
     const total = slides.length;
     if (total <= 5) return slides.map((_, index) => index);
@@ -196,7 +226,7 @@ export default function NewsBanner() {
   if (isLoading || slides.length === 0) return null;
 
   const slide = slides[current];
-  const currentBottomNews = getBottomNews();
+  const currentBottomNews = bottomNews;
   const visibleDotIndexes = getVisibleDotIndexes();
 
   const emitBannerReady = () => {
@@ -209,11 +239,21 @@ export default function NewsBanner() {
     <div className="nb-root">
       <div
         className="nb-container"
-        onClick={() => navigateToArticle(slide)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ cursor: "pointer" }}
+        onClick={(e) => {
+          if (isSwipeRef.current) {
+            isSwipeRef.current = false;
+            return;
+          }
+          navigateToArticle(slide);
+        }}
+        onPointerDown={supportsPointerEvents ? handlePointerStart : undefined}
+        onPointerMove={supportsPointerEvents ? handlePointerMove : undefined}
+        onPointerUp={supportsPointerEvents ? handlePointerEnd : undefined}
+        onPointerCancel={supportsPointerEvents ? handlePointerEnd : undefined}
+        onTouchStart={!supportsPointerEvents ? handlePointerStart : undefined}
+        onTouchMove={!supportsPointerEvents ? handlePointerMove : undefined}
+        onTouchEnd={!supportsPointerEvents ? handlePointerEnd : undefined}
+        style={{ cursor: "pointer", touchAction: "pan-y" }}
       >
         <img
           // key={current}

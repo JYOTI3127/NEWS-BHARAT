@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import {
@@ -249,9 +249,26 @@ const getTweetEmbedData = (value) => {
   if (!raw) return null;
 
   const extracted = raw.match(TWEET_URL_REGEX);
-  if (!extracted) return null;
+  const platformEmbedId = (() => {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+      if (
+        host === "platform.twitter.com" &&
+        url.pathname.toLowerCase() === "/embed/tweet.html"
+      ) {
+        return url.searchParams.get("id") || "";
+      }
+    } catch {
+      return "";
+    }
 
-  const tweetId = extracted[1];
+    return "";
+  })();
+
+  const tweetId = extracted?.[1] || platformEmbedId;
+  if (!tweetId) return null;
+
   const cleanUrl = `https://twitter.com/i/web/status/${tweetId}`;
 
   try {
@@ -260,14 +277,6 @@ const getTweetEmbedData = (value) => {
   } catch {
     return null;
   }
-};
-
-const getTweetEmbedUrl = (tweetId) => {
-  const embedUrl = new URL("https://platform.twitter.com/embed/Tweet.html");
-  embedUrl.searchParams.set("id", tweetId);
-  embedUrl.searchParams.set("dnt", "true");
-  embedUrl.searchParams.set("theme", "light");
-  return embedUrl.toString();
 };
 
 const getEmbedDescriptor = (value) => {
@@ -323,24 +332,19 @@ const createEmbedNode = (doc, descriptor) => {
     wrapper.setAttribute("data-tweet-id", descriptor.id);
     wrapper.setAttribute("data-tweet-url", descriptor.url);
 
-    const iframe = doc.createElement("iframe");
-    iframe.src = getTweetEmbedUrl(descriptor.id);
-    iframe.title = "Embedded X post";
-    iframe.loading = "lazy";
-    iframe.referrerPolicy = "strict-origin-when-cross-origin";
-    iframe.setAttribute("frameborder", "0");
-    iframe.setAttribute("scrolling", "no");
-    iframe.setAttribute("allowtransparency", "true");
-    iframe.setAttribute("height", "560");
-    wrapper.appendChild(iframe);
+    const blockquote = doc.createElement("blockquote");
+    blockquote.className = "twitter-tweet";
+    blockquote.setAttribute("data-dnt", "true");
+    blockquote.setAttribute("data-align", "center");
 
     const fallback = doc.createElement("a");
     fallback.href = descriptor.url || `https://twitter.com/i/web/status/${descriptor.id}`;
     fallback.target = "_blank";
     fallback.rel = "noopener noreferrer";
     fallback.textContent = "Open tweet on X";
-    fallback.className = "article-twitter-fallback";
-    wrapper.appendChild(fallback);
+
+    blockquote.appendChild(fallback);
+    wrapper.appendChild(blockquote);
 
     return wrapper;
   }
@@ -472,10 +476,43 @@ const normalizeArticleContent = (html) => {
     wrapper.appendChild(video);
   });
 
+  Array.from(doc.body.querySelectorAll("blockquote.twitter-tweet")).forEach(
+    (blockquote) => {
+      if (blockquote.closest(".article-twitter-embed")) return;
+
+      const tweetAnchor = Array.from(blockquote.querySelectorAll("a[href]"))
+        .find((anchor) => getTweetEmbedData(anchor.href));
+      const tweetData = getTweetEmbedData(tweetAnchor?.href);
+      if (!tweetData) return;
+
+      if (!blockquote.getAttribute("data-dnt")) {
+        blockquote.setAttribute("data-dnt", "true");
+      }
+
+      if (!blockquote.getAttribute("data-align")) {
+        blockquote.setAttribute("data-align", "center");
+      }
+
+      const wrapper = doc.createElement("div");
+      wrapper.className = "article-twitter-embed";
+      wrapper.setAttribute("data-tweet-id", tweetData.id);
+      wrapper.setAttribute("data-tweet-url", tweetData.url);
+
+      blockquote.parentNode?.insertBefore(wrapper, blockquote);
+      wrapper.appendChild(blockquote);
+    }
+  );
+
   Array.from(doc.body.querySelectorAll(".article-twitter-embed")).forEach(
     (element) => {
+      if (element.querySelector("blockquote.twitter-tweet")) return;
+
+      const tweetAnchor = element.querySelector("a[href]");
+      const tweetIframe = element.querySelector("iframe[src]");
       const tweetData =
         getTweetEmbedData(element.getAttribute("data-tweet-url")) ||
+        getTweetEmbedData(tweetAnchor?.href) ||
+        getTweetEmbedData(tweetIframe?.src) ||
         getTweetEmbedData(element.textContent);
       const tweetId =
         String(element.getAttribute("data-tweet-id") || tweetData?.id || "")
@@ -492,6 +529,17 @@ const normalizeArticleContent = (html) => {
       );
     }
   );
+
+  Array.from(
+    doc.body.querySelectorAll('iframe[src*="platform.twitter.com/embed/Tweet.html"]')
+  ).forEach((iframe) => {
+    if (iframe.closest(".article-twitter-embed")) return;
+
+    const tweetData = getTweetEmbedData(iframe.src);
+    if (!tweetData) return;
+
+    iframe.replaceWith(createEmbedNode(doc, { type: "tweet", ...tweetData }));
+  });
 
   Array.from(doc.body.querySelectorAll("p, div, blockquote")).forEach((element) => {
     if (element.closest(".article-media-frame, .article-twitter-embed")) return;
@@ -534,6 +582,73 @@ const normalizeArticleContent = (html) => {
   return doc.body.innerHTML;
 };
 
+const ensureTwitterScript = () =>
+  new Promise((resolve) => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      resolve(null);
+      return;
+    }
+
+    let resolved = false;
+    const finish = (value) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(value);
+    };
+
+    let didRetry = false;
+
+    const appendTwitterScript = () => {
+      const script = document.createElement("script");
+      script.id = "twitter-wjs";
+      script.src = "https://platform.twitter.com/widgets.js";
+      script.async = true;
+      script.charset = "utf-8";
+      script.onload = () => waitForWidgets(retryScriptLoad);
+      script.onerror = retryScriptLoad;
+      document.body.appendChild(script);
+    };
+
+    const retryScriptLoad = () => {
+      if (didRetry || window.twttr?.widgets?.load) {
+        finish(window.twttr || null);
+        return;
+      }
+
+      didRetry = true;
+      document.getElementById("twitter-wjs")?.remove();
+      window.setTimeout(appendTwitterScript, 250);
+    };
+
+    function waitForWidgets(onTimeout = () => finish(null)) {
+      const start = Date.now();
+      const interval = window.setInterval(() => {
+        if (window.twttr?.widgets?.load) {
+          window.clearInterval(interval);
+          finish(window.twttr);
+        } else if (Date.now() - start > 10000) {
+          window.clearInterval(interval);
+          onTimeout();
+        }
+      }, 100);
+    }
+
+    if (window.twttr?.widgets?.load) {
+      finish(window.twttr);
+      return;
+    }
+
+    const existing = document.getElementById("twitter-wjs");
+    if (existing) {
+      existing.addEventListener("load", () => waitForWidgets(retryScriptLoad), { once: true });
+      existing.addEventListener("error", retryScriptLoad, { once: true });
+      waitForWidgets(retryScriptLoad);
+      return;
+    }
+
+    appendTwitterScript();
+  });
+
 export default function ArticleDetails() {
   const params = useParams();
   const routeParam = params.slug || params.id;
@@ -546,7 +661,17 @@ export default function ArticleDetails() {
   const [copied, setCopied] = useState(false);
   const [moreInListMaxHeight, setMoreInListMaxHeight] = useState(null);
   const mainArticleRef = useRef(null);
+  const articleContentRef = useRef(null);
   const moreInListRef = useRef(null);
+  const articleBodyHtml = article?.content_html || article?.content || "";
+  const normalizedContent = useMemo(
+    () => normalizeArticleContent(articleBodyHtml),
+    [articleBodyHtml]
+  );
+  const plainArticleContent = useMemo(
+    () => getPlainText(articleBodyHtml),
+    [articleBodyHtml]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -616,6 +741,30 @@ export default function ArticleDetails() {
       document.title = "News4Bharat — Latest News on India";
     };
   }, [article?.title]);
+
+  useEffect(() => {
+    if (!article) return;
+
+    const timeouts = [];
+    let cancelled = false;
+
+    const loadTweets = async () => {
+      const tweetScope = articleContentRef.current;
+      if (!tweetScope?.querySelector("blockquote.twitter-tweet")) return;
+      const twttr = await ensureTwitterScript();
+      if (cancelled) return;
+      twttr?.widgets?.load?.(tweetScope);
+    };
+
+    [150, 800, 1800, 3500].forEach((delay) => {
+      timeouts.push(window.setTimeout(loadTweets, delay));
+    });
+
+    return () => {
+      cancelled = true;
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [article, normalizedContent]);
 
   useEffect(() => {
     if (!routeParam) return;
@@ -760,9 +909,6 @@ export default function ArticleDetails() {
   const imageAlt = article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
   const absoluteImageUrl = toAbsoluteSiteUrl(imageUrl) || DEFAULT_SHARE_IMAGE;
-  const articleBodyHtml = article.content_html || article.content || "";
-  const normalizedContent = normalizeArticleContent(articleBodyHtml);
-  const plainArticleContent = getPlainText(articleBodyHtml);
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
   const categoryName = primaryCategory?.name?.trim() || "";
   const canonicalUrl = getCanonicalArticleUrl(article) || "";
@@ -1034,6 +1180,7 @@ export default function ArticleDetails() {
           )}
 
           <div
+            ref={articleContentRef}
             className="article-content text-gray-700 text-left md:text-justify
   [&_p]:text-[16px] [&_p]:leading-[1.6] [&_p]:mb-[1.2rem]
   [&_h1]:text-[18px] [&_h1]:leading-[1.4] [&_h1]:mb-[1.2rem] [&_h1]:font-bold

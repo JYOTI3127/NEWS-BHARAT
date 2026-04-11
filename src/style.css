@@ -111,11 +111,6 @@ img {
   box-shadow: 0 12px 34px rgba(17, 17, 17, 0.14);
 }
 
-.article-content .article-media-frame::before {
-  content: "";
-  display: block;
-  padding-top: 56.25%;
-}
 
 .article-content .article-media-frame > iframe,
 .article-content .article-media-frame > video {

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { Tweet } from "react-tweet";
 import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag, ArrowLeft,
@@ -50,7 +51,6 @@ const truncateText = (value, maxLength) => {
 const toAbsoluteSiteUrl = (value) => {
   const normalized = String(value || "").trim();
   if (!normalized) return null;
-
   try {
     return new URL(normalized, SITE_URL).toString();
   } catch {
@@ -91,7 +91,6 @@ const getArticleCategoryDetails = (article) => {
     )
       .trim()
       .toLowerCase();
-
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -107,7 +106,6 @@ const getArticleTags = (article) => {
   if (Array.isArray(article?.tags_list)) {
     return article.tags_list.filter(Boolean);
   }
-
   return String(article?.tags || "")
     .split(",")
     .map((tag) => tag.trim())
@@ -139,12 +137,10 @@ const sharesCategoryWithArticle = (candidate, currentArticle) => {
 
 const isInPrimaryCategory = (candidate, primaryCategory) => {
   if (!primaryCategory) return false;
-
   const primaryId = String(primaryCategory.id || "");
   const primarySlug = String(primaryCategory.slug || "").trim().toLowerCase();
   const candidateIds = getArticleCategoryIds(candidate);
   const candidateSlugs = getArticleCategorySlugs(candidate);
-
   return (
     (primaryId && candidateIds.includes(primaryId)) ||
     (primarySlug && candidateSlugs.includes(primarySlug))
@@ -156,11 +152,9 @@ const getRobotsContent = (article) => {
     article?.noindex ? "noindex" : "index",
     article?.nofollow ? "nofollow" : "follow",
   ];
-
   if (!article?.noindex) {
     parts.push("max-snippet:-1", "max-image-preview:large");
   }
-
   return parts.join(",");
 };
 
@@ -183,16 +177,10 @@ const TWEET_URL_REGEX =
 
 const parseTimeToSeconds = (value) => {
   if (!value) return 0;
-
   const normalized = String(value).trim().toLowerCase();
   if (/^\d+$/.test(normalized)) return Number(normalized);
-
-  const match = normalized.match(
-    /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/
-  );
-
+  const match = normalized.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
   if (!match) return 0;
-
   const [, hours = "0", minutes = "0", seconds = "0"] = match;
   return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
 };
@@ -217,7 +205,6 @@ const getYouTubeEmbedUrl = (value) => {
         const markerIndex = parts.findIndex((part) =>
           ["embed", "shorts", "live"].includes(part)
         );
-
         if (markerIndex >= 0) {
           videoId = parts[markerIndex + 1] || "";
         }
@@ -230,14 +217,10 @@ const getYouTubeEmbedUrl = (value) => {
       parseTimeToSeconds(url.searchParams.get("t")) ||
       parseTimeToSeconds(url.searchParams.get("start"));
 
-    const embedUrl = new URL(
-      `https://www.youtube-nocookie.com/embed/${videoId}`
-    );
-
+    const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
     if (start > 0) {
       embedUrl.searchParams.set("start", String(start));
     }
-
     return embedUrl.toString();
   } catch {
     return null;
@@ -262,7 +245,6 @@ const getTweetEmbedData = (value) => {
     } catch {
       return "";
     }
-
     return "";
   })();
 
@@ -270,7 +252,6 @@ const getTweetEmbedData = (value) => {
   if (!tweetId) return null;
 
   const cleanUrl = `https://twitter.com/i/web/status/${tweetId}`;
-
   try {
     new URL(cleanUrl);
     return { id: tweetId, url: cleanUrl };
@@ -285,26 +266,16 @@ const getEmbedDescriptor = (value) => {
 
   const youtubeEmbed = getYouTubeEmbedUrl(url);
   if (youtubeEmbed) {
-    return {
-      type: "iframe",
-      src: youtubeEmbed,
-      title: "Embedded YouTube video",
-    };
+    return { type: "iframe", src: youtubeEmbed, title: "Embedded YouTube video" };
   }
 
   const tweetData = getTweetEmbedData(url);
   if (tweetData) {
-    return {
-      type: "tweet",
-      ...tweetData,
-    };
+    return { type: "tweet", ...tweetData };
   }
 
   if (DIRECT_VIDEO_FILE_REGEX.test(url)) {
-    return {
-      type: "video",
-      src: url,
-    };
+    return { type: "video", src: url };
   }
 
   return null;
@@ -318,34 +289,18 @@ const isStandaloneLinkElement = (element) => {
     }
     return node.nodeName !== "BR";
   });
-
   return (
     meaningfulChildren.length === 1 &&
     meaningfulChildren[0].nodeName === "A"
   );
 };
 
+// ── Tweet ke liye sirf placeholder div banao — react-tweet render karega ──
 const createEmbedNode = (doc, descriptor) => {
   if (descriptor.type === "tweet") {
     const wrapper = doc.createElement("div");
-    wrapper.className = "article-twitter-embed";
+    wrapper.className = "react-tweet-placeholder";
     wrapper.setAttribute("data-tweet-id", descriptor.id);
-    wrapper.setAttribute("data-tweet-url", descriptor.url);
-
-    const blockquote = doc.createElement("blockquote");
-    blockquote.className = "twitter-tweet";
-    blockquote.setAttribute("data-dnt", "true");
-    blockquote.setAttribute("data-align", "center");
-
-    const fallback = doc.createElement("a");
-    fallback.href = descriptor.url || `https://twitter.com/i/web/status/${descriptor.id}`;
-    fallback.target = "_blank";
-    fallback.rel = "noopener noreferrer";
-    fallback.textContent = "Open tweet on X";
-
-    blockquote.appendChild(fallback);
-    wrapper.appendChild(blockquote);
-
     return wrapper;
   }
 
@@ -447,14 +402,12 @@ const normalizeArticleContent = (html) => {
     if (!iframe.getAttribute("title")) {
       iframe.setAttribute("title", "Embedded media");
     }
-
     if (!iframe.getAttribute("allow")) {
       iframe.setAttribute(
         "allow",
         "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       );
     }
-
     iframe.setAttribute("allowfullscreen", "");
 
     const wrapper = doc.createElement("div");
@@ -478,35 +431,19 @@ const normalizeArticleContent = (html) => {
 
   Array.from(doc.body.querySelectorAll("blockquote.twitter-tweet")).forEach(
     (blockquote) => {
-      if (blockquote.closest(".article-twitter-embed")) return;
+      if (blockquote.closest(".react-tweet-placeholder")) return;
 
       const tweetAnchor = Array.from(blockquote.querySelectorAll("a[href]"))
         .find((anchor) => getTweetEmbedData(anchor.href));
       const tweetData = getTweetEmbedData(tweetAnchor?.href);
       if (!tweetData) return;
 
-      if (!blockquote.getAttribute("data-dnt")) {
-        blockquote.setAttribute("data-dnt", "true");
-      }
-
-      if (!blockquote.getAttribute("data-align")) {
-        blockquote.setAttribute("data-align", "center");
-      }
-
-      const wrapper = doc.createElement("div");
-      wrapper.className = "article-twitter-embed";
-      wrapper.setAttribute("data-tweet-id", tweetData.id);
-      wrapper.setAttribute("data-tweet-url", tweetData.url);
-
-      blockquote.parentNode?.insertBefore(wrapper, blockquote);
-      wrapper.appendChild(blockquote);
+      blockquote.replaceWith(createEmbedNode(doc, { type: "tweet", ...tweetData }));
     }
   );
 
   Array.from(doc.body.querySelectorAll(".article-twitter-embed")).forEach(
     (element) => {
-      if (element.querySelector("blockquote.twitter-tweet")) return;
-
       const tweetAnchor = element.querySelector("a[href]");
       const tweetIframe = element.querySelector("iframe[src]");
       const tweetData =
@@ -515,8 +452,7 @@ const normalizeArticleContent = (html) => {
         getTweetEmbedData(tweetIframe?.src) ||
         getTweetEmbedData(element.textContent);
       const tweetId =
-        String(element.getAttribute("data-tweet-id") || tweetData?.id || "")
-          .trim();
+        String(element.getAttribute("data-tweet-id") || tweetData?.id || "").trim();
 
       if (!tweetId) return;
 
@@ -533,22 +469,20 @@ const normalizeArticleContent = (html) => {
   Array.from(
     doc.body.querySelectorAll('iframe[src*="platform.twitter.com/embed/Tweet.html"]')
   ).forEach((iframe) => {
-    if (iframe.closest(".article-twitter-embed")) return;
-
+    if (iframe.closest(".react-tweet-placeholder")) return;
     const tweetData = getTweetEmbedData(iframe.src);
     if (!tweetData) return;
-
     iframe.replaceWith(createEmbedNode(doc, { type: "tweet", ...tweetData }));
   });
 
   Array.from(doc.body.querySelectorAll("p, div, blockquote")).forEach((element) => {
-    if (element.closest(".article-media-frame, .article-twitter-embed")) return;
-    if (element.querySelector("iframe, video, .article-twitter-embed")) return;
+    if (element.closest(".article-media-frame, .react-tweet-placeholder")) return;
+    if (element.querySelector("iframe, video, .react-tweet-placeholder")) return;
 
     let descriptor = null;
     const anchors = Array.from(element.querySelectorAll("a[href]"));
 
-    // Case 1: koi bhi <a href> mein tweet/youtube URL ho
+    // Case 1: <a href> mein tweet/youtube URL
     if (anchors.length >= 1) {
       for (const anchor of anchors) {
         const d = getEmbedDescriptor(anchor.href);
@@ -559,7 +493,7 @@ const normalizeArticleContent = (html) => {
       }
     }
 
-    // Case 2: plain text mein tweet URL ho — "Tweet: https://twitter.com/..." jaisi situation
+    // Case 2: plain text mein tweet URL
     if (!descriptor) {
       const fullText = element.textContent || "";
       const match = fullText.match(TWEET_URL_REGEX);
@@ -568,10 +502,15 @@ const normalizeArticleContent = (html) => {
       }
     }
 
-    // Case 3: YouTube / video — sirf tab jab element mein sirf URL ho
-    if (!descriptor && anchors.length === 0 && element.children.length === 0) {
+    // Case 3: YouTube / video
+    if (!descriptor) {
       const rawText = (element.textContent || "").trim();
-      descriptor = getEmbedDescriptor(rawText);
+      const tweetMatch = rawText.match(TWEET_URL_REGEX);
+      if (tweetMatch) {
+        descriptor = getEmbedDescriptor(tweetMatch[0]);
+      } else if (element.children.length === 0) {
+        descriptor = getEmbedDescriptor(rawText);
+      }
     }
 
     if (descriptor) {
@@ -582,72 +521,61 @@ const normalizeArticleContent = (html) => {
   return doc.body.innerHTML;
 };
 
-const ensureTwitterScript = () =>
-  new Promise((resolve) => {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      resolve(null);
-      return;
-    }
+// ── Article body ko parts mein split karo — tweets React se render honge ──
+const ArticleBody = ({ html, className, style, contentRef }) => {
+  const parts = useMemo(() => {
+    if (!html) return [];
+    const result = [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const children = Array.from(doc.body.childNodes);
+    let buffer = "";
 
-    let resolved = false;
-    const finish = (value) => {
-      if (resolved) return;
-      resolved = true;
-      resolve(value);
-    };
-
-    let didRetry = false;
-
-    const appendTwitterScript = () => {
-      const script = document.createElement("script");
-      script.id = "twitter-wjs";
-      script.src = "https://platform.twitter.com/widgets.js";
-      script.async = true;
-      script.charset = "utf-8";
-      script.onload = () => waitForWidgets(retryScriptLoad);
-      script.onerror = retryScriptLoad;
-      document.body.appendChild(script);
-    };
-
-    const retryScriptLoad = () => {
-      if (didRetry || window.twttr?.widgets?.load) {
-        finish(window.twttr || null);
-        return;
-      }
-
-      didRetry = true;
-      document.getElementById("twitter-wjs")?.remove();
-      window.setTimeout(appendTwitterScript, 250);
-    };
-
-    function waitForWidgets(onTimeout = () => finish(null)) {
-      const start = Date.now();
-      const interval = window.setInterval(() => {
-        if (window.twttr?.widgets?.load) {
-          window.clearInterval(interval);
-          finish(window.twttr);
-        } else if (Date.now() - start > 10000) {
-          window.clearInterval(interval);
-          onTimeout();
+    children.forEach((node, i) => {
+      if (
+        node.nodeType === 1 &&
+        node.classList?.contains("react-tweet-placeholder")
+      ) {
+        if (buffer) {
+          result.push({ type: "html", content: buffer, key: `html-${i}` });
+          buffer = "";
         }
-      }, 100);
+        result.push({
+          type: "tweet",
+          id: node.getAttribute("data-tweet-id"),
+          key: `tweet-${i}`,
+        });
+      } else {
+        const temp = document.createElement("div");
+        temp.appendChild(node.cloneNode(true));
+        buffer += temp.innerHTML;
+      }
+    });
+
+    if (buffer) {
+      result.push({ type: "html", content: buffer, key: "html-last" });
     }
 
-    if (window.twttr?.widgets?.load) {
-      finish(window.twttr);
-      return;
-    }
+    return result;
+  }, [html]);
 
-    const existing = document.getElementById("twitter-wjs");
-    if (existing) {
-      existing.addEventListener("load", () => waitForWidgets(retryScriptLoad), { once: true });
-      existing.addEventListener("error", retryScriptLoad, { once: true });
-      waitForWidgets(retryScriptLoad);
-      return;
-    }
-
-    appendTwitterScript();
-  });
+  return (
+    <div ref={contentRef} className={className} style={style}>
+      {parts.map((part) =>
+        part.type === "tweet" ? (
+          <div key={part.key} className="my-4 flex justify-center">
+            <Tweet id={part.id} />
+          </div>
+        ) : (
+          <div
+            key={part.key}
+            dangerouslySetInnerHTML={{ __html: part.content }}
+          />
+        )
+      )}
+    </div>
+  );
+};
 
 export default function ArticleDetails() {
   const params = useParams();
@@ -743,30 +671,6 @@ export default function ArticleDetails() {
   }, [article?.title]);
 
   useEffect(() => {
-    if (!article) return;
-
-    const timeouts = [];
-    let cancelled = false;
-
-    const loadTweets = async () => {
-      const tweetScope = articleContentRef.current;
-      if (!tweetScope?.querySelector("blockquote.twitter-tweet")) return;
-      const twttr = await ensureTwitterScript();
-      if (cancelled) return;
-      twttr?.widgets?.load?.(tweetScope);
-    };
-
-    [150, 800, 1800, 3500].forEach((delay) => {
-      timeouts.push(window.setTimeout(loadTweets, delay));
-    });
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach((timeout) => window.clearTimeout(timeout));
-    };
-  }, [article, normalizedContent]);
-
-  useEffect(() => {
     if (!routeParam) return;
     if (!article && !notFound && !loadError) return;
 
@@ -819,8 +723,7 @@ export default function ArticleDetails() {
     : [];
 
   const relatedArticles = article
-    ? sidebarBaseArticles
-      .filter((a) => sharesCategoryWithArticle(a, article))
+    ? sidebarBaseArticles.filter((a) => sharesCategoryWithArticle(a, article))
     : [];
 
   const handleShare = (platform) => {
@@ -916,8 +819,7 @@ export default function ArticleDetails() {
   const displayRelatedArticles =
     relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
   const moreCatArticles = primaryCategory
-    ? sidebarBaseArticles
-      .filter((a) => isInPrimaryCategory(a, primaryCategory))
+    ? sidebarBaseArticles.filter((a) => isInPrimaryCategory(a, primaryCategory))
     : [];
   const displayMoreArticles =
     moreCatArticles.length > 0 ? moreCatArticles : fallbackSidebarArticles;
@@ -940,11 +842,7 @@ export default function ArticleDetails() {
     ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
     : undefined;
   const heroImageWrapStyle = is2K
-    ? {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    }
+    ? { display: "flex", justifyContent: "center", alignItems: "center" }
     : undefined;
   const heroImageCardClassName = is2K
     ? "w-fit max-w-full mx-auto rounded-xl overflow-hidden mb-7 shadow-sm"
@@ -986,11 +884,7 @@ export default function ArticleDetails() {
       .filter(Boolean);
   const metaKeywords = Array.from(
     new Set(
-      [
-        article.focus_keyword,
-        ...secondaryKeywords,
-        ...tags,
-      ]
+      [article.focus_keyword, ...secondaryKeywords, ...tags]
         .map((item) => String(item || "").trim())
         .filter(Boolean)
     )
@@ -1010,12 +904,7 @@ export default function ArticleDetails() {
     dateModified: modifiedDate || "",
     ...(canonicalUrl ? { url: canonicalUrl } : {}),
     ...(canonicalUrl
-      ? {
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": canonicalUrl,
-        },
-      }
+      ? { mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl } }
       : {}),
     author: {
       "@type": authorDisplayName === SITE_NAME ? "Organization" : "Person",
@@ -1023,12 +912,7 @@ export default function ArticleDetails() {
       url: absoluteAuthorUrl,
       ...(authorPosition ? { jobTitle: authorPosition } : {}),
       ...(authorPhotoUrl
-        ? {
-          image: {
-            "@type": "ImageObject",
-            url: authorPhotoUrl,
-          },
-        }
+        ? { image: { "@type": "ImageObject", url: authorPhotoUrl } }
         : {}),
     },
     publisher: {
@@ -1044,11 +928,7 @@ export default function ArticleDetails() {
     isAccessibleForFree: !article.is_paid,
     ...(absoluteImageUrl
       ? {
-        image: {
-          "@type": "ImageObject",
-          url: absoluteImageUrl,
-          caption: imageAlt,
-        },
+        image: { "@type": "ImageObject", url: absoluteImageUrl, caption: imageAlt },
         thumbnailUrl: absoluteImageUrl,
       }
       : {}),
@@ -1071,10 +951,7 @@ export default function ArticleDetails() {
           <meta name="focus_keyword" content={article.focus_keyword} />
         )}
         {secondaryKeywords.length > 0 && (
-          <meta
-            name="secondary_keywords"
-            content={secondaryKeywords.join(", ")}
-          />
+          <meta name="secondary_keywords" content={secondaryKeywords.join(", ")} />
         )}
         {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
         <meta name="robots" content={robotsContent} />
@@ -1098,14 +975,9 @@ export default function ArticleDetails() {
         {canonicalUrl && <meta name="twitter:url" content={canonicalUrl} />}
         <meta name="twitter:image" content={absoluteImageUrl} />
         <meta name="twitter:image:alt" content={imageAlt} />
-        {date && (
-          <meta property="article:published_time" content={date} />
-        )}
+        {date && <meta property="article:published_time" content={date} />}
         {modifiedDate && (
-          <meta
-            property="article:modified_time"
-            content={modifiedDate}
-          />
+          <meta property="article:modified_time" content={modifiedDate} />
         )}
         <script type="application/ld+json">
           {JSON.stringify(articleSchema)}
@@ -1179,8 +1051,10 @@ export default function ArticleDetails() {
             </div>
           )}
 
-          <div
-            ref={articleContentRef}
+          {/* ── ARTICLE BODY — tweets React se render honge ── */}
+          <ArticleBody
+            html={normalizedContent}
+            contentRef={articleContentRef}
             className="article-content text-gray-700 text-left md:text-justify
   [&_p]:text-[16px] [&_p]:leading-[1.6] [&_p]:mb-[1.2rem]
   [&_h1]:text-[18px] [&_h1]:leading-[1.4] [&_h1]:mb-[1.2rem] [&_h1]:font-bold
@@ -1189,10 +1063,8 @@ export default function ArticleDetails() {
   [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
   [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
   [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-            [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1"
+  [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1"
             style={{ userSelect: "text", WebkitUserSelect: "text" }}
-            dangerouslySetInnerHTML={{ __html: normalizedContent }}
-            suppressHydrationWarning={true}
           />
 
           {tags.length > 0 && (

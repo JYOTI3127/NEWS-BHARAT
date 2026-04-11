@@ -81,6 +81,32 @@ def _invalidate_article_caches(article, old_slug=None):
         pass
 
 
+def _is_current_article_image_url(article, url_value, request=None):
+    if not url_value or not getattr(article, 'image', None):
+        return False
+
+    candidates = []
+    try:
+        candidates.append(article.image.url)
+        if request:
+            candidates.append(request.build_absolute_uri(article.image.url))
+    except Exception:
+        pass
+
+    try:
+        candidates.append(article.image.storage.url(article.image.name))
+    except Exception:
+        pass
+
+    normalized_value = str(url_value).split('?', 1)[0].rstrip('/')
+    normalized_candidates = {
+        str(candidate).split('?', 1)[0].rstrip('/')
+        for candidate in candidates
+        if candidate
+    }
+    return normalized_value in normalized_candidates
+
+
 # ═══════════════════════════════════════════════════════
 # CATEGORY VIEWS
 # ═══════════════════════════════════════════════════════
@@ -344,8 +370,11 @@ def _save_article_from_request(request, article=None):
     else:
         url_val = data.get('image_url', '').strip()
         if url_val and not url_val.startswith('blob:'):
-            article.image = None
-            article.image_url = url_val
+            if not _is_current_article_image_url(article, url_val, request):
+                article.image = None
+                article.image_url = url_val
+            elif article.image_url:
+                article.image_url = ''
 
     subcategories_raw = data.get('subcategories', '{}')
     try:

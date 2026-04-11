@@ -969,7 +969,7 @@ class ArticleAdmin(admin.ModelAdmin):
         page_query = page_query_dict.urlencode()
 
         articles_with_images = (
-            Article.objects.filter(image__isnull=False).exclude(image='')
+            Article.objects.filter(Q(image__isnull=False) & ~Q(image='') | Q(image_url__isnull=False) & ~Q(image_url=''))
             .select_related('author').prefetch_related('categories')
             .order_by('-created_at')[:12]
         )

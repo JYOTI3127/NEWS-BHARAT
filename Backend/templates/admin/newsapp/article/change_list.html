@@ -76,6 +76,8 @@
             <div class="art-title-cell">
               {% if article.image %}
                 <img src="{{ article.image.url }}" class="art-thumb" alt="">
+              {% elif article.image_url %}
+                <img src="{{ article.image_url }}" class="art-thumb" alt="">
               {% else %}
                 <div class="art-thumb art-thumb--placeholder">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -242,10 +244,10 @@
       {% for article in articles_with_images %}
         <div class="art-img-card">
           <!-- FIX: image pe click karo toh lightbox mein badi hogi -->
-          <img src="{{ article.image.url }}"
+          <img src="{% if article.image %}{{ article.image.url }}{% else %}{{ article.image_url }}{% endif %}"
                alt="{{ article.title }}"
                class="art-img-card__img"
-               data-image-src="{{ article.image.url|escape }}"
+               data-image-src="{% if article.image %}{{ article.image.url|escape }}{% else %}{{ article.image_url|escape }}{% endif %}"
                data-image-title="{{ article.title|truncatechars:60|escape }}"
                onclick="openLightbox(this.dataset.imageSrc, this.dataset.imageTitle)"
                style="cursor:zoom-in;">

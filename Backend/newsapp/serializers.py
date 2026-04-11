@@ -10,18 +10,44 @@ _TWITTER_EMBED_RE = re.compile(
     r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
     re.IGNORECASE,
 )
+_TWITTER_IFRAME_RE = re.compile(
+    r'<iframe\b(?=[^>]*(?:platform\.twitter\.com|twitter-widget))(?P<attrs>[^>]*)></iframe>',
+    re.IGNORECASE,
+)
 
 
 def normalize_twitter_embeds(content):
-    def replace_embed(match):
-        tweet_url = html.escape(match.group('url'), quote=True)
+    def tweet_block(tweet_url):
+        safe_url = html.escape(tweet_url, quote=True)
         return (
-            '<blockquote class="twitter-tweet article-twitter-embed">'
-            f'<a href="{tweet_url}">{tweet_url}</a>'
+            '<blockquote class="twitter-tweet">'
+            f'<a href="{safe_url}">{safe_url}</a>'
             '</blockquote>'
         )
 
-    return _TWITTER_EMBED_RE.sub(replace_embed, content or '')
+    def replace_embed(match):
+        return tweet_block(match.group('url'))
+
+    def replace_iframe(match):
+        attrs = html.unescape(match.group('attrs') or '')
+        id_match = re.search(r'data-tweet-id=["\']?(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            id_match = re.search(r'(?:[?&]|;)id=(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            id_match = re.search(r'/status/(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            return ''
+        return tweet_block(f"https://twitter.com/i/status/{id_match.group(1)}")
+
+    normalized = _TWITTER_EMBED_RE.sub(replace_embed, content or '')
+    normalized = _TWITTER_IFRAME_RE.sub(replace_iframe, normalized)
+    normalized = re.sub(
+        r'<div\b[^>]*class="[^"]*\btwitter-tweet-rendered\b[^"]*"[^>]*>\s*(<blockquote class="twitter-tweet">[\s\S]*?</blockquote>)\s*</div>',
+        r'\1',
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    return normalized
 
 
 class RoleSerializer(serializers.ModelSerializer):

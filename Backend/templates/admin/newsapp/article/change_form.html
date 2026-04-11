@@ -2247,7 +2247,7 @@ function nbSetLineHeight(value){
         range.insertNode(wrapper);
         range.setStartAfter(wrapper);
         range.collapse(true);
-        sel.removeAllRanges();
+        sel.removeAllRanges(); 
         sel.addRange(range);
       }catch(e){}
     }
@@ -2421,6 +2421,7 @@ function nbInsertInlineImage(){
 }
 function insertTag(tag){ nbInsertTag(tag); }
 function cleanContentBeforeSubmit(html){
+  html=normalizeTwitterEmbedsForSubmit(html);
   // Empty paragraphs hatao
   html=html.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi,'');
   // Triple+ br hatao
@@ -2440,6 +2441,48 @@ function cleanContentBeforeSubmit(html){
     return style?before+'style="'+style+'"':before;
   });
   return html.trim();
+}
+
+function normalizeTwitterEmbedsForSubmit(html){
+  var wrap=document.createElement('div');
+  wrap.innerHTML=html||'';
+
+  function tweetBlock(url){
+    if(!url)return document.createTextNode('');
+    var b=document.createElement('blockquote');
+    b.className='twitter-tweet article-twitter-embed';
+    b.setAttribute('data-tweet-url',url);
+    var m=url.match(/status\/(\d+)/);
+    if(m)b.setAttribute('data-tweet-id',m[1]);
+    var a=document.createElement('a');
+    a.href=url;
+    a.textContent=url;
+    b.appendChild(a);
+    return b;
+  }
+
+  wrap.querySelectorAll('script[src*="platform.twitter.com/widgets.js"]').forEach(function(n){n.remove();});
+  wrap.querySelectorAll('iframe').forEach(function(frame){
+    var src=frame.getAttribute('src')||'';
+    if(!/(twitter\.com|x\.com|platform\.twitter\.com)/i.test(src))return;
+    var decoded=src;
+    try{decoded=decodeURIComponent(src);}catch(e){}
+    var idMatch=decoded.match(/(?:status\/|id=)(\d+)/i);
+    if(idMatch){
+      frame.replaceWith(tweetBlock('https://twitter.com/i/status/'+idMatch[1]));
+    }else{
+      frame.remove();
+    }
+  });
+
+  wrap.querySelectorAll('.twitter-tweet, .article-twitter-embed, .twitter-tweet-rendered').forEach(function(node){
+    var url=node.getAttribute('data-tweet-url')||'';
+    var link=node.querySelector('a[href*="/status/"]');
+    if(!url&&link)url=link.href;
+    if(url)node.replaceWith(tweetBlock(url));
+  });
+
+  return wrap.innerHTML;
 }
 
 function insertNodeAtCursor(node) {
@@ -2534,15 +2577,7 @@ function loadTwitterWidgets(target) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  loadTwitterWidgets(document.getElementById('ui_content'));
-
-  setTimeout(function () {
-    loadTwitterWidgets(document.getElementById('ui_content'));
-  }, 1000);
-
-  setTimeout(function () {
-    loadTwitterWidgets(document.getElementById('ui_content'));
-  }, 2200);
+  // Keep admin editor embeds as editable placeholders; frontend renders the live tweet.
 });
 
 /* ══════════════════════════════════════════════
@@ -3648,6 +3683,4 @@ window.nbInlineInsertLink=window.nbInlineInsertLink;
 })();
 </script>
 
-<!-- Twitter Widget for Admin Preview -->
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 {% endblock %}

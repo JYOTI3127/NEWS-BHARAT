@@ -41,17 +41,6 @@ const getPlainText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const normalizePathname = (value) => {
-  const segments = String(value || "")
-    .trim()
-    .replace(/^\/+|\/+$/g, "")
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  return segments.length > 0 ? `/${segments.join("/")}` : "";
-};
-
 const truncateText = (value, maxLength) => {
   const text = getPlainText(value);
   if (!text || text.length <= maxLength) return text;
@@ -79,12 +68,12 @@ const getArticleImage = (article) => {
 const getArticleCategoryIds = (article) =>
   Array.isArray(article?.categories)
     ? article.categories
-        .map((value) =>
-          value && typeof value === "object"
-            ? String(value.id || "").trim()
-            : String(value || "").trim()
-        )
-        .filter(Boolean)
+      .map((value) =>
+        value && typeof value === "object"
+          ? String(value.id || "").trim()
+          : String(value || "").trim()
+      )
+      .filter(Boolean)
     : [];
 
 const getArticleCategoryDetails = (article) => {
@@ -162,7 +151,6 @@ const isInPrimaryCategory = (candidate, primaryCategory) => {
   );
 };
 
-// ✅ BUG FIX: Pehle apiCanonical valid ho toh use return karo — pehle hamesha fallback return ho raha tha
 const getRobotsContent = (article) => {
   const parts = [
     article?.noindex ? "noindex" : "index",
@@ -190,6 +178,8 @@ const XIcon = ({ size = 15 }) => (
 );
 
 const DIRECT_VIDEO_FILE_REGEX = /\.(mp4|webm|ogg|mov|m4v)(?:[?#].*)?$/i;
+const TWEET_URL_REGEX =
+  /https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/(?:[A-Za-z0-9_]+\/status(?:es)?|i\/web\/status|i\/status)\/(\d+)(?:[^\s"'<>]*)?/i;
 
 const parseTimeToSeconds = (value) => {
   if (!value) return 0;
@@ -255,24 +245,29 @@ const getYouTubeEmbedUrl = (value) => {
 };
 
 const getTweetEmbedData = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const extracted = raw.match(TWEET_URL_REGEX);
+  if (!extracted) return null;
+
+  const tweetId = extracted[1];
+  const cleanUrl = `https://twitter.com/i/web/status/${tweetId}`;
+
   try {
-    const url = new URL(value);
-    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
-
-    if (!["x.com", "twitter.com", "mobile.twitter.com"].includes(host)) {
-      return null;
-    }
-
-    const match = url.pathname.match(/\/status\/(\d+)/i);
-    if (!match) return null;
-
-    return {
-      id: match[1],
-      url: value,
-    };
+    new URL(cleanUrl);
+    return { id: tweetId, url: cleanUrl };
   } catch {
     return null;
   }
+};
+
+const getTweetEmbedUrl = (tweetId) => {
+  const embedUrl = new URL("https://platform.twitter.com/embed/Tweet.html");
+  embedUrl.searchParams.set("id", tweetId);
+  embedUrl.searchParams.set("dnt", "true");
+  embedUrl.searchParams.set("theme", "light");
+  return embedUrl.toString();
 };
 
 const getEmbedDescriptor = (value) => {
@@ -306,14 +301,20 @@ const getEmbedDescriptor = (value) => {
   return null;
 };
 
-const isStandaloneLinkElement = (element) =>
-  Array.from(element.childNodes).every((node) => {
+const isStandaloneLinkElement = (element) => {
+  const childNodes = Array.from(element.childNodes);
+  const meaningfulChildren = childNodes.filter((node) => {
     if (node.nodeType === 3) {
-      return !node.textContent || !node.textContent.trim();
+      return node.textContent && node.textContent.trim().length > 0;
     }
-
-    return ["A", "BR"].includes(node.nodeName);
+    return node.nodeName !== "BR";
   });
+
+  return (
+    meaningfulChildren.length === 1 &&
+    meaningfulChildren[0].nodeName === "A"
+  );
+};
 
 const createEmbedNode = (doc, descriptor) => {
   if (descriptor.type === "tweet") {
@@ -321,6 +322,26 @@ const createEmbedNode = (doc, descriptor) => {
     wrapper.className = "article-twitter-embed";
     wrapper.setAttribute("data-tweet-id", descriptor.id);
     wrapper.setAttribute("data-tweet-url", descriptor.url);
+
+    const iframe = doc.createElement("iframe");
+    iframe.src = getTweetEmbedUrl(descriptor.id);
+    iframe.title = "Embedded X post";
+    iframe.loading = "lazy";
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    iframe.setAttribute("frameborder", "0");
+    iframe.setAttribute("scrolling", "no");
+    iframe.setAttribute("allowtransparency", "true");
+    iframe.setAttribute("height", "560");
+    wrapper.appendChild(iframe);
+
+    const fallback = doc.createElement("a");
+    fallback.href = descriptor.url || `https://twitter.com/i/web/status/${descriptor.id}`;
+    fallback.target = "_blank";
+    fallback.rel = "noopener noreferrer";
+    fallback.textContent = "Open tweet on X";
+    fallback.className = "article-twitter-fallback";
+    wrapper.appendChild(fallback);
+
     return wrapper;
   }
 
@@ -451,17 +472,58 @@ const normalizeArticleContent = (html) => {
     wrapper.appendChild(video);
   });
 
-  Array.from(doc.body.querySelectorAll("p, div")).forEach((element) => {
+  Array.from(doc.body.querySelectorAll(".article-twitter-embed")).forEach(
+    (element) => {
+      const tweetData =
+        getTweetEmbedData(element.getAttribute("data-tweet-url")) ||
+        getTweetEmbedData(element.textContent);
+      const tweetId =
+        String(element.getAttribute("data-tweet-id") || tweetData?.id || "")
+          .trim();
+
+      if (!tweetId) return;
+
+      element.replaceWith(
+        createEmbedNode(doc, {
+          type: "tweet",
+          id: tweetId,
+          url: tweetData?.url || `https://twitter.com/i/web/status/${tweetId}`,
+        })
+      );
+    }
+  );
+
+  Array.from(doc.body.querySelectorAll("p, div, blockquote")).forEach((element) => {
     if (element.closest(".article-media-frame, .article-twitter-embed")) return;
     if (element.querySelector("iframe, video, .article-twitter-embed")) return;
 
-    const anchors = Array.from(element.querySelectorAll("a[href]"));
     let descriptor = null;
+    const anchors = Array.from(element.querySelectorAll("a[href]"));
 
-    if (anchors.length === 1 && isStandaloneLinkElement(element)) {
-      descriptor = getEmbedDescriptor(anchors[0].href);
-    } else if (anchors.length === 0 && element.children.length === 0) {
-      descriptor = getEmbedDescriptor(element.textContent);
+    // Case 1: koi bhi <a href> mein tweet/youtube URL ho
+    if (anchors.length >= 1) {
+      for (const anchor of anchors) {
+        const d = getEmbedDescriptor(anchor.href);
+        if (d && (d.type === "tweet" || isStandaloneLinkElement(element))) {
+          descriptor = d;
+          break;
+        }
+      }
+    }
+
+    // Case 2: plain text mein tweet URL ho — "Tweet: https://twitter.com/..." jaisi situation
+    if (!descriptor) {
+      const fullText = element.textContent || "";
+      const match = fullText.match(TWEET_URL_REGEX);
+      if (match) {
+        descriptor = getEmbedDescriptor(match[0]);
+      }
+    }
+
+    // Case 3: YouTube / video — sirf tab jab element mein sirf URL ho
+    if (!descriptor && anchors.length === 0 && element.children.length === 0) {
+      const rawText = (element.textContent || "").trim();
+      descriptor = getEmbedDescriptor(rawText);
     }
 
     if (descriptor) {
@@ -546,108 +608,14 @@ export default function ArticleDetails() {
     return () => controller.abort();
   }, [routeParam]);
 
-  // ✅ BUG FIX: Browser tab title React hydration ke baad bhi sahi rahe
   useEffect(() => {
     if (article?.title) {
       document.title = `${article.title} | News4Bharat`;
     }
     return () => {
-      // Cleanup: jab article page se navigate away ho toh default title restore karo
       document.title = "News4Bharat — Latest News on India";
     };
   }, [article?.title]);
-
-  useEffect(() => {
-    if (!article) return;
-
-    const embeds = Array.from(document.querySelectorAll(
-      ".article-twitter-embed[data-tweet-id]"
-    ));
-    const existingBlockquotes = Array.from(
-      document.querySelectorAll("blockquote.twitter-tweet")
-    );
-
-    if (embeds.length === 0 && existingBlockquotes.length === 0) return;
-
-    embeds.forEach((el) => {
-      const tweetUrl = el.getAttribute("data-tweet-url");
-      if (!tweetUrl || el.getAttribute("data-rendered")) return;
-
-      el.setAttribute("data-rendered", "true");
-      el.innerHTML = "";
-      el.style.cssText =
-        "display:flex; justify-content:center; width:100%; max-width:100%; margin:24px 0; overflow-x:auto;";
-
-      const blockquote = document.createElement("blockquote");
-      blockquote.className = "twitter-tweet";
-      blockquote.setAttribute("data-dnt", "true");
-      blockquote.setAttribute("data-align", "center");
-
-      const anchor = document.createElement("a");
-      anchor.href = tweetUrl;
-      anchor.textContent = "Loading tweet...";
-
-      blockquote.appendChild(anchor);
-      el.appendChild(blockquote);
-    });
-
-    let cancelled = false;
-
-    const loadWidgets = () => {
-      if (cancelled) return;
-      if (window.twttr?.widgets) {
-        window.twttr.widgets.load();
-      }
-    };
-
-    const ensureWidgets = () => {
-      if (window.twttr?.widgets) {
-        loadWidgets();
-        return;
-      }
-
-      if (!document.getElementById("twitter-wjs")) {
-        const script = document.createElement("script");
-        script.id = "twitter-wjs";
-        script.src = "https://platform.twitter.com/widgets.js";
-        script.async = true;
-        script.charset = "utf-8";
-        script.onload = () => {
-          loadWidgets();
-          window.setTimeout(loadWidgets, 1000);
-        };
-        document.body.appendChild(script);
-      } else {
-        window.setTimeout(loadWidgets, 500);
-      }
-    };
-
-    if (typeof IntersectionObserver === "undefined") {
-      ensureWidgets();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const hasVisibleTweet = entries.some((entry) => entry.isIntersecting);
-        if (!hasVisibleTweet) return;
-
-        observer.disconnect();
-        ensureWidgets();
-      },
-      { rootMargin: "320px 0px" }
-    );
-
-    embeds.forEach((embed) => observer.observe(embed));
-    existingBlockquotes.forEach((embed) => observer.observe(embed));
-
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
-  }, [article]);
 
   useEffect(() => {
     if (!routeParam) return;
@@ -697,13 +665,13 @@ export default function ArticleDetails() {
 
   const sidebarBaseArticles = article
     ? allArticles.filter(
-        (a) => String(a?.slug || a?.id || "") !== String(article?.slug || article?.id || "")
-      )
+      (a) => String(a?.slug || a?.id || "") !== String(article?.slug || article?.id || "")
+    )
     : [];
 
   const relatedArticles = article
     ? sidebarBaseArticles
-        .filter((a) => sharesCategoryWithArticle(a, article))
+      .filter((a) => sharesCategoryWithArticle(a, article))
     : [];
 
   const handleShare = (platform) => {
@@ -803,7 +771,7 @@ export default function ArticleDetails() {
     relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
   const moreCatArticles = primaryCategory
     ? sidebarBaseArticles
-        .filter((a) => isInPrimaryCategory(a, primaryCategory))
+      .filter((a) => isInPrimaryCategory(a, primaryCategory))
     : [];
   const displayMoreArticles =
     moreCatArticles.length > 0 ? moreCatArticles : fallbackSidebarArticles;
@@ -827,24 +795,24 @@ export default function ArticleDetails() {
     : undefined;
   const heroImageWrapStyle = is2K
     ? {
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+    }
     : undefined;
   const heroImageCardClassName = is2K
     ? "w-fit max-w-full mx-auto rounded-xl overflow-hidden mb-7 shadow-sm"
     : "w-full rounded-xl overflow-hidden mb-7 shadow-sm";
   const heroImageStyle = is2K
     ? {
-        width: "min(100%, 1480px)",
-        height: "auto",
-        maxWidth: "100%",
-        maxHeight: "min(72vh, 820px)",
-        objectFit: "contain",
-        objectPosition: "center",
-        margin: "0 auto",
-      }
+      width: "min(100%, 1480px)",
+      height: "auto",
+      maxWidth: "100%",
+      maxHeight: "min(72vh, 820px)",
+      objectFit: "contain",
+      objectPosition: "center",
+      margin: "0 auto",
+    }
     : undefined;
 
   const articleSummaryText =
@@ -897,11 +865,11 @@ export default function ArticleDetails() {
     ...(canonicalUrl ? { url: canonicalUrl } : {}),
     ...(canonicalUrl
       ? {
-          mainEntityOfPage: {
-            "@type": "WebPage",
-            "@id": canonicalUrl,
-          },
-        }
+        mainEntityOfPage: {
+          "@type": "WebPage",
+          "@id": canonicalUrl,
+        },
+      }
       : {}),
     author: {
       "@type": authorDisplayName === SITE_NAME ? "Organization" : "Person",
@@ -910,11 +878,11 @@ export default function ArticleDetails() {
       ...(authorPosition ? { jobTitle: authorPosition } : {}),
       ...(authorPhotoUrl
         ? {
-            image: {
-              "@type": "ImageObject",
-              url: authorPhotoUrl,
-            },
-          }
+          image: {
+            "@type": "ImageObject",
+            url: authorPhotoUrl,
+          },
+        }
         : {}),
     },
     publisher: {
@@ -930,13 +898,13 @@ export default function ArticleDetails() {
     isAccessibleForFree: !article.is_paid,
     ...(absoluteImageUrl
       ? {
-          image: {
-            "@type": "ImageObject",
-            url: absoluteImageUrl,
-            caption: imageAlt,
-          },
-          thumbnailUrl: absoluteImageUrl,
-        }
+        image: {
+          "@type": "ImageObject",
+          url: absoluteImageUrl,
+          caption: imageAlt,
+        },
+        thumbnailUrl: absoluteImageUrl,
+      }
       : {}),
     ...(categoryName ? { articleSection: categoryName } : {}),
     ...(metaKeywords ? { keywords: metaKeywords } : {}),
@@ -945,7 +913,6 @@ export default function ArticleDetails() {
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
 
-      {/* ✅ SEO HELMET */}
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={metaDescription} />
@@ -1148,7 +1115,7 @@ export default function ArticleDetails() {
                 <Newspaper size={14} color="#D80100" />
                 <span>Related Articles</span>
               </div>
-              <div className="max-h-[540px] overflow-y-auto divide-y divide-slate-100">
+              <div className="scrollbar-invisible max-h-[540px] overflow-y-auto divide-y divide-slate-100">
                 {displayRelatedArticles.map((rel) => (
                   <Link key={rel.id} to={getArticlePath(rel)}
                     target="_blank" rel="noopener noreferrer"
@@ -1181,11 +1148,11 @@ export default function ArticleDetails() {
           {displayMoreArticles.length > 0 && (() => {
             return (
               <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
-                </span>
-                <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
+                <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
+                  </span>
+                  <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
                     target="_blank" rel="noopener noreferrer"
                     className="text-[11px] text-red-600 font-semibold hover:underline flex items-center gap-0.5">
                     View All <ChevronRight size={11} />
@@ -1193,7 +1160,7 @@ export default function ArticleDetails() {
                 </div>
                 <div
                   ref={moreInListRef}
-                  className="overflow-y-auto divide-y divide-slate-100"
+                  className="scrollbar-invisible overflow-y-auto divide-y divide-slate-100"
                   style={
                     moreInListMaxHeight
                       ? { maxHeight: `${moreInListMaxHeight}px` }
@@ -1201,7 +1168,7 @@ export default function ArticleDetails() {
                   }
                 >
                   {displayMoreArticles.map((a) => (
-                  <Link key={a.id} to={getArticlePath(a)}
+                    <Link key={a.id} to={getArticlePath(a)}
                       target="_blank" rel="noopener noreferrer"
                       style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                       <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">

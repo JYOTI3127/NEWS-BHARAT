@@ -91,6 +91,21 @@ jobs:
             set -e
             mkdir -p "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
 
+      - name: Clean previous prerendered frontend files
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          command_timeout: 20m
+          script: |
+            set -e
+            TARGET="${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
+            rm -rf "$TARGET/article" "$TARGET/category" "$TARGET/assets"
+            rm -f "$TARGET/index.html" "$TARGET/robots.txt" "$TARGET/news4bharat-share.png" "$TARGET/Fevicon (1).png" "$TARGET/sitemap.xml"
+
       - name: Deploy build output to Hostinger over SSH
         if: steps.dispatch_mode.outputs.should_build == 'true'
         uses: appleboy/scp-action@v1

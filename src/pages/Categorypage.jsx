@@ -7,11 +7,6 @@ import {
 import { API_BASE } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
-const toCategoryArray = (categoryDetails) => {
-  if (Array.isArray(categoryDetails)) return categoryDetails;
-  return categoryDetails ? [categoryDetails] : [];
-};
-
 const useViewportWidth = () => {
   const getValue = () =>
     typeof window !== "undefined" ? window.innerWidth : 1280;
@@ -399,7 +394,7 @@ export default function CategoryPage() {
                   {moreInArticles.length} Posts
                 </span>
               </div>
-              <div className="max-h-[540px] overflow-y-auto divide-y divide-slate-100">
+              <div className="scrollbar-invisible max-h-[540px] overflow-y-auto divide-y divide-slate-100">
                 {moreInArticles.map((article) => (
                   <Link
                     key={article.id}

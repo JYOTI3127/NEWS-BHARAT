@@ -143,7 +143,7 @@ export default function BreakingNewsSection({ articles = [] }) {
             id="breaking-news-heading"
             className="m-0 font-[Poppins,sans-serif] text-[18px] font-bold leading-none text-[#111] min-[1441px]:text-[20px] max-[425px]:text-[17px]"
           >
-            Breaking News
+            Trending Today
           </h2>
         </div>
 

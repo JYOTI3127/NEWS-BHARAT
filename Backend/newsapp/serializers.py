@@ -6,22 +6,22 @@ import html
 import re
 
 
-_TWITTER_PLACEHOLDER_RE = re.compile(
-    r'<div\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="([^"]+)")[^>]*>[\s\S]*?</div>',
+_TWITTER_EMBED_RE = re.compile(
+    r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
     re.IGNORECASE,
 )
 
 
 def normalize_twitter_embeds(content):
-    def replace_placeholder(match):
-        tweet_url = html.escape(match.group(1), quote=True)
+    def replace_embed(match):
+        tweet_url = html.escape(match.group('url'), quote=True)
         return (
             '<blockquote class="twitter-tweet article-twitter-embed">'
-            f'<a href="{tweet_url}"></a>'
+            f'<a href="{tweet_url}">{tweet_url}</a>'
             '</blockquote>'
         )
 
-    return _TWITTER_PLACEHOLDER_RE.sub(replace_placeholder, content or '')
+    return _TWITTER_EMBED_RE.sub(replace_embed, content or '')
 
 
 class RoleSerializer(serializers.ModelSerializer):

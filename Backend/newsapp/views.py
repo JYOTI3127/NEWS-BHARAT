@@ -26,6 +26,7 @@ from django.core.mail import send_mail
 from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
 import os
+import uuid
 import google.generativeai as genai
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
@@ -54,6 +55,30 @@ def _parse_ist_datetime(raw_value):
         return timezone.make_aware(parsed_value, IST)
 
     return parsed_value.astimezone(IST)
+
+
+def _unique_article_image_name(article, original_filename, extension):
+    base_name = os.path.splitext(os.path.basename(original_filename or 'article-image'))[0]
+    safe_base = slugify(base_name)[:45] or 'article-image'
+    safe_slug = slugify(getattr(article, 'slug', '') or getattr(article, 'title', ''))[:45] or 'article'
+    return f"{safe_slug}-{uuid.uuid4().hex[:10]}-{safe_base}{extension}"
+
+
+def _invalidate_article_caches(article, old_slug=None):
+    try:
+        if old_slug:
+            cache.delete(f"article:slug:{old_slug}")
+        if getattr(article, 'slug', None):
+            cache.delete(f"article:slug:{article.slug}")
+        cache.delete('articles:homepage:')
+        if hasattr(cache, 'delete_pattern'):
+            cache.delete_pattern('articles:list:*')
+            cache.delete_pattern('articles:homepage:*')
+        cat_slugs = list(article.categories.values_list('slug', flat=True))
+        for cat_slug in cat_slugs:
+            cache.delete(f"articles:homepage:{cat_slug}")
+    except Exception:
+        pass
 
 
 # ═══════════════════════════════════════════════════════
@@ -153,6 +178,7 @@ def _save_article_from_request(request, article=None):
     data  = request.POST
     files = request.FILES
     is_new = article is None
+    old_slug = '' if is_new else (article.slug or '')
 
     category_ids_raw = data.get('categories', '')
     category_list_raw = data.getlist('categories')
@@ -306,16 +332,19 @@ def _save_article_from_request(request, article=None):
             img.save(output, format='WEBP', quality=75, optimize=True)
             output.seek(0)
 
-            original_name = uploaded_file.name.rsplit('.', 1)[0] + '.webp'
+            original_name = _unique_article_image_name(article, uploaded_file.name, '.webp')
             article.image     = ContentFile(output.read(), name=original_name)
             article.image_url = ''
 
         except Exception:
+            original_ext = os.path.splitext(uploaded_file.name or '')[1] or '.img'
+            uploaded_file.name = _unique_article_image_name(article, uploaded_file.name, original_ext)
             article.image     = uploaded_file
             article.image_url = ''
     else:
         url_val = data.get('image_url', '').strip()
         if url_val and not url_val.startswith('blob:'):
+            article.image = None
             article.image_url = url_val
 
     subcategories_raw = data.get('subcategories', '{}')
@@ -342,16 +371,8 @@ def _save_article_from_request(request, article=None):
             article.primary_category = None
             article.save(update_fields=['primary_category'])
 
-    # ── CACHE INVALIDATE ──
-    try:
-        cache.delete(f"article:slug:{article.slug}")
-        cache.delete('articles:homepage:')
-        cat_slugs = list(article.categories.values_list('slug', flat=True))
-        for cat_slug in cat_slugs:
-            cache.delete(f"articles:homepage:{cat_slug}")
-    except Exception:
-        pass
-
+    # Cache invalidate
+    _invalidate_article_caches(article, old_slug=old_slug)
     return article, None
 
 @api_view(['GET', 'POST'])

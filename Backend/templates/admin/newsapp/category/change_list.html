@@ -247,7 +247,7 @@
 const ADD_ARTICLE_URL = '/admin/newsapp/article/add/';
 
 let CATS       = [];
-let _csrfToken = '{{ csrf_token }}';
+let _csrfToken = '{{ csrf_token }}' || '';
 
 /* STATE */
 let expanded      = {};
@@ -266,13 +266,37 @@ let publishedThisMonth = 0;
    API HELPER
 ================================================================ */
 async function apiFetch(url, method = 'GET', body = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    const csrfToken = _csrfToken || (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || '';
+    if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+    }
+
     const opts = {
         method,
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrfToken },
+        headers,
+        credentials: 'same-origin',
     };
     if (body) opts.body = JSON.stringify(body);
+
     const res = await fetch(url, opts);
-    return res.json();
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+        let error = 'Request failed';
+        if (json) {
+            if (json.error) {
+                error = json.error;
+            } else if (typeof json === 'object') {
+                error = Object.values(json).flat().join(' | ');
+            } else if (typeof json === 'string') {
+                error = json;
+            }
+        } else {
+            error = res.statusText || error;
+        }
+        return { error };
+    }
+    return json;
 }
 
 /* ================================================================

@@ -150,18 +150,20 @@ def category_create(request):
     serializer = CategorySerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
+        cache.delete('categories:all:v2')
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
 def category_update(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     serializer = CategorySerializer(cat, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
+        cache.delete('categories:all:v2')
         return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -169,6 +171,7 @@ def category_archive(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'archived'
     cat.save(update_fields=['status'])
+    cache.delete('categories:all:v2')
     return Response({'status': 'archived'})
 
 
@@ -177,6 +180,7 @@ def category_restore(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'active'
     cat.save(update_fields=['status'])
+    cache.delete('categories:all:v2')
     return Response({'status': 'active'})
 
 

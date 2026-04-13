@@ -100,6 +100,12 @@ const getGithubDispatchPayload = () => {
   }
 }
 
+const stripLazyChunkPreloads = (html) =>
+  html.replace(
+    /<link\b(?=[^>]*\brel=["']modulepreload["'])(?=[^>]*\bas=["']script["'])[^>]*>\s*/gi,
+    ''
+  )
+
 // Main fix: build titles and meta directly from API data.
 function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   const SITE_NAME = 'News4Bharat'
@@ -279,7 +285,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     .map((tag) => String(tag || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim())
     .filter(Boolean)
 
-  let cleaned = html
+  let cleaned = stripLazyChunkPreloads(html)
     .replace(/<title>[\s\S]*?<\/title>/gi, '')
     .replace(/<meta[^>]+name=["']description["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']author["'][^>]*>\s*/gi, '')

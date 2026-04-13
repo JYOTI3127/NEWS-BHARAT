@@ -86,7 +86,6 @@ const getEligibleCategoryDetails = (article) => {
   });
 };
 
-const getArticleCategory = (article) => getEligibleCategoryDetails(article)[0]?.name || "Latest";
 const getPrimaryCategorySlug = (article) =>
   String(getEligibleCategoryDetails(article)[0]?.slug || "").toLowerCase();
 
@@ -155,7 +154,6 @@ async function fetchAllArticles() {
 }
 
 function StoryCard({ article }) {
-  const slug = article?.slug;
   const image = getArticleImage(article);
   const content = (
     <>
@@ -195,7 +193,7 @@ function StoryCard({ article }) {
   );
 }
 
-export default function MoreStoriesSection() {
+export default function MoreStoriesSection({ articles: passedArticles = [] }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const is4K = useIs4K();
@@ -205,6 +203,15 @@ export default function MoreStoriesSection() {
 
     async function loadArticles() {
       try {
+        const localArticles = normalizeArticles(passedArticles)
+          .filter((article) => !isExcludedArticle(article))
+          .slice(0, MAX_TOTAL_ARTICLES);
+
+        if (localArticles.length > 0) {
+          if (!ignore) setArticles(localArticles);
+          return;
+        }
+
         const categories = await fetchCategories();
         const allArticles = await fetchAllArticles();
         const categoryResults = await Promise.all(
@@ -283,7 +290,7 @@ export default function MoreStoriesSection() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [passedArticles]);
 
   if (loading) {
     return (

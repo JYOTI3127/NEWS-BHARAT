@@ -29,12 +29,13 @@ const isPrerenderUserAgent = () => {
 
 function DeferredSection({ id, anchorId, children, minHeight = 320, rootMargin = '400px 0px', forceRender = false }) {
   const alwaysRender = React.useMemo(() => isPrerenderUserAgent() || forceRender, [forceRender]);
-  const [shouldRender, setShouldRender] = React.useState(alwaysRender);
+  const [shouldRender, setShouldRender] = React.useState(
+    () => alwaysRender || typeof IntersectionObserver === 'undefined'
+  );
   const ref = React.useRef(null);
 
   useEffect(() => {
     if (alwaysRender || typeof IntersectionObserver === 'undefined') {
-      setShouldRender(true);
       return undefined;
     }
 
@@ -70,7 +71,7 @@ const Home = () => {
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
 
   const { data: articlesData, isLoading: articlesLoading } = useQuery({
-    queryKey: ['allArticles'],
+    queryKey: ['articles'],
     queryFn: fetchArticles,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

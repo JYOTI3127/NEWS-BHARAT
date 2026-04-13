@@ -43,6 +43,8 @@ const formatViews = (v) => {
 };
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
+const CATEGORY_ARTICLE_LIMIT = 50;
+const MORE_IN_ARTICLES_LIMIT = 30;
 
 const getSelectedSubcategoryValues = (selectedSubcategories) => {
   if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
@@ -79,24 +81,26 @@ export default function CategoryPage() {
       setLoading(true);
       setVisibleCount(6);
 
-      try {
-        const res = await fetch(`${API_BASE}/categories/`);
-        const data = await res.json();
+      const [categoryResult, articlesResult] = await Promise.allSettled([
+        fetch(`${API_BASE}/categories/`).then((res) => res.json()),
+        fetch(
+          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=${CATEGORY_ARTICLE_LIMIT}`
+        ).then((res) => res.json()),
+      ]);
+
+      if (categoryResult.status === "fulfilled") {
+        const data = categoryResult.value;
         const found = Array.isArray(data) ? data.find((c) => c.slug === slug) : null;
         setCategory(found || { name: slug });
-      } catch {
+      } else {
         setCategory({ name: slug });
       }
 
-      try {
-        const res = await fetch(
-          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=500`
-        );
-        const data = await res.json();
-
+      if (articlesResult.status === "fulfilled") {
+        const data = articlesResult.value;
         const filtered = Array.isArray(data) ? data : (data.results || []);
 
-        const sorted = filtered.sort(
+        const sorted = [...filtered].sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         );
 
@@ -123,8 +127,8 @@ export default function CategoryPage() {
         }));
 
         setArticles(normalized);
-      } catch (err) {
-        console.error("Articles fetch error:", err);
+      } else {
+        console.error("Articles fetch error:", articlesResult.reason);
         setArticles([]);
       }
 
@@ -137,7 +141,7 @@ export default function CategoryPage() {
   const heroArticle   = articles[0] || null;
   const gridArticles  = articles.slice(1, visibleCount + 1);
   const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
-  const moreInArticles = articles;
+  const moreInArticles = articles.slice(0, MORE_IN_ARTICLES_LIMIT);
   const hasMore       = visibleCount + 1 < articles.length;
   const shellStyle = is2K
     ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }

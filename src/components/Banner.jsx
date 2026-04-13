@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { fetchArticles } from "../lib/api";
 import { getAbsoluteArticleUrl, getArticlePath } from "../lib/articleUrl";
 
 const getCategoryLabel = (article) => {
@@ -71,7 +69,7 @@ const ShareCircleIcon = () => (
 );
 
 // ✅ API fetch function — alag rakha taaki sab components share kar sakein
-export default function NewsBanner() {
+export default function NewsBanner({ articles = [], loading = false }) {
   const navigate = useNavigate();
   const touchStartX = useRef(null);
   const touchCurrentX = useRef(null);
@@ -80,28 +78,13 @@ export default function NewsBanner() {
 
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const [direction, setDirection] = useState("next");
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 425);
   const supportsPointerEvents = typeof window !== "undefined" && !!window.PointerEvent;
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 425);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // ✅ useEffect + fetch HATAYA — useQuery lagaya
   // Ab yeh data cache hoga — doosre components bhi same data use karenge
-  const { data, isLoading } = useQuery({
-    queryKey: ["articles"],
-    queryFn: fetchArticles,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   // Data process karo
-  const all = Array.isArray(data) ? data : (data?.results || []);
-  const sorted = all
+  const all = Array.isArray(articles) ? articles : (articles?.results || []);
+  const sorted = [...all]
     .filter((a) => a.status === "published" || a.image_url)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -152,20 +135,23 @@ export default function NewsBanner() {
     canonical_url: a.canonical_url,
   }));
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    const interval = setInterval(() => {
-      goTo((current + 1) % slides.length, "next");
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [current, slides.length]);
-
-  const goTo = (index, dir = "next") => {
+  const goTo = (index) => {
     if (animating || index === current || slides.length === 0) return;
-    setDirection(dir);
     setAnimating(true);
     setTimeout(() => { setCurrent(index); setAnimating(false); }, 600);
   };
+
+  useEffect(() => {
+    if (slides.length === 0 || animating) return;
+    const interval = setInterval(() => {
+      setAnimating(true);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % slides.length);
+        setAnimating(false);
+      }, 600);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [animating, slides.length]);
 
   const navigateToArticle = (article) => {
     const path = getArticlePath(article);
@@ -223,7 +209,7 @@ export default function NewsBanner() {
     return [current - 2, current - 1, current, current + 1, current + 2];
   };
 
-  if (isLoading || slides.length === 0) return null;
+  if (loading || slides.length === 0) return null;
 
   const slide = slides[current];
   const currentBottomNews = bottomNews;
@@ -239,7 +225,7 @@ export default function NewsBanner() {
     <div className="nb-root">
       <div
         className="nb-container"
-        onClick={(e) => {
+        onClick={() => {
           if (isSwipeRef.current) {
             isSwipeRef.current = false;
             return;

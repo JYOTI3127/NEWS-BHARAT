@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{ seo_head|safe }}
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #111827;
+      background: #ffffff;
+      line-height: 1.7;
+    }
+    .article-page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 18px 56px;
+    }
+    .site-link {
+      display: inline-block;
+      margin-bottom: 24px;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 18px;
+      color: #4b5563;
+      font-size: 17px;
+    }
+    .meta {
+      margin-bottom: 24px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .hero-image {
+      width: 100%;
+      max-height: 480px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin: 8px 0 28px;
+    }
+    .content {
+      font-size: 17px;
+    }
+    .content img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="article-page">
+    <a class="site-link" href="/">News4Bharat</a>
+    <article>
+      <h1>{{ article.title }}</h1>
+      {% if article.subtitle %}
+        <p class="subtitle">{{ article.subtitle }}</p>
+      {% endif %}
+      <div class="meta">
+        {% if article.published_at %}Published {{ article.published_at|date:"M d, Y" }}{% endif %}
+        {% if article.author_display_name %} by {{ article.author_display_name }}{% endif %}
+      </div>
+      {% if article.get_image %}
+        <img class="hero-image" src="{{ article.get_image }}" alt="{{ article.image_alt|default:article.title }}">
+      {% endif %}
+      <div class="content">
+        {{ article.content|safe }}
+      </div>
+    </article>
+  </main>
+</body>
+</html>

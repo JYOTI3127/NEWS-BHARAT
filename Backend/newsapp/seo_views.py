@@ -34,6 +34,11 @@ def xml_resp(content: str) -> HttpResponse:
     return HttpResponse(content, content_type="application/xml; charset=utf-8")
 
 
+@require_GET
+def redirect_site_alias(request):
+    return redirect("/", permanent=True)
+
+
 # ─────────────────────────────────────────────
 # Static SEO files
 # ─────────────────────────────────────────────
@@ -143,14 +148,22 @@ def view_article_detail(request, category_slug, slug):
 def redirect_legacy_news_article(request, slug):
     from newsapp.models import Article
     article = get_object_or_404(Article.objects.prefetch_related("categories"), slug=slug, status="published")
-    return redirect(article_path(article), permanent=True)
+    target_path = article_path(article)
+    if target_path.rstrip("/") == request.path.rstrip("/"):
+        from newsapp.views import article_detail_page
+        return article_detail_page(request, slug)
+    return redirect(target_path, permanent=True)
 
 
 @require_GET
 def redirect_legacy_article(request, slug):
     from newsapp.models import Article
     article = get_object_or_404(Article.objects.prefetch_related("categories"), slug=slug, status="published")
-    return redirect(article_path(article), permanent=True)
+    target_path = article_path(article)
+    if target_path.rstrip("/") == request.path.rstrip("/"):
+        from newsapp.views import article_detail_page
+        return article_detail_page(request, slug)
+    return redirect(target_path, permanent=True)
 
 
 # ─────────────────────────────────────────────

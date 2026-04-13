@@ -1,6 +1,6 @@
 from django.contrib.sitemaps import Sitemap
 from .models import Article, Category
-from .seo_direct import article_path, article_url
+from .seo_direct import article_path, article_url, clean_url_segment
 
 class ArticleSitemap(Sitemap):
     changefreq = "hourly"
@@ -63,7 +63,7 @@ class CategorySitemap(Sitemap):
         return Category.objects.filter(status='active')
 
     def location(self, obj):
-        return f"/category/{obj.slug}/"
+        return f"/category/{clean_url_segment(obj.slug)}/"
 
 
 class StaticSitemap(Sitemap):

@@ -238,6 +238,65 @@ label.image-drop {
 .publish-btn-main.btn-draft { background: #f8fafc; color: #374151; border: 1.5px solid #e2e8f0; }
 .publish-btn-main.btn-draft:hover { background: #f1f5f9; border-color:#cbd5e1; }
 
+.publish-date-modal-backdrop {
+  position: fixed; inset: 0; z-index: 100000;
+  display: none; align-items: center; justify-content: center;
+  padding: 18px; background: rgba(15, 23, 42, 0.56);
+}
+.publish-date-modal-backdrop.active { display: flex; }
+.publish-date-modal {
+  width: min(460px, 100%); background: #fff; color: #0f172a;
+  border-radius: 8px; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.34);
+  border: 1px solid #e2e8f0; overflow: hidden;
+}
+.publish-date-modal__header {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 20px 22px 14px; border-bottom: 1px solid #e2e8f0;
+}
+.publish-date-modal__icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 36px; background: #eff6ff; color: #1d4ed8;
+}
+.publish-date-modal__title {
+  margin: 0; font-size: 17px; font-weight: 800; letter-spacing: 0;
+}
+.publish-date-modal__text {
+  margin: 6px 0 0; font-size: 13px; line-height: 1.55; color: #475569;
+}
+.publish-date-modal__body { padding: 16px 22px 6px; }
+.publish-date-choice {
+  display: flex; gap: 10px; align-items: flex-start;
+  width: 100%; padding: 12px 13px; margin-bottom: 10px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: #fff; color: #0f172a; cursor: pointer; text-align: left;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.publish-date-choice:hover {
+  border-color: #2563eb; background: #f8fafc; transform: translateY(-1px);
+}
+.publish-date-choice__badge {
+  flex: 0 0 auto; min-width: 48px; padding: 4px 8px;
+  border-radius: 999px; font-size: 10px; font-weight: 800;
+  color: #1d4ed8; background: #dbeafe; text-align: center;
+  text-transform: uppercase;
+}
+.publish-date-choice__title {
+  display: block; font-size: 13px; font-weight: 800; margin-bottom: 3px;
+}
+.publish-date-choice__desc {
+  display: block; font-size: 12px; line-height: 1.45; color: #64748b;
+}
+.publish-date-modal__footer {
+  display: flex; justify-content: flex-end; padding: 10px 22px 20px;
+}
+.publish-date-cancel {
+  border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+  border-radius: 8px; padding: 8px 14px; font-size: 12px;
+  font-weight: 700; cursor: pointer;
+}
+.publish-date-cancel:hover { background: #f8fafc; color: #0f172a; }
+
 /* ── FIX 2: Schedule card styles ── */
 .schedule-card {
   background: #fff;
@@ -1050,6 +1109,39 @@ label.image-drop {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Schedule Article
     </button>
+  </div>
+</div>
+
+<div class="publish-date-modal-backdrop" id="publish_date_modal" aria-hidden="true">
+  <div class="publish-date-modal" role="dialog" aria-modal="true" aria-labelledby="publish_date_modal_title">
+    <div class="publish-date-modal__header">
+      <div class="publish-date-modal__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h3"/><path d="M8 18h5"/></svg>
+      </div>
+      <div>
+        <h3 class="publish-date-modal__title" id="publish_date_modal_title">Choose publish date</h3>
+        <p class="publish-date-modal__text">This article is already published. Select which date should be shown after this update.</p>
+      </div>
+    </div>
+    <div class="publish-date-modal__body">
+      <button type="button" class="publish-date-choice" data-publish-mode="now">
+        <span class="publish-date-choice__badge">Today</span>
+        <span>
+          <span class="publish-date-choice__title">Use today's date and time</span>
+          <span class="publish-date-choice__desc">The article will move up as a freshly updated published article.</span>
+        </span>
+      </button>
+      <button type="button" class="publish-date-choice" data-publish-mode="original">
+        <span class="publish-date-choice__badge">Keep</span>
+        <span>
+          <span class="publish-date-choice__title">Keep the original publish date</span>
+          <span class="publish-date-choice__desc">Only the content changes; the old publish date stays the same.</span>
+        </span>
+      </button>
+    </div>
+    <div class="publish-date-modal__footer">
+      <button type="button" class="publish-date-cancel" data-publish-mode="cancel">Cancel update</button>
+    </div>
   </div>
 </div>
 
@@ -3102,6 +3194,48 @@ function getCsrf(){
   return el?el.value:'';
 }
 
+function choosePublishDateMode(){
+  var modal=document.getElementById('publish_date_modal');
+  if(!modal)return Promise.resolve('now');
+
+  return new Promise(function(resolve){
+    var resolved=false;
+    var previousOverflow=document.body.style.overflow;
+    var buttons=modal.querySelectorAll('[data-publish-mode]');
+
+    function close(mode){
+      if(resolved)return;
+      resolved=true;
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow=previousOverflow;
+      document.removeEventListener('keydown',onKeydown);
+      buttons.forEach(function(btn){
+        btn.removeEventListener('click',onButtonClick);
+      });
+      resolve(mode);
+    }
+
+    function onButtonClick(e){
+      close(e.currentTarget.getAttribute('data-publish-mode'));
+    }
+
+    function onKeydown(e){
+      if(e.key==='Escape')close('cancel');
+    }
+
+    buttons.forEach(function(btn){
+      btn.addEventListener('click',onButtonClick);
+    });
+    document.addEventListener('keydown',onKeydown);
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    var firstChoice=modal.querySelector('.publish-date-choice');
+    if(firstChoice)setTimeout(function(){firstChoice.focus();},0);
+  });
+}
+
 /* ══════════════════════════════════════════════
    SUBMIT
 ══════════════════════════════════════════════ */
@@ -3119,6 +3253,10 @@ async function submitArticle(forceStatus){
 
   const statusEl=document.getElementById('ui_status');
   const effectiveStatus=forceStatus||(statusEl?statusEl.value:'draft');
+  const articleId=_asArticleId||'{{ original.pk|default:"" }}';
+  const originalStatus='{{ original.status|default:""|escapejs }}';
+  const hasOriginalPublishedAt={{ original.published_at|yesno:"true,false" }};
+  let publishDateMode='now';
 
   if(effectiveStatus==='scheduled'){
     const schedInp=document.getElementById('ui_scheduled_at');
@@ -3137,6 +3275,11 @@ async function submitArticle(forceStatus){
     }
   }
 
+  if(articleId&&effectiveStatus==='published'&&originalStatus==='published'&&hasOriginalPublishedAt){
+    publishDateMode=await choosePublishDateMode();
+    if(publishDateMode==='cancel')return;
+  }
+
   const rawImageUrl=document.getElementById('ui_image')?document.getElementById('ui_image').value:'',
         safeImageUrl=(rawImageUrl&&!rawImageUrl.startsWith('blob:'))?rawImageUrl:'',
         subcategoriesJson=document.getElementById('ui_subcategory')?document.getElementById('ui_subcategory').value:'{}';
@@ -3146,6 +3289,7 @@ async function submitArticle(forceStatus){
   formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');
   formData.append('content',content);
   formData.append('status',effectiveStatus);
+  formData.append('publish_date_mode',publishDateMode);
   formData.append('priority',document.getElementById('ui_priority')?document.getElementById('ui_priority').value:'5');
   formData.append('is_paid',document.getElementById('ui_is_paid')&&document.getElementById('ui_is_paid').checked?'true':'false');
 
@@ -3198,7 +3342,6 @@ async function submitArticle(forceStatus){
   const tagsVal=document.getElementById('ui_tags')?document.getElementById('ui_tags').value:'';
   if(tagsVal)formData.append('tags',tagsVal);
 
-  const articleId=_asArticleId||'{{ original.pk|default:"" }}';
   const url=articleId?('/api/articles/'+articleId+'/'):'/api/articles/';
   const method=articleId?'PUT':'POST';
 

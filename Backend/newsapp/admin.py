@@ -949,16 +949,20 @@ class ArticleAdmin(admin.ModelAdmin):
         articles_qs = (
             Article.objects.prefetch_related('categories')
             .select_related('author', 'assigned_to')
-            .order_by(
+        )
+        if selected_status:
+            articles_qs = articles_qs.filter(status=selected_status)
+
+        if selected_status == 'scheduled':
+            articles_qs = articles_qs.order_by('scheduled_at', 'created_at')
+        else:
+            articles_qs = articles_qs.order_by(
                 Case(
                     When(status='scheduled', then=F('scheduled_at')),
                     default=F('created_at'),
                 ).desc(nulls_last=True),
                 '-created_at',
             )
-        )
-        if selected_status:
-            articles_qs = articles_qs.filter(status=selected_status)
 
         article_paginator = Paginator(articles_qs, 10)
         article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))

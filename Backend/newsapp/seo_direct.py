@@ -103,12 +103,18 @@ def primary_category_slug(article) -> str:
     return getattr(primary_cat, "slug", "") or ""
 
 
+def clean_url_segment(value) -> str:
+    parts = [part.strip() for part in re.split(r"/+", str(value or "").strip("/")) if part.strip()]
+    return parts[-1] if parts else ""
+
+
 def article_path(article_or_slug, category_slug: str = None) -> str:
     if hasattr(article_or_slug, "slug"):
-        slug = article_or_slug.slug
+        slug = clean_url_segment(article_or_slug.slug)
         category_slug = category_slug or primary_category_slug(article_or_slug)
     else:
-        slug = str(article_or_slug)
+        slug = clean_url_segment(article_or_slug)
+    category_slug = clean_url_segment(category_slug)
     if category_slug:
         return f"/{category_slug}/{slug}/"
     return f"/article/{slug}/"
@@ -125,11 +131,12 @@ def normalized_canonical(article, default_url: str) -> str:
         return default_url
 
     site_base = SEO["SITE_URL"].rstrip("/")
-    legacy_url = f"{site_base}/news/{article.slug}"
+    article_slug = clean_url_segment(article.slug)
+    legacy_url = f"{site_base}/news/{article_slug}"
     if canonical.rstrip("/") == legacy_url.rstrip("/"):
         return article_url(article, site_base)
 
-    legacy_article_url = f"{site_base}/article/{article.slug}"
+    legacy_article_url = f"{site_base}/article/{article_slug}"
     if canonical.rstrip("/") == legacy_article_url.rstrip("/"):
         return article_url(article, site_base)
 
@@ -360,8 +367,11 @@ class SitemapEngine:
         root = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
 
         for c in Category.objects.filter(status="active"):
+            category_slug = clean_url_segment(c.slug)
+            if not category_slug:
+                continue
             url = ET.SubElement(root, "url")
-            ET.SubElement(url, "loc").text        = f"{base}/category/{c.slug}"
+            ET.SubElement(url, "loc").text        = f"{base}/category/{category_slug}/"
             ET.SubElement(url, "changefreq").text = "hourly"
             ET.SubElement(url, "priority").text   = "0.8"
 
@@ -518,7 +528,7 @@ class SchemaEngine:
         items    = [{"id": 1, "name": "Home", "url": base}]
         if first_cat:
             items.append({"id": 2, "name": str(first_cat),
-                          "url": f"{base}/category/{first_cat.slug}"})
+                          "url": f"{base}/category/{clean_url_segment(first_cat.slug)}/"})
         items.append({"id": len(items) + 1, "name": article.title,
                       "url": article_url(article, base)})
         return {

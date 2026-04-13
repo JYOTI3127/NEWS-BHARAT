@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
@@ -35,7 +35,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
-from .seo_direct import article_url, normalized_canonical
+from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
 from django.utils.text import slugify
 
 User = get_user_model()
@@ -209,6 +209,7 @@ def _save_article_from_request(request, article=None):
     files = request.FILES
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
+    old_published_at = None if is_new else article.published_at
 
     category_ids_raw = data.get('categories', '')
     category_list_raw = data.getlist('categories')
@@ -256,8 +257,15 @@ def _save_article_from_request(request, article=None):
     if is_new:
         article = Article(author=request.user)
     else:
-        # Business rule: edited article should surface with the latest update date.
-        article.created_at = timezone.now()
+        publish_date_mode = data.get('publish_date_mode', 'now')
+        keep_original_publish_date = (
+            data.get('status') == 'published' and
+            publish_date_mode == 'original' and
+            old_published_at is not None
+        )
+        if not keep_original_publish_date:
+            # Business rule: edited article should surface with the latest update date.
+            article.created_at = timezone.now()
 
     article.title    = title
     article.subtitle = subtitle
@@ -298,7 +306,10 @@ def _save_article_from_request(request, article=None):
 
     if article.status == 'published':
         article.scheduled_at = None
-        article.published_at = timezone.now()
+        if data.get('publish_date_mode') == 'original' and old_published_at is not None:
+            article.published_at = old_published_at
+        else:
+            article.published_at = timezone.now()
 
     assigned_id = data.get('assigned_to', '')
     if assigned_id:
@@ -594,12 +605,19 @@ def normalize_article_canonical(raw_value, slug):
     return canonical
 
 def article_detail_page(request, slug, category_slug=None):
-    article = get_object_or_404(Article, slug=slug, status="published")
+    article_qs = Article.objects.filter(
+        status="published",
+    ).filter(
+        Q(slug=slug) | Q(slug__endswith=f"/{slug}")
+    )
+    article = article_qs.filter(slug=slug).first() or article_qs.first()
+    if article is None:
+        raise Http404("No Article matches the given query.")
 
     first_cat = article.primary_category or article.categories.first()
-    canonical_category = first_cat.slug if first_cat else None
+    canonical_category = clean_url_segment(first_cat.slug) if first_cat else None
     if category_slug and canonical_category and category_slug != canonical_category:
-        return redirect(f"/{canonical_category}/{article.slug}/", permanent=True)
+        return redirect(article_path(article), permanent=True)
 
     meta = MetaEngine.for_article(article)
     schemas = [

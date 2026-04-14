@@ -346,11 +346,14 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                mtime = obj.image.storage.get_modified_time(obj.image.name)
-                return f"{base}?v={int(mtime.timestamp())}"
+                base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                try:
+                    mtime = obj.image.storage.get_modified_time(obj.image.name)
+                    return f"{base}?v={int(mtime.timestamp())}"
+                except Exception:
+                    return base
             except Exception:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                return obj.image_url or None
         return obj.image_url
 
     def get_primary_category(self, obj):
@@ -390,11 +393,14 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                mtime = obj.image.storage.get_modified_time(obj.image.name)
-                return f"{base}?v={int(mtime.timestamp())}"
+                base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                try:
+                    mtime = obj.image.storage.get_modified_time(obj.image.name)
+                    return f"{base}?v={int(mtime.timestamp())}"
+                except Exception:
+                    return base
             except Exception:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                return obj.image_url or None
         return obj.image_url or None
 
     def get_category(self, obj):

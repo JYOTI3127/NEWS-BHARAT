@@ -346,12 +346,7 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                try:
-                    mtime = obj.image.storage.get_modified_time(obj.image.name)
-                    return f"{base}?v={int(mtime.timestamp())}"
-                except Exception:
-                    return base
+                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
             except Exception:
                 return obj.image_url or None
         return obj.image_url
@@ -393,12 +388,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                try:
-                    mtime = obj.image.storage.get_modified_time(obj.image.name)
-                    return f"{base}?v={int(mtime.timestamp())}"
-                except Exception:
-                    return base
+                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
             except Exception:
                 return obj.image_url or None
         return obj.image_url or None

@@ -65,21 +65,25 @@ def register():
         previous_status = getattr(instance, "_previous_status", None)
         if instance.status == "published" and previous_status != "published":
             build_reason = "article_published"
+            force_build = True
         else:
             build_reason = "article_updated"
+            force_build = False
 
         instance._build_previous_status = previous_status
         logger.info(
-            "[SEO Signal] Frontend build queued. slug=%s previous_status=%s current_status=%s reason=%s",
+            "[SEO Signal] Frontend build queued. slug=%s previous_status=%s current_status=%s reason=%s force=%s",
             instance.slug,
             previous_status,
             instance.status,
             build_reason,
+            force_build,
         )
 
         trigger_frontend_build_on_commit(
             reason=build_reason,
             article=instance,
+            force=force_build,
         )
 
     @receiver(m2m_changed, sender=Article.categories.through)

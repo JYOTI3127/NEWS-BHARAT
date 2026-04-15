@@ -1892,7 +1892,7 @@ def live_cricket(request):
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        cache_key = "cricket_live_data:v2"
+        cache_key = "cricket_live_data:v3"
         cached_data = cache.get(cache_key)
         if cached_data is not None:
             return Response(cached_data)
@@ -2009,6 +2009,13 @@ def live_cricket(request):
                 parsed = timezone.make_aware(parsed, ZoneInfo("UTC"))
             return parsed
 
+        def has_real_score(match):
+            return bool(
+                clean_score(match.get('t1s'))
+                or clean_score(match.get('t2s'))
+                or match.get('score')
+            )
+
         def normalize_match(match):
             teams = team_names_from_match(match)
             if len(teams) < 2:
@@ -2021,7 +2028,11 @@ def live_cricket(request):
             normalized['venue'] = normalized.get('venue') or normalized.get('venueInfo') or ''
             normalized['_has_real_teams'] = True
             normalized['_start_time'] = match_datetime(match)
-            return normalize_scores(match, normalized)
+            normalized = normalize_scores(match, normalized)
+            if normalized['_start_time']:
+                normalized['dateTimeIST'] = normalized['_start_time'].astimezone(IST).isoformat()
+                normalized['startTimeIST'] = normalized['_start_time'].astimezone(IST).strftime('%d %b %Y, %I:%M %p')
+            return normalized
 
         def match_bucket(match, status_text):
             has_result = (
@@ -2033,13 +2044,14 @@ def live_cricket(request):
 
             starts_at = match.get('_start_time')
             now = timezone.now()
-            if starts_at and starts_at > now + timedelta(minutes=10):
+            if starts_at and starts_at.astimezone(IST) > now.astimezone(IST) + timedelta(minutes=10):
                 return 'upcoming'
 
             is_started = match.get('matchStarted') is True
             looks_live = any(token in status_text for token in ('live', 'ongoing', 'in progress', 'stumps', 'innings break'))
             if is_started or looks_live:
-                return 'live'
+                if has_real_score(match) or is_started:
+                    return 'live'
 
             return 'upcoming'
 

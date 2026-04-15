@@ -122,10 +122,10 @@ export default function BreakingNewsSection({ articles = [] }) {
   return (
     <section
       className="
-        mx-auto mt-7 mb-9 w-[min(1120px,calc(100%-96px))] rounded-[14px] border-t-2 border-dotted border-[#8d8d8d] pt-3
+        mx-auto mt-7 mb-9 w-[min(1180px,calc(100%-72px))] rounded-[14px] border-t-2 border-dotted border-[#8d8d8d] pt-3
         font-[Poppins,sans-serif]
-        min-[1441px]:max-[2560px]:w-[min(1560px,calc(100%-240px))]
-        max-[1024px]:w-[min(100%,calc(100%-56px))]
+        min-[1441px]:max-[2560px]:w-[min(1660px,calc(100%-180px))]
+        max-[1024px]:w-[min(100%,calc(100%-48px))]
         max-[768px]:w-[calc(100%-40px)]
         max-[425px]:w-[calc(100%-32px)]
         max-[375px]:w-[calc(100%-28px)]
@@ -134,7 +134,7 @@ export default function BreakingNewsSection({ articles = [] }) {
       "
       aria-labelledby="breaking-news-heading"
     >
-      <div className="mb-[18px] flex items-end justify-between gap-4 max-[640px]:mb-3.5 max-[640px]:flex-col max-[640px]:items-start">
+      <div className="mb-[18px] flex items-end justify-between gap-4 max-[640px]:mb-3.5 max-[640px]:flex-row max-[640px]:items-end max-[640px]:gap-3">
         <div>
           <span className="mb-2 inline-flex items-center gap-2 font-[Poppins,sans-serif] text-[0.76rem] font-bold uppercase tracking-[0.18em] text-[#b91c1c] before:h-[9px] before:w-[9px] before:rounded-full before:bg-[#d90429] before:shadow-[0_0_0_4px_rgba(217,4,41,0.12)] before:content-['']">
             Live Desk
@@ -149,7 +149,7 @@ export default function BreakingNewsSection({ articles = [] }) {
 
         <Link
           to={BREAKING_NEWS_PATH}
-          className="font-[Poppins,sans-serif] text-[0.92rem] font-bold text-[#b91c1c] no-underline transition-colors duration-200 hover:text-[#7f1d1d]"
+          className="shrink-0 whitespace-nowrap font-[Poppins,sans-serif] text-[0.92rem] font-bold text-[#b91c1c] no-underline transition-colors duration-200 hover:text-[#7f1d1d] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem]"
         >
           View All
         </Link>
@@ -197,7 +197,7 @@ export default function BreakingNewsSection({ articles = [] }) {
             <StoryCard
               article={leftSecondaryArticle}
               className="
-                group grid grid-cols-[135px_minmax(0,1fr)] items-stretch gap-[9px] rounded-[10px] border-t border-dotted border-[#9a9a9a] p-[6px_2px_2px]
+                group grid grid-cols-[135px_minmax(0,1fr)] items-start gap-[9px] rounded-[10px] border-t border-dotted border-[#9a9a9a] p-[6px_2px_2px]
                 min-[1441px]:grid-cols-[150px_minmax(0,1fr)]
                 max-[768px]:grid-cols-[128px_minmax(0,1fr)]
                 max-[640px]:grid-cols-1 max-[640px]:h-auto
@@ -208,12 +208,12 @@ export default function BreakingNewsSection({ articles = [] }) {
                 article={leftSecondaryArticle}
                 alt={getArticleTitle(leftSecondaryArticle)}
                 className="
-                  block h-full min-h-[48px] w-full rounded-[10px] object-cover bg-[#f4f4f4]
-                  min-[1441px]:min-h-[54px]
+                  block h-[68px] min-h-[68px] w-full rounded-[10px] object-cover bg-[#f4f4f4]
+                  min-[1441px]:h-[76px] min-[1441px]:min-h-[76px]
                   max-[640px]:h-auto max-[640px]:aspect-[16/10]
                 "
               />
-              <div className="flex h-full min-h-[48px] min-w-0 flex-col justify-start gap-0.5 min-[1441px]:min-h-[54px] max-[640px]:min-h-0 max-[640px]:gap-2">
+              <div className="flex min-h-[68px] min-w-0 flex-col justify-start gap-0.5 min-[1441px]:min-h-[76px] max-[640px]:min-h-0 max-[640px]:gap-2">
                 <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.86rem,0.9vw,1.02rem)] font-semibold leading-[1.2] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.82rem]">
                   {getArticleTitle(leftSecondaryArticle)}
                 </h3>

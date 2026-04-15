@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models import F
-from datetime import timedelta
+from datetime import datetime, timedelta
 import requests
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -1922,6 +1922,7 @@ def live_cricket(request):
         live     = []
         upcoming = []
         recent   = []
+        seen_match_keys = set()
 
         def clean_team_name(value):
             value = str(value or '').strip()
@@ -1953,6 +1954,61 @@ def live_cricket(request):
                     unique.append(name)
             return unique[:2]
 
+        def clean_score(value):
+            value = str(value or '').strip()
+            if not value or value.lower() in ('tbd', '-', 'yet to bat', 'null', 'none'):
+                return ''
+            return value
+
+        def score_text(score):
+            if not isinstance(score, dict):
+                return ''
+            runs = score.get('r')
+            wickets = score.get('w')
+            overs = score.get('o')
+            if runs in (None, ''):
+                return ''
+            text = str(runs)
+            if wickets not in (None, ''):
+                text = f"{text}/{wickets}"
+            if overs not in (None, ''):
+                text = f"{text} ({overs})"
+            return text
+
+        def normalize_scores(match, normalized):
+            normalized['t1s'] = clean_score(match.get('t1s'))
+            normalized['t2s'] = clean_score(match.get('t2s'))
+
+            scores = match.get('score') if isinstance(match.get('score'), list) else []
+            for score in scores:
+                text = score_text(score)
+                if not text:
+                    continue
+                inning = str(score.get('inning') or '').lower()
+                t1 = normalized['t1'].lower()
+                t2 = normalized['t2'].lower()
+
+                if t1 and t1 in inning:
+                    normalized['t1s'] = normalized['t1s'] or text
+                elif t2 and t2 in inning:
+                    normalized['t2s'] = normalized['t2s'] or text
+                elif not normalized['t1s']:
+                    normalized['t1s'] = text
+                elif not normalized['t2s']:
+                    normalized['t2s'] = text
+
+            normalized['score'] = scores
+            return normalized
+
+        def match_datetime(match):
+            raw_value = match.get('dateTimeGMT') or match.get('date') or match.get('startDate')
+            parsed = parse_datetime(str(raw_value or ''))
+            if parsed is None:
+                return None
+            if timezone.is_naive(parsed):
+                parsed = timezone.make_aware(parsed, ZoneInfo("UTC"))
+            return parsed
+
         def normalize_match(match):
             teams = team_names_from_match(match)
             if len(teams) < 2:
@@ -1964,12 +2020,38 @@ def live_cricket(request):
             normalized['name'] = normalized.get('name') or f"{teams[0]} vs {teams[1]}"
             normalized['venue'] = normalized.get('venue') or normalized.get('venueInfo') or ''
             normalized['_has_real_teams'] = True
-            return normalized
+            normalized['_start_time'] = match_datetime(match)
+            return normalize_scores(match, normalized)
+
+        def match_bucket(match, status_text):
+            has_result = (
+                match.get('matchEnded')
+                or any(token in status_text for token in ('match over', 'won', 'beat', 'result', 'completed'))
+            )
+            if has_result:
+                return 'recent'
+
+            starts_at = match.get('_start_time')
+            now = timezone.now()
+            if starts_at and starts_at > now + timedelta(minutes=10):
+                return 'upcoming'
+
+            is_started = match.get('matchStarted') is True
+            looks_live = any(token in status_text for token in ('live', 'ongoing', 'in progress', 'stumps', 'innings break'))
+            if is_started or looks_live:
+                return 'live'
+
+            return 'upcoming'
 
         for match in matches:
             match = normalize_match(match)
             if not match:
                 continue
+
+            match_key = match.get('id') or f"{match.get('name')}|{match.get('dateTimeGMT') or match.get('date')}"
+            if match_key in seen_match_keys:
+                continue
+            seen_match_keys.add(match_key)
 
             match_status = str(match.get("status", "") or match.get("matchStatus", "") or "").lower()
             series_name = str(match.get("series", "") or match.get("series_name", "") or "").lower()
@@ -1978,14 +2060,18 @@ def live_cricket(request):
             # Prefer IPL matches when available in the feed.
             is_ipl = "ipl" in series_name or "indian premier league" in series_name or "ipl" in match_name
 
-            if match.get('matchEnded') or "match over" in match_status or "won" in match_status or "beat" in match_status or "result" in match_status or "completed" in match_status:
+            bucket = match_bucket(match, match_status)
+            if bucket == 'recent':
                 recent.append(match)
-            elif "upcoming" in match_status or "scheduled" in match_status or "preview" in match_status or "not started" in match_status:
+            elif bucket == 'upcoming':
                 upcoming.append(match)
             else:
                 live.append(match)
 
             match["_is_ipl"] = is_ipl
+
+        def public_match(match):
+            return {key: value for key, value in match.items() if not key.startswith('_')}
 
         def prioritize_ipl(items):
             return sorted(items, key=lambda item: (
@@ -1993,10 +2079,22 @@ def live_cricket(request):
                 0 if item.get("_has_real_teams") else 1,
             ))
 
+        def prioritize_upcoming(items):
+            return sorted(items, key=lambda item: (
+                0 if item.get("_is_ipl") else 1,
+                item.get("_start_time") or datetime.max.replace(tzinfo=ZoneInfo("UTC")),
+            ))
+
+        def prioritize_recent(items):
+            return sorted(items, key=lambda item: (
+                0 if item.get("_is_ipl") else 1,
+                -(item.get("_start_time").timestamp() if item.get("_start_time") else 0),
+            ))
+
         result = {
-            "live":     prioritize_ipl(live)[:1],
-            "upcoming": prioritize_ipl(upcoming)[:3],
-            "recent":   prioritize_ipl(recent)[:3]
+            "live":     [public_match(item) for item in prioritize_ipl(live)[:1]],
+            "upcoming": [public_match(item) for item in prioritize_upcoming(upcoming)[:3]],
+            "recent":   [public_match(item) for item in prioritize_recent(recent)[:3]]
         }
         cache.set(cache_key, result, 1800)
         return Response(result)

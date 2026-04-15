@@ -2218,6 +2218,22 @@ Website: https://news4bharat.com
  
     success = []
     failed = []
+    trace_id = uuid.uuid4().hex[:12]
+    newsletter_log = None
+    try:
+        newsletter_log = _save_history(
+            subject,
+            recipients,
+            chosen,
+            0,
+            0,
+            success_emails=[],
+            failed_emails=[],
+            trace_id=trace_id,
+        )
+    except Exception as e:
+        logger.warning(f"Could not create newsletter history: {e}")
+
     connection = get_connection(fail_silently=False)
 
     try:
@@ -2238,6 +2254,10 @@ Website: https://news4bharat.com
                     from_email=from_email,
                     to=[email],
                     connection=connection,
+                    headers={
+                        'X-News4Bharat-Newsletter-Trace': trace_id,
+                        'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
+                    },
                 )
                 msg.attach_alternative(personalized_html, "text/html")
                 msg.send(fail_silently=False)
@@ -2246,40 +2266,72 @@ Website: https://news4bharat.com
             except Exception as e:
                 failed.append({'email': email, 'error': str(e)})
                 logger.error(f"Newsletter failed for {email}: {e}")
+    except Exception as e:
+        if not success and not failed:
+            failed = [{'email': email, 'error': str(e)} for email in recipients]
+        logger.error(f"Newsletter SMTP connection failed: {e}")
     finally:
         try:
             connection.close()
         except Exception:
             pass
  
-    # History save karo (optional - model banao)
     try:
-        _save_history(subject, recipients, chosen, len(success), len(failed))
+        if newsletter_log:
+            newsletter_log.sent_count = len(success)
+            newsletter_log.failed_count = len(failed)
+            newsletter_log.success_emails = success
+            newsletter_log.failed_emails = failed
+            newsletter_log.event_history = [
+                *list(newsletter_log.event_history or []),
+                {
+                    'event': 'smtp_accepted' if success else 'smtp_failed',
+                    'email': '',
+                    'subject': subject,
+                    'at': timezone.localtime(timezone.now()).strftime('%d/%m/%Y %I:%M %p'),
+                    'raw_event': 'django_smtp_send',
+                    'reason': f'{len(success)} accepted by SMTP, {len(failed)} failed before SMTP acceptance',
+                }
+            ]
+            newsletter_log.save(update_fields=[
+                'sent_count', 'failed_count', 'success_emails', 'failed_emails', 'event_history'
+            ])
     except Exception as e:
-        logger.warning(f"Could not save newsletter history: {e}")
+        logger.warning(f"Could not update newsletter history: {e}")
  
+    sent_at = timezone.now()
+    response_status = 200 if success else 502
     return JsonResponse({
         'status': 'done',
+        'ok': bool(success),
         'sent': len(success),
         'failed': len(failed),
         'success_emails': success,
         'failed_emails': failed,
-    })
+        'sent_at': sent_at.isoformat(),
+        'sent_at_ist': timezone.localtime(sent_at).strftime('%d/%m/%Y %I:%M %p'),
+        'log_id': getattr(newsletter_log, 'id', None),
+        'trace_id': trace_id,
+        'note': 'sent means SMTP accepted the message. Delivered/bounced updates require Brevo webhook events.',
+    }, status=response_status)
  
  
-def _save_history(subject, recipients, chosen, sent_count, failed_count):
+def _save_history(subject, recipients, chosen, sent_count, failed_count, success_emails=None, failed_emails=None, trace_id=''):
     """Newsletter history save karna — NewsletterLog model use karo"""
     try:
         from newsapp.models import NewsletterLog
-        NewsletterLog.objects.create(
+        return NewsletterLog.objects.create(
+            trace_id=trace_id,
             subject=subject,
             recipients=recipients,
             chosen_articles=chosen,
             sent_count=sent_count,
             failed_count=failed_count,
+            success_emails=success_emails or [],
+            failed_emails=failed_emails or [],
         )
     except ImportError:
-        pass  # Model nahi bana toh skip
+        return None  # Model nahi bana toh skip
  
  
 @require_GET
@@ -2290,12 +2342,148 @@ def newsletter_history(request):
     """
     try:
         from newsapp.models import NewsletterLog
-        logs = NewsletterLog.objects.order_by('-sent_at')[:20].values(
-            'id', 'subject', 'sent_count', 'failed_count', 'sent_at'
-        )
-        return JsonResponse({'history': list(logs)})
+        limit = min(int(request.GET.get('limit', 30)), 100)
+        logs = []
+        for item in NewsletterLog.objects.order_by('-sent_at')[:limit]:
+            sent_at_local = timezone.localtime(item.sent_at)
+            logs.append({
+                'id': item.id,
+                'trace_id': item.trace_id,
+                'subject': item.subject,
+                'recipients': item.recipients or [],
+                'success_emails': item.success_emails or [],
+                'failed_emails': item.failed_emails or [],
+                'delivered_emails': item.delivered_emails or [],
+                'opened_emails': item.opened_emails or [],
+                'clicked_emails': item.clicked_emails or [],
+                'bounced_emails': item.bounced_emails or [],
+                'event_history': (item.event_history or [])[-50:],
+                'sent_count': item.sent_count,
+                'failed_count': item.failed_count,
+                'delivered_count': item.delivered_count,
+                'opened_count': item.opened_count,
+                'clicked_count': item.clicked_count,
+                'bounced_count': item.bounced_count,
+                'sent_at': item.sent_at.isoformat(),
+                'sent_at_ist': sent_at_local.strftime('%d/%m/%Y %I:%M %p'),
+            })
+        return JsonResponse({'history': logs})
     except Exception as e:
         return JsonResponse({'history': [], 'note': str(e)})
+
+
+def _append_unique_email(items, email):
+    normalized = str(email or '').strip().lower()
+    current = list(items or [])
+    if normalized and normalized not in current:
+        current.append(normalized)
+    return current
+
+
+def _newsletter_event_name(raw_event):
+    event = str(raw_event or '').strip().lower().replace('-', '_')
+    if event in {'hard_bounce', 'soft_bounce', 'blocked', 'invalid_email'}:
+        return 'bounced'
+    if event in {'delivered', 'opened', 'click', 'clicked'}:
+        return 'clicked' if event == 'click' else event
+    if event in {'sent', 'request', 'deferred'}:
+        return event
+    return event or 'unknown'
+
+
+def _find_newsletter_log_for_event(email, subject, log_id=None):
+    from newsapp.models import NewsletterLog
+
+    if log_id:
+        match = NewsletterLog.objects.filter(id=log_id).first()
+        if match:
+            return match
+
+    trace_id = ''
+    if isinstance(log_id, str) and not log_id.isdigit():
+        trace_id = log_id
+    if trace_id:
+        match = NewsletterLog.objects.filter(trace_id=trace_id).first()
+        if match:
+            return match
+
+    qs = NewsletterLog.objects.order_by('-sent_at')
+    if subject:
+        qs = qs.filter(subject__icontains=str(subject).strip()[:120])
+    if email:
+        email = str(email).strip().lower()
+        qs = qs.filter(recipients__contains=[email])
+    return qs.first()
+
+
+@csrf_exempt
+@require_POST
+def newsletter_brevo_webhook(request):
+    """
+    Brevo transactional webhook endpoint.
+    Configure Brevo events for delivered, opened, clicked, hard_bounce, soft_bounce, blocked.
+    """
+    try:
+        payload = json.loads(request.body or '{}')
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    events = payload if isinstance(payload, list) else [payload]
+    updated = 0
+
+    for event_payload in events:
+        if not isinstance(event_payload, dict):
+            continue
+        email = str(
+            event_payload.get('email')
+            or event_payload.get('recipient')
+            or event_payload.get('to')
+            or ''
+        ).strip().lower()
+        subject = str(event_payload.get('subject') or '').strip()
+        event = _newsletter_event_name(event_payload.get('event'))
+        log_id = (
+            event_payload.get('newsletter_log_id')
+            or event_payload.get('log_id')
+            or event_payload.get('trace_id')
+            or event_payload.get('X-News4Bharat-Newsletter-Trace')
+        )
+        log = _find_newsletter_log_for_event(email, subject, log_id=log_id)
+        if not log:
+            continue
+
+        event_record = {
+            'event': event,
+            'email': email,
+            'subject': subject or log.subject,
+            'at': timezone.localtime(timezone.now()).strftime('%d/%m/%Y %I:%M %p'),
+            'raw_event': event_payload.get('event'),
+            'reason': event_payload.get('reason') or event_payload.get('message') or event_payload.get('error') or '',
+        }
+
+        if event == 'delivered':
+            log.delivered_emails = _append_unique_email(log.delivered_emails, email)
+        elif event == 'opened':
+            log.opened_emails = _append_unique_email(log.opened_emails, email)
+        elif event == 'clicked':
+            log.clicked_emails = _append_unique_email(log.clicked_emails, email)
+        elif event == 'bounced':
+            log.bounced_emails = _append_unique_email(log.bounced_emails, email)
+
+        history = list(log.event_history or [])
+        history.append(event_record)
+        log.event_history = history[-500:]
+        log.delivered_count = len(log.delivered_emails or [])
+        log.opened_count = len(log.opened_emails or [])
+        log.clicked_count = len(log.clicked_emails or [])
+        log.bounced_count = len(log.bounced_emails or [])
+        log.save(update_fields=[
+            'delivered_emails', 'opened_emails', 'clicked_emails', 'bounced_emails',
+            'event_history', 'delivered_count', 'opened_count', 'clicked_count', 'bounced_count'
+        ])
+        updated += 1
+
+    return JsonResponse({'ok': True, 'updated': updated})
 
 @api_view(['GET'])
 def article_detail_by_slug(request, slug):

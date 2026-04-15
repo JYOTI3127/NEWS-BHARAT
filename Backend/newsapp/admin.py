@@ -31,6 +31,20 @@ admin.site.site_title  = "News Bharat Admin"
 admin.site.index_title = "Welcome to News Bharat Dashboard"
 
 
+class NewsletterLogAdmin(admin.ModelAdmin):
+    list_display = (
+        'subject', 'trace_id', 'sent_at', 'sent_count', 'failed_count',
+        'delivered_count', 'bounced_count', 'opened_count', 'clicked_count'
+    )
+    search_fields = ('subject',)
+    readonly_fields = (
+        'trace_id', 'subject', 'recipients', 'success_emails', 'failed_emails',
+        'delivered_emails', 'opened_emails', 'clicked_emails', 'bounced_emails',
+        'event_history', 'sent_count', 'failed_count', 'delivered_count',
+        'opened_count', 'clicked_count', 'bounced_count', 'sent_at'
+    )
+
+
 # ══════════════════════════════════════════════════════════════
 #  INLINES
 # ══════════════════════════════════════════════════════════════
@@ -1038,4 +1052,4 @@ admin_site.register(HomepageSlot,               HomepageSlotAdmin)
 admin_site.register(MetalRate)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
-admin.site.register(NewsletterLog)
+admin_site.register(NewsletterLog,               NewsletterLogAdmin)

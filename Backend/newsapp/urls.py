@@ -44,5 +44,6 @@ urlpatterns = [
     path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
     path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
     path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
+    path('newsletter/brevo-webhook/', views.newsletter_brevo_webhook, name='newsletter_brevo_webhook'),
 ]
 

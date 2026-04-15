@@ -206,6 +206,11 @@
         <div class="saved-newsletters-panel__sub">Open previous drafts anytime</div>
       </div>
       <div id="saved-newsletters"></div>
+      <div class="saved-newsletters-panel__head newsletter-log-head">
+        <div class="saved-newsletters-panel__title">Send Logs</div>
+        <div class="saved-newsletters-panel__sub">Delivery status from backend and Brevo webhooks</div>
+      </div>
+      <div id="newsletter-send-logs"></div>
     </aside>
     <div class="email-wrap" id="nl-preview">
       <div class="nl-header">
@@ -374,8 +379,13 @@
     const CUSTOM_EMAILS_STORAGE_KEY = 'n4b_custom_emails';
     const SAVED_NEWSLETTERS_STORAGE_KEY = 'n4b_saved_newsletters';
 
-    document.getElementById('nl-date').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-    renderEmailLists(); renderTestEmails(); renderSavedDrafts(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
+    setCurrentNewsletterDate();
+    renderEmailLists(); renderTestEmails(); renderSavedDrafts(); loadNewsletterLogs(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
+
+    function setCurrentNewsletterDate() {
+      const el = document.getElementById('nl-date');
+      if (el) el.textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
 
     function normalizeArticle(a) {
       return {
@@ -642,6 +652,55 @@
       renderSavedDrafts();
       showStatus('Saved newsletter removed.');
     }
+    function summarizeEmails(label, emails, limit = 8) {
+      const list = Array.isArray(emails) ? emails : [];
+      if (!list.length) return `<div class="newsletter-log-empty">${label}: none</div>`;
+      const visible = list.slice(0, limit).map(email => `<span>${escapeHTML(email.email || email)}</span>`).join('');
+      return `<details class="newsletter-log-emails"><summary>${label}: ${list.length}</summary><div>${visible}${list.length > limit ? `<span>+${list.length - limit} more</span>` : ''}</div></details>`;
+    }
+    function renderNewsletterLogs(history) {
+      const wrap = document.getElementById('newsletter-send-logs');
+      if (!wrap) return;
+      if (!history.length) {
+        wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">No send logs yet.</div>';
+        return;
+      }
+      wrap.innerHTML = history.map(log => `
+        <details class="newsletter-log-card">
+          <summary>
+            <span>${escapeHTML(log.subject || 'Untitled newsletter')}</span>
+            <b>${log.sent_count || 0}/${(log.recipients || []).length || 0} SMTP accepted</b>
+          </summary>
+          <div class="newsletter-log-meta">${escapeHTML(log.sent_at_ist || '')}</div>
+          <div class="newsletter-log-meta">Trace: ${escapeHTML(log.trace_id || 'not available')}</div>
+          <div class="newsletter-log-stats">
+            <span>SMTP accepted ${log.sent_count || 0}</span>
+            <span>SMTP failed ${log.failed_count || 0}</span>
+            <span>Brevo delivered ${log.delivered_count || 0}</span>
+            <span>Brevo bounced ${log.bounced_count || 0}</span>
+            <span>Opened ${log.opened_count || 0}</span>
+            <span>Clicked ${log.clicked_count || 0}</span>
+          </div>
+          ${summarizeEmails('Recipients', log.recipients)}
+          ${summarizeEmails('SMTP accepted', log.success_emails)}
+          ${summarizeEmails('SMTP failed', log.failed_emails)}
+          ${summarizeEmails('Bounced back', log.bounced_emails)}
+          ${summarizeEmails('Delivered', log.delivered_emails)}
+          ${(log.event_history || []).length ? `<details class="newsletter-log-emails"><summary>Recent events: ${log.event_history.length}</summary><div>${(log.event_history || []).slice(-10).reverse().map(evt => `<span>${escapeHTML(evt.at || '')} - ${escapeHTML(evt.event || '')} - ${escapeHTML(evt.email || '')}${evt.reason ? ` (${escapeHTML(evt.reason)})` : ''}</span>`).join('')}</div></details>` : ''}
+        </details>
+      `).join('');
+    }
+    async function loadNewsletterLogs() {
+      const wrap = document.getElementById('newsletter-send-logs');
+      if (wrap) wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">Loading send logs...</div>';
+      try {
+        const r = await fetch('/api/newsletter/history/?limit=30', { headers: { 'Accept': 'application/json' } });
+        const d = await r.json();
+        renderNewsletterLogs(Array.isArray(d.history) ? d.history : []);
+      } catch (e) {
+        if (wrap) wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">Could not load send logs.</div>';
+      }
+    }
     function parseEmailBatch(raw) {
       return Array.from(new Set(
         String(raw || '')
@@ -807,14 +866,19 @@
     async function sendTestNewsletter() {
       if (!chosen['hero']) { alert('Please choose a Cover Story first.'); return; }
       if (!testEmails.length) { alert('Please add at least one test recipient email first.'); return; }
+      setCurrentNewsletterDate();
       const btn = document.getElementById('test-btn');
       btn.disabled = true; btn.textContent = '🧪 Sending Test...';
       const payload = { recipients: testEmails, html: buildFinalHTML(), subject: normalizeSubjectLine(`[TEST] ${getSubjectLine()}`), is_test: true, chosen_articles: Object.fromEntries(Object.entries(chosen).map(([k, v]) => [k, v?.slug])) };
       try {
         const r = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
-        if (r.ok) { showStatus(`✅ Test sent to ${testEmails.length} addresses!`); }
-        else { alert('Error: ' + JSON.stringify(d)); }
+        if (r.ok && d.sent > 0) {
+          showStatus(`SMTP accepted ${d.sent} test email${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''}.`);
+          if (d.failed) alert('Some test emails failed:\n' + JSON.stringify(d.failed_emails, null, 2));
+          loadNewsletterLogs();
+        }
+        else { alert('Newsletter send failed:\n' + JSON.stringify(d, null, 2)); }
       } catch (e) { alert('Could not reach backend.\n\n' + e.message); }
       btn.disabled = false; btn.textContent = '🧪 Send Test Newsletter';
     }
@@ -823,14 +887,19 @@
       const allEmails = [...staticEmails, ...customEmails];
       if (!allEmails.length) { alert('Please add email addresses in the Recipients tab first.'); return; }
       if (!chosen['hero']) { alert('Please choose a Cover Story article first.'); return; }
+      setCurrentNewsletterDate();
       const btn = document.querySelector('.send-btn');
       btn.disabled = true; btn.textContent = 'Sending...';
       const payload = { recipients: allEmails, html: buildFinalHTML(), subject: getSubjectLine(), chosen_articles: Object.fromEntries(Object.entries(chosen).map(([k, v]) => [k, v?.slug])) };
       try {
         const r = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
-        if (r.ok) { showStatus(`Sent to ${d.sent} recipients (saved subscribers included)!`); }
-        else { alert('Error: ' + JSON.stringify(d)); }
+        if (r.ok && d.sent > 0) {
+          showStatus(`SMTP accepted ${d.sent} recipient${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''} (saved subscribers included).`);
+          if (d.failed) alert('Some emails failed:\n' + JSON.stringify(d.failed_emails, null, 2));
+          loadNewsletterLogs();
+        }
+        else { alert('Newsletter send failed:\n' + JSON.stringify(d, null, 2)); }
       } catch (e) { alert('Could not reach the backend.\n\n' + e.message); }
       btn.disabled = false; btn.textContent = 'Send Newsletter';
     }

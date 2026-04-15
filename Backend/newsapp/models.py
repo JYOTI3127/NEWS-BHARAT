@@ -688,11 +688,23 @@ class Notification(models.Model):
 
 class NewsletterLog(models.Model):
     """Newsletter send history track karta hai"""
+    trace_id = models.CharField(max_length=40, blank=True, default='', db_index=True)
     subject       = models.CharField(max_length=300)
     recipients    = models.JSONField(default=list)        # list of emails
     chosen_articles = models.JSONField(default=dict)      # {"hero": "slug", ...}
+    success_emails = models.JSONField(default=list)
+    failed_emails = models.JSONField(default=list)
+    delivered_emails = models.JSONField(default=list)
+    opened_emails = models.JSONField(default=list)
+    clicked_emails = models.JSONField(default=list)
+    bounced_emails = models.JSONField(default=list)
+    event_history = models.JSONField(default=list)
     sent_count    = models.IntegerField(default=0)
     failed_count  = models.IntegerField(default=0)
+    delivered_count = models.IntegerField(default=0)
+    opened_count = models.IntegerField(default=0)
+    clicked_count = models.IntegerField(default=0)
+    bounced_count = models.IntegerField(default=0)
     sent_at       = models.DateTimeField(auto_now_add=True)
  
     class Meta:

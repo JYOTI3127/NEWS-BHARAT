@@ -39,6 +39,7 @@ class NewsletterLogAdmin(admin.ModelAdmin):
     search_fields = ('subject',)
     readonly_fields = (
         'trace_id', 'subject', 'recipients', 'success_emails', 'failed_emails',
+        'brevo_message_ids',
         'delivered_emails', 'opened_emails', 'clicked_emails', 'bounced_emails',
         'event_history', 'sent_count', 'failed_count', 'delivered_count',
         'opened_count', 'clicked_count', 'bounced_count', 'sent_at'

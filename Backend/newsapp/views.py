@@ -2218,7 +2218,10 @@ Website: https://news4bharat.com
  
     success = []
     failed = []
+    brevo_message_ids = []
     trace_id = uuid.uuid4().hex[:12]
+    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
+    send_provider = 'brevo_api' if brevo_api_key else 'smtp'
     newsletter_log = None
     try:
         newsletter_log = _save_history(
@@ -2234,10 +2237,7 @@ Website: https://news4bharat.com
     except Exception as e:
         logger.warning(f"Could not create newsletter history: {e}")
 
-    connection = get_connection(fail_silently=False)
-
-    try:
-        connection.open()
+    if brevo_api_key:
         for email in recipients:
             try:
                 personalized_html = html_content.replace(
@@ -2248,33 +2248,91 @@ Website: https://news4bharat.com
                     NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
                     _get_newsletter_subscribe_base_url(),
                 )
-                msg = EmailMultiAlternatives(
-                    subject=subject,
-                    body=plain_text,
-                    from_email=from_email,
-                    to=[email],
-                    connection=connection,
-                    headers={
+                payload = {
+                    'sender': {
+                        'name': getattr(settings, 'NEWSLETTER_FROM_NAME', 'News4Bharat'),
+                        'email': sender_email,
+                    },
+                    'to': [{'email': email}],
+                    'subject': subject,
+                    'htmlContent': personalized_html,
+                    'textContent': plain_text,
+                    'headers': {
                         'X-News4Bharat-Newsletter-Trace': trace_id,
                         'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
                     },
+                    'tags': ['newsletter', 'test' if is_test else 'newsletter-send'],
+                }
+                response = requests.post(
+                    'https://api.brevo.com/v3/smtp/email',
+                    headers={
+                        'accept': 'application/json',
+                        'api-key': brevo_api_key,
+                        'content-type': 'application/json',
+                    },
+                    json=payload,
+                    timeout=30,
                 )
-                msg.attach_alternative(personalized_html, "text/html")
-                msg.send(fail_silently=False)
+                try:
+                    response_data = response.json()
+                except Exception:
+                    response_data = {'raw': response.text}
+                if not 200 <= response.status_code < 300:
+                    failed.append({
+                        'email': email,
+                        'error': response_data,
+                        'status_code': response.status_code,
+                    })
+                    logger.error(f"Newsletter Brevo API failed for {email}: {response.status_code} {response_data}")
+                    continue
+                message_id = response_data.get('messageId') or response_data.get('message_id') or ''
                 success.append(email)
-                logger.info(f"Newsletter sent to {email}")
+                brevo_message_ids.append({'email': email, 'message_id': message_id})
+                logger.info(f"Newsletter Brevo API accepted for {email}: {message_id}")
             except Exception as e:
                 failed.append({'email': email, 'error': str(e)})
-                logger.error(f"Newsletter failed for {email}: {e}")
-    except Exception as e:
-        if not success and not failed:
-            failed = [{'email': email, 'error': str(e)} for email in recipients]
-        logger.error(f"Newsletter SMTP connection failed: {e}")
-    finally:
+                logger.error(f"Newsletter Brevo API exception for {email}: {e}")
+    else:
+        connection = get_connection(fail_silently=False)
         try:
-            connection.close()
-        except Exception:
-            pass
+            connection.open()
+            for email in recipients:
+                try:
+                    personalized_html = html_content.replace(
+                        NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                        _build_subscribe_url(request, email),
+                    )
+                    personalized_html = personalized_html.replace(
+                        NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                        _get_newsletter_subscribe_base_url(),
+                    )
+                    msg = EmailMultiAlternatives(
+                        subject=subject,
+                        body=plain_text,
+                        from_email=from_email,
+                        to=[email],
+                        connection=connection,
+                        headers={
+                            'X-News4Bharat-Newsletter-Trace': trace_id,
+                            'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
+                        },
+                    )
+                    msg.attach_alternative(personalized_html, "text/html")
+                    msg.send(fail_silently=False)
+                    success.append(email)
+                    logger.info(f"Newsletter sent to {email}")
+                except Exception as e:
+                    failed.append({'email': email, 'error': str(e)})
+                    logger.error(f"Newsletter failed for {email}: {e}")
+        except Exception as e:
+            if not success and not failed:
+                failed = [{'email': email, 'error': str(e)} for email in recipients]
+            logger.error(f"Newsletter SMTP connection failed: {e}")
+        finally:
+            try:
+                connection.close()
+            except Exception:
+                pass
  
     try:
         if newsletter_log:
@@ -2282,19 +2340,21 @@ Website: https://news4bharat.com
             newsletter_log.failed_count = len(failed)
             newsletter_log.success_emails = success
             newsletter_log.failed_emails = failed
+            newsletter_log.brevo_message_ids = brevo_message_ids
             newsletter_log.event_history = [
                 *list(newsletter_log.event_history or []),
                 {
-                    'event': 'smtp_accepted' if success else 'smtp_failed',
+                    'event': f'{send_provider}_accepted' if success else f'{send_provider}_failed',
                     'email': '',
                     'subject': subject,
                     'at': timezone.localtime(timezone.now()).strftime('%d/%m/%Y %I:%M %p'),
-                    'raw_event': 'django_smtp_send',
-                    'reason': f'{len(success)} accepted by SMTP, {len(failed)} failed before SMTP acceptance',
+                    'raw_event': f'django_{send_provider}_send',
+                    'reason': f'{len(success)} accepted by {send_provider}, {len(failed)} failed',
                 }
             ]
             newsletter_log.save(update_fields=[
-                'sent_count', 'failed_count', 'success_emails', 'failed_emails', 'event_history'
+                'sent_count', 'failed_count', 'success_emails', 'failed_emails',
+                'brevo_message_ids', 'event_history'
             ])
     except Exception as e:
         logger.warning(f"Could not update newsletter history: {e}")
@@ -2312,7 +2372,9 @@ Website: https://news4bharat.com
         'sent_at_ist': timezone.localtime(sent_at).strftime('%d/%m/%Y %I:%M %p'),
         'log_id': getattr(newsletter_log, 'id', None),
         'trace_id': trace_id,
-        'note': 'sent means SMTP accepted the message. Delivered/bounced updates require Brevo webhook events.',
+        'provider': send_provider,
+        'brevo_message_ids': brevo_message_ids,
+        'note': 'Brevo API accepted means Brevo created a message id. Delivered/bounced updates require Brevo webhook events.',
     }, status=response_status)
  
  
@@ -2357,6 +2419,7 @@ def newsletter_history(request):
                 'opened_emails': item.opened_emails or [],
                 'clicked_emails': item.clicked_emails or [],
                 'bounced_emails': item.bounced_emails or [],
+                'brevo_message_ids': item.brevo_message_ids or [],
                 'event_history': (item.event_history or [])[-50:],
                 'sent_count': item.sent_count,
                 'failed_count': item.failed_count,
@@ -2391,7 +2454,7 @@ def _newsletter_event_name(raw_event):
     return event or 'unknown'
 
 
-def _find_newsletter_log_for_event(email, subject, log_id=None):
+def _find_newsletter_log_for_event(email, subject, log_id=None, message_id=''):
     from newsapp.models import NewsletterLog
 
     if log_id:
@@ -2406,6 +2469,18 @@ def _find_newsletter_log_for_event(email, subject, log_id=None):
         match = NewsletterLog.objects.filter(trace_id=trace_id).first()
         if match:
             return match
+
+    message_id = str(message_id or '').strip()
+    if message_id:
+        match = NewsletterLog.objects.filter(
+            brevo_message_ids__contains=[{'email': str(email or '').strip().lower(), 'message_id': message_id}]
+        ).first()
+        if match:
+            return match
+        for item in NewsletterLog.objects.order_by('-sent_at')[:100]:
+            for stored in item.brevo_message_ids or []:
+                if str(stored.get('message_id') or '').strip() == message_id:
+                    return item
 
     qs = NewsletterLog.objects.order_by('-sent_at')
     if subject:
@@ -2442,19 +2517,27 @@ def newsletter_brevo_webhook(request):
         ).strip().lower()
         subject = str(event_payload.get('subject') or '').strip()
         event = _newsletter_event_name(event_payload.get('event'))
+        message_id = str(
+            event_payload.get('message-id')
+            or event_payload.get('messageId')
+            or event_payload.get('message_id')
+            or event_payload.get('Message-ID')
+            or ''
+        ).strip()
         log_id = (
             event_payload.get('newsletter_log_id')
             or event_payload.get('log_id')
             or event_payload.get('trace_id')
             or event_payload.get('X-News4Bharat-Newsletter-Trace')
         )
-        log = _find_newsletter_log_for_event(email, subject, log_id=log_id)
+        log = _find_newsletter_log_for_event(email, subject, log_id=log_id, message_id=message_id)
         if not log:
             continue
 
         event_record = {
             'event': event,
             'email': email,
+            'message_id': message_id,
             'subject': subject or log.subject,
             'at': timezone.localtime(timezone.now()).strftime('%d/%m/%Y %I:%M %p'),
             'raw_event': event_payload.get('event'),

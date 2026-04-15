@@ -698,6 +698,7 @@ class NewsletterLog(models.Model):
     opened_emails = models.JSONField(default=list)
     clicked_emails = models.JSONField(default=list)
     bounced_emails = models.JSONField(default=list)
+    brevo_message_ids = models.JSONField(default=list)
     event_history = models.JSONField(default=list)
     sent_count    = models.IntegerField(default=0)
     failed_count  = models.IntegerField(default=0)

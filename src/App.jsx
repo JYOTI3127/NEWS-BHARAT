@@ -30,6 +30,7 @@ const FoundersNote = lazy(() => import("./pages/Foundersnote"));
 const EditorialPolicy = lazy(() => import("./pages/Editorialpolicy"));
 const CareersPage = lazy(() => import("./pages/Careerspage"));
 const ContactPage = lazy(() => import("./pages/Contactpage"));
+const NewsletterPage = lazy(() => import("./pages/NewsletterPage"));
 const CommingSoon = lazy(() => import("./pages/ComingSoon"));
 const ArticleDetails = lazy(() => import("./pages/ArticleDetails"));
 const SixtySecondsPage = lazy(() => import("./pages/Sixtysecondspage"));
@@ -180,6 +181,7 @@ function Layout() {
             <Route path="/editorial-policy" element={<EditorialPolicy />} />
             <Route path="/careers" element={<CareersPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/newsletter" element={<NewsletterPage />} />
             <Route path="/CommingSoon" element={<CommingSoon />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />

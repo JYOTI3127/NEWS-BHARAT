@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import MenuDrawer from "./MenuDrawer";
 import { apiUrl } from "../lib/api";
@@ -26,11 +26,12 @@ const HomeIcon = ({ active }) => (
   </svg>
 );
 
-const VideosIcon = ({ active }) => (
+const NewsletterIcon = ({ active }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
     stroke={active ? "#D80100" : "#999999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <polygon points="10,8 16,12 10,16" fill={active ? "#D80100" : "#999999"} stroke="none" />
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <path d="M4 8.5l8 5 8-5" />
+    <path d="M8 16h8" />
   </svg>
 );
 
@@ -63,10 +64,40 @@ const MenuIcon = ({ active }) => (
   </svg>
 );
 
+const getSearchResultHref = (item) => {
+  const articlePath = getArticlePath(item);
+  if (articlePath) return articlePath;
+  if (item?.url) return item.url;
+  if (item?.slug) return `/news/${item.slug}`;
+  return "/";
+};
+
+const getSearchPreview = (item) => {
+  const raw =
+    item?.subtitle ||
+    item?.summary ||
+    item?.excerpt ||
+    item?.description ||
+    item?.content ||
+    "";
+
+  return String(raw)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 95);
+};
+
 export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchDebounceRef = useRef(null);
+  const searchInputRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -114,6 +145,93 @@ export default function BottomNav() {
     return () => cancelDeferred();
   }, [isMobileView, showBreaking]);
 
+  useEffect(() => {
+    if (!searchOpen) return undefined;
+
+    const focusTimer = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 120);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const fetchSearchResults = async (query) => {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const res = await fetch(apiUrl(`/search/articles/?q=${encodeURIComponent(trimmedQuery)}`));
+      if (!res.ok) throw new Error("Search request failed");
+
+      const data = await res.json();
+      const results = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data?.articles)
+            ? data.articles
+            : [];
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search API error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+
+    if (!value.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    searchDebounceRef.current = window.setTimeout(() => {
+      fetchSearchResults(value);
+    }, 350);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key !== "Enter") return;
+
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+
+    fetchSearchResults(searchQuery);
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setIsSearching(false);
+  };
+
   const handleCloseBreaking = () => {
     sessionStorage.setItem("breakingClosed", "true");
     setShowBreaking(false);
@@ -121,14 +239,97 @@ export default function BottomNav() {
 
   const navItems = [
     { label: "Home", path: "/", icon: HomeIcon },
-    { label: "Videos", path: "/videos", icon: VideosIcon },
-    { label: "Search", path: "/search", icon: SearchIcon },
-    { label: "60 Second", path: "/live", icon: LiveTVIcon },
+    { label: "Newsletter", path: "/newsletter", icon: NewsletterIcon },
+    { label: "Search", action: "search", icon: SearchIcon },
+    {
+      label: "60 Second",
+      path: "/60-second-read",
+      activePaths: ["/60-second-read", "/category/60-second-read"],
+      icon: LiveTVIcon,
+    },
   ];
 
   return (
     <>
       {menuOpen && <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />}
+      {searchOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/45 md:hidden" onClick={closeSearch}>
+          <div
+            className="absolute left-3 right-3 bottom-[72px] rounded-lg bg-white shadow-[0_18px_55px_rgba(0,0,0,0.22)] overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+              <div>
+                <p className="m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-red-600">
+                  Search
+                </p>
+                <p className="m-0 mt-0.5 text-[12px] text-slate-500">
+                  News, topics, articles
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeSearch}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500"
+                aria-label="Close search"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-3">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
+                <SearchIcon active={false} />
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Search news..."
+                  className="min-w-0 flex-1 bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="mt-3 max-h-[330px] overflow-y-auto rounded-lg border border-slate-100 bg-white">
+                {isSearching ? (
+                  <div className="px-4 py-5 text-center text-[13px] font-medium text-slate-500">
+                    Searching...
+                  </div>
+                ) : searchQuery.trim() && searchResults.length === 0 ? (
+                  <div className="px-4 py-5 text-center text-[13px] font-medium text-slate-500">
+                    No results found.
+                  </div>
+                ) : !searchQuery.trim() ? (
+                  <div className="px-4 py-5 text-center text-[13px] text-slate-500">
+                    Type to search latest articles.
+                  </div>
+                ) : (
+                  searchResults.map((item, index) => (
+                    <button
+                      key={item?.id || item?.slug || `${item?.title || "result"}-${index}`}
+                      type="button"
+                      onClick={() => {
+                        closeSearch();
+                        navigate(getSearchResultHref(item));
+                      }}
+                      className="block w-full border-b border-slate-100 bg-white px-3 py-3 text-left last:border-b-0 hover:bg-red-50"
+                    >
+                      <span className="block text-[13px] font-semibold leading-snug text-slate-900">
+                        {item?.title || item?.headline || "Untitled"}
+                      </span>
+                      {getSearchPreview(item) ? (
+                        <span className="mt-1 block text-[11px] leading-[1.4] text-slate-500">
+                          {getSearchPreview(item)}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 z-50 font-sans block md:hidden">
         {showBreaking && (
@@ -186,12 +387,19 @@ export default function BottomNav() {
           flex justify-around items-center
           shadow-[0_-2px_10px_rgba(0,0,0,0.08)]
         ">
-          {navItems.map(({ label, path, icon: Icon }) => {
-            const active = location.pathname === path;
+          {navItems.map(({ label, path, activePaths = [path], action, icon }) => {
+            const active = action === "search" ? searchOpen : activePaths.includes(location.pathname);
             return (
               <button
                 key={label}
-                onClick={() => navigate(path)}
+                onClick={() => {
+                  if (action === "search") {
+                    setMenuOpen(false);
+                    setSearchOpen(true);
+                    return;
+                  }
+                  navigate(path);
+                }}
                 className={`
                   flex flex-col items-center justify-center
                   gap-0.5 xs:gap-1
@@ -202,7 +410,7 @@ export default function BottomNav() {
                 `}
               >
                 <span className="w-5 h-5 xs:w-6 xs:h-6 flex items-center justify-center">
-                  <Icon active={active} />
+                  {icon({ active })}
                 </span>
                 <span className={`
                   text-[9px] xs:text-[10px] sm:text-[11px]

@@ -78,6 +78,9 @@ export default function NewsBanner({ articles = [], loading = false }) {
 
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [is320, setIs320] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 320 : false
+  );
   const supportsPointerEvents = typeof window !== "undefined" && !!window.PointerEvent;
 
   // ✅ useEffect + fetch HATAYA — useQuery lagaya
@@ -153,6 +156,15 @@ export default function NewsBanner({ articles = [], loading = false }) {
     return () => clearInterval(interval);
   }, [animating, slides.length]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIs320(window.innerWidth <= 320);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const navigateToArticle = (article) => {
     const path = getArticlePath(article);
     if (path) navigate(path);
@@ -212,7 +224,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   if (loading || slides.length === 0) return null;
 
   const slide = slides[current];
-  const currentBottomNews = bottomNews;
+  const currentBottomNews = is320 ? bottomNews.slice(0, 2) : bottomNews;
   const visibleDotIndexes = getVisibleDotIndexes();
 
   const emitBannerReady = () => {
@@ -300,7 +312,10 @@ export default function NewsBanner({ articles = [], loading = false }) {
             </div>
           </div>
 
-          <div className="nb-bottom">
+          <div
+            className="nb-bottom"
+            style={is320 ? { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } : undefined}
+          >
             {currentBottomNews.map((item) => (
               <div
                 key={item.id}

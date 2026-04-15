@@ -113,23 +113,23 @@ const Home = () => {
         />
       </Profiler>
 
-      <DeferredSection id="VisualStories" minHeight={400}>
+      <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash}>
         <VisualStoriesWithScore articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="NewsPortalSection">
+      <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash}>
         <NewsPortalSection articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="StateNews" minHeight={560}>
+      <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash}>
         <StateNews articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px">
+      <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash}>
         <HomeCategorySections articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px">
+      <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash}>
         <MoreStoriesSection articles={allArticles} />
       </DeferredSection>
 

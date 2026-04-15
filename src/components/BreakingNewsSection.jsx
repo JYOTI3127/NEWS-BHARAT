@@ -122,14 +122,14 @@ export default function BreakingNewsSection({ articles = [] }) {
   return (
     <section
       className="
-        mx-auto mt-7 mb-9 w-[min(1200px,calc(100%-72px))] rounded-[14px] border-t-2 border-dotted border-[#8d8d8d] pt-3
+        mx-auto mt-7 mb-9 w-[min(1120px,calc(100%-96px))] rounded-[14px] border-t-2 border-dotted border-[#8d8d8d] pt-3
         font-[Poppins,sans-serif]
-        min-[1441px]:max-[2560px]:w-[min(1680px,calc(100%-160px))]
-        max-[1024px]:w-[min(100%,calc(100%-28px))]
-        max-[768px]:w-[calc(100%-20px)]
-        max-[425px]:w-[calc(100%-16px)]
-        max-[375px]:w-[calc(100%-14px)]
-        max-[320px]:w-[calc(100%-12px)]
+        min-[1441px]:max-[2560px]:w-[min(1560px,calc(100%-240px))]
+        max-[1024px]:w-[min(100%,calc(100%-56px))]
+        max-[768px]:w-[calc(100%-40px)]
+        max-[425px]:w-[calc(100%-32px)]
+        max-[375px]:w-[calc(100%-28px)]
+        max-[320px]:w-[calc(100%-24px)]
         max-[640px]:mt-[22px] max-[640px]:mb-7
       "
       aria-labelledby="breaking-news-heading"

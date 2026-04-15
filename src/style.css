@@ -13848,3 +13848,16 @@ img {
     margin-top: 8px !important;
   }
 }
+
+@media (min-width: 321px) and (max-width: 375px) {
+  .tn-feature-cards {
+    width: calc(100% - 14px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .tn-feature-card {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}

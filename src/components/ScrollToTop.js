@@ -18,22 +18,42 @@ function ScrollToTop() {
 
     const targetId = decodeURIComponent(hash.replace("#", ""));
     let attempts = 0;
+    let timeoutId = 0;
+
+    const getHeaderOffset = () => {
+      const headerHeight =
+        document.querySelector(".header-wrapper")?.getBoundingClientRect().height || 0;
+      return headerHeight + 24;
+    };
 
     const scrollToHashTarget = () => {
       const element = document.getElementById(targetId);
       if (!element) {
         attempts += 1;
         if (attempts < 30) {
-          window.setTimeout(scrollToHashTarget, 100);
+          timeoutId = window.setTimeout(scrollToHashTarget, 100);
         }
         return;
       }
 
-      element.scrollIntoView({ block: "start" });
+      const top =
+        element.getBoundingClientRect().top +
+        window.scrollY -
+        getHeaderOffset();
+
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: attempts < 2 ? "auto" : "smooth",
+      });
+
+      attempts += 1;
+      if (attempts < 12) {
+        timeoutId = window.setTimeout(scrollToHashTarget, 250);
+      }
     };
 
-    scrollToHashTarget();
-    return undefined;
+    timeoutId = window.setTimeout(scrollToHashTarget, 50);
+    return () => window.clearTimeout(timeoutId);
   }, [pathname, hash]);
 
   return null;

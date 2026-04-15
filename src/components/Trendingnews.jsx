@@ -89,13 +89,6 @@ const ArrowBtn = memo(({ direction, disabled, onClick, compact = false }) => (
   </div>
 ));
 
-const FlameSvg = memo(() => (
-  <svg width={22} height={30} viewBox="0 0 22 30">
-    <path d="M11 2C11 2 5 9 5 16a6 6 0 0 0 12 0C17 9 11 2 11 2z" fill="#f9a825" />
-    <path d="M11 20a2.5 2.5 0 0 1-2.5-2.5C8.5 15.5 11 12 11 12s2.5 3.5 2.5 5A2.5 2.5 0 0 1 11 20z" fill="#fff" />
-  </svg>
-));
-
 // ── Skeleton ──────────────────────────────────────────────────
 const Skeleton = memo(({ h = "16px", w = "100%", mb = "8px" }) => (
   <div style={{
@@ -264,8 +257,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
     [articles]
   );
   const totalPages = Math.ceil(withImage.length / 3);
-
-  useEffect(() => { setPage(0); }, [withImage.length]);
+  const safePage = totalPages > 0 ? page % totalPages : 0;
 
   useEffect(() => {
     if (loading || withImage.length === 0) return;
@@ -280,7 +272,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
     return () => clearInterval(timerRef.current);
   }, [loading, withImage.length, totalPages]);
 
-  const cards = withImage.slice(page * 3, page * 3 + 3);
+  const cards = withImage.slice(safePage * 3, safePage * 3 + 3);
   const transitionStyle = {
     opacity:   animDir === "out" ? 0 : 1,
     transform: animDir === "out" ? "translateY(10px)" : "translateY(0px)",
@@ -437,7 +429,7 @@ const LiveUpdates = memo(({ is2K }) => {
 // Pehle: Banner ke setInterval se poora TrendingNews re-render hota tha
 // Ab: sirf Banner re-render hoga har 3 sec mein
 // ─────────────────────────────────────────────
-const bannerSlides = [
+const FALLBACK_BANNER_SLIDES = [
   {
     leftBgClass: "bg-[#1e5c42]", brand1: "PRATIYOGITA", brand2: "DARPAN",
     price: "PRICE ₹125.00", date: "FEBRUARY 2024", tagline: "WHERE EXCELLENCE GUIDES THE SUCCESS",
@@ -461,52 +453,64 @@ const bannerSlides = [
   },
 ];
 
+const getAdImageUrl = (ad) => {
+  const image = ad?.image_url || ad?.ad_image_url || ad?.image || ad?.ad_image;
+  if (!image) return "";
+  if (typeof image === "string") return image;
+  return image?.url || "";
+};
+
 const Banner = memo(() => {
-  const [cur, setCur]       = useState(0);
-  const [fading, setFading] = useState(false);
+  const [adSlot, setAdSlot] = useState(null);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setFading(true);
-      setTimeout(() => { setCur((c) => (c + 1) % bannerSlides.length); setFading(false); }, 350);
-    }, 3000);
-    return () => clearInterval(t);
+    let ignore = false;
+
+    fetch(apiUrl("/homepage/ad_banner/current/"))
+      .then((response) => {
+        if (!response.ok) throw new Error("Ad slot unavailable");
+        return response.json();
+      })
+      .then((data) => {
+        if (!ignore) setAdSlot(data);
+      })
+      .catch(() => {
+        if (!ignore) setAdSlot(null);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const s = bannerSlides[cur];
+  const adImageUrl = getAdImageUrl(adSlot);
+  const adLinkUrl = adSlot?.link_url || "";
+  const shouldShowAd = adSlot?.is_active === true && Boolean(adImageUrl);
+
+  if (!shouldShowAd) return null;
+
+  const image = (
+    <img
+      src={adImageUrl}
+      alt={adSlot?.alt || "Sponsored advertisement"}
+      loading="lazy"
+      decoding="async"
+      className="block h-[115px] w-full rounded-[2px] object-cover"
+    />
+  );
+
   return (
-    <div className="tn-banner">
-      <div className={`tn-banner-slide transition-all duration-300 ease-out ${fading ? "opacity-0 translate-y-[6px]" : "opacity-100 translate-y-0"}`}>
-        <div className={`tn-banner-left ${s.leftBgClass}`}>
-          <div className="tn-banner-left-redbar" />
-          <div className="tn-banner-left-greenbar" />
-          <div className="tn-banner-left-content">
-            <div className="tn-banner-meta">{s.price}</div>
-            <div className="tn-banner-meta">{s.date}</div>
-            <div className="tn-banner-brands">
-              <div>
-                <div className="tn-banner-brand-name">{s.brand1}</div>
-                <div className="tn-banner-brand-name">{s.brand2}</div>
-              </div>
-              <FlameSvg />
-            </div>
-            <div className="tn-banner-tagline">{s.tagline}</div>
-          </div>
-        </div>
-        <div className={`tn-banner-mid ${s.midBgClass}`}>
-          <div className="tn-banner-mid-tag">{s.midTag}</div>
-          <div className={`tn-banner-mid-box ${s.midBoxBgClass}`}>
-            <div className="tn-banner-mid-line">{s.midL1}</div>
-            <div className="tn-banner-mid-line">{s.midL2}</div>
-            <div className="tn-banner-mid-line">{s.midL3}</div>
-          </div>
-        </div>
-        <div className={`tn-banner-right ${s.rightBgClass}`}>
-          <div className="tn-banner-right-label">{s.rl}</div>
-          <div className="tn-banner-right-main">{s.rb}</div>
-          <div className="tn-banner-right-sub">{s.rs}</div>
-        </div>
-      </div>
+    <div className="tn-banner" aria-label="Sponsored advertisement">
+      {adLinkUrl ? (
+        <a
+          href={adLinkUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="block no-underline"
+        >
+          {image}
+        </a>
+      ) : image}
     </div>
   );
 });
@@ -583,6 +587,8 @@ export default function TrendingNews({ articles: passedArticles = [], categories
             <LiveUpdates />
           </div>
         )}
+
+        <Banner />
       </div>
     </div>
   );

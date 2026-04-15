@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Mail, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Eye, Mail, Share2 } from "lucide-react";
 
 const SHARE_URL = "https://news4bharat.com/#newsletter";
 const SHARE_TITLE = "News4Bharat Newsletter";
@@ -22,10 +23,9 @@ export default function Newsletter() {
 
         section.scrollIntoView({
           behavior: "smooth",
-          block: "start"        // top pe aaye
+          block: "start"
         });
 
-        // Extra adjustment after scrollIntoView
         setTimeout(() => {
           const currentScroll = window.scrollY;
           window.scrollTo({
@@ -38,7 +38,7 @@ export default function Newsletter() {
 
     tryScroll(100);
     tryScroll(600);
-    tryScroll(1200);  
+    tryScroll(1200);
 
   }, []);
 
@@ -83,25 +83,20 @@ export default function Newsletter() {
 
         <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-between gap-8 min-[1025px]:gap-12 min-[1441px]:gap-16 min-[1800px]:gap-20">
 
-          {/* LEFT — Icon + Text */}
           <div className="flex flex-col items-start text-left gap-3 min-[1441px]:gap-4 min-[1025px]:max-w-[55%] min-[1800px]:max-w-[58%]">
 
-            {/* Icon */}
             <div className="w-12 h-12 min-[1441px]:w-14 min-[1441px]:h-14 min-[1800px]:w-16 min-[1800px]:h-16 bg-white/10 border border-white/20 rounded-xl min-[1441px]:rounded-2xl flex items-center justify-center text-white self-start">
               <Mail size={26} className="min-[1800px]:w-8 min-[1800px]:h-8" />
             </div>
 
-            {/* Label */}
             <p className="text-white text-xs min-[426px]:text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base font-medium tracking-widest uppercase self-start m-0">
               Our Newsletter
             </p>
 
-            {/* Title */}
             <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[2.4rem] min-[1441px]:text-[2.45rem] min-[1800px]:text-[2rem] leading-tight m-0 self-start">
               Subscribe To Our Newsletter!
             </h2>
 
-            {/* Subtitle */}
             <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base min-[1441px]:text-[1rem] min-[1800px]:text-[1.06rem] leading-relaxed min-[1441px]:leading-7 m-0 self-start max-w-[62ch]">
               Sign up for our weekly newsletter to stay informed about exciting offers, our latest products, and industry updates.
             </p>
@@ -123,6 +118,22 @@ export default function Newsletter() {
                 Share
               </button>
 
+              <Link
+                to="/newsletter"
+                className="
+                  inline-flex items-center justify-center gap-2
+                  rounded-full border border-white/25 bg-white/10 hover:bg-white/16
+                  px-4 py-2.5 min-[1441px]:px-5
+                  text-white text-xs min-[426px]:text-sm min-[1441px]:text-[0.95rem]
+                  font-medium no-underline cursor-pointer transition-all duration-200
+                  hover:-translate-y-0.5 active:translate-y-0
+                  font-[Poppins,sans-serif]
+                "
+              >
+                <Eye size={16} />
+                View
+              </Link>
+
               {shareFeedback ? (
                 <p className="m-0 text-white/75 text-xs min-[426px]:text-sm">
                   {shareFeedback}
@@ -131,7 +142,6 @@ export default function Newsletter() {
             </div>
           </div>
 
-          {/* RIGHT — Input + Button */}
           <div className="flex flex-col min-[426px]:flex-row items-stretch min-[426px]:items-center gap-3 min-[1441px]:gap-4 min-[1025px]:min-w-[380px] min-[1441px]:min-w-[520px] min-[1800px]:min-w-[620px]">
             {submitted ? (
               <p className="text-[#7dd3a8] text-sm min-[769px]:text-base min-[1441px]:text-[1rem] font-medium m-0">

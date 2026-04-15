@@ -27,6 +27,7 @@ from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
 import os
 import uuid
+import re
 import google.generativeai as genai
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
@@ -1891,7 +1892,8 @@ def live_cricket(request):
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        cached_data = cache.get("cricket_live_data")
+        cache_key = "cricket_live_data:v2"
+        cached_data = cache.get(cache_key)
         if cached_data is not None:
             return Response(cached_data)
 
@@ -1900,7 +1902,7 @@ def live_cricket(request):
             f"https://api.cricapi.com/v1/currentMatches?apikey={settings.CRICKET_API_KEY}&offset=0",
         ]
 
-        data = None
+        matches = []
         last_status_code = None
         for url in urls:
             response = requests.get(url, timeout=15)
@@ -1909,27 +1911,66 @@ def live_cricket(request):
                 continue
             candidate = response.json()
             if candidate.get("status") == "success" and candidate.get("data"):
-                data = candidate
-                break
+                matches.extend(candidate.get("data", []))
 
-        if data is None:
+        if not matches:
             return Response({
                 "error": f"Cricket API returned status {last_status_code}",
                 "live": [], "upcoming": [], "recent": []
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        if data.get("status") != "success" or not data.get("data"):
-            return Response({
-                "error": "Invalid response from Cricket API",
-                "live": [], "upcoming": [], "recent": []
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        matches  = data.get("data", [])
         live     = []
         upcoming = []
         recent   = []
 
+        def clean_team_name(value):
+            value = str(value or '').strip()
+            if not value or value.lower() in ('tbd', 'to be decided', 'unknown'):
+                return ''
+            return value
+
+        def team_names_from_match(match):
+            teams = match.get('teams') if isinstance(match.get('teams'), list) else []
+            team_info = match.get('teamInfo') if isinstance(match.get('teamInfo'), list) else []
+            names = [
+                clean_team_name(match.get('t1')),
+                clean_team_name(match.get('t2')),
+            ]
+            names.extend(clean_team_name(team.get('name')) for team in team_info if isinstance(team, dict))
+            names.extend(clean_team_name(team) for team in teams)
+
+            if len([name for name in names if name]) < 2:
+                raw_name = str(match.get('name') or match.get('title') or '')
+                for separator in (' vs ', ' v '):
+                    if separator in raw_name.lower():
+                        parts = re.split(separator, raw_name, maxsplit=1, flags=re.IGNORECASE)
+                        names.extend(clean_team_name(part) for part in parts[:2])
+                        break
+
+            unique = []
+            for name in names:
+                if name and name.lower() not in [item.lower() for item in unique]:
+                    unique.append(name)
+            return unique[:2]
+
+        def normalize_match(match):
+            teams = team_names_from_match(match)
+            if len(teams) < 2:
+                return None
+
+            normalized = dict(match)
+            normalized['t1'] = teams[0]
+            normalized['t2'] = teams[1]
+            normalized['name'] = normalized.get('name') or f"{teams[0]} vs {teams[1]}"
+            normalized['venue'] = normalized.get('venue') or normalized.get('venueInfo') or ''
+            normalized['_has_real_teams'] = True
+            return normalized
+
         for match in matches:
+            match = normalize_match(match)
+            if not match:
+                continue
+
             match_status = str(match.get("status", "") or match.get("matchStatus", "") or "").lower()
             series_name = str(match.get("series", "") or match.get("series_name", "") or "").lower()
             match_name = str(match.get("name", "") or match.get("title", "") or "").lower()
@@ -1937,9 +1978,9 @@ def live_cricket(request):
             # Prefer IPL matches when available in the feed.
             is_ipl = "ipl" in series_name or "indian premier league" in series_name or "ipl" in match_name
 
-            if "match over" in match_status or "won" in match_status or "beat" in match_status or "result" in match_status or "completed" in match_status:
+            if match.get('matchEnded') or "match over" in match_status or "won" in match_status or "beat" in match_status or "result" in match_status or "completed" in match_status:
                 recent.append(match)
-            elif "upcoming" in match_status or "scheduled" in match_status or "preview" in match_status:
+            elif "upcoming" in match_status or "scheduled" in match_status or "preview" in match_status or "not started" in match_status:
                 upcoming.append(match)
             else:
                 live.append(match)
@@ -1947,14 +1988,17 @@ def live_cricket(request):
             match["_is_ipl"] = is_ipl
 
         def prioritize_ipl(items):
-            return sorted(items, key=lambda item: 0 if item.get("_is_ipl") else 1)
+            return sorted(items, key=lambda item: (
+                0 if item.get("_is_ipl") else 1,
+                0 if item.get("_has_real_teams") else 1,
+            ))
 
         result = {
             "live":     prioritize_ipl(live)[:1],
             "upcoming": prioritize_ipl(upcoming)[:3],
             "recent":   prioritize_ipl(recent)[:3]
         }
-        cache.set("cricket_live_data", result, 1800)
+        cache.set(cache_key, result, 1800)
         return Response(result)
 
     except requests.exceptions.Timeout:

@@ -204,6 +204,24 @@ def category_posts(request, cat_id):
 # ARTICLE VIEWS
 # ═══════════════════════════════════════════════════════
 
+@api_view(['GET', 'POST'])
+def newsletters_api(request):
+    if request.method == 'GET':
+        newsletters = NewsletterCard.objects.all().order_by('-created_at')
+        serializer = NewsletterCardSerializer(newsletters, many=True)
+        return Response(serializer.data)
+
+    if not request.user.is_authenticated or not request.user.is_staff:
+        raise PermissionDenied('Only admin users can create newsletters.')
+
+    serializer = NewsletterCardSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
 def _save_article_from_request(request, article=None):
     data  = request.POST
     files = request.FILES
@@ -898,6 +916,29 @@ def update_ad_slot(request):
 
 
 # ═══════════════════════════════════════════════════════
+@require_GET
+def homepage_ad_banner(request):
+    slot = HomepageSlot.objects.filter(slot_name='ad_banner', is_active=True).first()
+    image_url = ''
+    link_url = ''
+    updated_at = None
+
+    if slot:
+        if slot.ad_image:
+            image_url = request.build_absolute_uri(slot.ad_image.url)
+        else:
+            image_url = slot.ad_image_url or ''
+        link_url = slot.ad_link_url or ''
+        updated_at = slot.updated_at.isoformat() if slot.updated_at else None
+
+    return JsonResponse({
+        'is_active': bool(slot and image_url),
+        'image_url': image_url,
+        'link_url': link_url,
+        'updated_at': updated_at,
+    })
+
+
 # WEATHER, METALS, MARKET
 # ═══════════════════════════════════════════════════════
 

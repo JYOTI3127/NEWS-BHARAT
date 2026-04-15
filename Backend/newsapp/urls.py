@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path('categories/', category_list),
+    path('newsletters/', views.newsletters_api, name='api_newsletters'),
+    path('newsletters', views.newsletters_api, name='api_newsletters_no_slash'),
     path('articles/', article_list),
     path('articles/<int:pk>/', views.article_detail),
     path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
@@ -40,6 +42,7 @@ urlpatterns = [
     path('homepage/hero/',        views.update_hero_slot,        name='hp_hero'),
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
+    path('homepage/ad_banner/current/', views.homepage_ad_banner, name='hp_ad_current'),
     path('admin/media-library/', media_library_view, name='admin_media_library'),
     path('newsletter/send/', views.send_newsletter, name='newsletter_send'),
     path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),

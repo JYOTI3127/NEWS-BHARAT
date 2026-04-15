@@ -379,6 +379,7 @@
     const CUSTOM_EMAILS_STORAGE_KEY = 'n4b_custom_emails';
     const SAVED_NEWSLETTERS_STORAGE_KEY = 'n4b_saved_newsletters';
 
+    sanitizeRecipientLists();
     setCurrentNewsletterDate();
     renderEmailLists(); renderTestEmails(); renderSavedDrafts(); loadNewsletterLogs(); initSubjectLine(); initEmailInputs(); initPreviewSubscription(); loadArticles(); initPreviews();
 
@@ -559,6 +560,17 @@
       document.getElementById('static-emails').innerHTML = staticEmails.map((e, i) => `<div class="email-tag"><span>${e}</span><button class="email-remove" onclick="removeEmail('static',${i})">×</button></div>`).join('');
       document.getElementById('custom-emails').innerHTML = customEmails.map((e, i) => `<div class="custom-email-row"><span>${e}</span><button class="email-remove" onclick="removeEmail('custom',${i})">×</button></div>`).join('');
     }
+    function uniqueEmails(values) {
+      return parseEmailBatch(Array.isArray(values) ? values.join(' ') : values);
+    }
+    function sanitizeRecipientLists() {
+      staticEmails = uniqueEmails(staticEmails);
+      customEmails = uniqueEmails(customEmails).filter(email => !staticEmails.includes(email));
+      testEmails = uniqueEmails(testEmails);
+      localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
+      persistCustomEmails();
+      localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
+    }
     function persistCustomEmails() {
       localStorage.setItem(CUSTOM_EMAILS_STORAGE_KEY, JSON.stringify(customEmails));
     }
@@ -633,9 +645,7 @@
       staticEmails = Array.isArray(draft.staticEmails) ? draft.staticEmails : [];
       customEmails = Array.isArray(draft.customEmails) ? draft.customEmails : [];
       testEmails = Array.isArray(draft.testEmails) ? draft.testEmails : [];
-      localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
-      persistCustomEmails();
-      localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
+      sanitizeRecipientLists();
       localStorage.setItem(SUBJECT_STORAGE_KEY, normalizeSubjectLine(draft.subject || ''));
       const subjectInput = document.getElementById('subject-line-input');
       if (subjectInput) subjectInput.value = normalizeSubjectLine(draft.subject || '');
@@ -714,20 +724,39 @@
     function appendEmails(type, rawValue) {
       const emails = parseEmailBatch(rawValue);
       if (!emails.length) return false;
+      let added = 0;
       if (type === 'static') {
-        emails.forEach(email => { if (!staticEmails.includes(email)) staticEmails.push(email); });
+        emails.forEach(email => {
+          if (!staticEmails.includes(email)) {
+            staticEmails.push(email);
+            customEmails = customEmails.filter(existing => existing !== email);
+            added += 1;
+          }
+        });
         localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
+        persistCustomEmails();
       }
       else if (type === 'custom') {
-        emails.forEach(email => { if (!customEmails.includes(email)) customEmails.push(email); });
+        emails.forEach(email => {
+          if (!customEmails.includes(email) && !staticEmails.includes(email)) {
+            customEmails.push(email);
+            added += 1;
+          }
+        });
         persistCustomEmails();
       }
       else if (type === 'test') {
-        emails.forEach(email => { if (!testEmails.includes(email)) testEmails.push(email); });
+        emails.forEach(email => {
+          if (!testEmails.includes(email)) {
+            testEmails.push(email);
+            added += 1;
+          }
+        });
         localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
         renderTestEmails();
       }
       renderEmailLists();
+      if (!added) showStatus('Email already added.');
       return true;
     }
     function initEmailInputs() {
@@ -885,7 +914,8 @@
     }
 
     async function sendNewsletter() {
-      const allEmails = [...staticEmails, ...customEmails];
+      sanitizeRecipientLists();
+      const allEmails = Array.from(new Set([...staticEmails, ...customEmails]));
       if (!allEmails.length) { alert('Please add email addresses in the Recipients tab first.'); return; }
       if (!chosen['hero']) { alert('Please choose a Cover Story article first.'); return; }
       setCurrentNewsletterDate();

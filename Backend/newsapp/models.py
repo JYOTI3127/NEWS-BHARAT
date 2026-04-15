@@ -273,6 +273,8 @@ class HomepageSlot(models.Model):
         ('top_1', 'Top 1'),
         ('top_2', 'Top 2'),
         ('featured', 'Featured'),
+        ('latest_news', 'Latest News'),
+        ('ad_banner', 'Ad Banner'),
     ]
 
     MODE_CHOICES = [
@@ -292,8 +294,49 @@ class HomepageSlot(models.Model):
         'Article',
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name='homepage_primary_slots'
     )
+
+    overlay_article_1 = models.ForeignKey(
+        'Article',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homepage_overlay_slot_1'
+    )
+    overlay_article_2 = models.ForeignKey(
+        'Article',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homepage_overlay_slot_2'
+    )
+    overlay_article_3 = models.ForeignKey(
+        'Article',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homepage_overlay_slot_3'
+    )
+
+    display_count = models.PositiveSmallIntegerField(default=4)
+    category_filter = models.ForeignKey(
+        'Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homepage_slots'
+    )
+    manual_articles = models.ManyToManyField(
+        'Article',
+        blank=True,
+        related_name='homepage_manual_slots'
+    )
+
+    ad_image = models.ImageField(upload_to='homepage_ads/', blank=True, null=True)
+    ad_image_url = models.URLField(blank=True, default='')
+    ad_link_url = models.URLField(blank=True, default='')
 
     auto_rule = models.CharField(
         max_length=20,
@@ -715,6 +758,25 @@ class NewsletterLog(models.Model):
  
     def __str__(self):
         return f"{self.subject} — {self.sent_at.strftime('%d %b %Y %H:%M')} ({self.sent_count} sent)"
+
+
+class NewsletterCard(models.Model):
+    title = models.CharField(max_length=255)
+    image = models.URLField()
+    description = models.TextField()
+    link = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'newsletter_cards'
+        ordering = ['-created_at']
+        verbose_name = 'Newsletter Card'
+        verbose_name_plural = 'Newsletter Cards'
+
+    def __str__(self):
+        return self.title
+
+
 class Newsletter(models.Model):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)

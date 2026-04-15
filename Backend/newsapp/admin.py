@@ -721,6 +721,13 @@ class HomepageSlotAdmin(admin.ModelAdmin):
     list_filter  = ('mode', 'is_active')
 
 
+class NewsletterCardAdmin(admin.ModelAdmin):
+    list_display = ('title', 'link', 'created_at')
+    search_fields = ('title', 'description', 'link')
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)
+
+
 class ReporterAdmin(admin.ModelAdmin):
     list_display      = ("user", "employee_id", "designation", "employment_type", "is_active", "get_categories")
     search_fields     = ("user__username", "employee_id")
@@ -1054,3 +1061,4 @@ admin_site.register(MetalRate)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)
+admin_site.register(NewsletterCard,              NewsletterCardAdmin)

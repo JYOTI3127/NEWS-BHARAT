@@ -414,3 +414,14 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         if obj.author:
             return obj.author.get_full_name() or obj.author.username
         return ''
+
+
+class NewsletterCardSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NewsletterCard
+        fields = ['id', 'title', 'image', 'description', 'link', 'created_at']
+
+    def get_created_at(self, obj):
+        return obj.created_at.date().isoformat() if obj.created_at else None

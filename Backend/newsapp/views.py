@@ -1027,6 +1027,34 @@ def metal_ticker(request):
     if cached is not None and not cached_is_valid:
         cache.delete(cache_key)
     refresh_error = None
+    gold = latest_valid_metal_rate("gold")
+    silver = latest_valid_metal_rate("silver")
+    if gold and silver and not force_refresh:
+        payload = {
+            "gold": {
+                "price":          gold.price,
+                "change":         gold.change,
+                "percent_change": gold.percent_change,
+                "trend":          gold.trend
+            },
+            "silver": {
+                "price":          silver.price,
+                "change":         silver.change,
+                "percent_change": silver.percent_change,
+                "trend":          silver.trend
+            },
+            "stale": True,
+        }
+        cache.set(cache_key, payload, 600)
+        return Response(payload)
+    if not force_refresh:
+        payload = {
+            "gold": {"price": 0, "change": 0, "percent_change": 0, "trend": "neutral"},
+            "silver": {"price": 0, "change": 0, "percent_change": 0, "trend": "neutral"},
+            "error": "Metal refresh is paused. Use refresh=1 to fetch new rates.",
+        }
+        cache.set(cache_key, payload, 600)
+        return Response(payload)
     try:
         fetch_and_store_metal_rates(force_refresh=force_refresh)
     except Exception as exc:
@@ -1064,6 +1092,7 @@ def update_metal_rates(request):
 
 @api_view(['GET'])
 def market_indices(request):
+    force_refresh = request.GET.get("refresh") in {"1", "true", "yes"}
     nifty_symbols = getattr(
         settings,
         'TWELVE_DATA_NIFTY_SYMBOLS',
@@ -1080,7 +1109,7 @@ def market_indices(request):
         ["USD/INR", "USDINR"],
     )
     try:
-        nifty = fetch_live_index_data(nifty_symbols, cache_prefix='market_index:nifty')
+        nifty = fetch_live_index_data(nifty_symbols, cache_prefix='market_index:nifty', force_refresh=force_refresh)
     except Exception as exc:
         nifty = {
             "error": str(exc),
@@ -1091,7 +1120,7 @@ def market_indices(request):
         }
 
     try:
-        sensex = fetch_live_index_data(sensex_symbols, cache_prefix='market_index:sensex')
+        sensex = fetch_live_index_data(sensex_symbols, cache_prefix='market_index:sensex', force_refresh=force_refresh)
     except Exception as exc:
         sensex = {
             "error": str(exc),
@@ -1102,7 +1131,7 @@ def market_indices(request):
         }
 
     try:
-        usd_inr = fetch_live_index_data(usd_inr_symbols, cache_prefix='market_index:usd_inr')
+        usd_inr = fetch_live_index_data(usd_inr_symbols, cache_prefix='market_index:usd_inr', force_refresh=force_refresh)
     except Exception as exc:
         usd_inr = {
             "error": str(exc),

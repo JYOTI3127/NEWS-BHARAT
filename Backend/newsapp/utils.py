@@ -20,6 +20,7 @@ from .models import MetalRate
 OZ_TO_GRAM = 31.1035
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 TWELVE_DATA_URL = "https://api.twelvedata.com/time_series"
+TWELVE_DATA_TIMEOUT_SECONDS = 4
 METAL_PRICE_LIMITS = {
     # INR per 10 grams.
     "gold": (10000, 300000),
@@ -64,6 +65,11 @@ def _market_error_payload(error):
         "percent_change": 0,
         "trend": "neutral",
     }
+
+
+def _is_quota_error(error):
+    message = str(error).lower()
+    return "api credit" in message or "run out" in message or "daily limit" in message
 
 
 def is_valid_metal_price(metal_type, price):
@@ -142,7 +148,7 @@ def _fetch_twelve_data_close(symbols, api_key):
                     "outputsize": 1,
                     "apikey": api_key,
                 },
-                timeout=20,
+                timeout=TWELVE_DATA_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             data = response.json()
@@ -160,6 +166,8 @@ def _fetch_twelve_data_close(symbols, api_key):
             return close
         except Exception as exc:
             last_error = exc
+            if _is_quota_error(exc):
+                break
             continue
 
     if last_error:
@@ -210,6 +218,8 @@ def fetch_index_data(symbols, cache_prefix=None, force_refresh=False):
             return payload
         except Exception as exc:
             last_error = exc
+            if _is_quota_error(exc):
+                break
             continue
 
     if last_error:
@@ -226,7 +236,7 @@ def _fetch_alpha_vantage_daily(symbol, api_key):
             "outputsize": "compact",
             "apikey": api_key,
         },
-        timeout=20,
+        timeout=TWELVE_DATA_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     data = response.json()
@@ -268,12 +278,13 @@ def fetch_live_index_data(symbols, cache_prefix=None, force_refresh=False):
         cached = cache.get(cache_key)
         if cached:
             return cached
+        stale = cache.get(stale_cache_key)
+        if stale:
+            return {**stale, "stale": True}
         cached_error = cache.get(error_cache_key)
         if cached_error:
-            stale = cache.get(stale_cache_key)
-            if stale:
-                return {**stale, "stale": True, "error": cached_error.get("error")}
             return cached_error
+        return _market_error_payload("Live market refresh is paused. Use refresh=1 to fetch a new quote.")
 
     api_key = getattr(settings, "TWELVE_DATA_API_KEY", "")
     if not api_key:
@@ -331,7 +342,7 @@ def _fetch_twelve_data_index_quote(symbol_config, api_key):
             ),
             "apikey": api_key,
         },
-        timeout=20,
+        timeout=TWELVE_DATA_TIMEOUT_SECONDS,
     )
     intraday_response.raise_for_status()
     intraday_data = intraday_response.json()
@@ -365,7 +376,7 @@ def _fetch_twelve_data_index_quote(symbol_config, api_key):
                 ),
                 "apikey": api_key,
             },
-            timeout=20,
+            timeout=TWELVE_DATA_TIMEOUT_SECONDS,
         )
         daily_response.raise_for_status()
         daily_data = daily_response.json()

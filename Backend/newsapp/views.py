@@ -146,6 +146,38 @@ def category_detail_page(request, slug):
         'page_obj': page_obj,
     })
 
+
+@api_view(['POST'])
+def contact_query_create(request):
+    serializer = ContactQuerySerializer(data=request.data)
+    if serializer.is_valid():
+        query = serializer.save()
+        return Response(
+            {
+                "message": "Contact query submitted successfully.",
+                "id": query.id,
+                "status": query.status,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def career_application_create(request):
+    serializer = CareerApplicationSerializer(data=request.data)
+    if serializer.is_valid():
+        application = serializer.save()
+        return Response(
+            {
+                "message": "Career application submitted successfully.",
+                "id": application.id,
+                "status": application.status,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['POST'])
 def category_create(request):
     serializer = CategorySerializer(data=request.data)

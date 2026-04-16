@@ -50,6 +50,35 @@ class NewsletterLogAdmin(admin.ModelAdmin):
 #  INLINES
 # ══════════════════════════════════════════════════════════════
 
+class ContactQueryAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'email', 'phone_number', 'subject', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('full_name', 'email', 'phone_number', 'subject', 'message')
+    readonly_fields = ('full_name', 'email', 'phone_number', 'subject', 'message', 'created_at', 'updated_at')
+    list_editable = ('status',)
+    ordering = ('-created_at',)
+
+
+class CareerApplicationAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'email', 'phone_number', 'job_title', 'job_type', 'status', 'created_at')
+    list_filter = ('status', 'job_type', 'job_title', 'created_at')
+    search_fields = ('full_name', 'email', 'phone_number', 'job_title', 'portfolio_url', 'cover_note')
+    readonly_fields = (
+        'full_name',
+        'email',
+        'phone_number',
+        'portfolio_url',
+        'job_title',
+        'job_type',
+        'resume',
+        'cover_note',
+        'created_at',
+        'updated_at',
+    )
+    list_editable = ('status',)
+    ordering = ('-created_at',)
+
+
 class ArticleVersionInline(admin.TabularInline):
     model           = ArticleVersion
     extra           = 0
@@ -1058,6 +1087,8 @@ admin_site.register(ArticleWorkflowLog)
 admin_site.register(FactCheck,                  FactCheckAdmin)
 admin_site.register(HomepageSlot,               HomepageSlotAdmin)
 admin_site.register(MetalRate)
+admin_site.register(ContactQuery,                ContactQueryAdmin)
+admin_site.register(CareerApplication,           CareerApplicationAdmin)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)

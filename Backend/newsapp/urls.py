@@ -10,6 +10,8 @@ urlpatterns = [
     path('articles/<int:pk>/', views.article_detail),
     path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
     path('articles/by-state/', views.articles_by_state),
+    path('contact-queries/', views.contact_query_create, name='api_contact_query_create'),
+    path('career-applications/', views.career_application_create, name='api_career_application_create'),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),
     path('update-metal/', update_metal_rates),

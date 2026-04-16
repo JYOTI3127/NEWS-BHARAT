@@ -78,6 +78,65 @@ class CategorySerializer(serializers.ModelSerializer):
         model  = Category
         fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count', 'unique_total_articles', 'published_this_month']
 
+
+class ContactQuerySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactQuery
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'phone_number',
+            'subject',
+            'message',
+            'status',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'status', 'created_at']
+
+    def validate_message(self, value):
+        value = (value or '').strip()
+        if len(value) < 10:
+            raise serializers.ValidationError('Message must be at least 10 characters long.')
+        if len(value) > 600:
+            raise serializers.ValidationError('Message cannot be longer than 600 characters.')
+        return value
+
+
+class CareerApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CareerApplication
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'phone_number',
+            'portfolio_url',
+            'job_title',
+            'job_type',
+            'resume',
+            'cover_note',
+            'status',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'status', 'created_at']
+
+    def validate_resume(self, value):
+        max_size = 5 * 1024 * 1024
+        allowed_extensions = ('.pdf', '.doc', '.docx')
+        name = (value.name or '').lower()
+        if not name.endswith(allowed_extensions):
+            raise serializers.ValidationError('Resume must be a PDF, DOC, or DOCX file.')
+        if value.size > max_size:
+            raise serializers.ValidationError('Resume file size cannot exceed 5 MB.')
+        return value
+
+    def validate_cover_note(self, value):
+        value = (value or '').strip()
+        if len(value) > 500:
+            raise serializers.ValidationError('Cover note cannot be longer than 500 characters.')
+        return value
+
     def get_article_count(self, obj):
         try:
             return obj.articles.filter(status='published').count()

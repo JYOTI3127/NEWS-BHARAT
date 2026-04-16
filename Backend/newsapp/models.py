@@ -372,6 +372,68 @@ class MetalRate(models.Model):
     def __str__(self):
         return f"{self.metal_type} - {self.price}"
 
+
+class ContactQuery(models.Model):
+    STATUS_CHOICES = [
+        ("new", "New"),
+        ("in_progress", "In Progress"),
+        ("resolved", "Resolved"),
+        ("spam", "Spam"),
+    ]
+
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=30)
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="new")
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Contact Query"
+        verbose_name_plural = "Contact Queries"
+
+    def __str__(self):
+        return f"{self.full_name} - {self.subject}"
+
+
+class CareerApplication(models.Model):
+    JOB_TYPE_CHOICES = [
+        ("full_time", "Full-Time"),
+        ("part_time", "Part-Time"),
+    ]
+    STATUS_CHOICES = [
+        ("new", "New"),
+        ("reviewing", "Reviewing"),
+        ("shortlisted", "Shortlisted"),
+        ("rejected", "Rejected"),
+        ("hired", "Hired"),
+    ]
+
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=30, blank=True)
+    portfolio_url = models.URLField(blank=True)
+    job_title = models.CharField(max_length=150)
+    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES)
+    resume = models.FileField(upload_to="career_applications/resumes/")
+    cover_note = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="new")
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Career Application"
+        verbose_name_plural = "Career Applications"
+
+    def __str__(self):
+        return f"{self.full_name} - {self.job_title}"
+
 class Reporter(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 

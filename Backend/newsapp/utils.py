@@ -20,6 +20,12 @@ from .models import MetalRate
 OZ_TO_GRAM = 31.1035
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 TWELVE_DATA_URL = "https://api.twelvedata.com/time_series"
+METAL_PRICE_LIMITS = {
+    # INR per 10 grams.
+    "gold": (10000, 300000),
+    # INR per kilogram.
+    "silver": (10000, 500000),
+}
 
 
 def external_get(url, **kwargs):
@@ -48,10 +54,25 @@ def _normalize_trend(change):
     return "up" if change > 0 else "down" if change < 0 else "neutral"
 
 
+def is_valid_metal_price(metal_type, price):
+    price = _coerce_float(price)
+    if price is None:
+        return False
+    low, high = METAL_PRICE_LIMITS.get(metal_type, (0, float("inf")))
+    return low <= price <= high
+
+
+def latest_valid_metal_rate(metal_type):
+    for rate in MetalRate.objects.filter(metal_type=metal_type).order_by("-created_at")[:50]:
+        if is_valid_metal_price(metal_type, rate.price):
+            return rate
+    return None
+
+
 def fetch_and_store_metal_rates(force_refresh=False):
     today = timezone.localdate()
-    latest_gold = MetalRate.objects.filter(metal_type="gold").order_by("-created_at").first()
-    latest_silver = MetalRate.objects.filter(metal_type="silver").order_by("-created_at").first()
+    latest_gold = latest_valid_metal_rate("gold")
+    latest_silver = latest_valid_metal_rate("silver")
 
     if (
         not force_refresh
@@ -83,6 +104,11 @@ def fetch_and_store_metal_rates(force_refresh=False):
 
     gold_price = ((gold_usd * usd_inr) / OZ_TO_GRAM) * 10
     silver_price = ((silver_usd * usd_inr) / OZ_TO_GRAM) * 1000
+
+    if not is_valid_metal_price("gold", gold_price):
+        raise ValueError(f"Fetched gold price is outside the expected INR/10g range: {gold_price:.2f}")
+    if not is_valid_metal_price("silver", silver_price):
+        raise ValueError(f"Fetched silver price is outside the expected INR/kg range: {silver_price:.2f}")
 
     save_metal("gold", gold_price)
     save_metal("silver", silver_price)
@@ -131,9 +157,10 @@ def _fetch_twelve_data_close(symbols, api_key):
 
 def save_metal(metal_type, new_price):
 
-    last_record = MetalRate.objects.filter(
-        metal_type=metal_type
-    ).order_by('-created_at').first()
+    if not is_valid_metal_price(metal_type, new_price):
+        raise ValueError(f"{metal_type} price is outside the expected range: {new_price}")
+
+    last_record = latest_valid_metal_rate(metal_type)
 
     if last_record:
         change = new_price - last_record.price

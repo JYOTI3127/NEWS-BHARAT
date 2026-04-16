@@ -980,15 +980,24 @@ def weather_api(request):
 @api_view(['GET'])
 def metal_ticker(request):
     cache_key = "metal_ticker:latest"
+    force_refresh = request.GET.get("refresh") in {"1", "true", "yes"}
     cached = cache.get(cache_key)
-    if cached is not None:
+    cached_is_valid = (
+        isinstance(cached, dict)
+        and is_valid_metal_price("gold", cached.get("gold", {}).get("price"))
+        and is_valid_metal_price("silver", cached.get("silver", {}).get("price"))
+    )
+    if cached_is_valid and not force_refresh:
         return Response(cached)
+    if cached is not None and not cached_is_valid:
+        cache.delete(cache_key)
+    refresh_error = None
     try:
-        fetch_and_store_metal_rates()
-    except Exception:
-        pass
-    gold   = MetalRate.objects.filter(metal_type="gold").order_by('-created_at').first()
-    silver = MetalRate.objects.filter(metal_type="silver").order_by('-created_at').first()
+        fetch_and_store_metal_rates(force_refresh=force_refresh)
+    except Exception as exc:
+        refresh_error = str(exc)
+    gold = latest_valid_metal_rate("gold")
+    silver = latest_valid_metal_rate("silver")
     payload = {
         "gold": {
             "price":          gold.price if gold else 0,
@@ -1003,15 +1012,18 @@ def metal_ticker(request):
             "trend":          silver.trend if silver else "neutral"
         }
     }
+    if refresh_error and not (gold and silver):
+        payload["error"] = refresh_error
     cache.set(cache_key, payload, 600)
     return Response(payload)
 
-from .utils import external_get, fetch_and_store_metal_rates, fetch_live_index_data
+from .utils import external_get, fetch_and_store_metal_rates, fetch_live_index_data, is_valid_metal_price, latest_valid_metal_rate
 
 
 @api_view(['GET'])
 def update_metal_rates(request):
     fetch_and_store_metal_rates(force_refresh=True)
+    cache.delete("metal_ticker:latest")
     return Response({"message": "Rates updated successfully"})
 
 
@@ -1026,6 +1038,11 @@ def market_indices(request):
         settings,
         'TWELVE_DATA_SENSEX_SYMBOLS',
         [{"symbol": "SENSEXETF", "exchange": "NSE"}],
+    )
+    usd_inr_symbols = getattr(
+        settings,
+        'TWELVE_DATA_USDINR_SYMBOLS',
+        ["USD/INR", "USDINR"],
     )
     try:
         nifty = fetch_live_index_data(nifty_symbols, cache_prefix='market_index:nifty')
@@ -1049,7 +1066,18 @@ def market_indices(request):
             "trend": "neutral",
         }
 
-    return Response({"nifty": nifty, "sensex": sensex})
+    try:
+        usd_inr = fetch_live_index_data(usd_inr_symbols, cache_prefix='market_index:usd_inr')
+    except Exception as exc:
+        usd_inr = {
+            "error": str(exc),
+            "price": 0,
+            "change": 0,
+            "percent_change": 0,
+            "trend": "neutral",
+        }
+
+    return Response({"nifty": nifty, "sensex": sensex, "usd_inr": usd_inr})
 
 
 # ═══════════════════════════════════════════════════════

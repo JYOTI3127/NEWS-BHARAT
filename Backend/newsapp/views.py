@@ -987,7 +987,10 @@ def metal_ticker(request):
         and is_valid_metal_price("gold", cached.get("gold", {}).get("price"))
         and is_valid_metal_price("silver", cached.get("silver", {}).get("price"))
     )
+    cached_is_error = isinstance(cached, dict) and bool(cached.get("error"))
     if cached_is_valid and not force_refresh:
+        return Response(cached)
+    if cached_is_error and not force_refresh:
         return Response(cached)
     if cached is not None and not cached_is_valid:
         cache.delete(cache_key)

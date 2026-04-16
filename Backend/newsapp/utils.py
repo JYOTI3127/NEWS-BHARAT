@@ -26,6 +26,8 @@ METAL_PRICE_LIMITS = {
     # INR per kilogram.
     "silver": (10000, 500000),
 }
+MARKET_ERROR_CACHE_SECONDS = 60 * 60
+MARKET_STALE_CACHE_SECONDS = 60 * 60 * 24
 
 
 def external_get(url, **kwargs):
@@ -52,6 +54,16 @@ def _coerce_float(value, default=None):
 
 def _normalize_trend(change):
     return "up" if change > 0 else "down" if change < 0 else "neutral"
+
+
+def _market_error_payload(error):
+    return {
+        "error": str(error),
+        "price": 0,
+        "change": 0,
+        "percent_change": 0,
+        "trend": "neutral",
+    }
 
 
 def is_valid_metal_price(metal_type, price):
@@ -248,11 +260,20 @@ def _fetch_alpha_vantage_daily(symbol, api_key):
 
 
 def fetch_live_index_data(symbols, cache_prefix=None, force_refresh=False):
-    cache_key = _minute_cache_key(cache_prefix or "market_index:live")
+    base_cache_key = cache_prefix or "market_index:live"
+    cache_key = _minute_cache_key(base_cache_key)
+    stale_cache_key = f"{base_cache_key}:last_good"
+    error_cache_key = f"{base_cache_key}:last_error"
     if not force_refresh:
         cached = cache.get(cache_key)
         if cached:
             return cached
+        cached_error = cache.get(error_cache_key)
+        if cached_error:
+            stale = cache.get(stale_cache_key)
+            if stale:
+                return {**stale, "stale": True, "error": cached_error.get("error")}
+            return cached_error
 
     api_key = getattr(settings, "TWELVE_DATA_API_KEY", "")
     if not api_key:
@@ -263,14 +284,23 @@ def fetch_live_index_data(symbols, cache_prefix=None, force_refresh=False):
         try:
             payload = _fetch_twelve_data_index_quote(symbol_config, api_key)
             cache.set(cache_key, payload, 60)
+            cache.set(stale_cache_key, payload, MARKET_STALE_CACHE_SECONDS)
+            cache.delete(error_cache_key)
             return payload
         except Exception as exc:
             last_error = exc
             continue
 
     if last_error:
-        raise last_error
-    raise ValueError("No valid live market index symbol configured")
+        error_payload = _market_error_payload(last_error)
+        cache.set(error_cache_key, error_payload, MARKET_ERROR_CACHE_SECONDS)
+        stale = cache.get(stale_cache_key)
+        if stale:
+            return {**stale, "stale": True, "error": error_payload["error"]}
+        return error_payload
+    error_payload = _market_error_payload("No valid live market index symbol configured")
+    cache.set(error_cache_key, error_payload, MARKET_ERROR_CACHE_SECONDS)
+    return error_payload
 
 
 def _build_twelve_data_params(symbol_config, *, interval, outputsize, previous_close=False):

@@ -102,8 +102,8 @@ const navLinks = [
   { label: "Trending",          path: "/category/trending" },
   { label: "Founder's Note",    path: "/founders-note" },
   { label: "Editorial Policy",  path: "/editorial-policy" },
-  { label: "Career",            path: "/careers" },
-  { label: "Contact Us",        path: "/contact" },
+  { label: "Careers",           path: "/careers" },
+  { label: "Contact Us",        path: "/contact-us" },
   // { label: "Coming Soon",       path: "/CommingSoon" },
 ];
 

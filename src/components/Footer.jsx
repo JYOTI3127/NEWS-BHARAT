@@ -59,13 +59,13 @@ const getFinalSlug = (text) => {
 
 // ── Har pill ka apna path ──
 const policyLinks = [
-  { label: "About Us", path: "/about" },
-  { label: "Founter's Note", path: "/founders-note" },
+  { label: "About Us", path: "/about-us" },
+  { label: "Founder's Note", path: "/founders-note" },
   { label: "Editorial Policy", path: "/editorial-policy" },
-  { label: "Career", path: "/careers" },
-  { label: "Contact Us", path: "/contact" },
+  { label: "Careers", path: "/careers" },
+  { label: "Contact Us", path: "/contact-us" },
   { label: "Privacy Policy", path: "/privacy-policy" },
-  { label: "Terms & Conditions", path: "/terms-of-service" },
+  { label: "Terms & Conditions", path: "/terms-and-conditions" },
   { label: "Disclaimer", path: "/disclaimer" },
 ];
 

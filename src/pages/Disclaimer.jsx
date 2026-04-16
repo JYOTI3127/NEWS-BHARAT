@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import PageSeo from "../components/PageSeo";
 import "../style.css";
+import disclaimerImg from "../assets/disclaimer-img.png";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.1) => {
@@ -154,17 +156,24 @@ const disclaimerSections = [
 /* ── COMPONENT ── */
 export default function DisclaimerPage() {
   return (
+    <>
+    <PageSeo
+      title="Disclaimer | News4Bharat Content & Liability Information"
+      description="Review the News4Bharat disclaimer regarding content accuracy, external links, and limitations of liability."
+      keywords="news disclaimer India, website liability disclaimer, News4Bharat terms"
+      path="/disclaimer"
+    />
     <div className="terms-page disclaimer-page">
 
       {/* ══════ HERO ══════ */}
       <section className="terms-hero">
         <img
           className="terms-hero-img"
-          src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1800&q=85&fit=crop"
+          src={disclaimerImg}
           alt="Disclaimer — News4Bharat"
         />
         <div className="terms-hero-overlay" />
-        <div className="terms-hero-grid" />
+        {/* <div className="terms-hero-grid" />
         <div className="terms-hero-bottom-fade" />
 
         <div className="terms-hero-content">
@@ -182,7 +191,7 @@ export default function DisclaimerPage() {
               Effective: March 2026
             </div>
           </div>
-        </div>
+        </div> */}
       </section>
 
       {/* ══════ BODY ══════ */}
@@ -249,5 +258,6 @@ export default function DisclaimerPage() {
         </section>
       </div>
     </div>
+    </>
   );
 }

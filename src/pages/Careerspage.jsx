@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Mic, Globe, Edit3, Shield, Video, TrendingUp,
-  CheckCircle, ArrowRight, Send, X, Briefcase, ChevronDown, MapPin, Clock, FileText,
+  CheckCircle, ArrowRight, Send, X, Briefcase, MapPin, Clock, FileText,
 } from "lucide-react";
+import PageSeo from "../components/PageSeo";
+import careerBg from "../assets/career-img.png";
 
 import "../style.css";
 
@@ -185,10 +187,9 @@ function ApplyModal({ role, onClose }) {
 
 /* ── ROLE CARD ── */
 function RoleCard({ role, onApply }) {
-  const [expanded, setExpanded] = useState(false);
   return (
-    <div className={`cp-role-card${expanded ? " cp-role-card--open" : ""}`}>
-      <div className="cp-role-top" onClick={() => setExpanded(!expanded)}>
+    <div className="cp-role-card cp-role-card--open">
+      <div className="cp-role-top">
         <div className="cp-role-icon">{role.icon}</div>
         <div className="cp-role-info">
           <h3 className="cp-role-title">{role.title}</h3>
@@ -197,19 +198,16 @@ function RoleCard({ role, onApply }) {
             <span className="cp-role-badge cp-role-badge--loc"><MapPin size={11} /> {role.location}</span>
           </div>
         </div>
-        <span className={`cp-chevron${expanded ? " cp-chevron--up" : ""}`}><ChevronDown size={17} /></span>
       </div>
-      {expanded && (
-        <div className="cp-role-body">
-          <p className="cp-role-desc">{role.desc}</p>
-          <div className="cp-skills-row">
-            {role.skills.map((s, i) => <span key={i} className="cp-skill-pill">{s}</span>)}
-          </div>
-          <button className="cp-apply-btn" onClick={() => onApply(role)}>
-            Apply Now <ArrowRight size={14} />
-          </button>
+      <div className="cp-role-body">
+        <p className="cp-role-desc">{role.desc}</p>
+        <div className="cp-skills-row">
+          {role.skills.map((s, i) => <span key={i} className="cp-skill-pill">{s}</span>)}
         </div>
-      )}
+        <button className="cp-apply-btn" onClick={() => onApply(role)}>
+          Apply Now <ArrowRight size={14} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -221,80 +219,71 @@ export default function CareersPage() {
   const [activeModal, setActiveModal] = useState(null);
 
   return (
-    <div className="careers-page">
+    <>
+      <PageSeo
+        title="Careers at News4Bharat | Jobs in Media & Journalism India"
+        description="Explore career opportunities at News4Bharat. Join our team of journalists, editors, and content creators shaping the future of news in India."
+        path="/careers"
+      />
+      <div className="careers-page">
 
-      {/* ══════════ HERO ══════════ */}
-      <section className="cp-hero">
-        <div className="cp-hero-bg">
-          <div className="cp-hero-img" />
-          <svg className="cp-hero-svg" viewBox="0 0 1400 560" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="cpBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#001d52" stopOpacity="0.88" />
-                <stop offset="60%" stopColor="#002765" stopOpacity="0.82" />
-                <stop offset="100%" stopColor="#003080" stopOpacity="0.78" />
-              </linearGradient>
-              <linearGradient id="cpWm" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="40%" stopColor="#ffffff" stopOpacity="0.06" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <rect width="1400" height="560" fill="url(#cpBg)" />
-          </svg>
-        </div>
-        <div className="cp-hero-content">
-          <FadeIn direction="none" delay={0.1}>
-            <div className="cp-hero-badge">
-              <span className="cp-badge-dot" />
-              <span className="cp-badge-text">Grow With News4Bharat</span>
-            </div>
-          </FadeIn>
-          <FadeIn direction="up" delay={0.2}>
-            <h1 className="cp-hero-title">Careers at<br /><span className="cp-hero-accent">News4Bharat</span></h1>
-          </FadeIn>
-          <FadeIn direction="up" delay={0.3}>
-            <p className="cp-hero-sub">We are building a newsroom rooted in integrity and innovation.</p>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ══════════ OPEN ROLES ══════════ */}
-      <section className="cp-section cp-bg-grey">
-        <div className="cp-container">
-          <FadeIn>
-            <div className="cp-sec-hd cp-center">
-              <span className="cp-label">Open Roles</span>
-              <h2 className="cp-title-md">Current openings at News4Bharat</h2>
-              <div className="cp-divider" />
-            </div>
-          </FadeIn>
-          <div className="cp-roles-grid">
-            {openRoles.map((role, i) => (
-              <FadeIn key={role.id} delay={i * 0.06}>
-                <RoleCard role={role} onApply={setActiveModal} />
-              </FadeIn>
-            ))}
+        {/* ══════════ HERO ══════════ */}
+        <section className="cp-hero">
+          <div className="cp-hero-bg">
+            <img
+              src={careerBg}
+              alt=""
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+              
+                zIndex: 0,
+              }}
+            />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ══════════ INTERNSHIPS ══════════ */}
-      <section className="cp-section cp-bg-dark">
-        <div className="cp-container">
-          <FadeIn direction="up">
-            <div className="cp-intern-simple">
-              <span className="cp-label cp-label--light">Internships</span>
-              <p className="cp-intern-body">We offer editorial internships for aspiring journalists passionate about ethical reporting.</p>
-              <button className="cp-intern-btn" onClick={() => setActiveModal({ title: "Editorial Internship" })}>
-                <Briefcase size={16} /> Apply for Internship
-              </button>
+        {/* ══════════ OPEN ROLES ══════════ */}
+        <section className="cp-section cp-bg-grey">
+          <div className="cp-container">
+            <FadeIn>
+              <div className="cp-sec-hd cp-center">
+                <span className="cp-label">Open Roles</span>
+                <h2 className="cp-title-md">Current openings at News4Bharat</h2>
+                <div className="cp-divider" />
+              </div>
+            </FadeIn>
+            <div className="cp-roles-grid">
+              {openRoles.map((role, i) => (
+                <FadeIn key={role.id} delay={i * 0.06}>
+                  <RoleCard role={role} onApply={setActiveModal} />
+                </FadeIn>
+              ))}
             </div>
-          </FadeIn>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {activeModal && <ApplyModal role={activeModal} onClose={() => setActiveModal(null)} />}
-    </div>
+        {/* ══════════ INTERNSHIPS ══════════ */}
+        <section className="cp-section cp-bg-dark">
+          <div className="cp-container">
+            <FadeIn direction="up">
+              <div className="cp-intern-simple">
+                <span className="cp-label cp-label--light">Internships</span>
+                <p className="cp-intern-body">We offer editorial internships for aspiring journalists passionate about ethical reporting.</p>
+                <button className="cp-intern-btn" onClick={() => setActiveModal({ title: "Editorial Internship" })}>
+                  <Briefcase size={16} /> Apply for Internship
+                </button>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        {activeModal && <ApplyModal role={activeModal} onClose={() => setActiveModal(null)} />}
+      </div>
+    </>
   );
 }

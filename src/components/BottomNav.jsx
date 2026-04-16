@@ -5,17 +5,28 @@ import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
 const BREAKING_NEWS_CATEGORY_ID = 2;
+const BREAKING_NEWS_CACHE_KEY = "bottomBreakingNewsItems";
 
-const deferNonCritical = (callback, timeout = 1200) => {
-  if (typeof window === "undefined") return () => {};
+const getCachedBreakingNews = () => {
+  if (typeof window === "undefined") return [];
 
-  if ("requestIdleCallback" in window) {
-    const id = window.requestIdleCallback(callback, { timeout });
-    return () => window.cancelIdleCallback?.(id);
+  try {
+    const cached = window.sessionStorage.getItem(BREAKING_NEWS_CACHE_KEY);
+    const parsed = cached ? JSON.parse(cached) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
+};
 
-  const id = window.setTimeout(callback, timeout);
-  return () => window.clearTimeout(id);
+const setCachedBreakingNews = (items) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(BREAKING_NEWS_CACHE_KEY, JSON.stringify(items));
+  } catch {
+    // Ignore storage errors; the live fetch still updates the UI.
+  }
 };
 
 const HomeIcon = ({ active }) => (
@@ -101,7 +112,7 @@ export default function BottomNav() {
   const [isMobileView, setIsMobileView] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
-  const [breakingNewsItems, setBreakingNewsItems] = useState([]);
+  const [breakingNewsItems, setBreakingNewsItems] = useState(getCachedBreakingNews);
   const [showBreaking, setShowBreaking] = useState(() => {
     return sessionStorage.getItem("breakingClosed") !== "true";
   });
@@ -119,7 +130,7 @@ export default function BottomNav() {
 
     const fetchBreakingNews = async () => {
       try {
-        const res = await fetch(apiUrl("/articles/?category=breaking-news&limit=4"));
+        const res = await fetch(apiUrl("/articles/?category=breaking-news&limit=2"));
         const data = await res.json();
 
         const articles = Array.isArray(data) ? data : (data.results ?? []);
@@ -129,20 +140,20 @@ export default function BottomNav() {
         );
 
         const source = breaking.length > 0 ? breaking : articles;
-        const shuffled = source
+        const shuffled = [...source]
           .sort(() => Math.random() - 0.5)
-          .slice(0, 2)
-          .map((article) => ({ title: article.title, slug: article.slug }));
+          .slice(0, 2);
 
         setBreakingNewsItems(shuffled);
+        setCachedBreakingNews(shuffled);
       } catch (err) {
         console.error("Breaking news fetch failed:", err);
         setBreakingNewsItems([]);
       }
     };
 
-    const cancelDeferred = deferNonCritical(fetchBreakingNews, 4500);
-    return () => cancelDeferred();
+    fetchBreakingNews();
+    return undefined;
   }, [isMobileView, showBreaking]);
 
   useEffect(() => {
@@ -356,7 +367,10 @@ export default function BottomNav() {
                     key={i}
                     onClick={() => {
                       const articlePath = getArticlePath(item);
-                      if (articlePath) navigate(articlePath);
+                      if (articlePath) {
+                        handleCloseBreaking();
+                        navigate(articlePath);
+                      }
                     }}
                     className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer hover:text-yellow-300 transition-colors duration-200"
                   >

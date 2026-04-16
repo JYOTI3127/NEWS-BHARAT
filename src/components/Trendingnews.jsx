@@ -166,13 +166,35 @@ const TrendingBar = memo(({ categories, is2K, is320 }) => {
 // ── Latest News ───────────────────────────────────────────────
 const LatestNews = memo(({ articles, loading, is2K }) => {
   const visibleArticles = articles.slice(0, 5);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (loading || visibleArticles.length <= 1) return undefined;
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % visibleArticles.length);
+    }, 4200);
+
+    return () => window.clearInterval(timer);
+  }, [loading, visibleArticles.length]);
+
+  const safeActiveIndex = visibleArticles.length > 0 ? activeIndex % visibleArticles.length : 0;
+  const spotlightArticle = visibleArticles[safeActiveIndex];
+  const spotlightImage = getArticleImage(spotlightArticle);
+  const getDesc = (article) =>
+    article?.subtitle ||
+    article?.summary ||
+    article?.excerpt ||
+    article?.description ||
+    "";
+  const spotlightPath = getArticlePath(spotlightArticle);
 
   return (
     <div
       className="tn-latest-news"
       style={is2K ? { maxHeight: 430, padding: 18 } : undefined}
     >
-      <SecHeader title="LATEST NEWS" />
+      <SecHeader title="All About This Week" />
       <style>{`
         .news-ticker-item:hover .news-ticker-title { color: #D80100 !important; }
         .news-ticker-title { transition: color 0.2s ease; }
@@ -191,55 +213,74 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
       ) : visibleArticles.length === 0 ? (
         <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
       ) : (
-        <div className="tn-latest-scroll" style={{ overflowY: "auto", position: "relative", ...(is2K ? { maxHeight: 300 } : {}) }}>
-          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#f0f0f0", zIndex: 1 }}>
-            <div style={{ width: "100%", height: "100%", background: "#D80100" }} />
-          </div>
-          {visibleArticles.map((article, i) => {
-            const desc =
-              article.subtitle ||
-              article.summary ||
-              article.excerpt ||
-              article.description ||
-              "";
-            const isTop   = i === 0;
-            const hasImage = !!article.image_url;
-            const itemStyle = {
-              padding: "11px 14px 11px 18px",
-              borderBottom: i < visibleArticles.length - 1 ? "1px solid #f0f0f0" : "none",
-              background: isTop ? "#fff8f8" : "#fff",
-            };
-            const inner = (
-              <>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#D80100", fontFamily: "Poppins, sans-serif", lineHeight: "1.4", flexShrink: 0, marginTop: 1 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: isTop ? 700 : 600, color: isTop ? "#111" : "#222", lineHeight: "1.4" }}>
-                    {article.title || "Untitled"}
-                  </div>
-                  <div className="tn-latest-item-desc" style={{ marginTop: 4, lineHeight: "1.5" }}>
-                    {desc.slice(0, 120)}{desc.length > 120 ? "..." : ""}
-                  </div>
-                  {formatArticleDateTime(article) && (
-                    <div style={{ marginTop: 4, color: "#6b7280", fontSize: 11, fontWeight: 600, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
-                      {formatArticleDateTime(article)}
-                    </div>
-                  )}
+        <div
+          className="tn-latest-scroll"
+          style={{ overflowY: "auto", position: "relative", ...(is2K ? { maxHeight: 300 } : {}) }}
+        >
+          {spotlightArticle ? (
+            <div
+              key={spotlightArticle.id || spotlightArticle.slug || safeActiveIndex}
+              style={{
+                margin: "0 0 9px 0",
+                padding: "14px 14px 13px 16px",
+                border: "1px solid #fde2e2",
+                borderLeft: "4px solid #D80100",
+                background: "linear-gradient(135deg,#fff5f5 0%,#ffffff 68%)",
+                boxShadow: "0 10px 26px rgba(216,1,0,0.08)",
+                transition: "opacity 0.35s ease, transform 0.35s ease",
+              }}
+            >
+              <Link
+                to={spotlightPath || "#"}
+                className="news-ticker-item"
+                style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                onClick={(event) => { if (!spotlightPath) event.preventDefault(); }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#D80100", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    Week Focus
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#D80100" }}>
+                    {String(safeActiveIndex + 1).padStart(2, "0")} / {String(visibleArticles.length).padStart(2, "0")}
+                  </span>
                 </div>
-              </>
-            );
-
-            return hasImage ? (
-              <Link key={article.id || `${article.slug}-${i}`} to={getArticlePath(article)} className="tn-article-link news-ticker-item" style={itemStyle}>
-                {inner}
+                <div
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16 / 9",
+                    marginBottom: 10,
+                    overflow: "hidden",
+                    borderRadius: 8,
+                    background: "linear-gradient(135deg, rgba(216,1,0,0.14), rgba(0,39,101,0.12))",
+                  }}
+                >
+                  {spotlightImage ? (
+                    <img
+                      src={spotlightImage}
+                      alt={spotlightArticle.title || "All About This Week"}
+                      loading="lazy"
+                      decoding="async"
+                      width={460}
+                      height={259}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      onError={(event) => { event.currentTarget.style.display = "none"; }}
+                    />
+                  ) : null}
+                </div>
+                <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: 800, color: "#111", lineHeight: "1.35", fontSize: is2K ? 18 : undefined }}>
+                  {spotlightArticle.title || "Untitled"}
+                </div>
+                <div className="tn-latest-item-desc" style={{ marginTop: 7, lineHeight: "1.55", WebkitLineClamp: 3 }}>
+                  {getDesc(spotlightArticle).slice(0, 150)}{getDesc(spotlightArticle).length > 150 ? "..." : ""}
+                </div>
+                {formatArticleDateTime(spotlightArticle) && (
+                  <div style={{ marginTop: 8, color: "#6b7280", fontSize: 11, fontWeight: 700, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
+                    {formatArticleDateTime(spotlightArticle)}
+                  </div>
+                )}
               </Link>
-            ) : (
-              <div key={article.id || `${article.slug}-${i}`} className="news-ticker-item" style={{ ...itemStyle, display: "flex", gap: 12, alignItems: "flex-start", cursor: "default" }}>
-                {inner}
-              </div>
-            );
-          })}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import "react-phone-input-2/lib/style.css";
 import PhoneInput from "react-phone-input-2";
 import {
-  Mail, MapPin, Send, CheckCircle,
+  Mail, MapPin, Phone, Send, CheckCircle,
   Linkedin, Twitter, Instagram, Facebook,
   Monitor, FileText, Star, BookOpen, Users, Zap,
   CheckCircle2,
 } from "lucide-react";
+import PageSeo from "../components/PageSeo";
 import "../style.css";
+import contactBg from "../assets/contact Us.jpg.jpeg";
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.12) => {
@@ -79,6 +81,11 @@ const contactEmails = [
   { label: "Advertisements", email: "advertisement@news4bharat.com" },
   { label: "General Queries", email: "info@news4bharat.com" },
 
+];
+
+const contactPhones = [
+  { label: "Landline", number: "0562 4004545", href: "tel:05624004545" },
+  { label: "Mobile", number: "+91 8279993074", href: "tel:+918279993074" },
 ];
 
 const CONTACT_FORM_RECIPIENT = "news4bharat11@gmail.com";
@@ -229,166 +236,194 @@ function ContactForm() {
 ══════════════════════════════════════ */
 export default function ContactPage() {
   return (
-    <div className="contact-page">
+    <>
+      <PageSeo
+        title="Contact News4Bharat | Get in Touch with Our Team"
+        description="Reach out to News4Bharat for feedback, partnerships, press inquiries, or support. We’re here to assist you."
+        keywords="contact News4Bharat, news website contact India, media inquiries"
+        path="/contact-us"
+      />
+      <div className="contact-page">
 
-      {/* ══════════ HERO ══════════ */}
-      <section className="ct-hero">
-        <div className="ct-hero-img" />
-        <div className="ct-hero-overlay" />
-        <div className="ct-hero-content">
-          <FadeIn direction="none" delay={0.1}>
-            <div className="ct-hero-badge">
-              <span className="ct-badge-dot" />
-              <span className="ct-badge-text">Contact Us</span>
-            </div>
-          </FadeIn>
-          <FadeIn direction="up" delay={0.2}>
-            <h1 className="ct-hero-title">Contact <span className="ct-hero-accent">Us</span></h1>
-          </FadeIn>
-          <FadeIn direction="up" delay={0.3}>
-            <p className="ct-hero-sub">We welcome reader engagement.</p>
-          </FadeIn>
-        </div>
-      </section>
+        {/* ══════════ HERO ══════════ */}
+        <section className="ct-hero">
+          <img
+            src={contactBg}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              zIndex: 0,
+            }}
+          />
+          <div className="ct-hero-overlay" />
+          {/* <div className="ct-hero-content">
+            <FadeIn direction="none" delay={0.1}>
+              <div className="ct-hero-badge">
+                <span className="ct-badge-dot" />
+                <span className="ct-badge-text">Contact Us</span>
+              </div>
+            </FadeIn>
+            <FadeIn direction="up" delay={0.2}>
+              <h1 className="ct-hero-title">Contact <span className="ct-hero-accent">Us</span></h1>
+            </FadeIn>
+            <FadeIn direction="up" delay={0.3}>
+              <p className="ct-hero-sub">We welcome reader engagement.</p>
+            </FadeIn>
+          </div> */}
+        </section>
 
-      {/* ══════════ CONTACT + FORM ══════════ */}
-      <section className="ct-main">
-        <div className="ct-container">
-          <div className="ct-split">
+        {/* ══════════ CONTACT + FORM ══════════ */}
+        <section className="ct-main">
+          <div className="ct-container">
+            <div className="ct-split">
 
-            {/* LEFT — contact info */}
-            <div className="ct-split-left">
+              {/* LEFT — contact info */}
+              <div className="ct-split-left">
 
-              {/* Contact Emails */}
-              <FadeIn direction="left" delay={0.05}>
-                <div className="ct-info-block">
-                  <span className="ct-label">Contact Us</span>
-                  <p className="ct-contact-desc">
-                    We'd be glad to hear from you. We aim to respond to all queries within 24–48 hours.
-                  </p>
-                  <div className="ct-email-list">
-                    {contactEmails.map(({ label, email }) => (
-                      <div key={email} className="ct-email-row">
-                        <span className="ct-email-tag">{label}</span>
-                        <a
-                          href={getMailHref(email)}
-                          className="ct-email-link"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <Mail size={14} /> {email}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* Office Addresses */}
-              <FadeIn direction="left" delay={0.1}>
-                <div className="ct-info-block">
-                  <span className="ct-label">Office Address</span>
-                  <div className="ct-offices">
-                    {offices.map((o, i) => (
-                      <div key={i} className="ct-office-item">
-                        <div className="ct-office-icon"><MapPin size={15} /></div>
-                        <div>
-                          <p className="ct-office-city">{o.city}</p>
-                          <p className="ct-office-addr">{o.address}</p>
+                {/* Contact Emails */}
+                <FadeIn direction="left" delay={0.05}>
+                  <div className="ct-info-block">
+                    <span className="ct-label">Contact Us</span>
+                    <p className="ct-contact-desc">
+                      We'd be glad to hear from you. We aim to respond to all queries within 24–48 hours.
+                    </p>
+                    <div className="ct-email-list">
+                      {contactEmails.map(({ label, email }) => (
+                        <div key={email} className="ct-email-row">
+                          <span className="ct-email-tag">{label}</span>
+                          <a
+                            href={getMailHref(email)}
+                            className="ct-email-link"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Mail size={14} /> {email}
+                          </a>
                         </div>
+                      ))}
+                      {contactPhones.map(({ label, number, href }) => (
+                        <div key={number} className="ct-email-row">
+                          <span className="ct-email-tag">{label}</span>
+                          <a href={href} className="ct-email-link">
+                            <Phone size={14} /> {number}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </FadeIn>
+
+                {/* Office Addresses */}
+                <FadeIn direction="left" delay={0.1}>
+                  <div className="ct-info-block">
+                    <span className="ct-label">Office Address</span>
+                    <div className="ct-offices">
+                      {offices.map((o, i) => (
+                        <div key={i} className="ct-office-item">
+                          <div className="ct-office-icon"><MapPin size={15} /></div>
+                          <div>
+                            <p className="ct-office-city">{o.city}</p>
+                            <p className="ct-office-addr">{o.address}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </FadeIn>
+
+                {/* Social Links */}
+                <FadeIn direction="left" delay={0.15}>
+                  <div className="ct-info-block">
+                    <span className="ct-label">Follow Us</span>
+                    <div className="ct-social-row">
+                      {socialLinks.map((s, i) => (
+                        <a key={i} href={s.href} className="ct-social-pill">
+                          {s.icon} {s.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </FadeIn>
+
+              </div>
+
+              {/* RIGHT — form */}
+              <div className="ct-split-right">
+                <FadeIn direction="right" delay={0.1}>
+                  <div className="ct-form-card">
+                    <span className="ct-label">Send a Message</span>
+                    <h2 className="ct-form-title">We read every message.</h2>
+                    <ContactForm />
+                  </div>
+                </FadeIn>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════ ADVERTISE WITH US ══════════ */}
+        <section className="ct-advertise">
+          <div className="ct-container">
+            <FadeIn>
+              <div className="ct-ad-header">
+                <span className="ct-label ct-label--light">Advertise With Us</span>
+                <h2 className="ct-ad-title">Partner With News 4 Bharat</h2>
+                <p className="ct-ad-sub">Reach an informed and engaged audience across Bharat.</p>
+              </div>
+            </FadeIn>
+
+            <div className="ct-ad-body">
+              {/* Opportunities grid */}
+              <FadeIn direction="left" delay={0.1}>
+                <div className="ct-ad-left">
+                  <p className="ct-ad-section-label">Advertising Opportunities</p>
+                  <div className="ct-ad-grid">
+                    {adOpportunities.map((item, i) => (
+                      <div key={i} className="ct-ad-item">
+                        <span className="ct-ad-item-icon">{item.icon}</span>
+                        <span className="ct-ad-item-text">{item.title}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </FadeIn>
 
-              {/* Social Links */}
-              <FadeIn direction="left" delay={0.15}>
-                <div className="ct-info-block">
-                  <span className="ct-label">Follow Us</span>
-                  <div className="ct-social-row">
-                    {socialLinks.map((s, i) => (
-                      <a key={i} href={s.href} className="ct-social-pill">
-                        {s.icon} {s.label}
-                      </a>
+              {/* Why partner */}
+              <FadeIn direction="right" delay={0.15}>
+                <div className="ct-ad-right">
+                  <p className="ct-ad-section-label">Why Partner With Us?</p>
+                  <div className="ct-why-list">
+                    {whyPartner.map((item, i) => (
+                      <div key={i} className="ct-why-item">
+                        <CheckCircle2 size={16} className="ct-why-icon" />
+                        <span>{item}</span>
+                      </div>
                     ))}
+                  </div>
+                  <div className="ct-ad-cta">
+                    <p className="ct-ad-cta-label">For media kit and pricing</p>
+                    <a
+                      href={getMailHref("info@news4bharat.com")}
+                      className="ct-ad-cta-email"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Mail size={15} /> info@news4bharat.com
+                    </a>
                   </div>
                 </div>
               </FadeIn>
-
             </div>
-
-            {/* RIGHT — form */}
-            <div className="ct-split-right">
-              <FadeIn direction="right" delay={0.1}>
-                <div className="ct-form-card">
-                  <span className="ct-label">Send a Message</span>
-                  <h2 className="ct-form-title">We read every message.</h2>
-                  <ContactForm />
-                </div>
-              </FadeIn>
-            </div>
-
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ══════════ ADVERTISE WITH US ══════════ */}
-      <section className="ct-advertise">
-        <div className="ct-container">
-          <FadeIn>
-            <div className="ct-ad-header">
-              <span className="ct-label ct-label--light">Advertise With Us</span>
-              <h2 className="ct-ad-title">Partner With News 4 Bharat</h2>
-              <p className="ct-ad-sub">Reach an informed and engaged audience across Bharat.</p>
-            </div>
-          </FadeIn>
-
-          <div className="ct-ad-body">
-            {/* Opportunities grid */}
-            <FadeIn direction="left" delay={0.1}>
-              <div className="ct-ad-left">
-                <p className="ct-ad-section-label">Advertising Opportunities</p>
-                <div className="ct-ad-grid">
-                  {adOpportunities.map((item, i) => (
-                    <div key={i} className="ct-ad-item">
-                      <span className="ct-ad-item-icon">{item.icon}</span>
-                      <span className="ct-ad-item-text">{item.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </FadeIn>
-
-            {/* Why partner */}
-            <FadeIn direction="right" delay={0.15}>
-              <div className="ct-ad-right">
-                <p className="ct-ad-section-label">Why Partner With Us?</p>
-                <div className="ct-why-list">
-                  {whyPartner.map((item, i) => (
-                    <div key={i} className="ct-why-item">
-                      <CheckCircle2 size={16} className="ct-why-icon" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="ct-ad-cta">
-                  <p className="ct-ad-cta-label">For media kit and pricing</p>
-                  <a
-                    href={getMailHref("info@news4bharat.com")}
-                    className="ct-ad-cta-email"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Mail size={15} /> info@news4bharat.com
-                  </a>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
-    </div>
+      </div>
+    </>
   );
 }

@@ -174,13 +174,18 @@ function Layout() {
         <Profiler id="MainRoutes" onRender={onRenderCallback}>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/about-us" element={<About />} />
+            <Route path="/about" element={<Navigate to="/about-us" replace />} />
             <Route path="/privacy-policy" element={<Privacy />} />
-            <Route path="/terms-of-service" element={<TermsPage />} />
+            <Route path="/terms-and-conditions" element={<TermsPage />} />
+            <Route path="/terms-conditions" element={<Navigate to="/terms-and-conditions" replace />} />
+            <Route path="/terms-of-service" element={<Navigate to="/terms-and-conditions" replace />} />
             <Route path="/founders-note" element={<FoundersNote />} />
             <Route path="/editorial-policy" element={<EditorialPolicy />} />
             <Route path="/careers" element={<CareersPage />} />
-            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/career" element={<Navigate to="/careers" replace />} />
+            <Route path="/contact-us" element={<ContactPage />} />
+            <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
             <Route path="/newsletter" element={<NewsletterPage />} />
             <Route path="/CommingSoon" element={<CommingSoon />} />
             <Route path="/category/:slug" element={<CategoryPage />} />

@@ -231,7 +231,7 @@
     align-items: center;
     gap: 14px;
     padding: 1.4rem 1.6rem;
-    cursor: pointer;
+    cursor: default;
 }
 
 .cp-role-icon {

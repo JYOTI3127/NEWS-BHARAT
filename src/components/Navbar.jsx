@@ -601,10 +601,10 @@ const Header = () => {
           </button>
         </div>
 
-        <div className="drawer-ticker">
+        {/* <div className="drawer-ticker">
           <span className="drawer-live-badge">LIVE</span>
           Breaking: Sensex surges 600 pts —
-        </div>
+        </div> */}
 
         <div className="drawer-search-wrap">
           <div className="drawer-search-box">
@@ -697,14 +697,14 @@ const Header = () => {
           })}
         </div>
 
-        <div className="drawer-foot">
+        {/* <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
             {["Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
-        </div>
+        </div> */}
       </aside>
 
       {/* ══ HEADER ══ */}

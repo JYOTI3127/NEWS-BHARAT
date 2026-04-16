@@ -487,7 +487,7 @@ def article_list(request):
         category_qs = Category.objects.only('id', 'name', 'slug')
         articles = (
             Article.objects.filter(status="published")
-            .select_related('author')
+            .select_related('author', 'primary_category')
             .prefetch_related(Prefetch('categories', queryset=category_qs))
             .only(
                 'id',
@@ -499,6 +499,9 @@ def article_list(request):
                 'image_alt',
                 'published_at',
                 'created_at',
+                'primary_category__id',
+                'primary_category__name',
+                'primary_category__slug',
                 'canonical_url',
                 'meta_description',
                 'focus_keyword',

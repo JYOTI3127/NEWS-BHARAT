@@ -78,6 +78,58 @@ class CategorySerializer(serializers.ModelSerializer):
         model  = Category
         fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count', 'unique_total_articles', 'published_this_month']
 
+    def get_article_count(self, obj):
+        try:
+            return obj.articles.filter(status='published').count()
+        except Exception:
+            return 0
+
+    def get_unique_total_articles(self, obj):
+        return self.context.get('unique_total_articles', 0)
+
+    def get_published_this_month(self, obj):
+        return self.context.get('published_this_month', 0)
+
+    def validate_sub_categories(self, value):
+        if value in (None, ''):
+            return {}
+
+        if isinstance(value, list):
+            cleaned = [str(item).strip() for item in value if str(item).strip()]
+            return {'default': cleaned} if cleaned else {}
+
+        if isinstance(value, dict):
+            normalized = {}
+            for key, items in value.items():
+                section_key = str(key).strip() or 'default'
+                if isinstance(items, list):
+                    normalized[section_key] = [str(item).strip() for item in items if str(item).strip()]
+                elif items in (None, ''):
+                    normalized[section_key] = []
+                else:
+                    item = str(items).strip()
+                    normalized[section_key] = [item] if item else []
+            return normalized
+
+        return {}
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        subs = instance.sub_categories
+        if isinstance(subs, list):
+            data['sub_categories'] = {'default': subs} if subs else {}
+        elif isinstance(subs, dict):
+            data['sub_categories'] = subs
+        else:
+            data['sub_categories'] = {}
+        return data
+
+
+class ArticleCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug']
+
 
 class ContactQuerySerializer(serializers.ModelSerializer):
     class Meta:
@@ -136,52 +188,6 @@ class CareerApplicationSerializer(serializers.ModelSerializer):
         if len(value) > 500:
             raise serializers.ValidationError('Cover note cannot be longer than 500 characters.')
         return value
-
-    def get_article_count(self, obj):
-        try:
-            return obj.articles.filter(status='published').count()
-        except Exception:
-            return 0
-
-    def get_unique_total_articles(self, obj):
-        return self.context.get('unique_total_articles', 0)
-
-    def get_published_this_month(self, obj):
-        return self.context.get('published_this_month', 0)
-
-    def validate_sub_categories(self, value):
-        if value in (None, ''):
-            return {}
-
-        if isinstance(value, list):
-            cleaned = [str(item).strip() for item in value if str(item).strip()]
-            return {'default': cleaned} if cleaned else {}
-
-        if isinstance(value, dict):
-            normalized = {}
-            for key, items in value.items():
-                section_key = str(key).strip() or 'default'
-                if isinstance(items, list):
-                    normalized[section_key] = [str(item).strip() for item in items if str(item).strip()]
-                elif items in (None, ''):
-                    normalized[section_key] = []
-                else:
-                    item = str(items).strip()
-                    normalized[section_key] = [item] if item else []
-            return normalized
-
-        return {}
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        subs = instance.sub_categories
-        if isinstance(subs, list):
-            data['sub_categories'] = {'default': subs} if subs else {}
-        elif isinstance(subs, dict):
-            data['sub_categories'] = subs
-        else:
-            data['sub_categories'] = {}
-        return data
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -428,7 +434,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     canonical_url = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
-    categories   = CategorySerializer(many=True, read_only=True)
+    categories   = ArticleCategorySerializer(many=True, read_only=True)
 
     class Meta:
         model  = Article

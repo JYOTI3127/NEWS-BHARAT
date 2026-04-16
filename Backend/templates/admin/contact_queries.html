@@ -1,0 +1,175 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Contact Queries — News4Bharat Admin{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/contact_queries.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cq-wrap">
+
+  {# ── Page Header ── #}
+  <div class="cq-header">
+    <div>
+      <div class="cq-breadcrumb">Dashboard / <span>Contact Queries</span></div>
+      <div class="cq-title">Contact Queries</div>
+      <div class="cq-subtitle">
+        <span class="cq-badge total">{{ total_count }} Total</span>
+        <span class="cq-badge new">{{ new_count }} New</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Filter Bar ── #}
+  <form method="get" class="cq-filter-bar">
+
+    {# Search #}
+    <div class="cq-search-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input
+        class="cq-input"
+        type="search"
+        name="q"
+        value="{{ search }}"
+        placeholder="Search name, email, phone, subject…"
+        autocomplete="off"
+      >
+    </div>
+
+    {# Status filter #}
+    <select name="status" class="cq-select">
+      <option value="">All statuses</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="cq-btn-filter">Filter</button>
+
+    <a href="/admin/contact-queries/" class="cq-btn-reset">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+      Reset
+    </a>
+
+    <span class="cq-result-count">
+      {{ queries|length }} result{% if queries|length != 1 %}s{% endif %}
+    </span>
+  </form>
+
+  {# ── Table ── #}
+  <div class="cq-table-container">
+    <div class="cq-table-card">
+      <div class="cq-table-wrap">
+        <table class="cq-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Subject</th>
+              <th>Message</th>
+              <th>Status</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {% for query in queries %}
+            <tr>
+
+              {# Name + avatar #}
+              <td>
+                <div class="cq-name">
+                  <div class="cq-avatar">{{ query.full_name|slice:":1" }}</div>
+                  {{ query.full_name }}
+                </div>
+              </td>
+
+              {# Email #}
+              <td class="cq-email">
+                <a href="mailto:{{ query.email }}">{{ query.email }}</a>
+              </td>
+
+              {# Phone #}
+              <td class="cq-phone">{{ query.phone_number|default:"—" }}</td>
+
+              {# Subject #}
+              <td>
+                <div class="cq-subject" title="{{ query.subject }}">
+                  {{ query.subject }}
+                </div>
+              </td>
+
+              {# Message preview #}
+              <td>
+                <div class="cq-message">{{ query.message|truncatechars:120 }}</div>
+              </td>
+
+              {# Status chip #}
+              <td>
+                <span class="cq-status {{ query.status|lower|cut:' ' }}">
+                  {{ query.get_status_display }}
+                </span>
+              </td>
+
+              {# Date #}
+              <td class="cq-date">{{ query.created_at|date:"d M Y, h:i A" }}</td>
+
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="cq-empty">
+                  <div class="cq-empty-icon">📭</div>
+                  <div class="cq-empty-title">No contact queries found</div>
+                  <div class="cq-empty-sub">Try adjusting your filters</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </div>
+
+      {# ── Pagination ── #}
+      {% if page_obj.has_other_pages %}
+      <div class="cq-pagination">
+        {% if page_obj.has_previous %}
+          <a class="cq-page-btn"
+             href="?q={{ search }}&status={{ selected_status }}&page={{ page_obj.previous_page_number }}">
+            ← Prev
+          </a>
+        {% endif %}
+
+        <span class="cq-page-info">
+          Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+          <a class="cq-page-btn"
+             href="?q={{ search }}&status={{ selected_status }}&page={{ page_obj.next_page_number }}">
+            Next →
+          </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

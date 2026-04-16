@@ -545,8 +545,86 @@ class NewsAdminSite(AdminSite):
                 self.admin_view(self.newsletter_view),
                 name='newsletter',
             ),
+            path(
+                'contact-queries/',
+                self.admin_view(self.contact_queries_view),
+                name='contact_queries',
+            ),
+            path(
+                'career-applications/',
+                self.admin_view(self.career_applications_view),
+                name='career_applications',
+            ),
         ]
         return custom_urls + urls
+
+    def contact_queries_view(self, request):
+        queries = ContactQuery.objects.all().order_by('-created_at')
+        search = (request.GET.get('q') or '').strip()
+        status_filter = (request.GET.get('status') or '').strip()
+
+        if search:
+            queries = queries.filter(
+                Q(full_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(subject__icontains=search) |
+                Q(message__icontains=search)
+            )
+        if status_filter:
+            queries = queries.filter(status=status_filter)
+
+        paginator = Paginator(queries, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        return TemplateResponse(request, 'admin/contact_queries.html', {
+            **self.each_context(request),
+            'title': 'Contact Queries',
+            'queries': page_obj.object_list,
+            'page_obj': page_obj,
+            'status_choices': ContactQuery.STATUS_CHOICES,
+            'selected_status': status_filter,
+            'search': search,
+            'total_count': queries.count(),
+            'new_count': ContactQuery.objects.filter(status='new').count(),
+        })
+
+    def career_applications_view(self, request):
+        applications = CareerApplication.objects.all().order_by('-created_at')
+        search = (request.GET.get('q') or '').strip()
+        status_filter = (request.GET.get('status') or '').strip()
+        job_type_filter = (request.GET.get('job_type') or '').strip()
+
+        if search:
+            applications = applications.filter(
+                Q(full_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(job_title__icontains=search) |
+                Q(portfolio_url__icontains=search) |
+                Q(cover_note__icontains=search)
+            )
+        if status_filter:
+            applications = applications.filter(status=status_filter)
+        if job_type_filter:
+            applications = applications.filter(job_type=job_type_filter)
+
+        paginator = Paginator(applications, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        return TemplateResponse(request, 'admin/career_applications.html', {
+            **self.each_context(request),
+            'title': 'Career Applications',
+            'applications': page_obj.object_list,
+            'page_obj': page_obj,
+            'status_choices': CareerApplication.STATUS_CHOICES,
+            'job_type_choices': CareerApplication.JOB_TYPE_CHOICES,
+            'selected_status': status_filter,
+            'selected_job_type': job_type_filter,
+            'search': search,
+            'total_count': applications.count(),
+            'new_count': CareerApplication.objects.filter(status='new').count(),
+        })
 
     def newsletter_view(self, request):
         category_qs = Category.objects.only('id', 'name', 'slug')

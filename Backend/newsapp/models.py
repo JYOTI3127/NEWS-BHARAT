@@ -399,6 +399,13 @@ class ContactQuery(models.Model):
     def __str__(self):
         return f"{self.full_name} - {self.subject}"
 
+    @property
+    def initials(self):
+        parts = (self.full_name or "").split()
+        if len(parts) > 1:
+            return (parts[0][0] + parts[1][0]).upper()
+        return parts[0][:2].upper() if parts else ""
+
 
 class CareerApplication(models.Model):
     JOB_TYPE_CHOICES = [
@@ -433,6 +440,13 @@ class CareerApplication(models.Model):
 
     def __str__(self):
         return f"{self.full_name} - {self.job_title}"
+
+    @property
+    def initials(self):
+        parts = (self.full_name or "").split()
+        if len(parts) > 1:
+            return (parts[0][0] + parts[1][0]).upper()
+        return parts[0][:2].upper() if parts else ""
 
 class Reporter(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

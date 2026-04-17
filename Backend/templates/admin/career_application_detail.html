@@ -1,0 +1,111 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Career Application - {{ application.full_name }}{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ca-page">
+  <div class="ca-header">
+    <div class="ca-header-left">
+      <div class="ca-breadcrumb">
+        <a href="/admin/">Dashboard</a>
+        <span class="ca-breadcrumb-sep">/</span>
+        <a href="/admin/career-applications/">Career Applications</a>
+        <span class="ca-breadcrumb-sep">/</span>
+        <span>{{ application.full_name }}</span>
+      </div>
+      <h1 class="ca-title">{{ application.full_name }}</h1>
+      <div class="ca-meta">
+        <span class="ca-badge ca-badge-total">{{ application.job_title }}</span>
+        <span class="ca-status ca-status-{{ application.status }}">{{ application.get_status_display }}</span>
+      </div>
+    </div>
+    <div class="ca-header-right ca-detail-actions">
+      <a href="/admin/career-applications/" class="ca-btn-ghost">Back</a>
+      {% if can_delete_application %}
+        <form method="post" action="/admin/career-applications/{{ application.pk }}/delete/" onsubmit="return confirm('Delete this application permanently?');">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="/admin/career-applications/">
+          <button type="submit" class="ca-btn-danger">Delete</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ca-detail-wrap">
+    <section class="ca-detail-panel ca-detail-main">
+      <div class="ca-detail-profile">
+        <div class="ca-avatar ca-avatar-1 ca-detail-avatar">{{ application.initials }}</div>
+        <div>
+          <div class="ca-detail-name">{{ application.full_name }}</div>
+          <div class="ca-detail-sub">{{ application.get_job_type_display }} application</div>
+        </div>
+      </div>
+
+      <div class="ca-detail-grid">
+        <div class="ca-detail-item">
+          <span>Email</span>
+          <a href="mailto:{{ application.email }}">{{ application.email }}</a>
+        </div>
+        <div class="ca-detail-item">
+          <span>Phone</span>
+          <strong>{{ application.phone_number|default:"-" }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Position</span>
+          <strong>{{ application.job_title }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Job Type</span>
+          <strong>{{ application.get_job_type_display }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Submitted</span>
+          <strong>{{ application.created_at|date:"d M Y, h:i A" }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Updated</span>
+          <strong>{{ application.updated_at|date:"d M Y, h:i A" }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="ca-detail-panel">
+      <h2>Files and Links</h2>
+      <div class="ca-detail-links">
+        {% if application.resume %}
+          <a href="{{ application.resume.url }}" target="_blank" rel="noopener" class="ca-detail-link">
+            Open Resume
+          </a>
+        {% else %}
+          <span class="ca-detail-muted">No resume uploaded</span>
+        {% endif %}
+
+        {% if application.portfolio_url %}
+          <a href="{{ application.portfolio_url }}" target="_blank" rel="noopener" class="ca-detail-link">
+            Open Portfolio
+          </a>
+        {% else %}
+          <span class="ca-detail-muted">No portfolio link</span>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="ca-detail-panel">
+      <h2>Cover Note</h2>
+      <div class="ca-detail-text">{{ application.cover_note|linebreaksbr|default:"No cover note added." }}</div>
+    </section>
+
+    <section class="ca-detail-panel">
+      <h2>Admin Notes</h2>
+      <div class="ca-detail-text">{{ application.admin_notes|linebreaksbr|default:"No admin notes added." }}</div>
+    </section>
+  </div>
+</div>
+{% endblock %}

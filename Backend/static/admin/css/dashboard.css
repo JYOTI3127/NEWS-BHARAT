@@ -18241,7 +18241,7 @@ tr.art-row td:has(.art-cat-text) {
 .ca-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 980px;
 }
 
 .ca-table thead tr {
@@ -18272,6 +18272,15 @@ tr.art-row td:has(.art-cat-text) {
 
 .ca-row:hover {
   background: #fafbff;
+}
+
+.ca-row-clickable {
+  cursor: pointer;
+}
+
+.ca-row-clickable:focus-visible {
+  outline: 2px solid #748ffc;
+  outline-offset: -2px;
 }
 
 .ca-row-new {
@@ -18489,6 +18498,195 @@ tr.art-row td:has(.art-cat-text) {
   margin-top: 2px;
 }
 
+/* ---- Row actions ---- */
+.ca-cell-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ca-delete-form {
+  display: inline-flex;
+}
+
+.ca-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ca-action-view {
+  color: #1d4ed8;
+  background: #eef3ff;
+  border-color: #c5d0fa;
+}
+
+.ca-action-view:hover {
+  background: #dce6ff;
+}
+
+.ca-action-delete,
+.ca-btn-danger {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.ca-action-delete:hover,
+.ca-btn-danger:hover {
+  background: #fee2e2;
+}
+
+.ca-btn-danger {
+  min-height: 38px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =============================================
+   DETAIL PAGE
+   ============================================= */
+
+.ca-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ca-detail-wrap {
+  padding: 20px 28px 36px;
+  display: grid;
+  gap: 16px;
+  max-width: 1100px;
+}
+
+.ca-detail-panel {
+  background: #fff;
+  border: 1px solid #e8ecf4;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ca-detail-panel h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.ca-detail-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.ca-detail-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+}
+
+.ca-detail-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.ca-detail-sub {
+  font-size: 12.5px;
+  color: #8892a4;
+  margin-top: 3px;
+}
+
+.ca-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.ca-detail-item {
+  border-top: 1px solid #edf0f6;
+  padding-top: 12px;
+  min-width: 0;
+}
+
+.ca-detail-item span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8892a4;
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.ca-detail-item strong,
+.ca-detail-item a {
+  color: #1f2937;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ca-detail-item a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.ca-detail-item a:hover {
+  text-decoration: underline;
+}
+
+.ca-detail-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ca-detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #eef3ff;
+  border: 1px solid #c5d0fa;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ca-detail-link:hover {
+  background: #dce6ff;
+}
+
+.ca-detail-muted,
+.ca-detail-text {
+  color: #5a6580;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ca-detail-text {
+  white-space: normal;
+}
+
 /* =============================================
    PAGINATION
    ============================================= */
@@ -18645,7 +18843,7 @@ tr.art-row td:has(.art-cat-text) {
   color: var(--text-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 13px;
 }
 .cq-breadcrumb span {
   color: var(--accent);
@@ -18660,7 +18858,7 @@ tr.art-row td:has(.art-cat-text) {
 }
 
 .cq-subtitle {
-  margin-top: 6px;
+  margin-top: 16px;
   font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text-secondary);
@@ -18838,6 +19036,7 @@ tr.art-row td:has(.art-cat-text) {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  min-width: 940px;
 }
 
 .cq-table thead tr {
@@ -18862,6 +19061,15 @@ tr.art-row td:has(.art-cat-text) {
 }
 .cq-table tbody tr:last-child { border-bottom: none; }
 .cq-table tbody tr:hover { background: var(--bg-card-hover); }
+
+.cq-row-clickable {
+  cursor: pointer;
+}
+
+.cq-row-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
 .cq-table td {
   padding: 13px 16px;
@@ -18901,7 +19109,7 @@ tr.art-row td:has(.art-cat-text) {
   font-size: 12px;
   transition: color 0.15s;
 }
-.cq-email a:hover { color: #fff; text-decoration: underline; }
+.cq-email a:hover { color: var(--blue-mid); text-decoration: underline; }
 
 .cq-phone {
   font-family: var(--font-mono);
@@ -18982,6 +19190,54 @@ tr.art-row td:has(.art-cat-text) {
 }
 
 /* ── Empty State ── */
+.cq-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.cq-delete-form {
+  display: inline-flex;
+}
+
+.cq-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cq-action-view {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(147, 197, 253, 0.22);
+}
+
+.cq-action-view:hover {
+  color: #fff;
+  background: rgba(59, 130, 246, 0.25);
+}
+
+.cq-action-delete {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.cq-action-delete:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.24);
+}
+
 .cq-empty {
   padding: 64px 24px;
   text-align: center;
@@ -19092,6 +19348,19 @@ tr.art-row td:has(.art-cat-text) {
 
   .ca-table-wrap {
     padding: 12px 16px 24px;
+  }
+
+  .ca-detail-wrap {
+    padding: 12px 16px 24px;
+  }
+
+  .ca-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ca-detail-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .ca-pagination {

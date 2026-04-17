@@ -551,9 +551,29 @@ class NewsAdminSite(AdminSite):
                 name='contact_queries',
             ),
             path(
+                'contact-queries/<int:query_id>/',
+                self.admin_view(self.contact_query_detail_view),
+                name='contact_query_detail',
+            ),
+            path(
+                'contact-queries/<int:query_id>/delete/',
+                self.admin_view(self.contact_query_delete_view),
+                name='contact_query_delete',
+            ),
+            path(
                 'career-applications/',
                 self.admin_view(self.career_applications_view),
                 name='career_applications',
+            ),
+            path(
+                'career-applications/<int:application_id>/',
+                self.admin_view(self.career_application_detail_view),
+                name='career_application_detail',
+            ),
+            path(
+                'career-applications/<int:application_id>/delete/',
+                self.admin_view(self.career_application_delete_view),
+                name='career_application_delete',
             ),
         ]
         return custom_urls + urls
@@ -587,7 +607,45 @@ class NewsAdminSite(AdminSite):
             'search': search,
             'total_count': queries.count(),
             'new_count': ContactQuery.objects.filter(status='new').count(),
+            'current_path': request.get_full_path(),
         })
+
+    def contact_query_detail_view(self, request, query_id):
+        query = get_object_or_404(ContactQuery, pk=query_id)
+        model_admin = self._registry.get(ContactQuery)
+        if model_admin and not model_admin.has_view_permission(request, query):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+        return TemplateResponse(request, 'admin/contact_query_detail.html', {
+            **self.each_context(request),
+            'title': f'Contact Query - {query.full_name}',
+            'query': query,
+            'can_delete_query': (
+                model_admin.has_delete_permission(request, query)
+                if model_admin else request.user.has_perm('newsapp.delete_contactquery')
+            ),
+        })
+
+    def contact_query_delete_view(self, request, query_id):
+        query = get_object_or_404(ContactQuery, pk=query_id)
+        model_admin = self._registry.get(ContactQuery)
+        can_delete = (
+            model_admin.has_delete_permission(request, query)
+            if model_admin else request.user.has_perm('newsapp.delete_contactquery')
+        )
+        if not can_delete:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+        if request.method != 'POST':
+            messages.error(request, 'Contact query delete karne ke liye delete button use karein.')
+            return redirect(f'/admin/contact-queries/{query.pk}/')
+
+        sender_name = query.full_name
+        query.delete()
+        messages.success(request, f"Contact query '{sender_name}' delete ho gayi.")
+        return redirect(request.POST.get('next') or '/admin/contact-queries/')
 
     def career_applications_view(self, request):
         applications = CareerApplication.objects.all().order_by('-created_at')
@@ -624,7 +682,45 @@ class NewsAdminSite(AdminSite):
             'search': search,
             'total_count': applications.count(),
             'new_count': CareerApplication.objects.filter(status='new').count(),
+            'current_path': request.get_full_path(),
         })
+
+    def career_application_detail_view(self, request, application_id):
+        application = get_object_or_404(CareerApplication, pk=application_id)
+        model_admin = self._registry.get(CareerApplication)
+        if model_admin and not model_admin.has_view_permission(request, application):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+        return TemplateResponse(request, 'admin/career_application_detail.html', {
+            **self.each_context(request),
+            'title': f'Career Application - {application.full_name}',
+            'application': application,
+            'can_delete_application': (
+                model_admin.has_delete_permission(request, application)
+                if model_admin else request.user.has_perm('newsapp.delete_careerapplication')
+            ),
+        })
+
+    def career_application_delete_view(self, request, application_id):
+        application = get_object_or_404(CareerApplication, pk=application_id)
+        model_admin = self._registry.get(CareerApplication)
+        can_delete = (
+            model_admin.has_delete_permission(request, application)
+            if model_admin else request.user.has_perm('newsapp.delete_careerapplication')
+        )
+        if not can_delete:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+        if request.method != 'POST':
+            messages.error(request, 'Application delete karne ke liye delete button use karein.')
+            return redirect(f'/admin/career-applications/{application.pk}/')
+
+        applicant_name = application.full_name
+        application.delete()
+        messages.success(request, f"Application '{applicant_name}' delete ho gayi.")
+        return redirect(request.POST.get('next') or '/admin/career-applications/')
 
     def newsletter_view(self, request):
         category_qs = Category.objects.only('id', 'name', 'slug')

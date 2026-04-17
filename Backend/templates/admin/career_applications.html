@@ -4,6 +4,11 @@
 {% block title %}Career Applications — News4Bharat{% endblock %}
 {% block content_title %}{% endblock %}
 
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="ca-page">
 
@@ -74,11 +79,12 @@
             <th>Links</th>
             <th>Status</th>
             <th>Submitted</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for app in applications %}
-          <tr class="ca-row {% if app.status == 'new' %}ca-row-new{% endif %}">
+          <tr class="ca-row ca-row-clickable {% if app.status == 'new' %}ca-row-new{% endif %}" data-href="/admin/career-applications/{{ app.pk }}/" tabindex="0" role="link" aria-label="View {{ app.full_name }} application">
             <td class="ca-cell-name">
               <div class="ca-avatar ca-avatar-{{ forloop.counter|divisibleby:5|yesno:'5,' }}{{ forloop.counter|divisibleby:4|yesno:'4,' }}{{ forloop.counter|divisibleby:3|yesno:'3,' }}{{ forloop.counter|divisibleby:2|yesno:'2,1' }}">
                 {{ app.initials }}
@@ -124,6 +130,14 @@
             <td class="ca-cell-date">
               <div class="ca-date">{{ app.created_at|date:"d M Y" }}</div>
               <div class="ca-time">{{ app.created_at|date:"h:i A" }}</div>
+            </td>
+            <td class="ca-cell-actions">
+              <a href="/admin/career-applications/{{ app.pk }}/" class="ca-action-btn ca-action-view">View</a>
+              <form method="post" action="/admin/career-applications/{{ app.pk }}/delete/" class="ca-delete-form" onsubmit="return confirm('Delete this application permanently?');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ current_path }}">
+                <button type="submit" class="ca-action-btn ca-action-delete">Delete</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
@@ -192,4 +206,18 @@
   </div>
 
 </div>
+<script>
+  document.querySelectorAll('.ca-row-clickable').forEach((row) => {
+    const openRow = () => {
+      if (row.dataset.href) window.location.href = row.dataset.href;
+    };
+    row.addEventListener('click', (event) => {
+      if (event.target.closest('a, button, input, select, textarea, form')) return;
+      openRow();
+    });
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') openRow();
+    });
+  });
+</script>
 {% endblock %}

@@ -1,0 +1,90 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Contact Query - {{ query.full_name }}{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ca-page">
+  <div class="ca-header">
+    <div class="ca-header-left">
+      <div class="ca-breadcrumb">
+        <a href="/admin/">Dashboard</a>
+        <span class="ca-breadcrumb-sep">/</span>
+        <a href="/admin/contact-queries/">Contact Queries</a>
+        <span class="ca-breadcrumb-sep">/</span>
+        <span>{{ query.full_name }}</span>
+      </div>
+      <h1 class="ca-title">{{ query.subject }}</h1>
+      <div class="ca-meta">
+        <span class="ca-badge ca-badge-total">{{ query.full_name }}</span>
+        <span class="cq-status {{ query.status|lower|cut:' ' }}">{{ query.get_status_display }}</span>
+      </div>
+    </div>
+    <div class="ca-header-right ca-detail-actions">
+      <a href="/admin/contact-queries/" class="ca-btn-ghost">Back</a>
+      {% if can_delete_query %}
+        <form method="post" action="/admin/contact-queries/{{ query.pk }}/delete/" onsubmit="return confirm('Delete this contact query permanently?');">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="/admin/contact-queries/">
+          <button type="submit" class="ca-btn-danger">Delete</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ca-detail-wrap">
+    <section class="ca-detail-panel ca-detail-main">
+      <div class="ca-detail-profile">
+        <div class="cq-avatar ca-detail-avatar">{{ query.initials }}</div>
+        <div>
+          <div class="ca-detail-name">{{ query.full_name }}</div>
+          <div class="ca-detail-sub">Submitted {{ query.created_at|date:"d M Y, h:i A" }}</div>
+        </div>
+      </div>
+
+      <div class="ca-detail-grid">
+        <div class="ca-detail-item">
+          <span>Email</span>
+          <a href="mailto:{{ query.email }}">{{ query.email }}</a>
+        </div>
+        <div class="ca-detail-item">
+          <span>Phone</span>
+          <strong>{{ query.phone_number|default:"-" }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Subject</span>
+          <strong>{{ query.subject }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Status</span>
+          <strong>{{ query.get_status_display }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Submitted</span>
+          <strong>{{ query.created_at|date:"d M Y, h:i A" }}</strong>
+        </div>
+        <div class="ca-detail-item">
+          <span>Updated</span>
+          <strong>{{ query.updated_at|date:"d M Y, h:i A" }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="ca-detail-panel">
+      <h2>Message</h2>
+      <div class="ca-detail-text">{{ query.message|linebreaksbr }}</div>
+    </section>
+
+    <section class="ca-detail-panel">
+      <h2>Admin Notes</h2>
+      <div class="ca-detail-text">{{ query.admin_notes|linebreaksbr|default:"No admin notes added." }}</div>
+    </section>
+  </div>
+</div>
+{% endblock %}

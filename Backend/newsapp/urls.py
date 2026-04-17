@@ -19,6 +19,7 @@ urlpatterns = [
     path('datetime/', datetime_api, name='api-datetime'),
     path('search/', search_api, name='api-search'),
     path('search/articles/', live_article_search_api, name='api-live-article-search'),
+    path('search/categories/', live_category_search_api, name='api-live-category-search'),
     path('login/',          views.secure_login_view,  name='login'),
     path('logout/',         views.secure_logout_view, name='logout'),
     path('my-credentials/', views.my_credentials,     name='my_credentials'),

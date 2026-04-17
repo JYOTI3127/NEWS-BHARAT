@@ -1313,6 +1313,45 @@ def search_api(request):
 
 
 @require_GET
+def live_category_search_api(request):
+    query = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 20)
+
+    if len(query) < 2:
+        return JsonResponse({
+            "query": query,
+            "total": 0,
+            "categories": [],
+            "error": "Query must be at least 2 characters"
+        }, status=400)
+
+    categories = (
+        Category.objects.filter(status='active')
+        .filter(Q(name__icontains=query) | Q(slug__icontains=query))
+        .annotate(article_count=Count('articles', filter=Q(articles__status='published')))
+        .order_by('-article_count', 'name')[:limit]
+    )
+
+    categories_data = [
+        {
+            "id": cat.id,
+            "name": cat.name,
+            "slug": cat.slug,
+            "description": cat.description or "",
+            "article_count": cat.article_count,
+            "url": f"/category/{clean_url_segment(cat.slug)}/",
+        }
+        for cat in categories
+    ]
+
+    return JsonResponse({
+        "query": query,
+        "total": len(categories_data),
+        "categories": categories_data,
+    })
+
+
+@require_GET
 def live_article_search_api(request):
     query = request.GET.get('q', '').strip()
     limit = min(int(request.GET.get('limit', 10)), 20)

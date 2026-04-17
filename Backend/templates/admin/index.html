@@ -353,7 +353,7 @@
     <div class="ad-toggle-row">
       <span class="ad-toggle-label">Show ad banner on homepage</span>
       <label class="hpc-toggle">
-        <input type="checkbox" id="adActive" {% if ad_slot and ad_slot.is_active %}checked{% endif %}>
+        <input type="checkbox" id="adActive" {% if not ad_slot or ad_slot.is_active %}checked{% endif %}>
         <span class="hpc-toggle-slider"></span>
       </label>
     </div>

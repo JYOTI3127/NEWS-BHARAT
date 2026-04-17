@@ -384,7 +384,7 @@ class SitemapEngine:
         today = datetime.utcnow().date().isoformat()
         pages = [
             ("/",               "1.0", "always"),
-            ("/about",          "0.7", "monthly"),
+            ("/about-us",       "0.7", "monthly"),
             ("/contact",        "0.6", "monthly"),
             ("/privacy-policy", "0.4", "yearly"),
             ("/terms",          "0.4", "yearly"),

@@ -947,18 +947,15 @@ def update_ad_slot(request):
     slot             = _get_or_create_slot('ad_banner')
     slot.mode        = 'manual'
     slot.ad_link_url = request.POST.get('ad_link_url', '').strip()
+    slot.is_active   = request.POST.get('is_active', 'false').lower() in ('true', '1', 'on')
 
     if 'ad_image' in request.FILES and request.FILES['ad_image']:
         slot.ad_image     = request.FILES['ad_image']
         slot.ad_image_url = ''
-        slot.is_active    = True
     else:
         ad_url = request.POST.get('ad_image_url', '').strip()
         if ad_url and not ad_url.startswith('blob:'):
             slot.ad_image_url = ad_url
-            slot.is_active    = True
-        else:
-            slot.is_active = request.POST.get('is_active', 'true').lower() in ('true', '1', 'on')
 
     slot.save()
     image_url = request.build_absolute_uri(slot.ad_image.url) if slot.ad_image else slot.ad_image_url

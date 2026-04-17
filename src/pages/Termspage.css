@@ -109,10 +109,6 @@
 .terms-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(120deg,
-            rgba(8, 8, 8, 0.93) 0%,
-            rgba(25, 0, 0, 0.82) 55%,
-            rgba(8, 8, 8, 0.78) 100%);
 }
 
 .terms-hero-grid {

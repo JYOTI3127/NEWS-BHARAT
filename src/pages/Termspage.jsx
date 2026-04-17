@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import "./Termspage.css";
 import termsBg from "../assets/terms-conditions.png";
@@ -257,10 +258,7 @@ export default function TermsPage() {
   return (
     <>
       <PageSeo
-        title="Terms & Conditions | News4Bharat User Agreement"
-        description="Read the terms and conditions for using News4Bharat, including user responsibilities, content usage, and legal terms."
-        keywords="terms and conditions news website, user agreement India website"
-        path="/terms-and-conditions"
+        {...STATIC_PAGE_SEO["/terms-and-conditions"]}
       />
       <div className="terms-page">
 

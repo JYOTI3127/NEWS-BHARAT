@@ -67,7 +67,8 @@
   box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
 }
 
-.mss-card:hover .mss-title,.mss-summary,
+.mss-card:hover .mss-title,
+.mss-card:hover .mss-summary,
 .mss-card:hover .mss-kicker {
   color: #d80100;
 }

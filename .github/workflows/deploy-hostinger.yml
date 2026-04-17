@@ -99,7 +99,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "build/*"
+          source: "build/*,build/.htaccess"
           target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
           strip_components: 1
           overwrite: true

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FiCheck, FiMinus, FiFeather, FiEdit3 } from "react-icons/fi";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import founderBg from "../assets/founder-img.png";
 
@@ -47,11 +48,14 @@ const commitments = [
 export default function FoundersNote() {
   return (
     <>
-      <PageSeo
+      {/* <PageSeo
         title="Founder’s Note | Vision Behind News4Bharat"
         description="Read the founder’s note to understand the vision, purpose, and inspiration behind launching News4Bharat."
         keywords="founder message news website, News4Bharat vision, founder story India media"
         path="/founders-note"
+      /> */}
+      <PageSeo
+        {...STATIC_PAGE_SEO["/founders-note"]}
       />
       <div className="fn-page">
 

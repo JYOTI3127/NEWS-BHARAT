@@ -23,12 +23,26 @@ const formatIndiaDateKey = (value) =>
     timeZone: INDIA_TZ, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(value);
 
-const isArticleFromTodayInIndia = (article) => {
+const indiaMidnight = (dateKey) => new Date(`${dateKey}T00:00:00+05:30`);
+
+// ✅ This week ka filter — Sunday se aaj tak (India timezone)
+const isArticleFromThisWeekInIndia = (article) => {
   const articleDate = getArticleDateValue(article);
   if (!articleDate) return false;
   const now = new Date();
   if (articleDate.getTime() > now.getTime()) return false;
-  return formatIndiaDateKey(articleDate) === formatIndiaDateKey(now);
+
+  const todayStr = formatIndiaDateKey(now);
+  const todayIndia = indiaMidnight(todayStr);
+  const dayOfWeek = todayIndia.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+  const weekStart = new Date(todayIndia);
+  weekStart.setUTCDate(todayIndia.getUTCDate() - dayOfWeek);
+
+  const articleStr = formatIndiaDateKey(articleDate);
+  const articleDay = indiaMidnight(articleStr);
+
+  return articleDay.getTime() >= weekStart.getTime();
 };
 
 const formatArticleDateTime = (article) => {
@@ -51,9 +65,7 @@ const formatArticleDateTime = (article) => {
 };
 
 // ─────────────────────────────────────────────
-// ✅ FIX 1: Teen alag hooks → ek hook
-// Pehle: 3 alag resize listeners
-// Ab: ek listener, ek state
+// ek hook — teen alag resize listeners ki jagah
 // ─────────────────────────────────────────────
 const useScreenSize = () => {
   const getSize = () => {
@@ -163,31 +175,44 @@ const TrendingBar = memo(({ categories, is2K, is320 }) => {
   );
 });
 
-// ── Latest News ───────────────────────────────────────────────
+// ── Latest News (All About This Week) ────────────────────────
 const LatestNews = memo(({ articles, loading, is2K }) => {
-  const visibleArticles = articles.slice(0, 5);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (loading || visibleArticles.length <= 1) return undefined;
-
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % visibleArticles.length);
-    }, 4200);
-
-    return () => window.clearInterval(timer);
-  }, [loading, visibleArticles.length]);
-
-  const safeActiveIndex = visibleArticles.length > 0 ? activeIndex % visibleArticles.length : 0;
-  const spotlightArticle = visibleArticles[safeActiveIndex];
-  const spotlightImage = getArticleImage(spotlightArticle);
+  const visibleArticles = useMemo(
+    () => articles.filter(isArticleFromThisWeekInIndia),
+    [articles]
+  );
+  const scrollRef = useRef(null);
+  const itemRefs = useRef([]);
   const getDesc = (article) =>
     article?.subtitle ||
     article?.summary ||
     article?.excerpt ||
     article?.description ||
     "";
-  const spotlightPath = getArticlePath(spotlightArticle);
+
+  useEffect(() => {
+    itemRefs.current = itemRefs.current.slice(0, visibleArticles.length);
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [visibleArticles.length]);
+
+  useEffect(() => {
+    if (loading || visibleArticles.length <= 1) return undefined;
+
+    let currentIndex = 0;
+    const timer = window.setInterval(() => {
+      currentIndex = (currentIndex + 1) % visibleArticles.length;
+      const scrollNode = scrollRef.current;
+      const nextItem = itemRefs.current[currentIndex];
+
+      if (!scrollNode || !nextItem) return;
+      scrollNode.scrollTo({
+        top: nextItem.offsetTop,
+        behavior: "smooth",
+      });
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [loading, visibleArticles.length]);
 
   return (
     <div
@@ -211,76 +236,42 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
           ))}
         </div>
       ) : visibleArticles.length === 0 ? (
-        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
+        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found for this week.</div>
       ) : (
         <div
+          ref={scrollRef}
           className="tn-latest-scroll"
           style={{ overflowY: "auto", position: "relative", ...(is2K ? { maxHeight: 300 } : {}) }}
         >
-          {spotlightArticle ? (
-            <div
-              key={spotlightArticle.id || spotlightArticle.slug || safeActiveIndex}
-              style={{
-                margin: "0 0 9px 0",
-                padding: "14px 14px 13px 16px",
-                border: "1px solid #fde2e2",
-                borderLeft: "4px solid #D80100",
-                background: "linear-gradient(135deg,#fff5f5 0%,#ffffff 68%)",
-                boxShadow: "0 10px 26px rgba(216,1,0,0.08)",
-                transition: "opacity 0.35s ease, transform 0.35s ease",
-              }}
-            >
+          {visibleArticles.map((article, index) => {
+            const articlePath = getArticlePath(article);
+            const desc = getDesc(article);
+
+            return (
               <Link
-                to={spotlightPath || "#"}
-                className="news-ticker-item"
+                key={article.id || article.slug || index}
+                ref={(node) => { itemRefs.current[index] = node; }}
+                to={articlePath || "#"}
+                className="tn-latest-item news-ticker-item"
                 style={{ display: "block", textDecoration: "none", color: "inherit" }}
-                onClick={(event) => { if (!spotlightPath) event.preventDefault(); }}
+                onClick={(event) => { if (!articlePath) event.preventDefault(); }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: "#D80100", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                    Week Focus
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#D80100" }}>
-                    {String(safeActiveIndex + 1).padStart(2, "0")} / {String(visibleArticles.length).padStart(2, "0")}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    width: "100%",
-                    aspectRatio: "16 / 9",
-                    marginBottom: 10,
-                    overflow: "hidden",
-                    borderRadius: 8,
-                    background: "linear-gradient(135deg, rgba(216,1,0,0.14), rgba(0,39,101,0.12))",
-                  }}
-                >
-                  {spotlightImage ? (
-                    <img
-                      src={spotlightImage}
-                      alt={spotlightArticle.title || "All About This Week"}
-                      loading="lazy"
-                      decoding="async"
-                      width={460}
-                      height={259}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      onError={(event) => { event.currentTarget.style.display = "none"; }}
-                    />
-                  ) : null}
-                </div>
                 <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: 800, color: "#111", lineHeight: "1.35", fontSize: is2K ? 18 : undefined }}>
-                  {spotlightArticle.title || "Untitled"}
+                  {article.title || "Untitled"}
                 </div>
-                <div className="tn-latest-item-desc" style={{ marginTop: 7, lineHeight: "1.55", WebkitLineClamp: 3 }}>
-                  {getDesc(spotlightArticle).slice(0, 150)}{getDesc(spotlightArticle).length > 150 ? "..." : ""}
-                </div>
-                {formatArticleDateTime(spotlightArticle) && (
-                  <div style={{ marginTop: 8, color: "#6b7280", fontSize: 11, fontWeight: 700, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
-                    {formatArticleDateTime(spotlightArticle)}
+                {desc ? (
+                  <div className="tn-latest-item-desc" style={{ marginTop: 7, lineHeight: "1.55", WebkitLineClamp: 2 }}>
+                    {desc.slice(0, 130)}{desc.length > 130 ? "..." : ""}
+                  </div>
+                ) : null}
+                {formatArticleDateTime(article) && (
+                  <div style={{ marginTop: 6, color: "#6b7280", fontSize: 11, fontWeight: 700, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
+                    {formatArticleDateTime(article)}
                   </div>
                 )}
               </Link>
-            </div>
-          ) : null}
+            );
+          })}
         </div>
       )}
     </div>
@@ -293,8 +284,9 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
   const [animDir, setAnimDir] = useState(null);
   const timerRef = useRef(null);
 
+  // ✅ Saare articles dikhao — sirf image filter, today filter nahi
   const withImage = useMemo(
-    () => articles.filter((a) => getArticleImage(a) && isArticleFromTodayInIndia(a)),
+    () => articles.filter((a) => getArticleImage(a)),
     [articles]
   );
   const totalPages = Math.ceil(withImage.length / 3);
@@ -339,7 +331,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
   return (
     <div>
       {withImage.length === 0 && (
-        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No today posts found.</div>
+        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
       )}
       <div className="tn-feature-cards" style={{ ...transitionStyle, ...(is2K ? { height: 430 } : {}) }}>
         {cards.map((card, i) => (
@@ -465,35 +457,7 @@ const LiveUpdates = memo(({ is2K }) => {
   );
 });
 
-// ─────────────────────────────────────────────
-// ✅ FIX 2: Banner — alag memo component
-// Pehle: Banner ke setInterval se poora TrendingNews re-render hota tha
-// Ab: sirf Banner re-render hoga har 3 sec mein
-// ─────────────────────────────────────────────
-const FALLBACK_BANNER_SLIDES = [
-  {
-    leftBgClass: "bg-[#1e5c42]", brand1: "PRATIYOGITA", brand2: "DARPAN",
-    price: "PRICE ₹125.00", date: "FEBRUARY 2024", tagline: "WHERE EXCELLENCE GUIDES THE SUCCESS",
-    midBgClass: "bg-[#f5a000]", midTag: "Semi Annual", midBoxBgClass: "bg-[#6a1fa2]",
-    midL1: "Current", midL2: "Affairs", midL3: "Special",
-    rightBgClass: "bg-[#f5e000]", rl: "MOST USEFUL FOR", rb: "UNION & STATE", rs: "CIVIL SERVICES EXAM",
-  },
-  {
-    leftBgClass: "bg-[#0d3b6e]", brand1: "COMPETITION", brand2: "TIMES",
-    price: "PRICE ₹150.00", date: "MARCH 2024", tagline: "YOUR GATEWAY TO SUCCESS",
-    midBgClass: "bg-[#e53935]", midTag: "Annual", midBoxBgClass: "bg-[#b71c1c]",
-    midL1: "General", midL2: "Knowledge", midL3: "Special",
-    rightBgClass: "bg-[#b2fab4]", rl: "BEST RESOURCE FOR", rb: "SSC & BANKING", rs: "EXAMINATION PREP",
-  },
-  {
-    leftBgClass: "bg-[#1a1a2e]", brand1: "CAREER", brand2: "LAUNCHER",
-    price: "PRICE ₹99.00", date: "APRIL 2024", tagline: "LAUNCHING CAREERS SINCE 1995",
-    midBgClass: "bg-[#7b1fa2]", midTag: "Monthly", midBoxBgClass: "bg-[#4a148c]",
-    midL1: "Reasoning", midL2: "& Aptitude", midL3: "Special",
-    rightBgClass: "bg-[#ffe082]", rl: "TOP CHOICE FOR", rb: "UPSC & STATE PSC", rs: "ASPIRANTS NATIONWIDE",
-  },
-];
-
+// ── Banner ────────────────────────────────────────────────────
 const getAdImageUrl = (ad) => {
   const image = ad?.image_url || ad?.ad_image_url || ad?.image || ad?.ad_image;
   if (!image) return "";
@@ -556,16 +520,10 @@ const Banner = memo(() => {
   );
 });
 
-// ─────────────────────────────────────────────
-// ✅ FIX 3: Main component — props se data lo
-// Pehle: useArticles() apna alag useQuery chalaata tha
-// Ab: Home.jsx se articles + categories props mein aate hain
-// = zero extra API calls!
-// ─────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────
 export default function TrendingNews({ articles: passedArticles = [], categories: passedCategories = [], loading: passedLoading = false }) {
   const { is4K, is2K, is320 } = useScreenSize();
 
-  // ✅ Articles — props se, process karo ek baar
   const articles = useMemo(() => {
     const list = Array.isArray(passedArticles) ? passedArticles : passedArticles?.results || [];
     return list
@@ -573,14 +531,12 @@ export default function TrendingNews({ articles: passedArticles = [], categories
       .sort((a, b) => new Date(b.published_at || b.created_at || 0) - new Date(a.published_at || a.created_at || 0));
   }, [passedArticles]);
 
-  // ✅ Categories — props se
   const categories = useMemo(() => {
     if (Array.isArray(passedCategories) && passedCategories.length > 0) {
       return passedCategories
         .filter((c) => (c.name || c.title) && c.status === "active" && c.slug?.trim())
         .map((c) => ({ name: c.name || c.title, slug: c.slug }));
     }
-    // Fallback: articles se nikalo
     const seen = new Set();
     const result = [];
     articles.forEach((article) => {

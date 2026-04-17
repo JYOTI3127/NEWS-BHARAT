@@ -112,6 +112,17 @@
   overflow: hidden;
 }
 
+.hcs-side-summary {
+  margin: 0;
+  color: #585858;
+  font-size: 12px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .hcs-empty {
   border: 1px dashed #ded6ce;
   border-radius: 14px;
@@ -142,6 +153,7 @@
 
 .hcs-editorial-featured:hover 
 .hcs-side-card:hover .hcs-side-title,
+.hcs-side-card:hover .hcs-side-summary,
 .hcs-side-card:hover .hcs-meta,
 .hcs-side-card:hover .hcs-kicker,
 .hcs-mosaic-featured:hover .hcs-featured-title,
@@ -150,7 +162,6 @@
 .hcs-card:hover .hcs-side-title,
 .hcs-card:hover .hcs-summary,
 .hcs-card:hover .hcs-kicker,
-.hcs-scoreline-featured:hover .hcs-featured-title,
 .hcs-scoreline-item:hover .hcs-side-title,
 .hcs-scoreline-item:hover .hcs-meta,
 .hcs-spotlight-main:hover .hcs-featured-title,

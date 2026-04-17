@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import disclaimerImg from "../assets/disclaimer-img.png";
 
@@ -158,10 +159,7 @@ export default function DisclaimerPage() {
   return (
     <>
     <PageSeo
-      title="Disclaimer | News4Bharat Content & Liability Information"
-      description="Review the News4Bharat disclaimer regarding content accuracy, external links, and limitations of liability."
-      keywords="news disclaimer India, website liability disclaimer, News4Bharat terms"
-      path="/disclaimer"
+      {...STATIC_PAGE_SEO["/disclaimer"]}
     />
     <div className="terms-page disclaimer-page">
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from "react";
-import logoBig from "../assets/NEWS4BHARAT LOGO 2 compact.png";
+import logoBig from "../assets/NEWS4BHARAT logo (7).png";
 import logoSmall from "../assets/NEWS4BHARAT compact.png";
 import { Link, useNavigate } from "react-router-dom";
 

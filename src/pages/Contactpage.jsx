@@ -8,6 +8,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import contactBg from "../assets/contact Us.jpg.jpeg";
 
@@ -22,7 +23,7 @@ const useInView = (threshold = 0.12) => {
     );
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
   return [ref, visible];
 };
 
@@ -88,7 +89,25 @@ const contactPhones = [
   { label: "Mobile", number: "+91 8279993074", href: "tel:+918279993074" },
 ];
 
-const CONTACT_FORM_RECIPIENT = "news4bharat11@gmail.com";
+const CONTACT_API_URL = "https://news4bharat.cloud/api/contact-queries/";
+
+const formatApiErrors = (data) => {
+  const errorData = data?.error || data?.errors || data;
+
+  if (!errorData || typeof errorData !== "object") {
+    return data?.message || data?.detail || "";
+  }
+
+  return Object.entries(errorData)
+    .flatMap(([field, value]) => {
+      const label = field
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+      const messages = Array.isArray(value) ? value : [value];
+      return messages.map((message) => `${label}: ${message}`);
+    })
+    .join(" ");
+};
 
 /* ── EMAIL HELPER — mobile pe mail app, desktop pe Gmail web ── */
 const getMailHref = (email, subject = "", body = "") => {
@@ -116,20 +135,21 @@ const getMailHref = (email, subject = "", body = "") => {
 
 /* ── CONTACT FORM ── */
 function ContactForm() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", phone: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: "", phone: "91", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
 
   useEffect(() => {
     if (!submitted) return undefined;
 
-    const timer = setTimeout(() => {
-      setForm({ name: "", email: "", subject: "", phone: "", message: "" });
-      setErrors({});
+    const timer = window.setTimeout(() => {
       setSubmitted(false);
-    }, 1500);
+      setSubmitResult(null);
+    }, 1800);
 
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [submitted]);
 
   const validate = () => {
@@ -138,57 +158,74 @@ function ContactForm() {
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = "Valid email required";
     if (!form.subject.trim()) e.subject = "Subject is required";
     if (!form.phone.trim()) e.phone = "Number is required";
+    else if (!/^\+?\d{10,15}$/.test(form.phone.trim())) e.phone = "Enter a valid phone number";
     if (!form.message.trim()) e.message = "Message is required";
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const emailBody = [
-      `Name: ${form.name}`,
-      `Email: ${form.email}`,
-      `Phone: ${form.phone}`,
-      "",
-      "Message:",
-      form.message,
-    ].join("\n");
+    const phoneNumber = form.phone.trim().startsWith("+")
+      ? form.phone.trim()
+      : `+${form.phone.trim()}`;
 
-    window.open(
-      getMailHref(CONTACT_FORM_RECIPIENT, form.subject, emailBody),
-      "_blank",
-      "noopener,noreferrer"
-    );
+    setIsSubmitting(true);
     setErrors({});
-    setSubmitted(true);
-  };
+    setSubmitResult(null);
+    setSubmitted(false);
 
-  if (submitted) {
-    return (
-      <div className="ct-form-success">
-        <div className="ct-success-icon"><CheckCircle size={34} /></div>
-        <h3 className="ct-success-title">Message Sent</h3>
-        <p className="ct-success-text">
-          Thank you for reaching out to News 4 Bharat. We will get back to you at{" "}
-          <a
-            href={getMailHref(CONTACT_FORM_RECIPIENT)}
-            className="ct-email-link"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {CONTACT_FORM_RECIPIENT}
-          </a>{" "}
-          within 24 hours.
-        </p>
-        <button className="ct-success-reset" onClick={() => { setForm({ name: "", email: "", subject: "", phone: "", message: "" }); setErrors({}); setSubmitted(false); }}>
-          Send Another Message
-        </button>
-      </div>
-    );
-  }
+    try {
+      const response = await fetch(CONTACT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: form.name.trim(),
+          email: form.email.trim(),
+          phone_number: phoneNumber,
+          subject: form.subject.trim(),
+          message: form.message.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(formatApiErrors(data) || "Message submit nahi ho paya. Please try again.");
+      }
+
+      setSubmitResult(data);
+      setForm({ name: "", email: "", subject: "", phone: "91", message: "" });
+      setSubmitted(true);
+    } catch (error) {
+      setErrors({ form: error.message || "Message submit nahi ho paya. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="ct-form-wrap">
+      {submitted && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: "12px 14px",
+            borderRadius: 8,
+            background: "#eefaf4",
+            color: "#146c43",
+            fontSize: 13,
+            lineHeight: 1.5,
+            border: "1px solid #bfe8d2",
+          }}
+        >
+          <CheckCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            {submitResult?.message || "Message sent successfully. The form is ready for another message."}
+          </span>
+        </div>
+      )}
       <div className="ct-form-row">
         <div className="ct-form-group">
           <label className="ct-form-label">Full Name *</label>
@@ -197,7 +234,7 @@ function ContactForm() {
         </div>
         <div className="ct-form-group">
           <label className="ct-form-label">Email Address *</label>
-          <input className={`ct-form-input${errors.email ? " ct-err" : ""}`} placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input type="email" className={`ct-form-input${errors.email ? " ct-err" : ""}`} placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           {errors.email && <span className="ct-error-msg">{errors.email}</span>}
         </div>
       </div>
@@ -211,6 +248,7 @@ function ContactForm() {
           <label className="ct-form-label">Number *</label>
           <PhoneInput
             country={"in"}
+            prefix="+"
             value={form.phone}
             onChange={(phone) => setForm({ ...form, phone })}
             inputClass="ct-form-input"
@@ -224,8 +262,9 @@ function ContactForm() {
         <textarea className={`ct-form-textarea${errors.message ? " ct-err" : ""}`} placeholder="Write your message here..." value={form.message} maxLength={600} onChange={(e) => setForm({ ...form, message: e.target.value })} />
         {errors.message && <span className="ct-error-msg">{errors.message}</span>}
       </div>
-      <button className="ct-submit-btn" onClick={handleSubmit}>
-        <Send size={15} /> Send Message
+      {errors.form && <span className="ct-error-msg">{errors.form}</span>}
+      <button className="ct-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
+        <Send size={15} /> {isSubmitting ? "Sending..." : "Send Message"}
       </button>
     </div>
   );
@@ -237,11 +276,14 @@ function ContactForm() {
 export default function ContactPage() {
   return (
     <>
-      <PageSeo
+      {/* <PageSeo
         title="Contact News4Bharat | Get in Touch with Our Team"
         description="Reach out to News4Bharat for feedback, partnerships, press inquiries, or support. We’re here to assist you."
         keywords="contact News4Bharat, news website contact India, media inquiries"
         path="/contact-us"
+      /> */}
+      <PageSeo
+        {...STATIC_PAGE_SEO["/contact-us"]}
       />
       <div className="contact-page">
 

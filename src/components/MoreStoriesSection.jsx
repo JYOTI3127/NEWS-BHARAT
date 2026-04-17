@@ -1,39 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./MoreStoriesSection.css";
-import { API_BASE } from "../lib/api";
+import { API_BASE, fetchArticles } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+
 const CATEGORY_API = `${API_BASE}/categories/`;
 
-const FEATURED_HOME_SLUGS = new Set([
-  "world-news",
-  "worldnews",
-  "sports",
-  "sport",
-  "entertainment",
-  "entertainmnet",
-  "technology",
-  "automobile",
-  "auto",
-  "health",
-  "ai",
-  "artificial-intelligence",
-]);
-
-const EXISTING_HOME_SLUGS = new Set([
-  "60-second-read",
-  "bharat-economy",
-  "bharat-explainers",
-  "bharat-opinions",
-  "bharat-in-numbers",
-  "bharats-startups",
-  "bharat-startups",
-  "states-of-bharat",
-  "state-of-bharat",
-]);
-
-const ARTICLES_PER_CATEGORY = 2;
-const MAX_TOTAL_ARTICLES = 18;
+const HOME_VISIBLE_SECTIONS = [
+  { slugs: ["world-news", "worldnews"], visibleCount: 5 },
+  { slugs: ["sports", "sport"], visibleCount: 5 },
+  { slugs: ["entertainment", "entertainmnet"], visibleCount: 5 },
+  { slugs: ["technology"], visibleCount: 4 },
+  { slugs: ["automobile", "auto"], visibleCount: 6 },
+  { slugs: ["health"], visibleCount: 4 },
+  { slugs: ["ai", "artificial-intelligence"], visibleCount: 5 },
+  { slugs: ["bharat-explainers"], visibleCount: 7 },
+  { slugs: ["bharat-in-numbers"], visibleCount: 5 },
+];
 
 const getArticleDateValue = (article) =>
   article?.published_at ||
@@ -78,16 +61,67 @@ const getArticleTitle = (article) => article?.title || article?.headline || "Unt
 const getArticleSummary = (article) =>
   article?.subtitle || article?.description || article?.summary || article?.excerpt || "";
 const getArticleImage = (article) => article?.image_url || article?.image || "";
-const getEligibleCategoryDetails = (article) => {
-  const details = Array.isArray(article?.category_details) ? article.category_details : [];
-  return details.filter((cat) => {
-    const slug = String(cat?.slug || "").toLowerCase();
-    return slug && !FEATURED_HOME_SLUGS.has(slug) && !EXISTING_HOME_SLUGS.has(slug);
-  });
+const getArticleIdentityKeys = (article) => {
+  const keys = [];
+  const id = String(article?.id || "").trim();
+  const slug = String(article?.slug || "").trim().toLowerCase();
+  if (id) keys.push(`id:${id}`);
+  if (slug) keys.push(`slug:${slug}`);
+  return keys;
 };
 
-const getPrimaryCategorySlug = (article) =>
-  String(getEligibleCategoryDetails(article)[0]?.slug || "").toLowerCase();
+const getArticleCategorySlugs = (article) => {
+  const slugs = [];
+  const addSlug = (value) => {
+    const slug = String(value || "").trim().toLowerCase();
+    if (slug) slugs.push(slug);
+  };
+
+  if (Array.isArray(article?.category_details)) {
+    article.category_details.forEach((cat) => addSlug(cat?.slug));
+  }
+
+  if (Array.isArray(article?.__mssCategorySlugs)) {
+    article.__mssCategorySlugs.forEach(addSlug);
+  }
+
+  if (typeof article?.category === "string") {
+    addSlug(article.category);
+  } else if (article?.category && typeof article.category === "object") {
+    addSlug(article.category.slug);
+  }
+
+  if (Array.isArray(article?.categories)) {
+    article.categories.forEach((cat) => {
+      if (cat && typeof cat === "object") addSlug(cat.slug);
+    });
+  }
+
+  return [...new Set(slugs)];
+};
+
+const doesArticleMatchSlugs = (article, sectionSlugs) => {
+  const articleSlugs = getArticleCategorySlugs(article);
+  return sectionSlugs.some((slug) => articleSlugs.includes(slug));
+};
+
+const getHomeVisibleArticleKeys = (articles) => {
+  const visibleKeys = new Set();
+
+  HOME_VISIBLE_SECTIONS.forEach((section) => {
+    articles
+      .filter((article) => doesArticleMatchSlugs(article, section.slugs))
+      .slice(0, section.visibleCount)
+      .forEach((article) => {
+        getArticleIdentityKeys(article).forEach((key) => visibleKeys.add(key));
+      });
+  });
+
+  return visibleKeys;
+};
+
+const hasAnyArticleKey = (article, keySet) =>
+  getArticleIdentityKeys(article).some((key) => keySet.has(key));
 
 const useIs4K = () => {
   const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
@@ -102,56 +136,66 @@ const useIs4K = () => {
   return is4K;
 };
 
-const isExcludedArticle = (article) => {
-  return getEligibleCategoryDetails(article).length === 0;
+const mergeArticleIntoMap = (articleMap, article, categorySlug = "") => {
+  const keys = getArticleIdentityKeys(article);
+  const primaryKey = keys[0];
+  if (!primaryKey) return;
+
+  const existing = articleMap.get(primaryKey);
+  const categorySlugs = new Set([
+    ...(existing?.__mssCategorySlugs || []),
+    ...(article?.__mssCategorySlugs || []),
+  ]);
+  const normalizedCategorySlug = String(categorySlug || "").trim().toLowerCase();
+  if (normalizedCategorySlug) categorySlugs.add(normalizedCategorySlug);
+
+  articleMap.set(primaryKey, {
+    ...(existing || {}),
+    ...article,
+    __mssCategorySlugs: [...categorySlugs],
+  });
 };
 
-async function fetchCategories() {
-  try {
-    const res = await fetch(CATEGORY_API);
-    if (!res.ok) throw new Error("Failed to fetch categories");
-    const data = await res.json();
-    const categories = Array.isArray(data) ? data : data?.results || [];
+const fetchCategories = async () => {
+  const response = await fetch(CATEGORY_API);
+  if (!response.ok) throw new Error("Failed to fetch categories");
+  const data = await response.json();
+  return Array.isArray(data) ? data : data?.results || [];
+};
 
-    return categories.filter((category) => {
-      const slug = String(category?.slug || "").toLowerCase();
-      const status = String(category?.status || "").toLowerCase();
-      return (
-        slug &&
-        !FEATURED_HOME_SLUGS.has(slug) &&
-        !EXISTING_HOME_SLUGS.has(slug) &&
-        (status === "" || status === "active")
-      );
+const fetchCategoryArticles = async (slug) => {
+  const response = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=200`);
+  if (!response.ok) return [];
+  const data = await response.json();
+  return normalizeArticles(data);
+};
+
+const fetchMergedArticles = async () => {
+  const articleMap = new Map();
+  const baseArticles = normalizeArticles(await fetchArticles());
+  baseArticles.forEach((article) => mergeArticleIntoMap(articleMap, article));
+
+  try {
+    const categories = await fetchCategories();
+    const categoryResults = await Promise.all(
+      categories
+        .map((category) => String(category?.slug || "").trim().toLowerCase())
+        .filter(Boolean)
+        .map(async (slug) => ({
+          slug,
+          articles: await fetchCategoryArticles(slug),
+        }))
+    );
+
+    categoryResults.forEach(({ slug, articles }) => {
+      articles.forEach((article) => mergeArticleIntoMap(articleMap, article, slug));
     });
   } catch {
-    return [];
+    return baseArticles;
   }
-}
 
-async function fetchArticlesForCategory(category) {
-  const slug = category?.slug;
-  if (!slug) return [];
-
-  try {
-    const res = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=${ARTICLES_PER_CATEGORY}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return normalizeArticles(data).filter((article) => !isExcludedArticle(article));
-  } catch {
-    return [];
-  }
-}
-
-async function fetchAllArticles() {
-  try {
-    const res = await fetch(`${API_BASE}/articles/`);
-    if (!res.ok) throw new Error("Failed to fetch all articles");
-    const data = await res.json();
-    return normalizeArticles(data);
-  } catch {
-    return [];
-  }
-}
+  return normalizeArticles([...articleMap.values()]);
+};
 
 function StoryCard({ article }) {
   const image = getArticleImage(article);
@@ -203,76 +247,13 @@ export default function MoreStoriesSection({ articles: passedArticles = [] }) {
 
     async function loadArticles() {
       try {
-        const localArticles = normalizeArticles(passedArticles)
-          .filter((article) => !isExcludedArticle(article))
-          .slice(0, MAX_TOTAL_ARTICLES);
-
-        if (localArticles.length > 0) {
-          if (!ignore) setArticles(localArticles);
-          return;
-        }
-
-        const categories = await fetchCategories();
-        const allArticles = await fetchAllArticles();
-        const categoryResults = await Promise.all(
-          categories.map(async (category) => ({
-            slug: category.slug,
-            articles: await fetchArticlesForCategory(category),
-          }))
-        );
-
-        const uniqueArticles = [];
-        const seen = new Set();
-        const representedCategorySlugs = new Set();
-
-        categoryResults.forEach((entry) => {
-          entry.articles.forEach((article) => {
-            const key = article?.id || article?.slug;
-            if (!key || seen.has(key)) return;
-            seen.add(key);
-            uniqueArticles.push(article);
-            const primarySlug = getPrimaryCategorySlug(article);
-            if (primarySlug) {
-              representedCategorySlugs.add(primarySlug);
-            }
-          });
-        });
-
-        const groupedFallbackArticles = new Map();
-
-        allArticles.forEach((article) => {
-          const primarySlug = getPrimaryCategorySlug(article);
-          const key = article?.id || article?.slug;
-          if (!primarySlug || !key || seen.has(key)) return;
-
-          const currentGroup = groupedFallbackArticles.get(primarySlug) || [];
-          if (currentGroup.length < ARTICLES_PER_CATEGORY) {
-            currentGroup.push(article);
-            groupedFallbackArticles.set(primarySlug, currentGroup);
-          }
-        });
-
-        groupedFallbackArticles.forEach((items, slug) => {
-          if (representedCategorySlugs.has(slug)) return;
-
-          items.forEach((article) => {
-            const key = article?.id || article?.slug;
-            if (!key || seen.has(key)) return;
-            seen.add(key);
-            uniqueArticles.push(article);
-          });
-        });
-
-        const filtered = uniqueArticles
-          .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0))
-          .slice(0, MAX_TOTAL_ARTICLES);
-
-        const recentFallback = allArticles
-          .filter((article) => article && (article.id || article.slug))
-          .slice(0, MAX_TOTAL_ARTICLES);
+        const localArticles = normalizeArticles(passedArticles);
+        const fetchedArticles = await fetchMergedArticles();
+        const sourceArticles = fetchedArticles.length > localArticles.length ? fetchedArticles : localArticles;
+        const homeVisibleKeys = getHomeVisibleArticleKeys(sourceArticles);
 
         if (!ignore) {
-          setArticles(filtered.length > 0 ? filtered : recentFallback);
+          setArticles(sourceArticles.filter((article) => !hasAnyArticleKey(article, homeVisibleKeys)));
         }
       } catch {
         if (!ignore) {

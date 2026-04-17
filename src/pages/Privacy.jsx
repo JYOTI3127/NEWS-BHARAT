@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import privacyBg from "../assets/privacy-img.png";
 
@@ -170,11 +171,12 @@ export default function PrivacyPage() {
 
   return (
     <>
-      <PageSeo
-        title="Privacy Policy | News4Bharat Data Protection & User Privacy"
+      {/* <PageSeo
+        {...STATIC_PAGE_SEO["/privacy-policy"]}
         description="Read News4Bharat’s privacy policy to understand how we collect, use, and protect your personal data while you use our platform."
-        keywords="privacy policy News4Bharat, data protection India website, user privacy policy"
-        path="/privacy-policy"
+      /> */}
+      <PageSeo
+        {...STATIC_PAGE_SEO["/privacy-policy"]}
       />
       <div className="privacy-page">
 

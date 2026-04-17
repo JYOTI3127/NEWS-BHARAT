@@ -8,6 +8,7 @@ import {
   getCanonicalArticleUrl,
   isArticlePath,
 } from './src/lib/articleUrl.js'
+import { STATIC_PAGE_SEO as SHARED_STATIC_PAGE_SEO } from './src/lib/staticPageSeo.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const API_BASE = 'https://news4bharat.cloud/api'
@@ -54,6 +55,8 @@ const STATIC_PAGE_META = {
     description: 'Explore career opportunities at News4Bharat. Join our team of journalists, editors, and content creators shaping the future of news in India.',
   },
 }
+
+Object.assign(STATIC_PAGE_META, SHARED_STATIC_PAGE_SEO)
 
 const isValidSlug = (value) =>
   typeof value === 'string' &&
@@ -552,6 +555,33 @@ async function renderInBatches(prerenderer, routes, articleMap, categoryMap, sit
   return { success, failed, failedRoutes }
 }
 
+function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
+  const shellPath = path.join(__dirname, 'build', 'index.html')
+
+  if (!fs.existsSync(shellPath)) {
+    console.log('Static page fallback skipped because build/index.html was not found')
+    return
+  }
+
+  const shellHtml = fs.readFileSync(shellPath, 'utf8')
+
+  Object.keys(STATIC_PAGE_META).forEach((route) => {
+    const outputDir = path.join(__dirname, 'build', route)
+    const outputPath = path.join(outputDir, 'index.html')
+    const staticHtml = cleanupPrerenderedHtml(
+      shellHtml,
+      route,
+      articleMap,
+      categoryMap,
+      siteData
+    )
+
+    fs.mkdirSync(outputDir, { recursive: true })
+    fs.writeFileSync(outputPath, staticHtml, 'utf8')
+    console.log(`  STATIC SEO ${route}`)
+  })
+}
+
 function generateSitemap(routes, articleMap, categoryMap) {
   const urls = Array.from(
     new Set(
@@ -600,6 +630,8 @@ const { success, failed, failedRoutes } = await renderInBatches(
 )
 
 await prerenderer.destroy()
+
+ensureStaticPageHtml(articleMap, categoryMap, siteData)
 
 generateSitemap(routes, articleMap, categoryMap)
 

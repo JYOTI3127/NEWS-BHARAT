@@ -4,9 +4,24 @@ import {
   CheckCircle, ArrowRight, Send, X, Briefcase, MapPin, Clock, FileText,
 } from "lucide-react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import careerBg from "../assets/career-img.png";
 
 import "../style.css";
+
+const CAREER_API_URL = "https://news4bharat.cloud/api/career-applications/";
+const MAX_RESUME_SIZE = 5 * 1024 * 1024;
+const RESUME_EXTENSIONS = [".pdf", ".doc", ".docx"];
+const JOB_TYPE_VALUES = {
+  "Full-Time": "full_time",
+  "Part-Time": "part_time",
+};
+
+const isValidResume = (file) => {
+  if (!file) return false;
+  const fileName = file.name.toLowerCase();
+  return RESUME_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+};
 
 /* ── FADE IN HOOK ── */
 const useInView = (threshold = 0.12) => {
@@ -58,6 +73,8 @@ function ApplyModal({ role, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", portfolio: "", cover: "", jobType: "Full-Time", resume: null });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
 
   const validate = () => {
     const e = {};
@@ -66,13 +83,48 @@ function ApplyModal({ role, onClose }) {
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = "Valid email required";
     if (form.phone && !/^\d{10}$/.test(form.phone.replace(/\s/g, ""))) e.phone = "Phone must be 10 digits only";
     if (!form.cover.trim()) e.cover = "Cover note is required";
+    if (!form.resume) e.resume = "Resume is required";
+    else if (!isValidResume(form.resume)) e.resume = "Resume PDF, DOC, or DOCX format me hona chahiye";
+    else if (form.resume.size > MAX_RESUME_SIZE) e.resume = "Resume max 5MB hona chahiye";
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    setSubmitted(true);
+
+    setIsSubmitting(true);
+    setErrors({});
+    setSubmitResult(null);
+
+    const payload = new FormData();
+    payload.append("full_name", form.name.trim());
+    payload.append("email", form.email.trim());
+    payload.append("phone_number", form.phone.trim());
+    payload.append("portfolio_url", form.portfolio.trim());
+    payload.append("job_title", role?.title || "Editorial Internship");
+    payload.append("job_type", JOB_TYPE_VALUES[form.jobType] || "full_time");
+    payload.append("resume", form.resume);
+    payload.append("cover_note", form.cover.trim());
+
+    try {
+      const response = await fetch(CAREER_API_URL, {
+        method: "POST",
+        body: payload,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.message || data?.detail || "Application submit nahi ho payi. Please try again.");
+      }
+
+      setSubmitResult(data);
+      setSubmitted(true);
+    } catch (error) {
+      setErrors({ form: error.message || "Application submit nahi ho payi. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -90,7 +142,11 @@ function ApplyModal({ role, onClose }) {
           <div className="cp-success-box">
             <div className="cp-success-icon"><CheckCircle size={32} /></div>
             <h3 className="cp-success-title">Application Received</h3>
-            <p className="cp-success-text">Thank you for applying to News4Bharat. Our editorial team will review your application and reach out within 7 working days.</p>
+            <p className="cp-success-text">
+              {submitResult?.message || "Thank you for applying to News4Bharat. Our editorial team will review your application and reach out within 7 working days."}
+              {submitResult?.id ? ` Reference ID: ${submitResult.id}.` : ""}
+              {submitResult?.status ? ` Status: ${submitResult.status}.` : ""}
+            </p>
             <button className="cp-success-btn" onClick={onClose}>Close</button>
           </div>
         ) : (
@@ -111,7 +167,7 @@ function ApplyModal({ role, onClose }) {
               </div>
               <div className="cp-form-group">
                 <label className="cp-form-label">Email Address *</label>
-                <input className={`cp-form-input${errors.email ? " cp-err" : ""}`} placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input type="email" className={`cp-form-input${errors.email ? " cp-err" : ""}`} placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 {errors.email && <span className="cp-error-msg">{errors.email}</span>}
               </div>
             </div>
@@ -157,7 +213,11 @@ function ApplyModal({ role, onClose }) {
                   accept=".pdf,.doc,.docx"
                   id="resumeInput"
                   className="hidden"
-                  onChange={(e) => setForm({ ...form, resume: e.target.files[0] })}
+                  onChange={(e) => {
+                    const file = e.target.files[0] || null;
+                    setForm({ ...form, resume: file });
+                    setErrors((current) => ({ ...current, resume: undefined }));
+                  }}
                 />
                 <label htmlFor="resumeInput" className="cp-resume-label">
                   {form.resume ? (
@@ -167,6 +227,7 @@ function ApplyModal({ role, onClose }) {
                   )}
                 </label>
               </div>
+              {errors.resume && <span className="cp-error-msg">{errors.resume}</span>}
             </div>
 
             <div className="cp-form-group">
@@ -176,7 +237,12 @@ function ApplyModal({ role, onClose }) {
             </div>
             <div className="cp-modal-footer">
               <p className="cp-modal-note">By submitting, you agree to our privacy policy. We do not share applicant data.</p>
-              <button className="cp-submit-btn" onClick={handleSubmit}><Send size={14} /> Submit Application</button>
+              <div className="cp-submit-wrap">
+                {errors.form && <span className="cp-error-msg">{errors.form}</span>}
+                <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
+                  <Send size={14} /> {isSubmitting ? "Submitting..." : "Submit Application"}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -221,9 +287,7 @@ export default function CareersPage() {
   return (
     <>
       <PageSeo
-        title="Careers at News4Bharat | Jobs in Media & Journalism India"
-        description="Explore career opportunities at News4Bharat. Join our team of journalists, editors, and content creators shaping the future of news in India."
-        path="/careers"
+        {...STATIC_PAGE_SEO["/careers"]}
       />
       <div className="careers-page">
 

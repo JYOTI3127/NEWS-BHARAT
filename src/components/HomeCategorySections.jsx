@@ -271,6 +271,9 @@ const EditorialSection = memo(({ section, articles }) => {
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
                 ) : null}
                 <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+                {(section.key === "world-news" || section.key === "ai") && getArticleSummary(article) ? (
+                  <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                ) : null}
                 <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
               </div>
             </StoryLink>
@@ -404,6 +407,9 @@ const SpotlightSection = memo(({ section, articles }) => {
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
                 ) : null}
                 <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+                {section.key === "automobile" && getArticleSummary(article) ? (
+                  <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                ) : null}
                 <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
               </div>
             </StoryLink>
@@ -416,6 +422,9 @@ const SpotlightSection = memo(({ section, articles }) => {
             <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-bottom-rail-thumb" />
             <div className="hcs-bottom-rail-copy">
               <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+              {section.key === "automobile" && getArticleSummary(article) ? (
+                <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+              ) : null}
               <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
             </div>
           </StoryLink>

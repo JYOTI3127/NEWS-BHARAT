@@ -12,40 +12,42 @@ const WhatsAppIcon = ({ size = 17 }) => (
 
 const footerLinks = {
   NEWS: [
-    "Breaking News",
-    "World News",
-    "Business",
-    "Technology",
-    "Sports",
-    "Entertainment",
-    "Health",
-    "Education",
-    "Automobile",
-    "National",
-    "Political",
-    "Trending"
+    { name: "Breaking News", slug: "breaking-news" },
+    { name: "World News", slug: "world-news" },
+    { name: "Business", slug: "bharat-economy" },
+    { name: "Technology", slug: "technology" },
+    { name: "Sports", slug: "sports" },
+    { name: "Entertainment", slug: "entertainment" },
+    { name: "Health", slug: "health" },
+    { name: "Education", slug: "education" },
+    { name: "Automobile", slug: "automobile" },
+    { name: "National", slug: "national" },
+    { name: "Political", slug: "political" },
+    { name: "Trending", slug: "trending" }
   ],
-  All_About_Bharat: [
-    "Bharat Opinions",
-    "Bharat Explainers",
-    "Bharat in Numbers",
-    "Bharat's Startups",
-    "Bharat BFSI",
-    "Bharat 2047"
-  ],
-  State_of_Bharat: [
-    "Maharashtra",
-    "Tamil Nadu",
-    "Karnataka",
-    "Gujarat",
-    "Uttar Pradesh",
-    "West Bengal"
-  ],
-  MORE: [
-    "Entertainment",
-    "60 Second Read",
-    "Health",
 
+  All_About_Bharat: [
+    { name: "Bharat Opinions", slug: "bharat-opinions" },
+    { name: "Bharat Explainers", slug: "bharat-explainers" },
+    { name: "Bharat in Numbers", slug: "bharat-in-numbers" },
+    { name: "Bharat's Startups", slug: "bharat-startups" },
+    { name: "Bharat BFSI", slug: "bfsi" },
+    { name: "Bharat 2047", slug: "bharat-2047" }
+  ],
+
+  State_of_Bharat: [
+    { name: "Maharashtra", slug: "state-of-bharat", subcategory: "Maharashtra" },
+    { name: "Tamil Nadu", slug: "state-of-bharat", subcategory: "Tamil Nadu" },
+    { name: "Karnataka", slug: "state-of-bharat", subcategory: "Karnataka" },
+    { name: "Gujarat", slug: "state-of-bharat", subcategory: "Gujarat" },
+    { name: "Uttar Pradesh", slug: "state-of-bharat", subcategory: "Uttar Pradesh" },
+    { name: "West Bengal", slug: "state-of-bharat", subcategory: "West Bengal" }
+  ],
+
+  MORE: [
+    { name: "Entertainment", slug: "entertainment" },
+    { name: "60 Second Read", slug: "60-second-read" },
+    { name: "Health", slug: "health" }
   ]
 };
 
@@ -206,8 +208,15 @@ export default function Footer() {
 
                     return (
                       <li key={index}>
-                        <Link to={`/category/${slug}`} className="ft-col-link">
-                          {name}
+                        <Link
+                          to={
+                            item.subcategory
+                              ? `/category/${item.slug}?subcategory=${item.subcategory}`
+                              : `/category/${item.slug}`
+                          }
+                          className="ft-col-link"
+                        >
+                          {item.name}
                         </Link>
                       </li>
                     );

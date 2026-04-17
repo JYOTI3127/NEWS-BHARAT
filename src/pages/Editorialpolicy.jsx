@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FiCheck, FiShield, FiEye, FiUsers, FiAlertCircle, FiHeart, FiRefreshCw, FiSearch, FiFileText, FiMail } from "react-icons/fi";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import editorialBg from "../assets/editorial-policy.png";
 
@@ -111,11 +112,12 @@ const factCheckSteps = [
 export default function EditorialPolicy() {
     return (
         <>
-            <PageSeo
-                title="Editorial Policy | News4Bharat Journalism Standards & Ethics"
+            {/* <PageSeo
+                {...STATIC_PAGE_SEO["/editorial-policy"]}
                 description="Explore News4Bharat’s editorial policy, covering our fact-checking process, content guidelines, and commitment to ethical journalism."
-                keywords="editorial policy news website, journalism ethics India, fact-checking policy"
-                path="/editorial-policy"
+            /> */}
+            <PageSeo
+                {...STATIC_PAGE_SEO["/editorial-policy"]}
             />
             <div className="ep-page">
 

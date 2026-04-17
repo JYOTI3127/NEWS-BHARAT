@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import PageSeo from "../components/PageSeo";
+import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import heroBg from "../assets/about-img.jpeg";
 
@@ -114,14 +115,10 @@ export default function AboutPage() {
   return (
     <>
       <PageSeo
-        title="About News4Bharat | Independent Digital News Portal India"
-        description="Learn about News4Bharat, our mission, editorial values, and commitment to delivering accurate, unbiased, and timely news across India & the World."
-        keywords="about News4Bharat, Indian news platform, news mission India"
-        path="/about-us"
+        {...STATIC_PAGE_SEO["/about-us"]}
       />
       <div className="about-page">
 
-        {/* ══════════ HERO ══════════ */}
         {/* ══════════ HERO ══════════ */}
         <section className="hero">
           <div className="hero-bg" style={{ position: "relative", overflow: "hidden" }}>
@@ -135,7 +132,7 @@ export default function AboutPage() {
                 inset: 0,
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                // objectFit: "cover",
                 objectPosition: "center",
                 zIndex: 0,
               }}

@@ -838,9 +838,13 @@ class NewsletterLog(models.Model):
 
 class NewsletterCard(models.Model):
     title = models.CharField(max_length=255)
-    image = models.URLField()
-    description = models.TextField()
-    link = models.URLField()
+    image = models.URLField(blank=True, default='')
+    description = models.TextField(blank=True, default='')
+    link = models.URLField(blank=True, default='')
+    subject = models.CharField(max_length=300, blank=True, default='')
+    html_content = models.TextField(blank=True, default='')
+    chosen_articles = models.JSONField(default=dict, blank=True)
+    draft_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

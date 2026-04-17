@@ -368,9 +368,13 @@
     const CAT_COLORS = { 'Politics': '#4b4b4b', 'Economy': '#4b4b4b', 'Space': '#4b4b4b', 'Security': '#4b4b4b', 'Diplomacy': '#4b4b4b', 'Infrastructure': '#4b4b4b', 'Health': '#4b4b4b', 'Cricket': '#4b4b4b', 'Energy': '#4b4b4b', 'Startups': '#4b4b4b', 'Education': '#6f6f6f', 'Markets': '#4b4b4b', 'Technology': '#4b4b4b', 'Business': '#4b4b4b', 'World': '#4b4b4b', 'default': '#4b4b4b' };
     function cc(cat) { return CAT_COLORS[cat] || CAT_COLORS.default; }
     function escapeHTML(v) { return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function getCookie(name) {
+      return document.cookie.split(';').map(item => item.trim()).find(item => item.startsWith(name + '='))?.split('=').slice(1).join('=') || '';
+    }
 
     const PRELOADED_ARTICLES = JSON.parse('{{ articles_json|default:"[]"|escapejs }}');
     let allArticles = [], filteredArts = [], activeSecEl = null, activeSecKey = null, chosen = {};
+    let savedDraftsCache = [];
     let staticEmails = JSON.parse(localStorage.getItem('n4b_static_emails') || '[]');
     let customEmails = JSON.parse(localStorage.getItem('n4b_custom_emails') || '[]');
     let testEmails = JSON.parse(localStorage.getItem('n4b_test_emails') || '[]');
@@ -574,16 +578,42 @@
     function persistCustomEmails() {
       localStorage.setItem(CUSTOM_EMAILS_STORAGE_KEY, JSON.stringify(customEmails));
     }
-    function getSavedDrafts() {
-      return JSON.parse(localStorage.getItem(SAVED_NEWSLETTERS_STORAGE_KEY) || '[]');
+    function newsletterToDraft(newsletter) {
+      const draftData = newsletter.draft_data || {};
+      return {
+        id: newsletter.id,
+        name: newsletter.title || newsletter.subject || 'Untitled Newsletter',
+        saved_at: newsletter.created_at,
+        subject: newsletter.subject || newsletter.title || '',
+        chosen: draftData.chosen || {},
+        staticEmails: draftData.staticEmails || [],
+        customEmails: draftData.customEmails || [],
+        testEmails: draftData.testEmails || [],
+        html: newsletter.html || newsletter.html_content || '',
+        newsletter,
+      };
     }
-    function setSavedDrafts(drafts) {
-      localStorage.setItem(SAVED_NEWSLETTERS_STORAGE_KEY, JSON.stringify(drafts));
+    async function getSavedDrafts() {
+      const response = await fetch('/api/newsletters/', {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Could not load saved newsletters.');
+      const data = await response.json();
+      savedDraftsCache = (Array.isArray(data) ? data : []).map(newsletterToDraft);
+      return savedDraftsCache;
     }
-    function renderSavedDrafts() {
+    async function renderSavedDrafts() {
       const wrap = document.getElementById('saved-newsletters');
       if (!wrap) return;
-      const drafts = getSavedDrafts();
+      wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">Loading saved newsletters...</div>';
+      let drafts = [];
+      try {
+        drafts = await getSavedDrafts();
+      } catch (e) {
+        wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">Could not load saved newsletters.</div>';
+        return;
+      }
       if (!drafts.length) {
         wrap.innerHTML = '<div class="test-note" style="margin-top:8px;">No saved newsletters yet.</div>';
         return;
@@ -619,27 +649,50 @@
     }
     function buildDraftPayload() {
       const subject = getSubjectLine();
+      const hero = chosen.hero || {};
+      const html = buildFinalHTML();
+      const chosenArticles = Object.fromEntries(
+        Object.entries(chosen).map(([key, article]) => [key, article?.slug || article?.id || ''])
+      );
       return {
-        id: Date.now(),
-        name: subject || `Newsletter ${new Date().toLocaleString('en-IN')}`,
-        saved_at: new Date().toISOString(),
+        title: subject || `Newsletter ${new Date().toLocaleString('en-IN')}`,
         subject,
-        chosen,
-        staticEmails,
-        customEmails,
-        testEmails,
+        image: hero.image || '',
+        description: hero.excerpt || '',
+        link: hero.slug ? `https://news4bharat.com/article/${hero.slug}` : '',
+        html,
+        chosen_articles: chosenArticles,
+        draft_data: {
+          chosen,
+          staticEmails,
+          customEmails,
+          testEmails,
+        },
       };
     }
-    function saveNewsletterDraft() {
+    async function saveNewsletterDraft() {
       if (!chosen['hero']) { alert('Please choose a Cover Story before saving.'); return; }
-      const drafts = getSavedDrafts();
-      drafts.unshift(buildDraftPayload());
-      setSavedDrafts(drafts.slice(0, 20));
-      renderSavedDrafts();
-      showStatus('Newsletter saved!');
+      try {
+        const response = await fetch('/api/newsletters/', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRFToken': decodeURIComponent(getCookie('csrftoken')),
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(buildDraftPayload()),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || data.error || 'Newsletter save failed.');
+        await renderSavedDrafts();
+        showStatus('Newsletter saved to database!');
+      } catch (e) {
+        alert(e.message || 'Newsletter save failed.');
+      }
     }
     function loadNewsletterDraft(index) {
-      const draft = getSavedDrafts()[index];
+      const draft = savedDraftsCache[index];
       if (!draft) return;
       chosen = draft.chosen || {};
       staticEmails = Array.isArray(draft.staticEmails) ? draft.staticEmails : [];
@@ -655,12 +708,25 @@
       renderAllPreviews();
       showStatus('Saved newsletter opened!');
     }
-    function deleteNewsletterDraft(index) {
-      const drafts = getSavedDrafts();
-      drafts.splice(index, 1);
-      setSavedDrafts(drafts);
-      renderSavedDrafts();
-      showStatus('Saved newsletter removed.');
+    async function deleteNewsletterDraft(index) {
+      const draft = savedDraftsCache[index];
+      if (!draft || !draft.id) return;
+      if (!confirm('Delete this saved newsletter?')) return;
+      try {
+        const response = await fetch(`/api/newsletters/${draft.id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': decodeURIComponent(getCookie('csrftoken')),
+          },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error('Could not delete saved newsletter.');
+        await renderSavedDrafts();
+        showStatus('Saved newsletter removed.');
+      } catch (e) {
+        alert(e.message || 'Could not delete saved newsletter.');
+      }
     }
     function summarizeEmails(label, emails, limit = 8) {
       const list = Array.isArray(emails) ? emails : [];

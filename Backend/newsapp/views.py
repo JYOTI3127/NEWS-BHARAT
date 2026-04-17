@@ -255,6 +255,16 @@ def newsletters_api(request):
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['DELETE'])
+def newsletter_detail_api(request, newsletter_id):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        raise PermissionDenied('Only admin users can delete newsletters.')
+
+    newsletter = get_object_or_404(NewsletterCard, pk=newsletter_id)
+    newsletter.delete()
+    return Response({'status': 'deleted', 'id': newsletter_id})
+
+
 def _save_article_from_request(request, article=None):
     data  = request.POST
     files = request.FILES

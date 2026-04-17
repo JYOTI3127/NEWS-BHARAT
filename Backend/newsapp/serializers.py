@@ -483,10 +483,24 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
 
 class NewsletterCardSerializer(serializers.ModelSerializer):
     created_at = serializers.SerializerMethodField()
+    html = serializers.CharField(source='html_content', required=False, allow_blank=True)
 
     class Meta:
         model = NewsletterCard
-        fields = ['id', 'title', 'image', 'description', 'link', 'created_at']
+        fields = [
+            'id',
+            'title',
+            'subject',
+            'image',
+            'description',
+            'link',
+            'html',
+            'html_content',
+            'chosen_articles',
+            'draft_data',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
 
     def get_created_at(self, obj):
         return obj.created_at.date().isoformat() if obj.created_at else None

@@ -78,6 +78,12 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
+      - name: Ensure deployment control files
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        run: |
+          cp public/.htaccess build/.htaccess
+          cp public/robots.txt build/robots.txt
+
       - name: Ensure Hostinger target directory exists
         if: steps.dispatch_mode.outputs.should_build == 'true'
         uses: appleboy/ssh-action@v1

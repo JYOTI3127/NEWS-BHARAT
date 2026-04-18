@@ -580,6 +580,21 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
 export default function ArticleDetails() {
   const params = useParams();
   const routeParam = params.slug || params.id;
+  const categorySlug = params.categorySlug || "";
+  const articleLookupCandidates = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            categorySlug && routeParam ? `${categorySlug}/${routeParam}` : "",
+            routeParam,
+          ]
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+        )
+      ),
+    [categorySlug, routeParam]
+  );
   const is2K = useIs2K();
 
   const [article, setArticle] = useState(null);
@@ -612,11 +627,27 @@ export default function ArticleDetails() {
 
     const loadArticle = async () => {
       try {
+        const fetchArticleDetail = async () => {
+          for (const candidate of articleLookupCandidates) {
+            const response = await fetch(
+              apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
+              {
+                signal: controller.signal,
+                cache: "no-store",
+              }
+            );
+
+            if (response.ok) return response;
+            if (response.status !== 404) {
+              throw new Error(`Failed to fetch article detail: ${response.status}`);
+            }
+          }
+
+          return null;
+        };
+
         const [detailResponse, listResponse] = await Promise.all([
-          fetch(apiUrl(`/articles/slug/${encodeURIComponent(routeParam)}/`), {
-            signal: controller.signal,
-            cache: "no-store",
-          }),
+          fetchArticleDetail(),
           fetch(apiUrl("/articles/?limit=500"), {
             signal: controller.signal,
             cache: "no-store",
@@ -636,7 +667,23 @@ export default function ArticleDetails() {
         const sortedList = sortArticlesByNewest(list);
         setAllArticles(sortedList);
 
-        if (!detailResponse.ok) {
+        if (!detailResponse) {
+          const requestedPath =
+            categorySlug && routeParam ? `/${categorySlug}/${routeParam}/` : "";
+          const listMatch = sortedList.find((candidate) => {
+            const articlePath = getArticlePath(candidate);
+            const slug = String(candidate?.slug || "").trim();
+            return (
+              (requestedPath && articlePath === requestedPath) ||
+              articleLookupCandidates.includes(slug)
+            );
+          });
+
+          if (listMatch && (listMatch.slug || listMatch.id)) {
+            setArticle(listMatch);
+            return;
+          }
+
           setNotFound(true);
           return;
         }
@@ -659,7 +706,7 @@ export default function ArticleDetails() {
     loadArticle();
 
     return () => controller.abort();
-  }, [routeParam]);
+  }, [articleLookupCandidates, categorySlug, routeParam]);
 
   useEffect(() => {
     if (article?.title) {

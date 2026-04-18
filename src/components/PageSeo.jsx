@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 
 const SITE_URL = "https://news4bharat.com";
@@ -6,6 +7,16 @@ export default function PageSeo({ title, description, keywords = "", path = "/" 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const canonicalUrl = `${SITE_URL}${normalizedPath}`;
   const keywordContent = Array.isArray(keywords) ? keywords.join(", ") : keywords;
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+
+    const readyTimer = window.setTimeout(() => {
+      document.dispatchEvent(new Event("prerender-ready"));
+    }, 100);
+
+    return () => window.clearTimeout(readyTimer);
+  }, [canonicalUrl, description, keywordContent, title]);
 
   return (
     <Helmet>

@@ -148,7 +148,7 @@ export function EntertainmentSection() {
 
   const rootStyle = is2K
     ? {
-        width: "min(1820px, calc(100% - 96px))",
+        width: "min(1660px, calc(100% - 180px))",
         margin: "0 auto 24px",
       }
     : undefined;

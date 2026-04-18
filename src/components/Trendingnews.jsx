@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import AdvertisementSlot from "./AdvertisementSlot";
 
 const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read");
 
@@ -458,68 +459,6 @@ const LiveUpdates = memo(({ is2K }) => {
 });
 
 // ── Banner ────────────────────────────────────────────────────
-const getAdImageUrl = (ad) => {
-  const image = ad?.image_url || ad?.ad_image_url || ad?.image || ad?.ad_image;
-  if (!image) return "";
-  if (typeof image === "string") return image;
-  return image?.url || "";
-};
-
-const Banner = memo(() => {
-  const [adSlot, setAdSlot] = useState(null);
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetch(apiUrl("/homepage/ad_banner/current/"))
-      .then((response) => {
-        if (!response.ok) throw new Error("Ad slot unavailable");
-        return response.json();
-      })
-      .then((data) => {
-        if (!ignore) setAdSlot(data);
-      })
-      .catch(() => {
-        if (!ignore) setAdSlot(null);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const adImageUrl = getAdImageUrl(adSlot);
-  const adLinkUrl = adSlot?.link_url || "";
-  const shouldShowAd = adSlot?.is_active === true && Boolean(adImageUrl);
-
-  if (!shouldShowAd) return null;
-
-  const image = (
-    <img
-      src={adImageUrl}
-      alt={adSlot?.alt || "Sponsored advertisement"}
-      loading="lazy"
-      decoding="async"
-      className="block h-[115px] w-full rounded-[2px] object-cover"
-    />
-  );
-
-  return (
-    <div className="tn-banner" aria-label="Sponsored advertisement">
-      {adLinkUrl ? (
-        <a
-          href={adLinkUrl}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="block no-underline"
-        >
-          {image}
-        </a>
-      ) : image}
-    </div>
-  );
-});
-
 // ── Main Component ────────────────────────────────────────────
 export default function TrendingNews({ articles: passedArticles = [], categories: passedCategories = [], loading: passedLoading = false }) {
   const { is4K, is2K, is320 } = useScreenSize();
@@ -585,7 +524,12 @@ export default function TrendingNews({ articles: passedArticles = [], categories
           </div>
         )}
 
-        <Banner />
+        <AdvertisementSlot
+          placement="home_after_trending"
+          variant="mediumRectangle"
+          className="home-after-trending-ad"
+          allowUnmatchedPlacement
+        />
       </div>
     </div>
   );

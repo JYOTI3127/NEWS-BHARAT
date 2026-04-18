@@ -83,7 +83,7 @@ const StoryCard = memo(function StoryCard({ article, className, children }) {
   }
 
   return (
-    <Link to={path} className={className}>
+    <Link to={path} className={`breaking-news-link ${className}`} style={{ textDecoration: 'none' }}>
       {children}
     </Link>
   );
@@ -149,7 +149,8 @@ export default function BreakingNewsSection({ articles = [] }) {
 
         <Link
           to={BREAKING_NEWS_PATH}
-          className="shrink-0 whitespace-nowrap font-[Poppins,sans-serif] text-[0.92rem] font-bold text-[#b91c1c] no-underline transition-colors duration-200 hover:text-[#7f1d1d] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem]"
+          className="breaking-news-link shrink-0 whitespace-nowrap font-[Poppins,sans-serif] text-[0.92rem] font-bold text-[#b91c1c] no-underline transition-colors duration-200 hover:text-[#7f1d1d] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem]"
+          style={{ textDecoration: 'none' }}
         >
           View All
         </Link>

@@ -140,7 +140,7 @@ const stripHtml = (value) => {
     .replace(/<\/?[^>]*$/g, "")
     .replace(/^[a-z0-9-]+\s*=\s*["'][^"']*["']\s*/gi, "")
     .replace(/\b(?:style|class|id|data-[a-z0-9-]+|dir|face|size)\s*=\s*["'][^"']*["']/gi, "")
-    .replace(/^[^a-zA-Z0-9\u0900-\u097F]+/, "")
+    .replace(/^[^\p{L}\p{N}]+/u, "")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned;
@@ -152,6 +152,38 @@ const getSearchPreview = (item) => {
   if (!cleaned) return "";
   const trimmed = cleaned.slice(0, 110).trim();
   return cleaned.length > 110 ? `${trimmed}...` : trimmed;
+};
+
+const getListFromSearchResponse = (data) => {
+  if (Array.isArray(data)) return data;
+  return data?.results || data?.categories || data?.data || data?.items || [];
+};
+
+const getCategorySearchTitle = (item) =>
+  item?.name || item?.title || item?.label || item?.category_name || "Untitled Category";
+
+const getCategorySearchDescription = (item) => {
+  const cleaned = stripHtml(item?.description || item?.summary || item?.excerpt || "");
+  if (!cleaned) return "";
+  const trimmed = cleaned.slice(0, 90).trim();
+  return cleaned.length > 90 ? `${trimmed}...` : trimmed;
+};
+
+const getCategorySearchHref = (item) => {
+  const directLink = item?.path || item?.url || item?.link || "";
+  const title = getCategorySearchTitle(item);
+  const slug = item?.slug || item?.category_slug || item?.categorySlug;
+
+  if (directLink) {
+    try {
+      const parsed = new URL(directLink, "https://news4bharat.com");
+      if (parsed.pathname.startsWith("/category/")) return parsed.pathname;
+    } catch (error) {
+      void error;
+    }
+  }
+
+  return `/category/${getFinalSlug(slug, title)}`;
 };
 
 const NAV_SECTIONS = [
@@ -188,6 +220,16 @@ const navLinks = [
   { label: "Political", path: "/category/politics" },
   { label: "Trending", path: "/category/trending" },
 ];
+
+const uniqueNavLinksByPath = (links) => {
+  const seen = new Set();
+  return links.filter((link) => {
+    const key = String(link?.path || "").trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 // ─────────────────────────────────────────────
 // ✅ FIX 2: LogoFull & LogoScroll — bahar + memo
@@ -310,12 +352,12 @@ const Header = () => {
   const [navSections, setNavSections]             = useState(NAV_SECTIONS);
   const [navSectionsLoaded, setNavSectionsLoaded] = useState(false);
 
-  const [weather, setWeather]   = useState(null);
+  const [_weather, setWeather]  = useState(null);
   const [metals, setMetals]     = useState(null);
   const [markets, setMarkets]   = useState(null);
 
   // ✅ FIX: date alag state — time LiveClock handle karega
-  const [date, setDate] = useState(
+  const [_date, setDate] = useState(
     () => new Date().toLocaleDateString("en-IN", {
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     })
@@ -325,6 +367,10 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [showResults, setShowResults]     = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [categorySearchResults, setCategorySearchResults] = useState([]);
+  const [isCategorySearching, setIsCategorySearching] = useState(false);
+  const [showCategoryResults, setShowCategoryResults] = useState(false);
   const [headerHeight, setHeaderHeight]   = useState(0);
 
   // ✅ Hooks — clean
@@ -332,23 +378,26 @@ const Header = () => {
   const is2K     = useIs2K();
 
   const searchRef               = useRef(null);
+  const drawerSearchRef         = useRef(null);
   const searchDebounceRef       = useRef(null);
+  const categorySearchDebounceRef = useRef(null);
+  const categorySearchRequestRef = useRef(0);
   const headerRef               = useRef(null);
   const measuredHeaderHeightRef = useRef(0);
   const navigate                = useNavigate();
 
   const extra2KNavLinks = [
-    { label: "Technology",   path: "/category/technology" },
-    { label: "AI",           path: "/category/ai" },
-    { label: "BFSI",         path: "/category/bfsi" },
-    { label: "Auto",         path: "/category/automobile" },
-    { label: "Health",       path: "/category/health" },
-    { label: "Education",    path: "/category/education" },
-    { label: "Entertainment",path: "/category/entertainment" },
-    { label: "Bharat 2047",  path: "/category/bharat-2047" },
-    { label: "Opinions",     path: "/category/bharat-opinions" },
+    { label: "AI",                 path: "/category/ai" },
+    { label: "Bharat Explainers",  path: "/category/bharat-explainers" },
+    { label: "Bharat Numbers",     path: "/category/bharat-in-numbers" },
+    { label: "Bharat Startups",    path: "/category/bharat-startups" },
+    { label: "BFSI",               path: "/category/bfsi" },
+    { label: "Bharat 2047",        path: "/category/bharat-2047" },
+    { label: "Opinions",           path: "/category/bharat-opinions" },
+    { label: "States",             path: "/category/state-of-bharat" },
+    { label: "60 Sec Read",        path: "/category/60-second-read" },
   ];
-  const visibleNavLinks = is2K ? [...navLinks, ...extra2KNavLinks] : navLinks;
+  const visibleNavLinks = is2K ? uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]) : navLinks;
 
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
@@ -363,7 +412,9 @@ const Header = () => {
             weekday: "long", day: "numeric", month: "long", year: "numeric",
           })
         );
-      } catch {}
+      } catch (error) {
+        void error;
+      }
     };
     const cancelDeferred = deferNonCritical(fetchDate, 5000);
     return () => cancelDeferred();
@@ -431,6 +482,52 @@ const Header = () => {
     }
   }, []);
 
+  const fetchCategorySearchResults = useCallback(async (query) => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setCategorySearchResults([]);
+      setShowCategoryResults(false);
+      return;
+    }
+
+    const requestId = categorySearchRequestRef.current + 1;
+    categorySearchRequestRef.current = requestId;
+    setIsCategorySearching(true);
+    setShowCategoryResults(true);
+
+    try {
+      const res = await fetch(
+        apiUrl(`/search/categories/?q=${encodeURIComponent(trimmedQuery)}&limit=5`)
+      );
+      if (!res.ok) throw new Error(`Category search failed: ${res.status}`);
+
+      const data = await res.json();
+      if (categorySearchRequestRef.current !== requestId) return;
+
+      setCategorySearchResults(getListFromSearchResponse(data));
+    } catch (err) {
+      if (categorySearchRequestRef.current === requestId) {
+        console.error("Category search API error:", err);
+        setCategorySearchResults([]);
+      }
+    } finally {
+      if (categorySearchRequestRef.current === requestId) {
+        setIsCategorySearching(false);
+      }
+    }
+  }, []);
+
+  const openCategorySearchResult = useCallback((item) => {
+    const href = getCategorySearchHref(item);
+    setShowCategoryResults(false);
+    setCategorySearchQuery("");
+    setCategorySearchResults([]);
+    setIsOpen(false);
+    setExpandedSection(null);
+    setExpandedSubcat(null);
+    navigate(href);
+  }, [navigate]);
+
   const handleSearchChange = useCallback((e) => {
     const val = e.target.value;
     setSearchQuery(val);
@@ -444,13 +541,54 @@ const Header = () => {
     if (e.key === "Escape") setShowResults(false);
   }, [fetchSearchResults, searchQuery]);
 
+  const handleCategorySearchChange = useCallback((e) => {
+    const val = e.target.value;
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowResults(false);
+    setCategorySearchQuery(val);
+    if (categorySearchDebounceRef.current) clearTimeout(categorySearchDebounceRef.current);
+
+    if (!val.trim()) {
+      setCategorySearchResults([]);
+      setShowCategoryResults(false);
+      return;
+    }
+
+    categorySearchDebounceRef.current = setTimeout(() => {
+      fetchCategorySearchResults(val);
+    }, 300);
+  }, [fetchCategorySearchResults]);
+
+  const handleCategorySearchKeyDown = useCallback((e) => {
+    if (e.key === "Enter") {
+      if (categorySearchDebounceRef.current) clearTimeout(categorySearchDebounceRef.current);
+      if (categorySearchResults.length > 0) {
+        openCategorySearchResult(categorySearchResults[0]);
+        return;
+      }
+      fetchCategorySearchResults(categorySearchQuery);
+    }
+    if (e.key === "Escape") setShowCategoryResults(false);
+  }, [categorySearchQuery, categorySearchResults, fetchCategorySearchResults, openCategorySearchResult]);
+
   useEffect(() => {
     const handler = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false);
+      if (drawerSearchRef.current && !drawerSearchRef.current.contains(e.target)) {
+        setShowCategoryResults(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowResults(false);
+  }, [isOpen]);
 
   // Weather
   useEffect(() => {
@@ -460,7 +598,9 @@ const Header = () => {
         const r    = await fetch(apiUrl("/weather/?city=Delhi"));
         const data = await r.json();
         setWeather(data);
-      } catch {}
+      } catch (error) {
+        void error;
+      }
     };
     const cancelDeferred = deferNonCritical(fetchWeather, 5200);
     const iv = setInterval(fetchWeather, 10 * 60 * 1000);
@@ -474,7 +614,9 @@ const Header = () => {
         const r    = await fetch(apiUrl("/metal-ticker/"));
         const data = await r.json();
         setMetals(data);
-      } catch {}
+      } catch (error) {
+        void error;
+      }
     };
     const cancelDeferred = deferNonCritical(fetchMetals, 4600);
     const iv = setInterval(fetchMetals, 15 * 60 * 1000);
@@ -488,7 +630,9 @@ const Header = () => {
         const r    = await fetch(apiUrl("/market-indices/"));
         const data = await r.json();
         setMarkets(data);
-      } catch {}
+      } catch (error) {
+        void error;
+      }
     };
     const cancelDeferred = deferNonCritical(fetchMarkets, 4200);
     const iv = setInterval(fetchMarkets, 5 * 60 * 1000);
@@ -586,7 +730,7 @@ const Header = () => {
 
   const topBarClasses = isMobile
     ? "hidden"
-    : `${showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
+    : `${!isOpen && showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
 
   return (
     <>
@@ -606,17 +750,60 @@ const Header = () => {
           Breaking: Sensex surges 600 pts —
         </div> */}
 
-        <div className="drawer-search-wrap">
+        <div className="drawer-search-wrap" ref={drawerSearchRef}>
           <div className="drawer-search-box">
             <Search size={14} color="#aa9988" />
             <input
               type="text"
-              placeholder="Search news, topics..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onKeyDown={handleSearchKeyDown}
+              name="drawer-category-search"
+              autoComplete="off"
+              placeholder="Search categories..."
+              value={categorySearchQuery}
+              onChange={handleCategorySearchChange}
+              onKeyDown={handleCategorySearchKeyDown}
+              onFocus={() => {
+                if (categorySearchResults.length > 0 || categorySearchQuery.trim()) {
+                  setShowCategoryResults(true);
+                }
+              }}
             />
           </div>
+          {showCategoryResults && (
+            <div className="drawer-category-results">
+              {isCategorySearching ? (
+                <div className="drawer-category-result-empty">Searching categories...</div>
+              ) : categorySearchResults.length === 0 ? (
+                <div className="drawer-category-result-empty">
+                  No category found for "{categorySearchQuery}"
+                </div>
+              ) : (
+                categorySearchResults.map((item, idx) => {
+                  const title = getCategorySearchTitle(item);
+                  const description = getCategorySearchDescription(item);
+                  const Icon = getIconForCategory(title, item?.slug || item?.category_slug || "");
+
+                  return (
+                    <button
+                      type="button"
+                      key={item?.id || item?.slug || item?.category_slug || `${title}-${idx}`}
+                      className="drawer-category-result"
+                      onClick={() => openCategorySearchResult(item)}
+                    >
+                      <span className="drawer-category-result-icon">
+                        <Icon size={14} strokeWidth={2} />
+                      </span>
+                      <span className="drawer-category-result-copy">
+                        <span className="drawer-category-result-title">{title}</span>
+                        {description && (
+                          <span className="drawer-category-result-desc">{description}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         <div className="drawer-scroll">
@@ -758,13 +945,15 @@ const Header = () => {
                   type="text"
                   className="search-input"
                   placeholder="Search news..."
+                  name="navbar-article-search"
+                  autoComplete="off"
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onKeyDown={handleSearchKeyDown}
-                  onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                  onFocus={() => !isOpen && searchResults.length > 0 && setShowResults(true)}
                 />
                 <Mic size={14} className="mic-icon" />
-                {showResults && (
+                {!isOpen && showResults && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
                     {isSearching ? (
                       <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>

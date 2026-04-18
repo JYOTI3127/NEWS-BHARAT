@@ -79,7 +79,7 @@ export default function Newsletter() {
 
   return (
     <section id="newsletter" className="w-full bg-white flex items-center justify-center px-4 py-6 min-[1441px]:px-8 min-[1800px]:px-10 min-[2561px]:px-12 max-[425px]:px-3 max-[375px]:px-2.5 max-[320px]:px-2 font-[Poppins,sans-serif]">
-      <div className="w-full max-w-[1480px] min-[1441px]:max-w-[1680px] min-[1800px]:max-w-[1800px] min-[2561px]:max-w-[1900px] bg-[#002765] rounded-2xl min-[1441px]:rounded-[28px] px-6 py-8 min-[1441px]:px-10 min-[1441px]:py-10 min-[1800px]:px-12 min-[1800px]:py-12 max-[768px]:px-5 max-[768px]:py-7 max-[425px]:px-4 max-[425px]:py-6 max-[375px]:px-3.5 max-[320px]:px-3 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
+      <div className="w-full max-w-[1240px] min-[1441px]:max-w-[1820px] min-[2561px]:max-w-[2400px] bg-[#002765] rounded-2xl min-[1441px]:rounded-[28px] px-6 py-8 min-[1441px]:px-10 min-[1441px]:py-10 min-[1800px]:px-12 min-[1800px]:py-12 max-[768px]:px-5 max-[768px]:py-7 max-[425px]:px-4 max-[425px]:py-6 max-[375px]:px-3.5 max-[320px]:px-3 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
 
         <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-between gap-8 min-[1025px]:gap-12 min-[1441px]:gap-16 min-[1800px]:gap-20">
 

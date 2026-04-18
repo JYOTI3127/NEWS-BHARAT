@@ -28,6 +28,27 @@
   margin: 0;
   padding: 0;
 }
+a {
+    color: #001d52;
+    text-decoration: underline;
+}
+
+a.breaking-news-link,
+a.breaking-news-link:hover,
+a.breaking-news-link:focus,
+a.breaking-news-link:active,
+a.bottom-breaking-link,
+a.bottom-breaking-link:hover,
+a.bottom-breaking-link:focus,
+a.bottom-breaking-link:active {
+  text-decoration: none !important;
+}
+
+a.breaking-news-link *,
+a.bottom-breaking-link * {
+  text-decoration: none !important;
+}
+
 #newsletter {
   scroll-margin-top: 120px;  
   scroll-behavior: smooth;
@@ -210,9 +231,21 @@ img {
 @media (max-width: 425px) {
   .home-whatsapp-float {
     right: 12px;
-    bottom: 20px;
+    bottom: 82px;
     width: 46px;
     height: 46px;
+  }
+}
+
+@media (max-width: 375px) {
+  .home-whatsapp-float {
+    bottom: 78px;
+  }
+}
+
+@media (max-width: 320px) {
+  .home-whatsapp-float {
+    bottom: 74px;
   }
 }
 
@@ -1924,7 +1957,7 @@ img {
 
 .tn-inner {
   max-width: 1300px;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   padding: 30px 32px;
   background: #fff;
 }
@@ -2330,6 +2363,180 @@ img {
   font-weight: 900;
   color: #111;
   letter-spacing: 0.05em;
+}
+
+/* Homepage ad slots */
+.home-ad-slot {
+  width: min(var(--ad-width), calc(100% - 32px));
+  margin: 18px auto;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font);
+}
+
+.home-ad-frame {
+  display: block;
+  width: 100%;
+  max-width: var(--ad-width);
+  aspect-ratio: var(--ad-ratio-width) / var(--ad-ratio-height);
+  overflow: hidden;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #fff;
+  line-height: 0;
+  text-decoration: none;
+}
+
+.home-ad-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.home-top-ad {
+  margin-top: 20px;
+  margin-bottom: 18px;
+}
+
+.home-top-ad--mobile {
+  display: none;
+}
+
+.home-after-trending-ad {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
+.home-mid-ad {
+  margin-top: 8px;
+  margin-bottom: 26px;
+}
+
+.home-side-ad {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .home-ad-slot {
+    width: min(var(--ad-width), calc(100% - 24px));
+    margin: 14px auto;
+  }
+
+  .home-top-ad--desktop {
+    display: none;
+  }
+
+  .home-top-ad--mobile {
+    display: flex;
+  }
+
+  .home-after-trending-ad,
+  .home-mid-ad {
+    width: min(var(--ad-width), calc(100% - 20px));
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1199px) {
+  .home-side-ad {
+    position: fixed;
+    top: 118px;
+    z-index: 20;
+    display: flex;
+    width: 160px;
+    margin: 0;
+  }
+
+  .home-side-ad--left {
+    left: 8px;
+    transform: scale(0.7);
+    transform-origin: top left;
+  }
+
+  .home-side-ad--right {
+    right: 8px;
+    transform: scale(0.7);
+    transform-origin: top right;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .home-side-ad {
+    position: fixed;
+    top: 132px;
+    z-index: 20;
+    display: flex;
+    width: 160px;
+    margin: 0;
+  }
+
+  .home-side-ad--left {
+    left: 10px;
+    transform: scale(0.86);
+    transform-origin: top left;
+  }
+
+  .home-side-ad--right {
+    right: 10px;
+    transform: scale(0.86);
+    transform-origin: top right;
+  }
+}
+
+@media (min-width: 1600px) and (max-width: 1799px) {
+  .home-side-ad {
+    position: fixed;
+    top: 142px;
+    z-index: 20;
+    display: flex;
+    width: 160px;
+    margin: 0;
+  }
+
+  .home-side-ad--left {
+    left: max(10px, calc((100vw - 1240px) / 2 - 172px));
+  }
+
+  .home-side-ad--right {
+    right: max(10px, calc((100vw - 1240px) / 2 - 172px));
+  }
+}
+
+@media (min-width: 1800px) and (max-width: 2560px) {
+  .home-side-ad {
+    position: fixed;
+    top: 142px;
+    z-index: 20;
+    display: flex;
+    width: 160px;
+    margin: 0;
+  }
+
+  .home-side-ad--left {
+    left: max(14px, calc((100vw - 1240px) / 2 - 178px));
+  }
+
+  .home-side-ad--right {
+    right: max(14px, calc((100vw - 1240px) / 2 - 178px));
+  }
+}
+
+@media (min-width: 2561px) {
+  .home-side-ad {
+    position: fixed;
+    top: 160px;
+    z-index: 20;
+    display: flex;
+    width: 160px;
+    margin: 0;
+  }
+
+  .home-side-ad--left {
+    left: max(24px, calc((100vw - 2400px) / 2 - 184px));
+  }
+
+  .home-side-ad--right {
+    right: max(24px, calc((100vw - 2400px) / 2 - 184px));
+  }
 }
 
 .tn-page-4k .tn-inner {
@@ -11484,11 +11691,26 @@ img {
 
 @media (min-width: 1025px) and (max-width: 1440px) {
 
-  .tn-inner,
+  .nb-container,
   .vs-inner,
-  .nps-inner,
   .sn-wrap {
+    width: min(1240px, calc(100% - 48px));
     max-width: 1240px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .tn-inner {
+    width: min(1360px, calc(100% - 24px));
+    max-width: 1360px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .nps-inner,
+  .nps-entertainment {
+    width: min(1180px, calc(100% - 72px));
+    max-width: 1180px;
     margin-left: auto !important;
     margin-right: auto !important;
   }
@@ -11590,6 +11812,7 @@ img {
   }
 
   .nb-container {
+    width: min(1820px, calc(100% - 96px));
     max-width: 1820px;
     height: 680px;
     margin-left: auto;
@@ -11829,21 +12052,21 @@ img {
   }
 
   .about-page .hero-content {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .about-page .container {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .about-page .who-grid,
@@ -11868,12 +12091,12 @@ img {
 
   .fn-page .fn-hero-container,
   .fn-page .fn-container {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .fn-page .fn-layout {
@@ -11889,30 +12112,30 @@ img {
   .careers-page .cp-container,
   .contact-page .ct-hero-content,
   .contact-page .ct-container {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .terms-page .terms-hero-content,
   .terms-page .terms-tabs-inner,
   .terms-page .terms-body {
-    width: min(1920px, calc(100% - 64px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 32px !important;
-    padding-right: 32px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .disclaimer-page .terms-hero-content,
   .disclaimer-page .terms-body {
-    width: min(1840px, calc(100% - 96px)) !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    width: min(1820px, calc(100% - 96px)) !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
   .disclaimer-page .terms-body .terms-grid {
@@ -11940,23 +12163,23 @@ img {
   }
 
   .privacy-page .priv-hero-content {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
     margin-bottom: 12% !important;
   }
 
   .privacy-page .priv-layout {
-    width: min(1880px, calc(100% - 80px)) !important;
+    width: min(1820px, calc(100% - 96px)) !important;
     max-width: none !important;
     margin-left: auto !important;
     margin-right: auto !important;
     grid-template-columns: 360px minmax(0, 1fr) !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
 
 }
@@ -13926,10 +14149,6 @@ img {
     line-height: 1.35 !important;
   }
 
-  .tn-banner {
-    display: none !important;
-  }
-
   .tn-live-mobile {
     margin-top: 16px !important;
     clear: both !important;
@@ -14040,4 +14259,17 @@ img {
     min-width: 0 !important;
     width: 100% !important;
   }
+}
+
+/* Top news banner should touch both viewport edges; other sections keep their gutters. */
+.nb-root .nb-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.nb-root .nb-bg {
+  width: 100% !important;
+  min-width: 100% !important;
 }

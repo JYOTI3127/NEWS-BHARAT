@@ -1,11 +1,59 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import MenuDrawer from "./MenuDrawer";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
-const BREAKING_NEWS_CATEGORY_ID = 2;
-const BREAKING_NEWS_CACHE_KEY = "bottomBreakingNewsItems";
+const BOTTOM_STRIP_CATEGORY_SLUG = "bharat-explainers";
+const BREAKING_NEWS_CACHE_KEY = "bottomBharatExplainersOnlyV1";
+const OLD_BREAKING_NEWS_CACHE_KEYS = [
+  "bottomBreakingNewsItems",
+  "bottomBharatExplainersItems",
+  "bottomBharatExplainersItemsV2",
+];
+
+const getArticleCategories = (article) => {
+  const categoryDetails = Array.isArray(article?.category_details)
+    ? article.category_details
+    : article?.category_details
+      ? [article.category_details]
+      : [];
+  const categories = Array.isArray(article?.categories) ? article.categories : [];
+  const category = article?.category ? [article.category] : [];
+
+  return [...categoryDetails, ...categories, ...category];
+};
+
+const isBharatExplainerArticle = (article) =>
+  getArticleCategories(article).some((category) => {
+    if (typeof category === "string") {
+      const value = category.toLowerCase();
+      return value === BOTTOM_STRIP_CATEGORY_SLUG || value.includes("bharat explainer");
+    }
+
+    const slug = String(category?.slug || category?.category_slug || "").toLowerCase();
+    const name = String(category?.name || category?.title || "").toLowerCase();
+    return slug === BOTTOM_STRIP_CATEGORY_SLUG || name.includes("bharat explainer");
+  });
+
+const getArticleDateValue = (article) =>
+  article?.published_at ||
+  article?.created_at ||
+  article?.updated_at ||
+  article?.date ||
+  article?.published_date ||
+  article?.publish_date ||
+  "";
+
+const sortLatestArticles = (articles) =>
+  [...articles].sort(
+    (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
+  );
+
+const getOnlyBharatExplainers = (items) =>
+  (Array.isArray(items) ? items : [])
+    .filter((article) => article?.status !== "draft")
+    .filter(isBharatExplainerArticle);
 
 const getCachedBreakingNews = () => {
   if (typeof window === "undefined") return [];
@@ -13,7 +61,7 @@ const getCachedBreakingNews = () => {
   try {
     const cached = window.sessionStorage.getItem(BREAKING_NEWS_CACHE_KEY);
     const parsed = cached ? JSON.parse(cached) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    return sortLatestArticles(getOnlyBharatExplainers(parsed)).slice(0, 2);
   } catch {
     return [];
   }
@@ -23,7 +71,10 @@ const setCachedBreakingNews = (items) => {
   if (typeof window === "undefined") return;
 
   try {
-    window.sessionStorage.setItem(BREAKING_NEWS_CACHE_KEY, JSON.stringify(items));
+    window.sessionStorage.setItem(
+      BREAKING_NEWS_CACHE_KEY,
+      JSON.stringify(sortLatestArticles(getOnlyBharatExplainers(items)).slice(0, 2))
+    );
   } catch {
     // Ignore storage errors; the live fetch still updates the UI.
   }
@@ -126,26 +177,36 @@ export default function BottomNav() {
   }, []);
 
   useEffect(() => {
+    OLD_BREAKING_NEWS_CACHE_KEYS.forEach((key) => {
+      window.sessionStorage.removeItem(key);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!isMobileView || !showBreaking) return;
 
     const fetchBreakingNews = async () => {
       try {
-        const res = await fetch(apiUrl("/articles/?category=breaking-news&limit=2"));
+        const res = await fetch(
+          apiUrl(`/articles/?category=${BOTTOM_STRIP_CATEGORY_SLUG}&limit=10`),
+          { cache: "no-store" }
+        );
         const data = await res.json();
 
         const articles = Array.isArray(data) ? data : (data.results ?? []);
-        const breaking = articles.filter((article) =>
-          article.categories?.includes(BREAKING_NEWS_CATEGORY_ID) &&
-          article.status === "published"
-        );
+        let publishedArticles = getOnlyBharatExplainers(articles);
 
-        const source = breaking.length > 0 ? breaking : articles;
-        const shuffled = [...source]
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 2);
+        if (publishedArticles.length === 0) {
+          const fallbackRes = await fetch(apiUrl("/articles/?limit=100"), { cache: "no-store" });
+          const fallbackData = await fallbackRes.json();
+          const fallbackArticles = Array.isArray(fallbackData) ? fallbackData : (fallbackData.results ?? []);
+          publishedArticles = getOnlyBharatExplainers(fallbackArticles);
+        }
 
-        setBreakingNewsItems(shuffled);
-        setCachedBreakingNews(shuffled);
+        const latest = sortLatestArticles(publishedArticles).slice(0, 2);
+
+        setBreakingNewsItems(latest);
+        setCachedBreakingNews(latest);
       } catch (err) {
         console.error("Breaking news fetch failed:", err);
         setBreakingNewsItems([]);
@@ -362,30 +423,43 @@ export default function BottomNav() {
 
             <ul className="list-none m-0 p-0 space-y-0.5">
               {breakingNewsItems.length > 0 ? (
-                breakingNewsItems.map((item, i) => (
-                  <li
-                    key={i}
-                    onClick={() => {
-                      const articlePath = getArticlePath(item);
-                      if (articlePath) {
-                        handleCloseBreaking();
-                        navigate(articlePath);
-                      }
-                    }}
-                    className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer hover:text-yellow-300 transition-colors duration-200"
-                  >
-                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>
-                    <span>{item.title}</span>
-                  </li>
-                ))
+                breakingNewsItems.map((item, i) => {
+                  const articlePath = getArticlePath(item);
+
+                  if (!articlePath) {
+                    return (
+                      <li
+                        key={item.id || item.slug || i}
+                        className="text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5"
+                      >
+                        <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
+                        <span>{item.title}</span>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={item.id || item.slug || i}>
+                      <Link
+                        to={articlePath}
+                        onClick={handleCloseBreaking}
+                        className="bottom-breaking-link text-white text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5 cursor-pointer !no-underline hover:!no-underline hover:text-yellow-300 transition-colors duration-200"
+                        style={{ textDecoration: "none" }}
+                      >
+                        <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
+                        <span>{item.title}</span>
+                      </Link>
+                    </li>
+                  );
+                })
               ) : (
                 <>
                   <li className="text-white/85 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
-                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">•</span>
+                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
                     <span>Loading breaking news...</span>
                   </li>
                   <li className="text-white/60 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
-                    <span className="text-white/80 text-base xs:text-lg leading-none flex-shrink-0">•</span>
+                    <span className="text-white/80 text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
                     <span>Latest updates will appear here shortly.</span>
                   </li>
                 </>

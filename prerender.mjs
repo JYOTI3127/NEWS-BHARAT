@@ -610,7 +610,7 @@ console.log(`\nTotal ${routes.length} routes will be prerendered\n`)
 const prerenderer = new Prerenderer({
   staticDir: path.join(__dirname, 'build'),
   renderer: new PuppeteerRenderer({
-    renderAfterDocumentEvent: 'prerender-ready',
+    renderAfterTime: 1200,
     timeout: 60000,
     args: [
       '--no-sandbox',

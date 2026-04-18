@@ -6,6 +6,7 @@ import NewsBanner from '../components/Banner';
 import TrendingNews from '../components/Trendingnews';
 import BreakingNewsSection from '../components/BreakingNewsSection';
 import HomeCategorySections from '../components/HomeCategorySections';
+import AdvertisementSlot from '../components/AdvertisementSlot';
 
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
@@ -106,8 +107,21 @@ const Home = () => {
 
   return (
     <>
+      <AdvertisementSlot
+        placement="home_side_left"
+        variant="sideRail"
+        className="home-side-ad home-side-ad--left"
+        minWidth={769}
+      />
+      <AdvertisementSlot
+        placement="home_side_right"
+        variant="sideRail"
+        className="home-side-ad home-side-ad--right"
+        minWidth={769}
+      />
+
       <a
-        href="https://whatsapp.com/channel/news4bharat"
+        href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx"
         className="home-whatsapp-float"
         target="_blank"
         rel="noopener noreferrer"
@@ -120,6 +134,19 @@ const Home = () => {
       <Profiler id="NewsBanner" onRender={onRenderCallback}>
         <NewsBanner articles={allArticles} loading={articlesLoading} />
       </Profiler>
+
+      <AdvertisementSlot
+        placement="home_top"
+        variant="leaderboard"
+        className="home-top-ad home-top-ad--desktop"
+        minWidth={769}
+      />
+      <AdvertisementSlot
+        placement="home_top_mobile"
+        variant="mobileStrip"
+        className="home-top-ad home-top-ad--mobile"
+        maxWidth={768}
+      />
 
       {/* <section className="w-full px-4 sm:px-6 pt-5">
         <div className="mx-auto max-w-[1240px] rounded-2xl border border-[#ece5dd] bg-white/80 px-4 py-4 text-sm leading-7 text-[#5f5a53] shadow-[0_1px_4px_rgba(0,0,0,0.03)] sm:px-6">
@@ -142,6 +169,12 @@ const Home = () => {
       <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash}>
         <VisualStoriesWithScore articles={allArticles} />
       </DeferredSection>
+
+      <AdvertisementSlot
+        placement="home_mid"
+        variant="largeRectangle"
+        className="home-mid-ad"
+      />
 
       <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash}>
         <NewsPortalSection articles={allArticles} />

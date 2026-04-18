@@ -1,5 +1,5 @@
 .mss-root {
-  width: min(1280px, calc(100% - 48px));
+  width: min(1240px, calc(100% - 48px));
   margin: 0 auto 32px;
   font-family: "Poppins", sans-serif;
 }
@@ -303,7 +303,7 @@
 
 @media (max-width: 1440px) {
   .mss-root {
-    width: min(1280px, calc(100% - 48px));
+    width: min(1240px, calc(100% - 48px));
   }
 }
 

@@ -660,6 +660,7 @@
   padding: 10px 14px;
   border-bottom: 1px solid #e8e0d6;
   flex-shrink: 0;
+  position: relative;
 }
 
 .drawer-search-box {
@@ -688,6 +689,97 @@
 
 .drawer-search-box input::placeholder {
   color: #aa9988;
+}
+
+.drawer-category-results {
+  position: absolute;
+  top: calc(100% - 8px);
+  left: 14px;
+  right: 14px;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #e2d7c8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.16);
+}
+
+.drawer-category-result,
+.drawer-category-result-empty {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-en, "Poppins", sans-serif);
+  text-align: left;
+}
+
+.drawer-category-result {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 11px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #f0e9df;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.drawer-category-result:last-child {
+  border-bottom: 0;
+}
+
+.drawer-category-result:hover,
+.drawer-category-result:focus-visible {
+  color: #d80100;
+  background: #fff4f4;
+  outline: none;
+}
+
+.drawer-category-result-icon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #d80100;
+  background: rgba(216, 1, 0, 0.08);
+}
+
+.drawer-category-result-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drawer-category-result-title {
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-category-result-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #6f6255;
+  font-size: 11px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.drawer-category-result-empty {
+  padding: 11px 12px;
+  color: #7c7166;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .drawer-scroll {
@@ -1365,7 +1457,7 @@
 
 @media (min-width: 1441px) and (max-width: 2560px) {
   .header-wrapper.is-2k .header-shell {
-    width: min(2140px, calc(100% - 72px));
+    width: min(1820px, calc(100% - 96px));
   }
 
   .header-wrapper.is-2k .main-nav {

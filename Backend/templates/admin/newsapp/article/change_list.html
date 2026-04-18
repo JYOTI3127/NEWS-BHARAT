@@ -205,6 +205,7 @@
 <div class="um-pagination">
   <div class="pagination-info">
     Showing {{ article_page_obj.start_index }}-{{ article_page_obj.end_index }} of {{ article_page_obj.paginator.count }} articles
+    &middot; Page {{ article_page_obj.number }} of {{ article_page_obj.paginator.num_pages }}
   </div>
   <div class="pagination-btns">
     {% if article_page_obj.has_previous %}
@@ -215,8 +216,12 @@
     {% for num in article_page_obj.paginator.page_range %}
       {% if num == article_page_obj.number %}
         <span class="pg-btn active">{{ num }}</span>
+      {% elif num == 1 or num == article_page_obj.paginator.num_pages %}
+        <a class="pg-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}article_page={{ num }}">{{ num }}</a>
       {% elif num >= article_page_obj.number|add:'-2' and num <= article_page_obj.number|add:'2' %}
         <a class="pg-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}article_page={{ num }}">{{ num }}</a>
+      {% elif num == article_page_obj.number|add:'-3' or num == article_page_obj.number|add:'3' %}
+        <span class="pg-btn pg-btn--ellipsis">...</span>
       {% endif %}
     {% endfor %}
     {% if article_page_obj.has_next %}
@@ -225,6 +230,20 @@
       <span class="pg-btn" style="opacity:.45;pointer-events:none;">&rsaquo;</span>
     {% endif %}
   </div>
+  {% if article_page_obj.paginator.num_pages > 5 %}
+  <form class="pagination-jump" method="get" action="?{% if page_query %}{{ page_query }}{% endif %}">
+    <label for="articlePageJump">Go to page</label>
+    <input
+      id="articlePageJump"
+      name="article_page"
+      type="number"
+      min="1"
+      max="{{ article_page_obj.paginator.num_pages }}"
+      value="{{ article_page_obj.number }}"
+      aria-label="Go to article page">
+    <button type="submit">Go</button>
+  </form>
+  {% endif %}
 </div>
 {% endif %}
 

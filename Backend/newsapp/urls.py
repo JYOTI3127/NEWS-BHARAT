@@ -11,6 +11,7 @@ urlpatterns = [
     path('articles/<int:pk>/', views.article_detail),
     path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
     path('articles/by-state/', views.articles_by_state),
+    path('dashboard/stats/', views.dashboard_stats_api, name='api_dashboard_stats'),
     path('contact-queries/', views.contact_query_create, name='api_contact_query_create'),
     path('career-applications/', views.career_application_create, name='api_career_application_create'),
     path('weather/', weather_api),

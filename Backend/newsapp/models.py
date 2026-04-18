@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from .workflow import ALLOWED_TRANSITIONS
 from django.core.exceptions import ValidationError
+from django.core.files.images import get_image_dimensions
 import uuid
 
 
@@ -130,6 +131,7 @@ class Article(models.Model):
     created_at   = models.DateTimeField(auto_now_add=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    updated_at   = models.DateTimeField(auto_now=True)
  
     assigned_to = models.ForeignKey(
         User,
@@ -150,6 +152,13 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
+        update_fields = kwargs.get('update_fields')
+        if update_fields:
+            update_fields = set(update_fields)
+            if 'updated_at' not in update_fields:
+                self.updated_at = timezone.now()
+                update_fields.add('updated_at')
+                kwargs['update_fields'] = update_fields
     
         # ✅ SLUG AUTO GENERATE
         if not self.slug:
@@ -353,6 +362,84 @@ class HomepageSlot(models.Model):
 
     def __str__(self):
         return f"{self.slot_name} ({self.mode})"
+
+
+class HomepageAdBanner(models.Model):
+    HOME_TOP = 'home_top'
+    HOME_TOP_MOBILE = 'home_top_mobile'
+    HOME_AFTER_TRENDING = 'home_after_trending'
+    HOME_MID = 'home_mid'
+    HOME_SIDE_LEFT = 'home_side_left'
+    HOME_SIDE_RIGHT = 'home_side_right'
+
+    PLACEMENT_CHOICES = [
+        (HOME_TOP, 'Home Top'),
+        (HOME_TOP_MOBILE, 'Home Top Mobile'),
+        (HOME_AFTER_TRENDING, 'Home After Trending'),
+        (HOME_MID, 'Home Mid'),
+        (HOME_SIDE_LEFT, 'Home Side Left'),
+        (HOME_SIDE_RIGHT, 'Home Side Right'),
+    ]
+
+    PLACEMENT_DIMENSIONS = {
+        HOME_TOP: (728, 90),
+        HOME_TOP_MOBILE: (300, 50),
+        HOME_AFTER_TRENDING: (300, 250),
+        HOME_MID: (336, 280),
+        HOME_SIDE_LEFT: (160, 600),
+        HOME_SIDE_RIGHT: (160, 600),
+    }
+
+    PLACEMENT_BREAKPOINTS = {
+        HOME_TOP: '769px+',
+        HOME_TOP_MOBILE: '0px-768px',
+        HOME_AFTER_TRENDING: 'all screens',
+        HOME_MID: 'all screens',
+        HOME_SIDE_LEFT: '769px+',
+        HOME_SIDE_RIGHT: '769px+',
+    }
+
+    placement = models.CharField(max_length=40, choices=PLACEMENT_CHOICES, unique=True)
+    image = models.ImageField(upload_to='homepage_ads/', blank=True, null=True)
+    image_url = models.URLField(blank=True, default='')
+    link_url = models.URLField(blank=True, default='')
+    alt = models.CharField(max_length=255, blank=True, default='Sponsored advertisement')
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['placement']
+        verbose_name = 'Homepage Ad Banner'
+        verbose_name_plural = 'Homepage Ad Banners'
+
+    @property
+    def width(self):
+        return self.PLACEMENT_DIMENSIONS.get(self.placement, (0, 0))[0]
+
+    @property
+    def height(self):
+        return self.PLACEMENT_DIMENSIONS.get(self.placement, (0, 0))[1]
+
+    @property
+    def size(self):
+        return f'{self.width}x{self.height}'
+
+    @property
+    def breakpoint(self):
+        return self.PLACEMENT_BREAKPOINTS.get(self.placement, '')
+
+    def clean(self):
+        super().clean()
+        if self.image and self.placement in self.PLACEMENT_DIMENSIONS:
+            expected_width, expected_height = self.PLACEMENT_DIMENSIONS[self.placement]
+            image_width, image_height = get_image_dimensions(self.image)
+            if image_width != expected_width or image_height != expected_height:
+                raise ValidationError(
+                    f'{self.placement} banner must be exactly {expected_width}x{expected_height}px.'
+                )
+
+    def __str__(self):
+        return f'Homepage ad {self.placement} ({self.size})'
     
 
 class MetalRate(models.Model):

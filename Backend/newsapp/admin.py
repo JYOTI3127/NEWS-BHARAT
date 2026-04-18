@@ -738,6 +738,7 @@ class NewsAdminSite(AdminSite):
                 'image_alt',
                 'published_at',
                 'created_at',
+                'updated_at',
                 'canonical_url',
                 'meta_description',
                 'focus_keyword',
@@ -805,6 +806,27 @@ class NewsAdminSite(AdminSite):
             extra_context['ad_slot'] = HomepageSlot.objects.filter(slot_name='ad_banner').first()
         except Exception:
             extra_context['ad_slot'] = None
+
+        try:
+            saved_banners = {
+                banner.placement: banner
+                for banner in HomepageAdBanner.objects.filter(
+                    placement__in=[placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
+                )
+            }
+            extra_context['ad_banner_rows'] = [
+                {
+                    'placement': placement,
+                    'label': label,
+                    'width': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][0],
+                    'height': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][1],
+                    'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS[placement],
+                    'banner': saved_banners.get(placement),
+                }
+                for placement, label in HomepageAdBanner.PLACEMENT_CHOICES
+            ]
+        except Exception:
+            extra_context['ad_banner_rows'] = []
 
         try:
             now       = timezone.now()
@@ -922,6 +944,20 @@ class NewsAdminSite(AdminSite):
 class HomepageSlotAdmin(admin.ModelAdmin):
     list_display = ('slot_name', 'mode', 'article', 'is_active', 'pin_until')
     list_filter  = ('mode', 'is_active')
+
+
+class HomepageAdBannerAdmin(admin.ModelAdmin):
+    list_display = ('placement', 'size', 'image_preview', 'link_url', 'is_active', 'updated_at')
+    list_filter = ('placement', 'is_active')
+    readonly_fields = ('updated_at',)
+
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="max-width:120px;max-height:60px;border-radius:4px;">', obj.image.url)
+        if obj.image_url:
+            return format_html('<img src="{}" style="max-width:120px;max-height:60px;border-radius:4px;">', obj.image_url)
+        return "No image"
+    image_preview.short_description = "Preview"
 
 
 class NewsletterCardAdmin(admin.ModelAdmin):
@@ -1112,7 +1148,7 @@ class FactCheckAdmin(admin.ModelAdmin):
 
 class ArticleAdmin(admin.ModelAdmin):
     inlines      = [ArticleVersionInline, WorkflowLogInline]
-    list_display = ['title', 'status', 'author', 'author_display_name', 'priority', 'created_at']
+    list_display = ['title', 'status', 'author', 'author_display_name', 'priority', 'created_at', 'updated_at']
     list_filter  = ['status', 'categories', 'is_paid', 'priority']
     search_fields = ['title', 'author__username', 'author_display_name']
 
@@ -1139,12 +1175,12 @@ class ArticleAdmin(admin.ModelAdmin):
             )
         }),
         ('Audit Info — Read Only', {
-            'fields': ('author', 'published_at', 'created_at'),
+            'fields': ('author', 'published_at', 'created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
 
-    readonly_fields = ['author', 'published_at', 'created_at']
+    readonly_fields = ['author', 'published_at', 'created_at', 'updated_at']
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -1260,6 +1296,7 @@ admin_site.register(ArticleVersion)
 admin_site.register(ArticleWorkflowLog)
 admin_site.register(FactCheck,                  FactCheckAdmin)
 admin_site.register(HomepageSlot,               HomepageSlotAdmin)
+admin_site.register(HomepageAdBanner,           HomepageAdBannerAdmin)
 admin_site.register(MetalRate)
 admin_site.register(ContactQuery,                ContactQueryAdmin)
 admin_site.register(CareerApplication,           CareerApplicationAdmin)

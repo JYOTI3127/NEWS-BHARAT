@@ -13,7 +13,7 @@ class ArticleSitemap(Sitemap):
         ).prefetch_related('categories')
 
     def lastmod(self, obj):
-        return obj.published_at or obj.created_at
+        return obj.updated_at or obj.published_at or obj.created_at
 
     def location(self, obj):
         return article_path(obj)

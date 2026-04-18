@@ -1523,12 +1523,33 @@ function _asGetStorageKey(){
   return 'nb_autosave_'+(_asArticleId||'new');
 }
 
+function _asHashString(raw){
+  var hash=0,i,chr;
+  raw=String(raw||'');
+  if(!raw.length)return '0';
+  for(i=0;i<raw.length;i++){
+    chr=raw.charCodeAt(i);
+    hash=((hash<<5)-hash)+chr;
+    hash|=0;
+  }
+  return String(hash);
+}
+function _asSecondaryKwsValue(){
+  return Array.isArray(window.secondaryKws) ? window.secondaryKws.join(',') : '';
+}
+function _asArticleTagsValue(){
+  return Array.isArray(window.articleTags) ? window.articleTags.join(',') : '';
+}
 function _asGetHash(){
-  return ((
+  return _asHashString(
     (document.getElementById('ui_title')?document.getElementById('ui_title').value:'') +
     (document.getElementById('ui_content')?document.getElementById('ui_content').innerHTML:'') +
-    (document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'')
-  ).length).toString();
+    (document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'') +
+    (document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'') +
+    (document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'') +
+    _asSecondaryKwsValue() +
+    _asArticleTagsValue()
+  );
 }
 function _asShowBadge(state,msg,timer){
   var badge=document.getElementById('nb_autosave_badge'),
@@ -1561,11 +1582,58 @@ function _asSaveToLocalStorage(){
       meta:document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'',
       slug:document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'',
       focus_kw:document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'',
-      sec_kws:secondaryKws.join(','),
-      tags:articleTags.join(','),
+      sec_kws:_asSecondaryKwsValue(),
+      tags:_asArticleTagsValue(),
       ts:new Date().toISOString()
     };
     localStorage.setItem(key,JSON.stringify(data));
+  }catch(e){}
+}
+function _asApplyLocalDraft(data){
+  if(!data)return;
+  if(document.getElementById('ui_title'))document.getElementById('ui_title').value=data.title||'';
+  if(document.getElementById('ui_subtitle'))document.getElementById('ui_subtitle').value=data.subtitle||'';
+  if(document.getElementById('ui_content'))document.getElementById('ui_content').innerHTML=data.content||'';
+  if(document.getElementById('ui_meta_desc'))document.getElementById('ui_meta_desc').value=data.meta||'';
+  if(document.getElementById('ui_slug'))document.getElementById('ui_slug').value=data.slug||'';
+  if(document.getElementById('ui_focus_kw'))document.getElementById('ui_focus_kw').value=data.focus_kw||'';
+  if(data.sec_kws!==undefined){
+    secondaryKws=String(data.sec_kws||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
+    if(typeof renderSecKws==='function')renderSecKws();
+  }
+  if(data.tags!==undefined){
+    articleTags=String(data.tags||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
+    if(typeof renderTags==='function')renderTags();
+  }
+  if(typeof updateSeoScore==='function')updateSeoScore();
+  if(typeof updateEditorPreview==='function')updateEditorPreview();
+  if(typeof updateSubtitleCount==='function')updateSubtitleCount();
+  if(typeof nbSaveHistory==='function')nbSaveHistory();
+  _asLastSavedHash=_asGetHash();
+  _asShowBadge('saved','Local draft restored','');
+  setTimeout(_asHideBadge,3000);
+}
+function _asRestoreLocalDraftIfNeeded(){
+  try{
+    var raw=localStorage.getItem(_asGetStorageKey());
+    if(!raw)return;
+    var data=JSON.parse(raw);
+    if(!data||(!data.title&&!data.content))return;
+    var currentHash=_asGetHash();
+    var localHash=_asHashString(
+      (data.title||'')+
+      (data.content||'')+
+      (data.meta||'')+
+      (data.slug||'')+
+      (data.focus_kw||'')+
+      (data.sec_kws||'')+
+      (data.tags||'')
+    );
+    if(!localHash||localHash==='0'||localHash===currentHash)return;
+    var savedAt=data.ts?new Date(data.ts).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'recently';
+    if(confirm('A locally saved draft from '+savedAt+' is available. Restore it?')){
+      _asApplyLocalDraft(data);
+    }
   }catch(e){}
 }
 async function _asAutoSave(){
@@ -1592,7 +1660,7 @@ async function _asAutoSave(){
     formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');
     formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');
     formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
-    formData.append('secondary_keywords',secondaryKws.join(','));
+    formData.append('secondary_keywords',_asSecondaryKwsValue());
 
     var url = _asArticleId ? ('/api/articles/' + _asArticleId + '/') : '/api/articles/';
     var method = _asArticleId ? 'PUT' : 'POST';
@@ -1635,6 +1703,8 @@ function _asStartCountdown(){
   },1000);
 }
 _asStartCountdown();
+_asLastSavedHash=_asGetHash();
+setTimeout(_asRestoreLocalDraftIfNeeded,500);
 
 ['ui_title','ui_subtitle','ui_meta_desc','ui_focus_kw','ui_slug'].forEach(function(id){
   var el=document.getElementById(id);

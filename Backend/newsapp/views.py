@@ -34,6 +34,8 @@ from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.core.files.images import get_image_dimensions
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
@@ -509,6 +511,7 @@ def article_list(request):
                 'image_alt',
                 'published_at',
                 'created_at',
+                'updated_at',
                 'primary_category__id',
                 'primary_category__name',
                 'primary_category__slug',
@@ -607,6 +610,38 @@ def dashboard_articles(request):
     serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
     cache.set(cache_key, serializer.data, 120) 
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def dashboard_stats_api(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({"error": "Login required"}, status=401)
+
+    now = timezone.now()
+    overdue = Article.objects.filter(
+        deadline__lt=now,
+        status__in=['draft', 'review', 'fact_check', 'legal', 'approved', 'scheduled'],
+    ).exclude(status='published').count()
+    draft = Article.objects.filter(status='draft').count()
+    review = Article.objects.filter(status__in=['review', 'fact_check', 'legal', 'approved']).count()
+    scheduled = Article.objects.filter(status='scheduled').count()
+    archived = Article.objects.filter(status='archived').count()
+    rejected = Article.objects.filter(status='rejected').count()
+    published = Article.objects.filter(status='published').count()
+
+    return Response({
+        'total_articles': Article.objects.count(),
+        'published': published,
+        'drafts': draft,
+        'scheduled': scheduled,
+        'archived': archived,
+        'rejected': rejected,
+        'paid': Article.objects.filter(is_paid=True).count(),
+        'overdue': overdue,
+        'authors': User.objects.filter(articles_authored__isnull=False).distinct().count(),
+        'categories': Category.objects.count(),
+        'in_pipeline': draft + review + scheduled,
+    })
 
 
 def update_article_status(request, article):
@@ -818,6 +853,27 @@ def dashboard_view(request):
     except Exception:
         ad_slot = None
 
+    try:
+        saved_banners = {
+            banner.placement: banner
+            for banner in HomepageAdBanner.objects.filter(
+                placement__in=[placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
+            )
+        }
+        ad_banner_rows = [
+            {
+                'placement': placement,
+                'label': label,
+                'width': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][0],
+                'height': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][1],
+                'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS[placement],
+                'banner': saved_banners.get(placement),
+            }
+            for placement, label in HomepageAdBanner.PLACEMENT_CHOICES
+        ]
+    except Exception:
+        ad_banner_rows = []
+
     published_articles_for_picker = Article.objects.filter(
         status='published'
     ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
@@ -853,6 +909,7 @@ def dashboard_view(request):
         "hero_slot":                     hero_slot,
         "latest_slot":                   latest_slot,
         "ad_slot":                       ad_slot,
+        "ad_banner_rows":                ad_banner_rows,
         "published_articles_for_picker": published_articles_for_picker,
         "categories":                    categories,
         "mp3_categories":                categories,
@@ -941,30 +998,161 @@ def update_latest_news_slot(request):
     return JsonResponse({'status': 'saved', 'slot': 'latest_news'})
 
 
+def _serialize_homepage_ad_banner(request, banner):
+    image_url = request.build_absolute_uri(banner.image.url) if banner.image else banner.image_url
+    item = {
+        'placement': banner.placement,
+        'size': banner.size,
+        'width': banner.width,
+        'height': banner.height,
+        'breakpoint': banner.breakpoint,
+        'is_active': bool(banner.is_active and image_url),
+        'stored_is_active': bool(banner.is_active),
+        'image_url': image_url or '',
+        'link_url': banner.link_url or '',
+        'alt': banner.alt or 'Sponsored advertisement',
+        'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
+    }
+    return item
+
+
+def _empty_homepage_ad_banner(placement):
+    width, height = HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement, (None, None))
+    return {
+        'placement': placement,
+        'size': f'{width}x{height}' if width and height else '',
+        'width': width,
+        'height': height,
+        'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS.get(placement, ''),
+        'is_active': False,
+        'stored_is_active': False,
+        'image_url': '',
+        'link_url': '',
+        'alt': 'Sponsored advertisement',
+        'updated_at': None,
+    }
+
+
+def _homepage_ad_banner_payload(request, banners, placements=None):
+    banner_by_placement = {banner.placement: banner for banner in banners}
+    placement_list = placements or [placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
+    items = [
+        _serialize_homepage_ad_banner(request, banner_by_placement[placement])
+        if placement in banner_by_placement else _empty_homepage_ad_banner(placement)
+        for placement in placement_list
+    ]
+    return {
+        'banners': items,
+        'by_placement': {item['placement']: item for item in items},
+    }
+
+
+def _validate_remote_ad_image_url(image_url, placement):
+    expected_width, expected_height = HomepageAdBanner.PLACEMENT_DIMENSIONS[placement]
+    try:
+        response = requests.get(
+            image_url,
+            timeout=8,
+            headers={'User-Agent': 'News4BharatAdmin/1.0'},
+        )
+        response.raise_for_status()
+        width, height = get_image_dimensions(ContentFile(response.content))
+    except Exception:
+        return f'Could not verify {placement} image URL. Please upload the image file or use a reachable URL.'
+
+    if width != expected_width or height != expected_height:
+        return f'{placement} URL image must be exactly {expected_width}x{expected_height}px, got {width}x{height}px.'
+    return ''
+
+
 @staff_member_required
 @require_POST
 def update_ad_slot(request):
     slot             = _get_or_create_slot('ad_banner')
     slot.mode        = 'manual'
-    slot.ad_link_url = request.POST.get('ad_link_url', '').strip()
     slot.is_active   = request.POST.get('is_active', 'false').lower() in ('true', '1', 'on')
-
-    if 'ad_image' in request.FILES and request.FILES['ad_image']:
-        slot.ad_image     = request.FILES['ad_image']
-        slot.ad_image_url = ''
-    else:
-        ad_url = request.POST.get('ad_image_url', '').strip()
-        if ad_url and not ad_url.startswith('blob:'):
-            slot.ad_image_url = ad_url
-
     slot.save()
-    image_url = request.build_absolute_uri(slot.ad_image.url) if slot.ad_image else slot.ad_image_url
+
+    saved_banners = []
+    errors = {}
+    has_placement_payload = any(
+        request.FILES.get(f'ad_image_{placement}')
+        or f'ad_image_url_{placement}' in request.POST
+        or f'ad_link_url_{placement}' in request.POST
+        or f'ad_alt_{placement}' in request.POST
+        or f'is_active_{placement}' in request.POST
+        for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES
+    )
+
+    if has_placement_payload:
+        for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES:
+            banner, _created = HomepageAdBanner.objects.get_or_create(placement=placement)
+            banner.link_url = request.POST.get(f'ad_link_url_{placement}', '').strip()
+            banner.alt = request.POST.get(f'ad_alt_{placement}', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
+            banner.is_active = request.POST.get(f'is_active_{placement}', 'false').lower() in ('true', '1', 'on')
+
+            upload = request.FILES.get(f'ad_image_{placement}')
+            image_url = request.POST.get(f'ad_image_url_{placement}', '').strip()
+
+            if upload:
+                banner.image = upload
+                banner.image_url = ''
+            elif image_url and not image_url.startswith('blob:'):
+                url_error = _validate_remote_ad_image_url(image_url, placement)
+                if url_error:
+                    errors[placement] = [url_error]
+                    continue
+                banner.image = None
+                banner.image_url = image_url
+
+            try:
+                banner.full_clean()
+                banner.save()
+                saved_banners.append(banner)
+            except ValidationError as exc:
+                errors[placement] = exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+
+    if not saved_banners and ('ad_image' in request.FILES or request.POST.get('ad_image_url')):
+        legacy_banner, _created = HomepageAdBanner.objects.get_or_create(placement=HomepageAdBanner.HOME_TOP)
+        legacy_has_error = False
+        legacy_banner.link_url = request.POST.get('ad_link_url', '').strip()
+        legacy_banner.alt = request.POST.get('alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
+        legacy_banner.is_active = slot.is_active
+        if request.FILES.get('ad_image'):
+            legacy_banner.image = request.FILES['ad_image']
+            legacy_banner.image_url = ''
+        else:
+            legacy_url = request.POST.get('ad_image_url', '').strip()
+            if legacy_url and not legacy_url.startswith('blob:'):
+                url_error = _validate_remote_ad_image_url(legacy_url, HomepageAdBanner.HOME_TOP)
+                if url_error:
+                    errors[HomepageAdBanner.HOME_TOP] = [url_error]
+                    legacy_has_error = True
+                else:
+                    legacy_banner.image = None
+                    legacy_banner.image_url = legacy_url
+        if not legacy_has_error:
+            try:
+                legacy_banner.full_clean()
+                legacy_banner.save()
+                saved_banners.append(legacy_banner)
+            except ValidationError as exc:
+                errors[HomepageAdBanner.HOME_TOP] = exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+
+    if errors:
+        return JsonResponse({'error': 'Invalid banner size', 'errors': errors}, status=400)
+
+    banners = HomepageAdBanner.objects.filter(placement__in=[placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES])
+    payload = _homepage_ad_banner_payload(request, banners)
+    first_active = next((item for item in payload['banners'] if item['is_active']), None)
     return JsonResponse({
         'status': 'saved',
         'slot': 'ad_banner',
-        'is_active': bool(slot.is_active and image_url),
-        'image_url': image_url or '',
-        'link_url': slot.ad_link_url or '',
+        'is_active': bool(first_active),
+        'image_url': first_active['image_url'] if first_active else '',
+        'link_url': first_active['link_url'] if first_active else '',
+        'banners': payload['banners'],
+        'by_placement': payload['by_placement'],
         'updated_at': slot.updated_at.isoformat() if slot.updated_at else None,
     })
 
@@ -972,26 +1160,50 @@ def update_ad_slot(request):
 # ═══════════════════════════════════════════════════════
 @require_GET
 def homepage_ad_banner(request):
-    slot = HomepageSlot.objects.filter(slot_name='ad_banner').first()
-    image_url = ''
-    link_url = ''
-    updated_at = None
+    requested_placement = (request.GET.get('placement') or '').strip()
+    allowed_placements = [placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
 
-    if slot:
-        if slot.ad_image:
-            image_url = request.build_absolute_uri(slot.ad_image.url)
-        else:
-            image_url = slot.ad_image_url or ''
-        link_url = slot.ad_link_url or ''
-        updated_at = slot.updated_at.isoformat() if slot.updated_at else None
+    if requested_placement:
+        if requested_placement not in allowed_placements:
+            return JsonResponse({'placement': requested_placement, 'is_active': False})
+        banner = HomepageAdBanner.objects.filter(placement=requested_placement).first()
+        item = _serialize_homepage_ad_banner(request, banner) if banner else _empty_homepage_ad_banner(requested_placement)
+        if not item['is_active']:
+            return JsonResponse({'placement': requested_placement, 'is_active': False})
+        return JsonResponse({
+            'placement': item['placement'],
+            'is_active': True,
+            'image_url': item['image_url'],
+            'link_url': item['link_url'],
+            'alt': item['alt'],
+        })
+
+    requested_size = (request.GET.get('size') or '').strip()
+    placements = allowed_placements
+    if requested_size:
+        placements = [
+            placement for placement in allowed_placements
+            if f"{HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][0]}x{HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][1]}" == requested_size
+        ] or allowed_placements
+
+    banners = HomepageAdBanner.objects.filter(placement__in=placements)
+    payload = _homepage_ad_banner_payload(request, banners, placements=placements)
+    first_active = next((item for item in payload['banners'] if item['is_active']), None)
 
     return JsonResponse({
-        'is_active': bool(slot and slot.is_active and image_url),
-        'has_slot': bool(slot),
-        'stored_is_active': bool(slot and slot.is_active),
-        'image_url': image_url,
-        'link_url': link_url,
-        'updated_at': updated_at,
+        'is_active': bool(first_active),
+        'has_slot': bool(payload['banners']),
+        'stored_is_active': any(item['stored_is_active'] for item in payload['banners']),
+        'image_url': first_active['image_url'] if first_active else '',
+        'link_url': first_active['link_url'] if first_active else '',
+        'placement': first_active['placement'] if first_active else '',
+        'size': first_active['size'] if first_active else '',
+        'width': first_active['width'] if first_active else None,
+        'height': first_active['height'] if first_active else None,
+        'alt': first_active['alt'] if first_active else 'Sponsored advertisement',
+        'banners': payload['banners'],
+        'by_placement': payload['by_placement'],
+        'updated_at': first_active['updated_at'] if first_active else None,
     })
 
 
@@ -2306,6 +2518,7 @@ def newsletter_view(request):
             'image_alt',
             'published_at',
             'created_at',
+            'updated_at',
             'canonical_url',
             'meta_description',
             'focus_keyword',

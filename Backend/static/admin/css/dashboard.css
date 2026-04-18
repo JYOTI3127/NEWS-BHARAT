@@ -15909,9 +15909,42 @@ tr.art-row td:has(.art-cat-text) {
 }
 
 /* ─── Ad Banner ─── */
+.ad-size-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.ad-size-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.ad-size-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ad-size-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ad-size-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 .ad-preview {
   border: 2px dashed #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   min-height: 80px;
   display: flex;
   align-items: center;
@@ -15919,6 +15952,11 @@ tr.art-row td:has(.art-cat-text) {
   overflow: hidden;
   margin-bottom: 14px;
   background: #f8fafc;
+}
+
+.ad-preview--slot {
+  min-height: 96px;
+  margin-bottom: 10px;
 }
 
 .ad-preview img {

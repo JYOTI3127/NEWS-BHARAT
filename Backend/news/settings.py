@@ -235,10 +235,10 @@ FRONTEND_BUILD_EVENT_SCHEDULED_BATCH = os.environ.get(
     "rebuild-frontend",
 )
 FRONTEND_BUILD_BATCH_THRESHOLD = int(
-    os.environ.get("FRONTEND_BUILD_BATCH_THRESHOLD", "3")
+    os.environ.get("FRONTEND_BUILD_BATCH_THRESHOLD", "1")
 )
 FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS = int(
-    os.environ.get("FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS", "1800")
+    os.environ.get("FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS", "0")
 )
 
 

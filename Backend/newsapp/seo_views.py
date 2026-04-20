@@ -50,9 +50,19 @@ def view_robots(request):
     if 'news4bharat.cloud' in host:
         content = (
             "User-agent: *\n"
+            "Allow: /api/\n"
+            "Allow: /media/\n"
+            "Allow: /static/\n"
             "Disallow: /\n\n"
             "User-agent: Googlebot\n"
             "Allow: /api/\n"
+            "Allow: /media/\n"
+            "Allow: /static/\n"
+            "Disallow: /\n\n"
+            "User-agent: Google-InspectionTool\n"
+            "Allow: /api/\n"
+            "Allow: /media/\n"
+            "Allow: /static/\n"
             "Disallow: /\n"
         )
     else:

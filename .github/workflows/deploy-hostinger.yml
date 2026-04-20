@@ -78,10 +78,11 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Ensure deployment control files
+      - name: Keep server-managed files out of deploy
         if: steps.dispatch_mode.outputs.should_build == 'true'
         run: |
-          cp public/.htaccess build/.htaccess
+          rm -f build/.htaccess
+          rm -f build/robots.txt
 
       - name: Ensure Hostinger target directory exists
         if: steps.dispatch_mode.outputs.should_build == 'true'
@@ -96,7 +97,6 @@ jobs:
             set -e
             TARGET_DIR="${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
             mkdir -p "$TARGET_DIR"
-            rm -f "$TARGET_DIR/robots.txt"
             rm -f "$TARGET_DIR/sitemap.xml"
             rm -f "$TARGET_DIR/sitemap_index.xml"
             rm -f "$TARGET_DIR/sitemap-articles.xml"
@@ -112,7 +112,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "build/*,build/.htaccess"
+          source: "build/*"
           target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
           strip_components: 1
           overwrite: true

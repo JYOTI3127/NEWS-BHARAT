@@ -582,27 +582,6 @@ function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
   })
 }
 
-function generateSitemap(routes, articleMap, categoryMap) {
-  const urls = Array.from(
-    new Set(
-      routes
-        .map((route) => buildMetaForRoute(route, articleMap, categoryMap).canonical)
-        .filter(Boolean)
-    )
-  )
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
-  .map((url) => `  <url>\n    <loc>${url}</loc>\n  </url>`)
-  .join('\n')}
-</urlset>
-`
-
-  fs.writeFileSync(path.join(__dirname, 'build', 'sitemap.xml'), xml, 'utf8')
-  console.log(`Generated sitemap.xml with ${urls.length} URLs`)
-}
-
 console.log('Fetching routes and API data...')
 const { routes, articleMap, categoryMap, siteData } = await getRoutesAndData()
 console.log(`\nTotal ${routes.length} routes will be prerendered\n`)
@@ -632,8 +611,6 @@ const { success, failed, failedRoutes } = await renderInBatches(
 await prerenderer.destroy()
 
 ensureStaticPageHtml(articleMap, categoryMap, siteData)
-
-generateSitemap(routes, articleMap, categoryMap)
 
 console.log('\n' + '-'.repeat(50))
 console.log('Prerendering complete!')

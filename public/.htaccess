@@ -1,6 +1,5 @@
 Options -MultiViews
 DirectoryIndex index.html
-
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -10,8 +9,6 @@ DirectoryIndex index.html
   RewriteCond %{HTTP_HOST} !^news4bharat\.com$ [NC]
   RewriteRule ^ https://news4bharat.com%{REQUEST_URI} [R=301,L,NE]
 
-  # SEO file handlers
-  RewriteRule ^robots\.txt$ robots.txt.php [L]
   RewriteRule ^rss\.xml$ https://news4bharat.cloud/rss.xml [R=301,L]
 
   # Existing static files/folders direct serve karo

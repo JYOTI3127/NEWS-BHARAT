@@ -82,7 +82,6 @@ jobs:
         if: steps.dispatch_mode.outputs.should_build == 'true'
         run: |
           cp public/.htaccess build/.htaccess
-          cp public/robots.txt build/robots.txt
 
       - name: Ensure Hostinger target directory exists
         if: steps.dispatch_mode.outputs.should_build == 'true'
@@ -95,7 +94,15 @@ jobs:
           command_timeout: 20m
           script: |
             set -e
-            mkdir -p "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
+            TARGET_DIR="${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
+            mkdir -p "$TARGET_DIR"
+            rm -f "$TARGET_DIR/robots.txt"
+            rm -f "$TARGET_DIR/sitemap.xml"
+            rm -f "$TARGET_DIR/sitemap_index.xml"
+            rm -f "$TARGET_DIR/sitemap-articles.xml"
+            rm -f "$TARGET_DIR/sitemap-news.xml"
+            rm -f "$TARGET_DIR/sitemap-categories.xml"
+            rm -f "$TARGET_DIR/sitemap-static.xml"
 
       - name: Deploy build output to Hostinger over SSH
         if: steps.dispatch_mode.outputs.should_build == 'true'

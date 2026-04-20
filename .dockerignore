@@ -1,0 +1,7 @@
+node_modules
+build
+.git
+*.log
+.env
+.env.local
+prerender-failed.txt

@@ -66,7 +66,7 @@ CACHE_FEED    = 300    # 5 min
 def _prettify(element: ET.Element) -> str:
     rough = ET.tostring(element, encoding="unicode")
     reparsed = minidom.parseString(f'<?xml version="1.0" encoding="UTF-8"?>{rough}')
-    return reparsed.toprettyxml(indent="  ")
+    return reparsed.toprettyxml(indent="  ", encoding="UTF-8").decode("utf-8")
 
 
 def _strip(text: str, max_len: int = 0) -> str:

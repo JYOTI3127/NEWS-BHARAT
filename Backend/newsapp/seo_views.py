@@ -17,7 +17,7 @@ from django.core.cache import cache
 
 from newsapp.seo_direct import (
     SEO,
-    robots_txt,
+    robots_txt as build_robots_txt,
     SitemapEngine,
     SchemaEngine,
     MetaEngine,
@@ -43,12 +43,6 @@ def redirect_site_alias(request):
 # Static SEO files
 # ─────────────────────────────────────────────
 
-def robots_txt():
-    return """User-agent: *
-Allow: /
-Sitemap: https://news4bharat.com/sitemap_index.xml
-"""
-
 @require_GET
 def view_robots(request):
     host = request.get_host()
@@ -62,7 +56,7 @@ def view_robots(request):
             "Disallow: /\n"
         )
     else:
-        content = robots_txt() 
+        content = build_robots_txt()
     
     return HttpResponse(content, content_type="text/plain")
 

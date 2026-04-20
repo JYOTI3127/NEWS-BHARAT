@@ -11,7 +11,7 @@ DirectoryIndex index.html
   RewriteRule ^ https://news4bharat.com%{REQUEST_URI} [R=301,L,NE]
 
   # SEO files - backend (.cloud) se serve karo
-  RewriteRule ^robots\.txt$ https://news4bharat.cloud/robots.txt [R=301,L]
+  RewriteRule ^robots\.txt$ robots.txt.php [L]
   RewriteRule ^sitemap_index\.xml$ https://news4bharat.cloud/sitemap_index.xml [R=301,L]
   RewriteRule ^sitemap-articles\.xml$ https://news4bharat.cloud/sitemap-articles.xml [R=301,L]
   RewriteRule ^sitemap-news\.xml$ https://news4bharat.cloud/sitemap-news.xml [R=301,L]

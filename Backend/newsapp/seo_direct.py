@@ -171,6 +171,11 @@ Allow: /
 Disallow: /admin/
 Crawl-delay: 0
 
+User-agent: Google-InspectionTool
+Allow: /
+Disallow: /admin/
+Crawl-delay: 0
+
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/

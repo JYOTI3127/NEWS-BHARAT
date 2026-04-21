@@ -51,7 +51,7 @@ const getArticleList = (data) =>
 const fetchAllArticles = async (signal) => {
   const allArticles = [];
   const seen = new Set();
-  let nextUrl = apiUrl("/articles/?limit=200");
+  let nextUrl = apiUrl("/articles/?page=1&limit=200");
   let pages = 0;
 
   while (nextUrl && pages < 10) {

@@ -344,3 +344,40 @@
 @media (max-width: 480px) {
   .ft-links-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
 }
+
+/* Keep footer aligned with the homepage middle column and navbar. */
+.ft-main,
+.ft-bottom {
+  width: var(--site-content-width) !important;
+  max-width: var(--site-content-width) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.ft-main {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ft-bottom {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 767px) {
+  .ft-main,
+  .ft-bottom {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ft-main {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .ft-bottom {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}

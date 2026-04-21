@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAbsoluteArticleUrl, getArticlePath } from "../lib/articleUrl";
+import { formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 
 const getCategoryLabel = (article) => {
+  if (article?.primary_category?.name) return article.primary_category.name;
+
   const details = Array.isArray(article?.category_details) ? article.category_details : [];
   const rawCategory = article?.category;
   const directCategory =
@@ -22,9 +25,12 @@ const getCategoryLabel = (article) => {
   return "News";
 };
 
-const timeAgo = (dateStr) => {
+const timeAgo = (article) => {
+  const dateStr = getArticleDateValue(article);
   if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(mins / 60);
   const days = Math.floor(hrs / 24);
@@ -34,7 +40,8 @@ const timeAgo = (dateStr) => {
   return "Just now";
 };
 
-const isTodayArticle = (dateStr) => {
+const isTodayArticle = (article) => {
+  const dateStr = getArticleDateValue(article);
   if (!dateStr) return false;
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return false;
@@ -89,11 +96,9 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const all = Array.isArray(articles) ? articles : (articles?.results || []);
   const sorted = [...all]
     .filter((a) => a.status === "published" || a.image_url)
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
 
-  const todayArticles = sorted.filter((a) =>
-    isTodayArticle(a.published_at || a.created_at)
-  );
+  const todayArticles = sorted.filter((a) => isTodayArticle(a));
 
   const featuredArticles =
     todayArticles.length >= 6
@@ -118,7 +123,12 @@ export default function NewsBanner({ articles = [], loading = false }) {
       title: a.title,
       category: getCategoryLabel(a),
       image: img,
+      image_alt: a.image_alt,
       public_url: a.public_url,
+      published_date: a.published_date,
+      published_at: a.published_at,
+      created_at: a.created_at,
+      primary_category: a.primary_category,
       category_details: a.category_details,
       categories: a.categories,
       canonical_url: a.canonical_url,
@@ -126,13 +136,17 @@ export default function NewsBanner({ articles = [], loading = false }) {
     if (slides.length >= 3) break;
   }
 
-  const bottomNews = topSix.slice(3, 6).map((a) => ({
+  const bottomNews = topSix.map((a) => ({
     id: a.id,
     slug: a.slug,
     title: a.title,
-    time: timeAgo(a.published_at || a.created_at),
+    time: formatArticleDateTimeIST(a) || timeAgo(a) || "—",
     region: getCategoryLabel(a),
     public_url: a.public_url,
+    published_at: a.published_at,
+    published_date: a.published_date,
+    created_at: a.created_at,
+    primary_category: a.primary_category,
     category_details: a.category_details,
     categories: a.categories,
     canonical_url: a.canonical_url,
@@ -224,7 +238,9 @@ export default function NewsBanner({ articles = [], loading = false }) {
   if (loading || slides.length === 0) return null;
 
   const slide = slides[current];
-  const currentBottomNews = is320 ? bottomNews.slice(0, 2) : bottomNews;
+  const currentBottomNews = bottomNews
+    .filter((item) => String(item.id || item.slug) !== String(slide.id || slide.slug))
+    .slice(0, is320 ? 2 : 3);
   const visibleDotIndexes = getVisibleDotIndexes();
 
   const emitBannerReady = () => {
@@ -256,7 +272,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
         <img
           // key={current}
           src={slide.image}
-          alt={slide.title}
+          alt={slide.image_alt || slide.title}
 
           loading="eager"
           fetchPriority="high"

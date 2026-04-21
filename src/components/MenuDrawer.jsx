@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { createElement, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart2, TrendingUp, PenLine, Cpu, Flame,
@@ -221,7 +221,7 @@ export default function MenuDrawer({ open, onClose }) {
     if (!showBreaking || breakingArticles.length > 0) return;
     setBreakingLoading(true);
 
-    fetch(apiUrl("/articles/?category=breaking-news&limit=10"))
+    fetch(apiUrl("/articles/?category=breaking-news&page=1&limit=10"))
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
@@ -238,7 +238,7 @@ export default function MenuDrawer({ open, onClose }) {
         // Agar breaking category nahi mili toh latest 10 dikhao
         const result = breaking.length > 0 ? breaking : all;
         const sorted = result
-          .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date))
+          .sort((a, b) => new Date(b.published_date || b.published_at || b.created_at || b.date || 0) - new Date(a.published_date || a.published_at || a.created_at || a.date || 0))
           .slice(0, 10);
 
         setBreakingArticles(sorted);
@@ -470,7 +470,7 @@ export default function MenuDrawer({ open, onClose }) {
           <div className="md-divider" />
           <div className="md-section-title">Categories</div>
 
-          {navSections.map(({ label, slug, Icon, links, subcategories }) => {
+          {navSections.map(({ label, slug, Icon: SectionIcon, links, subcategories }) => {
             const sectionOpen = expandedSection === label;
             const hasSubcats  = subcategories && subcategories.length > 0;
             const hasLinks    = links && links.length > 0;
@@ -480,7 +480,7 @@ export default function MenuDrawer({ open, onClose }) {
               <div key={label}>
                 <button className="md-sec-head" onClick={() => toggleSection(label)}>
                   <span className="md-sec-icon">
-                    <Icon size={15} color="#D80100" strokeWidth={2} />
+                    {createElement(SectionIcon, { size: 15, color: "#D80100", strokeWidth: 2 })}
                   </span>
                   <span
                     className="md-sec-label"

@@ -164,7 +164,7 @@ const fetchCategories = async () => {
 };
 
 const fetchCategoryArticles = async (slug) => {
-  const response = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=200`);
+  const response = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=200`);
   if (!response.ok) return [];
   const data = await response.json();
   return normalizeArticles(data);

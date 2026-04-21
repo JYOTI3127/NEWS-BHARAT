@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE } from "../lib/api";
+import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
 // ✅ Fix 1 — Category slug se seedha fetch, saare articles nahi
@@ -9,12 +9,12 @@ function useCategoryArticles(slug) {
   const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/articles/?category=${slug}&limit=10`)
+    fetch(`${API_BASE}/articles/?category=${slug}&page=1&limit=10`)
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
         const sorted = all.sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
         );
         setArticles(sorted);
         setLoading(false);
@@ -26,18 +26,6 @@ function useCategoryArticles(slug) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }).replace(/am|pm/i, (match) => match.toUpperCase())
-    : "";
-
 const imgSrc = (a) => a?.image_url || a?.image || null;
 
 const useIs4K = () => {
@@ -152,14 +140,7 @@ export function EntertainmentSection() {
         margin: "0 auto 24px",
       }
     : undefined;
-  const layoutStyle = is2K
-    ? {
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 280px",
-        gap: 18,
-        alignItems: "stretch",
-      }
-    : undefined;
+  const layoutStyle = is2K ? { display: "block" } : undefined;
   const leftMidStyle = is2K
     ? {
         display: "grid",
@@ -170,8 +151,8 @@ export function EntertainmentSection() {
     : undefined;
   const featuredStyle = is2K ? { height: 360, borderRadius: 10, width: "100%" } : undefined;
   const midColStyle = is2K ? { height: 470, paddingLeft: 18 } : undefined;
-  const sidebarStyle = is2K ? { width: 280, minWidth: 280, height: 470 } : undefined;
-  const sidebarScrollStyle = is2K ? { maxHeight: 426, padding: "8px 10px" } : undefined;
+  const sidebarStyle = { display: "none" };
+  const sidebarScrollStyle = undefined;
 
   return (
     <div className={`nps-entertainment${is4K ? " nps-4k" : ""}`} style={rootStyle}>
@@ -215,7 +196,7 @@ export function EntertainmentSection() {
                 />
                 <div className="hs-featured-overlay">
                   <p className="hs-featured-title">{featured.title}</p>
-                  <DateLabel date={formatDate(featured.published_at || featured.created_at)} />
+                  <DateLabel date={formatArticleDateTimeIST(featured)} />
                 </div>
               </div>
             </div>
@@ -256,7 +237,7 @@ export function EntertainmentSection() {
               </div>
               <div className="hs-small-text">
                 <p className="hs-small-title">{smallCard.title}</p>
-                <DateLabel date={formatDate(smallCard.published_at || smallCard.created_at)} />
+                <DateLabel date={formatArticleDateTimeIST(smallCard)} />
               </div>
             </div>
           ) : null}
@@ -294,7 +275,7 @@ export function EntertainmentSection() {
                     </div>
                     <div className="hs-mid-text">
                       <p className="hs-mid-title">{card.title}</p>
-                      <DateLabel date={formatDate(card.published_at || card.created_at)} />
+                      <DateLabel date={formatArticleDateTimeIST(card)} />
                     </div>
                   </div>
                 ))}
@@ -350,7 +331,7 @@ export function EntertainmentSection() {
                     <div className="nps-health-text-wrap">
                       <p className="nps-health-text">{item.title}</p>
                       <span className="hs-sidebar-date">
-                        {formatDate(item.published_at || item.created_at)}
+                        {formatArticleDateTimeIST(item)}
                       </span>
                     </div>
                   </div>

@@ -410,3 +410,10 @@
     font-size: 11px;
   }
 }
+
+@media (min-width: 768px) {
+  .home-main-column .mss-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

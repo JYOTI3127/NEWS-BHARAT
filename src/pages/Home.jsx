@@ -1,18 +1,22 @@
 import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchArticles, fetchCategories } from '../lib/api';
+import { fetchArticlePage, fetchArticles, fetchCategories, getListFromResponse } from '../lib/api';
 
 import NewsBanner from '../components/Banner';
 import TrendingNews from '../components/Trendingnews';
 import BreakingNewsSection from '../components/BreakingNewsSection';
 import HomeCategorySections from '../components/HomeCategorySections';
 import AdvertisementSlot from '../components/AdvertisementSlot';
+import CategoryMiniCarousel from '../components/CategoryMiniCarousel';
 
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
 const StateNews = lazy(() => import('../components/Statenews'));
 const MoreStoriesSection = lazy(() => import('../components/MoreStoriesSection'));
 const Newsletter = lazy(() => import('../components/Newsletter'));
+
+const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
+const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
 
 const WhatsAppFloatingIcon = () => (
   <svg
@@ -43,7 +47,15 @@ const isPrerenderUserAgent = () => {
   return /HeadlessChrome|prerender/i.test(userAgent);
 };
 
-function DeferredSection({ id, anchorId, children, minHeight = 320, rootMargin = '400px 0px', forceRender = false }) {
+function DeferredSection({
+  id,
+  anchorId,
+  children,
+  minHeight = 320,
+  rootMargin = '400px 0px',
+  forceRender = false,
+  className = '',
+}) {
   const alwaysRender = React.useMemo(() => isPrerenderUserAgent() || forceRender, [forceRender]);
   const [shouldRender, setShouldRender] = React.useState(
     () => alwaysRender || typeof IntersectionObserver === 'undefined'
@@ -70,7 +82,7 @@ function DeferredSection({ id, anchorId, children, minHeight = 320, rootMargin =
   }, [alwaysRender, rootMargin]);
 
   return (
-    <div id={anchorId} ref={ref} style={{ minHeight, scrollMarginTop: '120px' }}>
+    <div id={anchorId} ref={ref} className={className} style={{ minHeight, scrollMarginTop: '120px' }}>
       {shouldRender ? (
         <Suspense fallback={<div style={{ minHeight, background: '#f8f8f8' }} />}>
           <Profiler id={id} onRender={onRenderCallback}>
@@ -101,25 +113,36 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: bannerArticlesData, isLoading: bannerArticlesLoading } = useQuery({
+    queryKey: ['banner-articles'],
+    queryFn: () => fetchArticlePage({ page: 1, limit: 5 }),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const allArticles = React.useMemo(() => {
     return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
   }, [articlesData]);
 
-  return (
-    <>
-      <AdvertisementSlot
-        placement="home_side_left"
-        variant="sideRail"
-        className="home-side-ad home-side-ad--left"
-        minWidth={769}
-      />
-      <AdvertisementSlot
-        placement="home_side_right"
-        variant="sideRail"
-        className="home-side-ad home-side-ad--right"
-        minWidth={769}
-      />
+  const bannerArticles = React.useMemo(
+    () => getListFromResponse(bannerArticlesData),
+    [bannerArticlesData]
+  );
 
+  return (
+    <div className="home-page-shell">
+      <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
+        <AdvertisementSlot
+          placement="home_side_left"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--left"
+          dismissible
+          minWidth={768}
+        />
+      </aside>
+
+      <main className="home-main-column">
       <a
         href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx"
         className="home-whatsapp-float"
@@ -131,9 +154,11 @@ const Home = () => {
         <WhatsAppFloatingIcon />
       </a>
 
-      <Profiler id="NewsBanner" onRender={onRenderCallback}>
-        <NewsBanner articles={allArticles} loading={articlesLoading} />
-      </Profiler>
+      <div className="home-section-align">
+        <Profiler id="NewsBanner" onRender={onRenderCallback}>
+          <NewsBanner articles={bannerArticles} loading={bannerArticlesLoading} />
+        </Profiler>
+      </div>
 
       <AdvertisementSlot
         placement="home_top"
@@ -154,49 +179,76 @@ const Home = () => {
         </div>
       </section> */}
 
-      <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
-        <BreakingNewsSection articles={allArticles} />
-      </Profiler>
+      <div className="home-section-align">
+        <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
+          <BreakingNewsSection articles={allArticles} />
+        </Profiler>
+      </div>
 
-      <Profiler id="TrendingNews" onRender={onRenderCallback}>
-        <TrendingNews
-          articles={allArticles}
-          categories={categoriesData}
-          loading={articlesLoading}
-        />
-      </Profiler>
+      <div className="home-section-align">
+        <Profiler id="TrendingNews" onRender={onRenderCallback}>
+          <TrendingNews
+            articles={allArticles}
+            categories={categoriesData}
+            loading={articlesLoading}
+          />
+        </Profiler>
+      </div>
 
-      <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash}>
+      <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
         <VisualStoriesWithScore articles={allArticles} />
       </DeferredSection>
 
-      <AdvertisementSlot
-        placement="home_mid"
-        variant="largeRectangle"
-        className="home-mid-ad"
-      />
-
-      <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash}>
+      <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash} className="home-section-align">
         <NewsPortalSection articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash}>
+      <DeferredSection id="BharatInNumbers" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+        <CategoryMiniCarousel
+          title="Bharat in Numbers"
+          slugs={BHARAT_NUMBERS_SLUGS}
+          categoryPath="/category/bharat-in-numbers"
+          adPlacement="home_bharat_numbers_right"
+        />
+      </DeferredSection>
+
+      <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash} className="home-section-align">
         <StateNews articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash}>
+      <DeferredSection id="BharatStartups" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+        <CategoryMiniCarousel
+          title="Bharat of Startups"
+          slugs={BHARAT_STARTUPS_SLUGS}
+          categoryPath="/category/bharat-startups"
+          adPlacement="home_bharat_startups_right"
+        />
+      </DeferredSection>
+
+      <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash} className="home-section-align">
         <HomeCategorySections articles={allArticles} />
       </DeferredSection>
 
-      <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash}>
+      <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
         <MoreStoriesSection articles={allArticles} />
       </DeferredSection>
 
       {/* ✅ #newsletter hash hone par forceRender=true — Newsletter turant DOM mein aayega */}
-      <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash}>
+      <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
         <Newsletter />
       </DeferredSection>
-    </>
+      </main>
+
+      <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
+        <AdvertisementSlot
+          placement="home_side_right"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--right"
+          dismissible
+          minWidth={768}
+        />
+      </aside>
+    </div>
   );
 };
 

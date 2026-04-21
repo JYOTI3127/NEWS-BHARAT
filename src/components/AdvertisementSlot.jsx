@@ -105,10 +105,12 @@ function AdvertisementSlot({
   variant = "leaderboard",
   className = "",
   allowUnmatchedPlacement = false,
+  dismissible = false,
   minWidth,
   maxWidth,
 }) {
   const [adSlot, setAdSlot] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
 
   const size = SLOT_SIZES[variant] || SLOT_SIZES.leaderboard;
   const candidateUrls = useMemo(() => buildCandidateUrls(placement), [placement]);
@@ -148,7 +150,7 @@ function AdvertisementSlot({
     };
   }, [allowUnmatchedPlacement, candidateUrls, isViewportMatch, placement]);
 
-  if (!isViewportMatch) return null;
+  if (!isViewportMatch || dismissed) return null;
 
   const adImageUrl = getAdImageUrl(adSlot);
   if (!adImageUrl) return null;
@@ -177,6 +179,20 @@ function AdvertisementSlot({
         "--ad-ratio-height": `${size.height}`,
       }}
     >
+      {dismissible && (
+        <button
+          type="button"
+          className="home-ad-close"
+          aria-label="Close advertisement"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDismissed(true);
+          }}
+        >
+          x
+        </button>
+      )}
       {adLinkUrl ? (
         <a
           href={adLinkUrl}

@@ -6,18 +6,18 @@ export default function ArticleCard({ article }) {
     title,
     subtitle,
     category_details,
+    published_date,
     published_at,
     created_at,
     image_url,
     image,
-    slug,
     display_author_name,   // ✅ API mein yahi field hai
     author_display_name,   // ✅ backup field
   } = article;
 
   const imageUrl = image_url || image || null;
 
-  const date = published_at || created_at;
+  const date = published_date || published_at || created_at;
 
   // ✅ AM/PM ke saath time
   const formattedDate = date
@@ -28,7 +28,8 @@ export default function ArticleCard({ article }) {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
-      })
+        timeZone: "Asia/Kolkata",
+      }).replace(/\b(am|pm)\b/g, (match) => match.toUpperCase()) + " IST"
     : "";
 
   const articlePath = getArticlePath(article);

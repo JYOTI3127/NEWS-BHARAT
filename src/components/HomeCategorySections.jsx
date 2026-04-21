@@ -192,7 +192,7 @@ async function fetchCategoryArticles(section) {
   const slugs = section?.slugs || [];
   for (const slug of slugs) {
     try {
-      const res = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=8`);
+      const res = await fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=8`);
       if (!res.ok) continue;
       const data     = await res.json();
       const articles = normalizeArticles(data);

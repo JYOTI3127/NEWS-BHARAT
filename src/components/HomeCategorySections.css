@@ -1014,3 +1014,10 @@
     font-size: 9px;
   }
 }
+
+@media (min-width: 768px) {
+  .home-main-column .hcs-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

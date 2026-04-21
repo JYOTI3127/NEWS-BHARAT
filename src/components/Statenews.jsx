@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE } from "../lib/api";
+import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
 // ── State List ────────────────────────────────────────────────
@@ -12,17 +12,7 @@ const stateList = [
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
 ];
 
-const stateNameSet = new Set(stateList.map((state) => state.toLowerCase()));
-
 // ── Helpers ───────────────────────────────────────────────────
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-IN", {
-        day: "numeric", month: "long", year: "numeric",
-        hour: "2-digit", minute: "2-digit", hour12: true,
-      }).replace(/am|pm/i, (match) => match.toUpperCase())
-    : "";
-
 const imgSrc = (a) => a?.image_url || a?.image || null;
 const categoryLabel = (article, fallback = "STATE NEWS") =>
   article?.category_details?.[0]?.name ||
@@ -30,6 +20,10 @@ const categoryLabel = (article, fallback = "STATE NEWS") =>
   fallback;
 
 const getSelectedStateName = (article) => {
+  if (typeof article?.selected_state_name === "string" && article.selected_state_name.trim()) {
+    return article.selected_state_name.trim();
+  }
+
   const subs = article?.selected_subcategories?.subs;
   if (!subs || typeof subs !== "object") return "";
 
@@ -43,25 +37,63 @@ const getSelectedStateName = (article) => {
   return "";
 };
 
-const hasMappedState = (article) => {
-  const stateName = getSelectedStateName(article);
-  return Boolean(stateName) && stateNameSet.has(stateName.toLowerCase());
-};
-
 const getStateTagLabel = (article, activeState, fallback = "STATE NEWS") =>
   activeState || getSelectedStateName(article) || categoryLabel(article, fallback);
 
 const getSortTimestamp = (article) => {
-  const rawDate =
-    article?.published_at ||
-    article?.created_at ||
-    article?.date ||
-    null;
+  const rawDate = getArticleDateValue(article) || null;
 
   if (!rawDate) return 0;
 
   const parsed = new Date(rawDate).getTime();
   return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const normalizeAllStatesResponse = (data) => {
+  const states = Array.isArray(data?.states) && data.states.length > 0
+    ? data.states
+    : stateList;
+
+  if (Array.isArray(data?.results)) {
+    return { states, articles: data.results };
+  }
+
+  if (Array.isArray(data)) {
+    return { states, articles: data };
+  }
+
+  const groupedArticles =
+    data?.results && !Array.isArray(data.results) && typeof data.results === "object"
+      ? data.results
+      : {};
+
+  const articles = states.flatMap((state) => {
+    const stateArticles = Array.isArray(groupedArticles[state]) ? groupedArticles[state] : [];
+    return stateArticles.map((article) => ({
+      ...article,
+      selected_state_name: state,
+    }));
+  });
+
+  return { states, articles };
+};
+
+const normalizeSingleStateResponse = (data, fallbackState) => {
+  const stateName = data?.state || fallbackState;
+  const articles = Array.isArray(data?.results)
+    ? data.results
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  return {
+    stateName,
+    hasNext: Boolean(data?.has_next),
+    articles: articles.map((article) => ({
+      ...article,
+      selected_state_name: stateName,
+    })),
+  };
 };
 
 // ── Breakpoint Hook ───────────────────────────────────────────
@@ -134,6 +166,9 @@ export default function StateNews() {
   const [activeState,     setActiveState]    = useState(null);
   const [stateArticles,   setStateArticles]  = useState([]);
   const [startupArticles, setStartupArticles] = useState([]);
+  const [availableStates, setAvailableStates] = useState(stateList);
+  const [statePage,       setStatePage]       = useState(1);
+  const [hasMoreStates,   setHasMoreStates]   = useState(false);
   const [stateLoading,    setStateLoading]   = useState(true);
   const [startupLoading,  setStartupLoading] = useState(true);
 
@@ -147,34 +182,46 @@ export default function StateNews() {
 
   useEffect(() => {
     setStateLoading(true);
-    setStateArticles([]);
 
     const url = activeState
-      ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(activeState)}`
-      : `${API_BASE}/articles/?category=state-of-bharat`;
+      ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(activeState)}&page=${statePage}&limit=10`
+      : `${API_BASE}/articles/by-state/`;
 
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
-        const articles = Array.isArray(data) ? data : (data.results || []);
-        const filteredArticles = activeState
-          ? articles
-          : articles.filter(hasMappedState);
-        const sorted = [...filteredArticles].sort(
-          (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
-        );
-        setStateArticles(sorted);
+        if (activeState) {
+          const { articles, hasNext, stateName } = normalizeSingleStateResponse(data, activeState);
+          const sorted = [...articles].sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+          setAvailableStates((prev) =>
+            prev.includes(stateName) ? prev : [...prev, stateName]
+          );
+          setHasMoreStates(hasNext);
+          setStateArticles((prev) =>
+            statePage === 1
+              ? sorted
+              : [...prev, ...sorted].sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a))
+          );
+        } else {
+          const { states, articles } = normalizeAllStatesResponse(data);
+          const sorted = [...articles].sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+          setAvailableStates(states);
+          setHasMoreStates(false);
+          setStateArticles(sorted);
+        }
+
         setStateLoading(false);
       })
       .catch(() => {
-        setStateArticles([]);
+        if (statePage === 1) setStateArticles([]);
+        setHasMoreStates(false);
         setStateLoading(false);
       });
-  }, [activeState]);
+  }, [activeState, statePage]);
 
   // ✅ Fix 1 — Startups category filter se fetch
   useEffect(() => {
-    fetch(`${API_BASE}/articles/?category=bharat-startups&limit=6`)
+    fetch(`${API_BASE}/articles/?category=bharat-startups&page=1&limit=6`)
       .then((r) => r.json())
       .then((data) => {
         const all = Array.isArray(data) ? data : (data.results || []);
@@ -201,7 +248,7 @@ export default function StateNews() {
     if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 200, behavior: "smooth" });
   };
 
-  const loading = stateLoading;
+  const loading = stateLoading && statePage === 1;
 
   return (
     <div
@@ -244,15 +291,21 @@ export default function StateNews() {
         <div className="sn-tabs-scroll-area" ref={tabsRef}>
           <button
             className={`sn-tab-btn${activeState === null ? " active" : ""}`}
-            onClick={() => setActiveState(null)}
+            onClick={() => {
+              setActiveState(null);
+              setStatePage(1);
+            }}
           >
             All States
           </button>
-          {stateList.map((s) => (
+          {availableStates.map((s) => (
             <button
               key={s}
               className={`sn-tab-btn${activeState === s ? " active" : ""}`}
-              onClick={() => setActiveState(s)}
+              onClick={() => {
+                setActiveState(s);
+                setStatePage(1);
+              }}
             >
               {s}
             </button>
@@ -335,7 +388,7 @@ export default function StateNews() {
                     {featuredCard.title}
                   </p>
                   <span className="sn-big-date">
-                    {formatDate(featuredCard.published_at || featuredCard.created_at)}
+                    {formatArticleDateTimeIST(featuredCard)}
                   </span>
                 </div>
               </div>
@@ -394,7 +447,7 @@ export default function StateNews() {
                       <span className="sn-card-tag">{getStateTagLabel(card, activeState, "STATE")}</span>
                       <p className="sn-mid-title">{card.title}</p>
                       <span className="sn-card-date">
-                        {formatDate(card.published_at || card.created_at)}
+                        {formatArticleDateTimeIST(card)}
                       </span>
                     </div>
                   </div>
@@ -429,7 +482,7 @@ export default function StateNews() {
                   <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
                     <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
                     <p className="sn-sc-title">{bottomLeftCard.title}</p>
-                    <span className="sn-card-date">{formatDate(bottomLeftCard.published_at || bottomLeftCard.created_at)}</span>
+                    <span className="sn-card-date">{formatArticleDateTimeIST(bottomLeftCard)}</span>
                   </div>
                 </>
               ) : null}
@@ -449,11 +502,7 @@ export default function StateNews() {
                 <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
                 <p className="sn-sc-title">{bottomLeftCard.title}</p>
                 <span className="sn-card-date">
-                  {formatDate(
-                    bottomLeftCard.published_at ||
-                    bottomLeftCard.created_at ||
-                    bottomLeftCard.date
-                  )}
+                  {formatArticleDateTimeIST(bottomLeftCard)}
                 </span>
               </div>
             </div>
@@ -498,7 +547,7 @@ export default function StateNews() {
                     <div className="sn-di-text-wrap" style={{ flex: 1, minWidth: 0 }}>
                       <p className="sn-di-title">{item.title}</p>
                       <span className="sn-di-date">
-                        {formatDate(item.published_at || item.created_at)}
+                        {formatArticleDateTimeIST(item)}
                       </span>
                     </div>
                   </div>
@@ -507,6 +556,18 @@ export default function StateNews() {
         </div>
 
       </div>
+      {activeState && hasMoreStates && (
+        <div className="sn-load-more-wrap">
+          <button
+            type="button"
+            className="sn-load-more-btn"
+            disabled={stateLoading}
+            onClick={() => setStatePage((page) => page + 1)}
+          >
+            {stateLoading ? "Loading..." : `Load More ${activeState}`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

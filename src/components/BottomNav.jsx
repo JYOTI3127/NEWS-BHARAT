@@ -188,7 +188,7 @@ export default function BottomNav() {
     const fetchBreakingNews = async () => {
       try {
         const res = await fetch(
-          apiUrl(`/articles/?category=${BOTTOM_STRIP_CATEGORY_SLUG}&limit=10`),
+          apiUrl(`/articles/?category=${BOTTOM_STRIP_CATEGORY_SLUG}&page=1&limit=10`),
           { cache: "no-store" }
         );
         const data = await res.json();
@@ -197,7 +197,7 @@ export default function BottomNav() {
         let publishedArticles = getOnlyBharatExplainers(articles);
 
         if (publishedArticles.length === 0) {
-          const fallbackRes = await fetch(apiUrl("/articles/?limit=100"), { cache: "no-store" });
+          const fallbackRes = await fetch(apiUrl("/articles/?page=1&limit=100"), { cache: "no-store" });
           const fallbackData = await fallbackRes.json();
           const fallbackArticles = Array.isArray(fallbackData) ? fallbackData : (fallbackData.results ?? []);
           publishedArticles = getOnlyBharatExplainers(fallbackArticles);

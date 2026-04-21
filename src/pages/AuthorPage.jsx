@@ -29,11 +29,11 @@ export default function AuthorPage() {
     const list = parseArticlesResponse(articleData);
     return list
       .filter((article) => article?.slug || article?.id)
-      .sort(
-        (a, b) =>
-          new Date(b.published_at || b.created_at || 0) -
-          new Date(a.published_at || a.created_at || 0)
-      );
+        .sort(
+          (a, b) =>
+          new Date(b.published_date || b.published_at || b.created_at || 0) -
+          new Date(a.published_date || a.published_at || a.created_at || 0)
+        );
   }, [articleData]);
 
   const authorArticles = useMemo(
@@ -178,4 +178,3 @@ export default function AuthorPage() {
     </div>
   );
 }
-

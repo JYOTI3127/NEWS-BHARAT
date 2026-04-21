@@ -38,7 +38,7 @@ export default function SixtySecondsPage() {
     setLoading(true);
     window.scrollTo(0, 0);
 
-    fetch(`${API_BASE}/articles/`)
+    fetch(`${API_BASE}/articles/?page=1&limit=10`)
       .then((r) => r.json())
       .then((data) => {
         const list  = Array.isArray(data) ? data : (data.results || []);

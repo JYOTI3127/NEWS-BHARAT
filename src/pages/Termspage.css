@@ -752,3 +752,31 @@ background:
         font-size: 1.4rem;
     }
 }
+
+@media (min-width: 768px) {
+    .terms-page .terms-hero,
+    .disclaimer-page .terms-hero,
+    .terms-page .terms-tabs-bar,
+    .disclaimer-page .terms-tabs-bar,
+    .terms-page .terms-body,
+    .disclaimer-page .terms-body {
+        width: var(--site-content-width) !important;
+        max-width: var(--site-content-width) !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .terms-page .terms-hero-content,
+    .terms-page .terms-tabs-inner,
+    .disclaimer-page .terms-hero-content,
+    .disclaimer-page .terms-tabs-inner {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+}

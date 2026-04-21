@@ -4,7 +4,7 @@ import {
   Clock, User, TrendingUp, ChevronRight,
   Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
-import { API_BASE } from "../lib/api";
+import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
 const useViewportWidth = () => {
@@ -23,19 +23,6 @@ const useViewportWidth = () => {
 };
 
 // ✅ AM/PM ke saath time
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }).replace(/am|pm/i, (match) => match.toUpperCase())
-    : "";
-
-
 const formatViews = (v) => {
   if (!v) return "";
   if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
@@ -65,7 +52,6 @@ export default function CategoryPage() {
   const { slug } = useParams();
   const location = useLocation();
   const viewportWidth = useViewportWidth();
-  const is2K = viewportWidth >= 1441 && viewportWidth <= 2560;
 
   const searchParams  = new URLSearchParams(location.search);
   const subFilter     = searchParams.get("subcategory") || "";
@@ -84,7 +70,7 @@ export default function CategoryPage() {
       const [categoryResult, articlesResult] = await Promise.allSettled([
         fetch(`${API_BASE}/categories/`).then((res) => res.json()),
         fetch(
-          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&limit=${CATEGORY_ARTICLE_LIMIT}`
+          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`
         ).then((res) => res.json()),
       ]);
 
@@ -101,7 +87,7 @@ export default function CategoryPage() {
         const filtered = Array.isArray(data) ? data : (data.results || []);
 
         const sorted = [...filtered].sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
         );
 
         const finalArticles = subFilter
@@ -143,9 +129,10 @@ export default function CategoryPage() {
   const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
   const moreInArticles = articles.slice(0, MORE_IN_ARTICLES_LIMIT);
   const hasMore       = visibleCount + 1 < articles.length;
-  const shellStyle = is2K
-    ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
-    : undefined;
+  const shellStyle = {
+    width: "var(--site-content-width)",
+    maxWidth: "var(--site-content-width)",
+  };
   const heroMediaStyle = (() => {
     if (viewportWidth >= 1441 && viewportWidth <= 2560) {
       return {
@@ -183,7 +170,7 @@ export default function CategoryPage() {
 
       {/* Category Header */}
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
+        <div className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
             {subFilter ? `${category?.name || slug} › ${subFilter}` : (category?.name || slug)}
           </h1>
@@ -198,7 +185,7 @@ export default function CategoryPage() {
       </div>
 
       <div
-        className="max-w-[1240px] mx-auto px-4 sm:px-6 py-[28px] grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-7 items-start"
+        className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6 py-[28px] grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-7 items-start"
         style={shellStyle}
       >
 
@@ -234,7 +221,7 @@ export default function CategoryPage() {
                     </span>
                     {/* ✅ Time AM/PM ke saath */}
                     <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
-                      <Clock size={12} className="mr-1" />{formatDate(heroArticle.published_at || heroArticle.created_at)}
+                      <Clock size={12} className="mr-1" />{formatArticleDateTimeIST(heroArticle)}
                     </span>
                     {heroArticle.views && (
                       <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
@@ -292,7 +279,7 @@ export default function CategoryPage() {
                         </span>
                         {/* ✅ AM/PM time */}
                         <span className="flex items-center gap-1">
-                          <Clock size={11} />{formatDate(article.published_at || article.created_at)}
+                          <Clock size={11} />{formatArticleDateTimeIST(article)}
                         </span>
                       </div>
                       {article.views && (
@@ -344,7 +331,7 @@ export default function CategoryPage() {
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-slate-900 line-clamp-2">{article.title}</p>
                       <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                        <Clock size={10} />{formatDate(article.published_at || article.created_at)}
+                        <Clock size={10} />{formatArticleDateTimeIST(article)}
                       </span>
                     </div>
                   </div>
@@ -379,7 +366,7 @@ export default function CategoryPage() {
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-slate-900 line-clamp-2">{article.title}</p>
                       <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock size={10} />{formatDate(article.published_at || article.created_at)}
+                        <Clock size={10} />{formatArticleDateTimeIST(article)}
                       </span>
                     </div>
                   </div>
@@ -428,7 +415,7 @@ export default function CategoryPage() {
                           {article.title}
                         </p>
                         <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
-                          <Clock size={10} />{formatDate(article.published_at || article.created_at)}
+                          <Clock size={10} />{formatArticleDateTimeIST(article)}
                         </span>
                       </div>
                     </div>

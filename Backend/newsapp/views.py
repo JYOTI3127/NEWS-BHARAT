@@ -615,6 +615,117 @@ def articles_by_state(request):
 
 
 @api_view(['GET'])
+def articles_by_state(request):
+    state = str(request.GET.get('state') or '').strip()
+    try:
+        limit = max(1, min(int(request.GET.get('limit', 10)), 100))
+    except (TypeError, ValueError):
+        limit = 10
+    try:
+        page = max(1, int(request.GET.get('page', 1)))
+    except (TypeError, ValueError):
+        page = 1
+
+    try:
+        category = Category.objects.get(slug='state-of-bharat')
+    except Category.DoesNotExist:
+        return Response({"error": "Category not found"}, status=404)
+
+    def article_states(article):
+        selected = article.selected_subcategories or {}
+        states = selected.get('subs', {}).get('3', [])
+        return states if isinstance(states, list) else []
+
+    articles = list(
+        Article.objects.filter(
+            status='published',
+            categories__slug='state-of-bharat',
+        )
+        .select_related('author', 'primary_category')
+        .prefetch_related(Prefetch('categories', queryset=Category.objects.only('id', 'name', 'slug')))
+        .only(
+            'id',
+            'title',
+            'slug',
+            'subtitle',
+            'image',
+            'image_url',
+            'image_alt',
+            'published_at',
+            'created_at',
+            'primary_category__id',
+            'primary_category__name',
+            'primary_category__slug',
+            'selected_subcategories',
+            'canonical_url',
+            'author__username',
+            'author__first_name',
+            'author__last_name',
+            'author_display_name',
+        )
+        .order_by('-created_at')
+        .distinct()
+    )
+
+    if not state:
+        cache_key = "articles:state:index:v2"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        sub_categories = category.sub_categories if isinstance(category.sub_categories, dict) else {}
+        configured_states = sub_categories.get('3', [])
+        if not isinstance(configured_states, list):
+            configured_states = []
+        all_states = list(dict.fromkeys([
+            *[str(item).strip() for item in configured_states if str(item).strip()],
+            *[
+                str(item).strip()
+                for article in articles
+                for item in article_states(article)
+                if str(item).strip()
+            ],
+        ]))
+        payload = {
+            'count': len(all_states),
+            'states': all_states,
+            'results': {
+                state_name: ArticleListSerializer(
+                    [article for article in articles if state_name in article_states(article)][:3],
+                    many=True,
+                    context={'request': request},
+                ).data
+                for state_name in all_states
+            },
+        }
+        cache.set(cache_key, payload, 300)
+        return Response(payload)
+
+    cache_key = f"articles:state:v2:{state}:{page}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    filtered = [article for article in articles if state in article_states(article)]
+    total = len(filtered)
+    start = (page - 1) * limit
+    end = start + limit
+    serializer = ArticleListSerializer(filtered[start:end], many=True, context={'request': request})
+    payload = {
+        'count': total,
+        'page': page,
+        'limit': limit,
+        'total_pages': (total + limit - 1) // limit if limit else 0,
+        'has_next': end < total,
+        'has_previous': page > 1,
+        'state': state,
+        'results': serializer.data,
+    }
+    cache.set(cache_key, payload, 300)
+    return Response(payload)
+
+
+@api_view(['GET'])
 def dashboard_articles(request):
     user = request.user
     if not user.is_authenticated:

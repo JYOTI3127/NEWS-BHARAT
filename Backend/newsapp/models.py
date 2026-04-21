@@ -373,16 +373,16 @@ class HomepageSlot(models.Model):
 class HomepageAdBanner(models.Model):
     HOME_TOP = 'home_top'
     HOME_TOP_MOBILE = 'home_top_mobile'
-    HOME_AFTER_TRENDING = 'home_after_trending'
-    HOME_MID = 'home_mid'
+    HOME_BHARAT_NUMBERS_RIGHT = 'home_bharat_numbers_right'
+    HOME_BHARAT_STARTUPS_RIGHT = 'home_bharat_startups_right'
     HOME_SIDE_LEFT = 'home_side_left'
     HOME_SIDE_RIGHT = 'home_side_right'
 
     PLACEMENT_CHOICES = [
         (HOME_TOP, 'Home Top'),
         (HOME_TOP_MOBILE, 'Home Top Mobile'),
-        (HOME_AFTER_TRENDING, 'Home After Trending'),
-        (HOME_MID, 'Home Mid'),
+        (HOME_BHARAT_NUMBERS_RIGHT, 'Home Bharat in Numbers Right'),
+        (HOME_BHARAT_STARTUPS_RIGHT, 'Home Bharat of Startups Right'),
         (HOME_SIDE_LEFT, 'Home Side Left'),
         (HOME_SIDE_RIGHT, 'Home Side Right'),
     ]
@@ -390,8 +390,8 @@ class HomepageAdBanner(models.Model):
     PLACEMENT_DIMENSIONS = {
         HOME_TOP: (728, 90),
         HOME_TOP_MOBILE: (300, 50),
-        HOME_AFTER_TRENDING: (300, 250),
-        HOME_MID: (336, 280),
+        HOME_BHARAT_NUMBERS_RIGHT: (300, 250),
+        HOME_BHARAT_STARTUPS_RIGHT: (300, 250),
         HOME_SIDE_LEFT: (160, 600),
         HOME_SIDE_RIGHT: (160, 600),
     }
@@ -399,8 +399,8 @@ class HomepageAdBanner(models.Model):
     PLACEMENT_BREAKPOINTS = {
         HOME_TOP: '769px+',
         HOME_TOP_MOBILE: '0px-768px',
-        HOME_AFTER_TRENDING: 'all screens',
-        HOME_MID: 'all screens',
+        HOME_BHARAT_NUMBERS_RIGHT: 'all screens',
+        HOME_BHARAT_STARTUPS_RIGHT: 'all screens',
         HOME_SIDE_LEFT: '769px+',
         HOME_SIDE_RIGHT: '769px+',
     }

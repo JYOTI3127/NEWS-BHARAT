@@ -82,14 +82,23 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_article_count(self, obj):
         try:
+            annotated = getattr(obj, 'article_count', None)
+            if annotated is not None:
+                return annotated
             return obj.articles.filter(status='published').count()
         except Exception:
             return 0
 
     def get_unique_total_articles(self, obj):
+        annotated = getattr(obj, 'unique_total_articles', None)
+        if annotated is not None:
+            return annotated
         return self.context.get('unique_total_articles', 0)
 
     def get_published_this_month(self, obj):
+        annotated = getattr(obj, 'published_this_month', None)
+        if annotated is not None:
+            return annotated
         return self.context.get('published_this_month', 0)
 
     def validate_sub_categories(self, value):
@@ -565,6 +574,53 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             return ''
         updated_display = self.get_updated_display(obj)
         return f'Updated on {updated_display}' if updated_display else ''
+
+
+class ArticleListSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    primary_category = serializers.SerializerMethodField()
+    published_date = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
+    canonical_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Article
+        fields = [
+            'id',
+            'title',
+            'slug',
+            'subtitle',
+            'image_url',
+            'image_alt',
+            'primary_category',
+            'published_date',
+            'public_url',
+            'canonical_url',
+        ]
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            try:
+                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+            except Exception:
+                return obj.image_url or None
+        return obj.image_url or None
+
+    def get_primary_category(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
+    def get_published_date(self, obj):
+        published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+        return published_at.isoformat() if published_at else None
+
+    def get_public_url(self, obj):
+        return article_url(obj)
+
+    def get_canonical_url(self, obj):
+        final_url = article_url(obj)
+        return normalized_canonical(obj, final_url)
 
 
 class NewsletterCardSerializer(serializers.ModelSerializer):

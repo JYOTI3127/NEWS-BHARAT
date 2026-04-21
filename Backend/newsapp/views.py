@@ -74,12 +74,25 @@ def _invalidate_article_caches(article, old_slug=None):
         if getattr(article, 'slug', None):
             cache.delete(f"article:slug:{article.slug}")
         cache.delete('articles:homepage:')
+        cache.delete('categories:all:v2')
+        cache.delete('categories:all:v3')
         if hasattr(cache, 'delete_pattern'):
             cache.delete_pattern('articles:list:*')
             cache.delete_pattern('articles:homepage:*')
+            cache.delete_pattern('categories:all:*')
         cat_slugs = list(article.categories.values_list('slug', flat=True))
         for cat_slug in cat_slugs:
             cache.delete(f"articles:homepage:{cat_slug}")
+    except Exception:
+        pass
+
+
+def _invalidate_category_cache():
+    cache.delete('categories:all:v2')
+    cache.delete('categories:all:v3')
+    try:
+        if hasattr(cache, 'delete_pattern'):
+            cache.delete_pattern('categories:all:*')
     except Exception:
         pass
 
@@ -116,24 +129,33 @@ def _is_current_article_image_url(article, url_value, request=None):
 
 @api_view(['GET'])
 def category_list(request):
-    cache_key = 'categories:all:v2'
+    cache_key = 'categories:all:v3'
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
-    categories = Category.objects.all()
     now = timezone.now()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    serializer = CategorySerializer(
-        categories,
-        many=True,
-        context={
-            'unique_total_articles': Article.objects.count(),
-            'published_this_month': Article.objects.filter(
-                status='published',
-                published_at__gte=start_of_month,
-            ).count(),
-        },
+    categories = Category.objects.annotate(
+        article_count=Count(
+            'articles',
+            filter=Q(articles__status='published'),
+            distinct=True,
+        ),
+        unique_total_articles=Count(
+            'articles',
+            filter=Q(articles__status='published'),
+            distinct=True,
+        ),
+        published_this_month=Count(
+            'articles',
+            filter=Q(
+                articles__status='published',
+                articles__published_at__gte=start_of_month,
+            ),
+            distinct=True,
+        ),
     )
+    serializer = CategorySerializer(categories, many=True)
     cache.set(cache_key, serializer.data, 3600)  # 1 hour
     return Response(serializer.data)
 
@@ -185,7 +207,7 @@ def category_create(request):
     serializer = CategorySerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        cache.delete('categories:all:v2')
+        _invalidate_category_cache()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -196,7 +218,7 @@ def category_update(request, cat_id):
     serializer = CategorySerializer(cat, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
-        cache.delete('categories:all:v2')
+        _invalidate_category_cache()
         return Response(serializer.data)
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -206,7 +228,7 @@ def category_archive(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'archived'
     cat.save(update_fields=['status'])
-    cache.delete('categories:all:v2')
+    _invalidate_category_cache()
     return Response({'status': 'archived'})
 
 
@@ -215,7 +237,7 @@ def category_restore(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'active'
     cat.save(update_fields=['status'])
-    cache.delete('categories:all:v2')
+    _invalidate_category_cache()
     return Response({'status': 'active'})
 
 
@@ -487,11 +509,16 @@ def article_list(request):
     if request.method == "GET":
         category = request.GET.get('category')
         try:
-            limit = max(1, min(int(request.GET.get('limit', 50)), 100))
+            limit = max(1, min(int(request.GET.get('limit', 10)), 100))
         except (TypeError, ValueError):
-            limit = 50
+            limit = 10
+        try:
+            page = max(1, int(request.GET.get('page', 1)))
+        except (TypeError, ValueError):
+            page = 1
+        use_full_payload = str(request.GET.get('full', '')).lower() in {'1', 'true', 'yes'}
 
-        cache_key = f"articles:list:{category or 'all'}:{limit}"
+        cache_key = f"articles:list:v3:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -516,28 +543,32 @@ def article_list(request):
                 'primary_category__name',
                 'primary_category__slug',
                 'canonical_url',
-                'meta_description',
-                'focus_keyword',
-                'secondary_keywords',
-                'noindex',
-                'nofollow',
-                'in_sitemap',
                 'author__username',
                 'author__first_name',
                 'author__last_name',
                 'author_display_name',
-                'tags',
-                'is_paid',
-                'selected_subcategories',
             )
             .order_by('-published_at', '-created_at')
         )
         if category:
             articles = articles.filter(categories__slug=category).distinct()
 
-        serializer = ArticleHomepageSerializer(articles[:limit], many=True, context={'request': request})
-        cache.set(cache_key, serializer.data, 300)
-        return Response(serializer.data)
+        total = articles.count()
+        start = (page - 1) * limit
+        end = start + limit
+        serializer_class = ArticleHomepageSerializer if use_full_payload else ArticleListSerializer
+        serializer = serializer_class(articles[start:end], many=True, context={'request': request})
+        payload = {
+            'count': total,
+            'page': page,
+            'limit': limit,
+            'total_pages': (total + limit - 1) // limit if limit else 0,
+            'has_next': end < total,
+            'has_previous': page > 1,
+            'results': serializer.data,
+        }
+        cache.set(cache_key, payload, 300)
+        return Response(payload)
 
     elif request.method == "POST":
         if not request.user.is_authenticated:
@@ -1065,6 +1096,15 @@ def _validate_remote_ad_image_url(image_url, placement):
     return ''
 
 
+def _validate_ad_banner_for_save(banner, *, validate_image=False):
+    if validate_image:
+        banner.full_clean()
+    else:
+        banner.clean_fields(exclude=['image'])
+        banner.validate_unique()
+        banner.validate_constraints()
+
+
 @staff_member_required
 @require_POST
 def update_ad_slot(request):
@@ -1087,26 +1127,34 @@ def update_ad_slot(request):
     if has_placement_payload:
         for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES:
             banner, _created = HomepageAdBanner.objects.get_or_create(placement=placement)
+            previous_image_name = banner.image.name if banner.image else ''
             banner.link_url = request.POST.get(f'ad_link_url_{placement}', '').strip()
             banner.alt = request.POST.get(f'ad_alt_{placement}', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
             banner.is_active = request.POST.get(f'is_active_{placement}', 'false').lower() in ('true', '1', 'on')
 
             upload = request.FILES.get(f'ad_image_{placement}')
             image_url = request.POST.get(f'ad_image_url_{placement}', '').strip()
+            media_changed = False
 
             if upload:
                 banner.image = upload
                 banner.image_url = ''
+                media_changed = True
             elif image_url and not image_url.startswith('blob:'):
-                url_error = _validate_remote_ad_image_url(image_url, placement)
-                if url_error:
-                    errors[placement] = [url_error]
-                    continue
-                banner.image = None
-                banner.image_url = image_url
+                if image_url != (banner.image_url or '') or banner.image:
+                    url_error = _validate_remote_ad_image_url(image_url, placement)
+                    if url_error:
+                        errors[placement] = [url_error]
+                        continue
+                    banner.image = None
+                    banner.image_url = image_url
+                    media_changed = True
 
             try:
-                banner.full_clean()
+                if media_changed or (banner.image and banner.image.name != previous_image_name):
+                    _validate_ad_banner_for_save(banner, validate_image=True)
+                else:
+                    _validate_ad_banner_for_save(banner, validate_image=False)
                 banner.save()
                 saved_banners.append(banner)
             except ValidationError as exc:
@@ -1115,25 +1163,33 @@ def update_ad_slot(request):
     if not saved_banners and ('ad_image' in request.FILES or request.POST.get('ad_image_url')):
         legacy_banner, _created = HomepageAdBanner.objects.get_or_create(placement=HomepageAdBanner.HOME_TOP)
         legacy_has_error = False
+        previous_image_name = legacy_banner.image.name if legacy_banner.image else ''
+        media_changed = False
         legacy_banner.link_url = request.POST.get('ad_link_url', '').strip()
         legacy_banner.alt = request.POST.get('alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
         legacy_banner.is_active = slot.is_active
         if request.FILES.get('ad_image'):
             legacy_banner.image = request.FILES['ad_image']
             legacy_banner.image_url = ''
+            media_changed = True
         else:
             legacy_url = request.POST.get('ad_image_url', '').strip()
             if legacy_url and not legacy_url.startswith('blob:'):
-                url_error = _validate_remote_ad_image_url(legacy_url, HomepageAdBanner.HOME_TOP)
-                if url_error:
-                    errors[HomepageAdBanner.HOME_TOP] = [url_error]
-                    legacy_has_error = True
-                else:
-                    legacy_banner.image = None
-                    legacy_banner.image_url = legacy_url
+                if legacy_url != (legacy_banner.image_url or '') or legacy_banner.image:
+                    url_error = _validate_remote_ad_image_url(legacy_url, HomepageAdBanner.HOME_TOP)
+                    if url_error:
+                        errors[HomepageAdBanner.HOME_TOP] = [url_error]
+                        legacy_has_error = True
+                    else:
+                        legacy_banner.image = None
+                        legacy_banner.image_url = legacy_url
+                        media_changed = True
         if not legacy_has_error:
             try:
-                legacy_banner.full_clean()
+                if media_changed or (legacy_banner.image and legacy_banner.image.name != previous_image_name):
+                    _validate_ad_banner_for_save(legacy_banner, validate_image=True)
+                else:
+                    _validate_ad_banner_for_save(legacy_banner, validate_image=False)
                 legacy_banner.save()
                 saved_banners.append(legacy_banner)
             except ValidationError as exc:
@@ -2547,6 +2603,7 @@ def newsletter_view(request):
 
 import logging
 from django.core.mail import EmailMultiAlternatives, get_connection
+from email.mime.image import MIMEImage
 from email.utils import formataddr
 from datetime import datetime
 from urllib.parse import quote
@@ -2558,6 +2615,78 @@ logger = logging.getLogger(__name__)
 NEWSLETTER_SUBSCRIBE_SALT = 'news4bharat.newsletter.subscribe'
 NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_URL__'
 NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_FORM_URL__'
+
+
+def _newsletter_html_debug_urls(html_content, limit=8):
+    urls = {'images': [], 'links': []}
+    for attr_name, _quote_char, attr_value in re.findall(
+        r'\b(src|href)=(["\'])(?!#)([^"\']+)\2',
+        str(html_content or ''),
+        flags=re.IGNORECASE,
+    ):
+        key = 'images' if attr_name.lower() == 'src' else 'links'
+        if attr_value not in urls[key]:
+            urls[key].append(attr_value)
+        urls[key] = urls[key][:limit]
+    return urls
+
+
+def _embed_newsletter_images(html_content, max_images=12, max_image_bytes=2 * 1024 * 1024):
+    """
+    Email clients like Gmail can block/fail remote images. For SMTP sends, embed
+    newsletter images as inline CID attachments so the visual email matches the
+    downloaded HTML instead of showing the image alt text.
+    """
+    attachments = []
+    seen = {}
+
+    def replace_img_src(match):
+        quote_char, image_url = match.groups()
+        image_url = str(image_url or '').strip()
+        if (
+            not image_url
+            or image_url.startswith(('cid:', 'data:'))
+            or len(attachments) >= max_images
+        ):
+            return match.group(0)
+
+        if image_url in seen:
+            return f'src={quote_char}cid:{seen[image_url]}{quote_char}'
+
+        try:
+            response = requests.get(
+                image_url,
+                headers={'User-Agent': 'News4BharatNewsletter/1.0'},
+                timeout=12,
+                stream=True,
+            )
+            response.raise_for_status()
+            content_type = (response.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
+            if not content_type.startswith('image/'):
+                return match.group(0)
+
+            content = response.raw.read(max_image_bytes + 1, decode_content=True)
+            if not content or len(content) > max_image_bytes:
+                return match.group(0)
+
+            cid = f"n4b-{uuid.uuid4().hex}@news4bharat"
+            image = MIMEImage(content, _subtype=content_type.split('/', 1)[1])
+            image.add_header('Content-ID', f'<{cid}>')
+            image.add_header('Content-Disposition', 'inline')
+            attachments.append(image)
+            seen[image_url] = cid
+            return f'src={quote_char}cid:{cid}{quote_char}'
+        except Exception as exc:
+            logger.warning(f"Newsletter image embed failed for {image_url}: {exc}")
+            return match.group(0)
+
+    html_with_inline_images = re.sub(
+        r'\bsrc=(["\'])(https?://[^"\']+)\1',
+        replace_img_src,
+        str(html_content or ''),
+        flags=re.IGNORECASE,
+    )
+    return html_with_inline_images, attachments
  
  
 def _auth(request):
@@ -2753,13 +2882,29 @@ def send_newsletter(request):
         )
         recipients = _normalize_emails([*recipients, *subscriber_emails])
 
+    original_recipient_count = len(recipients)
+    max_recipients = max(1, int(getattr(settings, 'NEWSLETTER_MAX_RECIPIENTS', 300) or 300))
+    recipient_limit_warning = ''
+    skipped_recipient_count = 0
+    if original_recipient_count > max_recipients:
+        skipped_recipient_count = original_recipient_count - max_recipients
+        recipients = recipients[:max_recipients]
+        recipient_limit_warning = (
+            f'Only the first {max_recipients} recipients will receive this newsletter. '
+            f'The remaining {skipped_recipient_count} recipients were not sent.'
+        )
+
     if not recipients:
         return JsonResponse({'error': 'No recipients provided'}, status=400)
  
     if not html_content:
         return JsonResponse({'error': 'No HTML content provided'}, status=400)
 
-    sender_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+    sender_email = (
+        getattr(settings, 'NEWSLETTER_FROM_EMAIL', '').strip()
+        or getattr(settings, 'DEFAULT_FROM_EMAIL', '').strip()
+        or getattr(settings, 'EMAIL_HOST_USER', '').strip()
+    )
     if not sender_email:
         return JsonResponse({'error': 'Email sender is not configured'}, status=500)
     from_email = formataddr((
@@ -2781,9 +2926,21 @@ Website: https://news4bharat.com
     success = []
     failed = []
     brevo_message_ids = []
+    debug_urls = {'images': [], 'links': []}
     trace_id = uuid.uuid4().hex[:12]
+    brevo_no_tracking_headers = {
+        'X-Mailin-Track': '0',
+        'X-Mailin-Track-Clicks': '0',
+        'X-Mailin-Track-Opens': '0',
+        'X-SIB-Track': '0',
+        'X-SIB-Track-Clicks': '0',
+        'X-SIB-Track-Opens': '0',
+    }
+    requested_provider = getattr(settings, 'NEWSLETTER_SEND_PROVIDER', 'smtp')
+    requested_provider = str(requested_provider or 'smtp').strip().lower()
     brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
-    send_provider = 'brevo_api' if brevo_api_key else 'smtp'
+    use_brevo_api = bool(brevo_api_key) and requested_provider not in {'smtp', 'newsletter_smtp'}
+    send_provider = 'brevo_api' if use_brevo_api else 'newsletter_smtp'
     newsletter_log = None
     try:
         newsletter_log = _save_history(
@@ -2799,7 +2956,7 @@ Website: https://news4bharat.com
     except Exception as e:
         logger.warning(f"Could not create newsletter history: {e}")
 
-    if brevo_api_key:
+    if use_brevo_api:
         for email in recipients:
             try:
                 personalized_html = html_content.replace(
@@ -2810,6 +2967,8 @@ Website: https://news4bharat.com
                     NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
                     _get_newsletter_subscribe_base_url(),
                 )
+                if not debug_urls['images'] and not debug_urls['links']:
+                    debug_urls = _newsletter_html_debug_urls(personalized_html)
                 payload = {
                     'sender': {
                         'name': getattr(settings, 'NEWSLETTER_FROM_NAME', 'News4Bharat'),
@@ -2819,10 +2978,14 @@ Website: https://news4bharat.com
                     'subject': subject,
                     'htmlContent': personalized_html,
                     'textContent': plain_text,
+                    'trackOpens': False,
+                    'trackClicks': False,
                     'headers': {
                         'X-News4Bharat-Newsletter-Trace': trace_id,
                         'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
+                        **brevo_no_tracking_headers,
                     },
+
                     'tags': ['newsletter', 'test' if is_test else 'newsletter-send'],
                 }
                 response = requests.post(
@@ -2855,46 +3018,74 @@ Website: https://news4bharat.com
                 failed.append({'email': email, 'error': str(e)})
                 logger.error(f"Newsletter Brevo API exception for {email}: {e}")
     else:
-        connection = get_connection(fail_silently=False)
-        try:
-            connection.open()
-            for email in recipients:
-                try:
-                    personalized_html = html_content.replace(
-                        NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                        _build_subscribe_url(request, email),
-                    )
-                    personalized_html = personalized_html.replace(
-                        NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                        _get_newsletter_subscribe_base_url(),
-                    )
-                    msg = EmailMultiAlternatives(
-                        subject=subject,
-                        body=plain_text,
-                        from_email=from_email,
-                        to=[email],
-                        connection=connection,
-                        headers={
-                            'X-News4Bharat-Newsletter-Trace': trace_id,
-                            'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
-                        },
-                    )
-                    msg.attach_alternative(personalized_html, "text/html")
-                    msg.send(fail_silently=False)
-                    success.append(email)
-                    logger.info(f"Newsletter sent to {email}")
-                except Exception as e:
-                    failed.append({'email': email, 'error': str(e)})
-                    logger.error(f"Newsletter failed for {email}: {e}")
-        except Exception as e:
-            if not success and not failed:
-                failed = [{'email': email, 'error': str(e)} for email in recipients]
-            logger.error(f"Newsletter SMTP connection failed: {e}")
-        finally:
+        smtp_host = getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', '')
+        smtp_port = int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or 587)
+        smtp_use_tls = bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True))
+        smtp_user = getattr(settings, 'NEWSLETTER_SMTP_USER', '')
+        smtp_password = getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '')
+
+        if not smtp_host or not smtp_user or not smtp_password:
+            failed = [{
+                'email': email,
+                'error': 'Newsletter SMTP is not configured. Please set NEWSLETTER_SMTP_HOST, NEWSLETTER_SMTP_USER, and NEWSLETTER_SMTP_PASSWORD.',
+            } for email in recipients]
+            logger.error("Newsletter SMTP is not configured")
+        else:
+            connection = get_connection(
+                host=smtp_host,
+                port=smtp_port,
+                username=smtp_user,
+                password=smtp_password,
+                use_tls=smtp_use_tls,
+                fail_silently=False,
+            )
             try:
-                connection.close()
-            except Exception:
-                pass
+                connection.open()
+                for email in recipients:
+                    try:
+                        personalized_html = html_content.replace(
+                            NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                            _build_subscribe_url(request, email),
+                        )
+                        personalized_html = personalized_html.replace(
+                            NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                            _get_newsletter_subscribe_base_url(),
+                        )
+                        if not debug_urls['images'] and not debug_urls['links']:
+                            debug_urls = _newsletter_html_debug_urls(personalized_html)
+                        personalized_html, inline_images = _embed_newsletter_images(personalized_html)
+                        msg = EmailMultiAlternatives(
+                            subject=subject,
+                            body=plain_text,
+                            from_email=from_email,
+                            to=[email],
+                            connection=connection,
+                            headers={
+                                'X-News4Bharat-Newsletter-Trace': trace_id,
+                                'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
+                                **brevo_no_tracking_headers,
+                            },
+                        )
+                        if inline_images:
+                            msg.mixed_subtype = 'related'
+                        msg.attach_alternative(personalized_html, "text/html")
+                        for inline_image in inline_images:
+                            msg.attach(inline_image)
+                        msg.send(fail_silently=False)
+                        success.append(email)
+                        logger.info(f"Newsletter sent to {email}")
+                    except Exception as e:
+                        failed.append({'email': email, 'error': str(e)})
+                        logger.error(f"Newsletter failed for {email}: {e}")
+            except Exception as e:
+                if not success and not failed:
+                    failed = [{'email': email, 'error': str(e)} for email in recipients]
+                logger.error(f"Newsletter SMTP connection failed: {e}")
+            finally:
+                try:
+                    connection.close()
+                except Exception:
+                    pass
  
     try:
         if newsletter_log:
@@ -2911,7 +3102,10 @@ Website: https://news4bharat.com
                     'subject': subject,
                     'at': timezone.localtime(timezone.now()).strftime('%d/%m/%Y %I:%M %p'),
                     'raw_event': f'django_{send_provider}_send',
-                    'reason': f'{len(success)} accepted by {send_provider}, {len(failed)} failed',
+                    'reason': (
+                        f'{len(success)} accepted by {send_provider}, {len(failed)} failed'
+                        + (f'; {recipient_limit_warning}' if recipient_limit_warning else '')
+                    ),
                 }
             ]
             newsletter_log.save(update_fields=[
@@ -2936,6 +3130,12 @@ Website: https://news4bharat.com
         'trace_id': trace_id,
         'provider': send_provider,
         'brevo_message_ids': brevo_message_ids,
+        'debug_sent_image_urls': debug_urls['images'],
+        'debug_sent_link_urls': debug_urls['links'],
+        'recipient_limit': max_recipients,
+        'requested_recipients': original_recipient_count,
+        'skipped_recipients': skipped_recipient_count,
+        'warning': recipient_limit_warning,
         'note': 'Brevo API accepted means Brevo created a message id. Delivered/bounced updates require Brevo webhook events.',
     }, status=response_status)
  

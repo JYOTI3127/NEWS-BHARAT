@@ -50,6 +50,7 @@ const STORY_COLUMNS_MAP = {
 const getArticleTimeValue = (article) => {
     const raw =
         article?.published_at ||
+        article?.published_date ||
         article?.created_at ||
         article?.updated_at ||
         article?.date ||
@@ -148,7 +149,7 @@ const normalizeMatches = (matches) =>
     Array.isArray(matches) ? matches.map(ensureMatchShape) : [];
 
 const formatArticleDateTime = (article) => {
-    const raw = article?.published_at || article?.created_at || article?.updated_at || "";
+    const raw = article?.published_date || article?.published_at || article?.created_at || article?.updated_at || "";
     if (!raw) return "";
 
     const date = new Date(raw);
@@ -387,7 +388,7 @@ export default function VisualStoriesWithScore() {
 
     // ✅ Fix 2 — Category filter se fetch, saare articles nahi
     useEffect(() => {
-        fetch(`${API_BASE}/articles/?category=${CATEGORY_SLUG}&limit=50`)
+        fetch(`${API_BASE}/articles/?category=${CATEGORY_SLUG}&page=1&limit=50`)
             .then((r) => r.json())
             .then((data) => {
                 const all = Array.isArray(data)
@@ -445,7 +446,7 @@ export default function VisualStoriesWithScore() {
         "laptop-l": "220px",
         "4k": "220px",
     }[bp] || "220px";
-    const scoreCardHeight = isMobile ? "360px" : is4K ? "520px" : is2K ? "450px" : "360px";
+    const scoreCardHeight = isMobile ? "360px" : is4K ? "520px" : is2K ? "450px" : "330px";
 
     const visibleStories = stories.slice(offset, offset + VISIBLE);
     const renderedStories = isMobile ? stories : visibleStories;
@@ -523,16 +524,18 @@ export default function VisualStoriesWithScore() {
                         <button
                             aria-label="Previous Bharat Economy stories"
                             onClick={() => scrollStories(-1)}
+                            disabled={!isMobile && !canPrev}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canPrev ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:-translate-x-0.5"
                                 }`}
                             style={{
+                                left: 0,
                                 border: "1px solid rgba(216, 1, 0, 0.32)",
                                 width: isMobile ? "30px" : "36px",
                                 height: isMobile ? "30px" : "36px",
                                 background: "#ffffff",
                                 color: "#D80100",
                                 boxShadow: "0 8px 18px rgba(17, 17, 17, 0.14)",
-                                transform: isMobile ? "translate(-10px, -50%)" : "translate(-50%, -50%)",
+                                transform: isMobile ? "translate(0, -50%)" : "translate(-18%, -50%)",
                             }}
                         >
                             <FaChevronLeft size={isMobile ? 12 : 14} />
@@ -640,7 +643,7 @@ export default function VisualStoriesWithScore() {
                                                     className="text-[#6b7280] leading-snug"
                                                     style={{
                                                         marginTop: is4K ? "8px" : "6px",
-                                                        fontSize: is4K ? "13px" : is2K ? "12px" : "11px",
+                                                        fontSize: is4K ? "13px" : is2K ? "12px" : "9px",
                                                         fontWeight: 600,
                                                         fontFamily: "Poppins, sans-serif",
                                                     }}
@@ -657,9 +660,11 @@ export default function VisualStoriesWithScore() {
                         <button
                             aria-label="Next Bharat Economy stories"
                             onClick={() => scrollStories(1)}
+                            disabled={!isMobile && !canNext}
                             className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canNext ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:translate-x-0.5"
                                 }`}
                             style={{
+                                right: 0,
                                 border: "1px solid rgba(216, 1, 0, 0.32)",
                                 width: isMobile ? "30px" : "36px",
                                 height: isMobile ? "30px" : "36px",

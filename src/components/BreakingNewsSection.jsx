@@ -110,14 +110,14 @@ export default function BreakingNewsSection({ articles = [] }) {
     const normalized = normalizeArticles(articles);
     const breakingArticles = normalized.filter(isBreakingArticle);
 
-    return dedupeArticles([...breakingArticles, ...normalized]).slice(0, 8);
+    return dedupeArticles([...breakingArticles, ...normalized]).slice(0, 9);
   }, [articles]);
 
   if (sectionArticles.length === 0) return null;
 
   const featuredArticle = sectionArticles[0];
   const leftSecondaryArticle = sectionArticles[1];
-  const headlineArticles = sectionArticles.slice(2, 7);
+  const headlineArticles = sectionArticles.slice(2, 9);
 
   return (
     <section
@@ -230,11 +230,11 @@ export default function BreakingNewsSection({ articles = [] }) {
         </div>
 
         <div className="grid content-start">
-          {headlineArticles.map((article) => (
+          {headlineArticles.map((article, index) => (
             <StoryCard
               key={article.id || article.slug || getArticleTitle(article)}
               article={article}
-              className="
+              className={`
                 group grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 rounded-[10px] border-b border-dotted border-[#9a9a9a] py-[9px]
                 first:pt-0 last:border-b-0 last:pb-0
                 min-[1441px]:grid-cols-[minmax(0,1fr)_130px]
@@ -244,7 +244,8 @@ export default function BreakingNewsSection({ articles = [] }) {
                 max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
                 max-[375px]:grid-cols-[minmax(0,1fr)_82px]
                 max-[320px]:grid-cols-[minmax(0,1fr)_72px]
-              "
+                ${index >= 5 ? 'max-[1440px]:hidden' : ''}
+              `}
             >
               <div className="min-w-0">
                 <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem] max-[320px]:text-[0.72rem]">

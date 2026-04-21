@@ -730,7 +730,7 @@ const Header = () => {
 
   const topBarClasses = isMobile
     ? "hidden"
-    : `${!isOpen && showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
+    : `${!isOpen && showResults ? "overflow-visible" : "overflow-hidden"} transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b-0 py-1"}`;
 
   return (
     <>
@@ -898,7 +898,7 @@ const Header = () => {
       <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}${is2K ? " is-2k" : ""}`}>
 
         {/* Ticker Bar */}
-        <div className={tickerBarClasses}>
+        {/* <div className={tickerBarClasses}>
           <div className="header-shell ticker-shell">
             <div className="ticker-left">
               <BarChart2 size={14} className="ticker-icon" />
@@ -907,7 +907,7 @@ const Header = () => {
             <div className="ticker-scroll-track">
               <div className="ticker-scroll-inner">
                 {/* ✅ TickerContent memo — sirf market data change hone par re-render */}
-                <TickerContent
+                {/* <TickerContent
                   sensexPrice={sensexPrice}
                   sensexChange={sensexChange}
                   sensexTrend={sensexTrend}
@@ -933,60 +933,62 @@ const Header = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>  */}
 
         {/* Top Bar — Search + Date/Time */}
-        <div className={topBarClasses}>
-          <div className="header-shell">
-            <div className="search-row">
-              <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
-                <Search size={14} className="search-icon" />
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Search news..."
-                  name="navbar-article-search"
-                  autoComplete="off"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onKeyDown={handleSearchKeyDown}
-                  onFocus={() => !isOpen && searchResults.length > 0 && setShowResults(true)}
-                />
-                <Mic size={14} className="mic-icon" />
-                {!isOpen && showResults && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
-                    {isSearching ? (
-                      <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
-                    ) : searchResults.length === 0 ? (
-                      <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
-                    ) : (
-                      searchResults.map((item, idx) => (
-                        <Link
-                          key={idx}
-                          to={getSearchResultHref(item)}
-                          className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
-                          onClick={() => setShowResults(false)}
-                        >
-                          {(item.category || item.tag || item.type) && (
-                            <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
-                              {item.category || item.tag || item.type}
-                            </span>
-                          )}
-                          <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
-                          {getSearchPreview(item) && (
-                            <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{getSearchPreview(item)}</span>
-                          )}
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                )}
+        {!isScrolled && (
+          <div className={`top-bar ${topBarClasses}`}>
+            <div className="header-shell">
+              <div className="search-row">
+                <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
+                  <Search size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search news..."
+                    name="navbar-article-search"
+                    autoComplete="off"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={() => !isOpen && searchResults.length > 0 && setShowResults(true)}
+                  />
+                  <Mic size={14} className="mic-icon" />
+                  {!isOpen && showResults && (
+                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
+                      {isSearching ? (
+                        <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
+                      ) : searchResults.length === 0 ? (
+                        <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
+                      ) : (
+                        searchResults.map((item, idx) => (
+                          <Link
+                            key={idx}
+                            to={getSearchResultHref(item)}
+                            className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
+                            onClick={() => setShowResults(false)}
+                          >
+                            {(item.category || item.tag || item.type) && (
+                              <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
+                                {item.category || item.tag || item.type}
+                              </span>
+                            )}
+                            <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
+                            {getSearchPreview(item) && (
+                              <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{getSearchPreview(item)}</span>
+                            )}
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+
               </div>
-
-
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Nav */}
         <nav className="main-nav">

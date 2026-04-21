@@ -7,7 +7,7 @@ import {
   ChevronRight, Newspaper, Tag, ArrowLeft,
   Instagram, Youtube, Linkedin,
 } from "lucide-react";
-import { apiUrl } from "../lib/api";
+import { apiUrl, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
 import {
   getCanonicalArticleUrl,
@@ -23,18 +23,6 @@ const toCategoryArray = (categoryDetails) => {
   if (Array.isArray(categoryDetails)) return categoryDetails;
   return categoryDetails ? [categoryDetails] : [];
 };
-
-const formatDate = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-IN", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }).replace(/am|pm/i, (match) => match.toUpperCase())
-    : "";
 
 const getPlainText = (value) =>
   String(value || "")
@@ -113,12 +101,7 @@ const getArticleTags = (article) => {
 };
 
 const getArticleTimestamp = (article) =>
-  new Date(
-    article?.published_at ||
-    article?.created_at ||
-    article?.updated_at ||
-    0
-  ).getTime() || 0;
+  new Date(getArticleDateValue(article) || article?.updated_at || 0).getTime() || 0;
 
 const sortArticlesByNewest = (list) =>
   [...list].sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
@@ -648,7 +631,7 @@ export default function ArticleDetails() {
 
         const [detailResponse, listResponse] = await Promise.all([
           fetchArticleDetail(),
-          fetch(apiUrl("/articles/?limit=500"), {
+          fetch(apiUrl("/articles/?page=1&limit=500"), {
             signal: controller.signal,
             cache: "no-store",
           }),
@@ -853,8 +836,8 @@ export default function ArticleDetails() {
     );
   }
 
-  const date = article.published_at || article.created_at;
-  const modifiedDate = article.updated_at || article.published_at || article.created_at;
+  const date = getArticleDateValue(article);
+  const modifiedDate = article.updated_at || getArticleDateValue(article);
   const imageUrl = getArticleImage(article);
   const imageAlt = article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
@@ -886,13 +869,18 @@ export default function ArticleDetails() {
       : `${SITE_URL}${authorPagePath}`;
   const authorPhotoUrl = toAbsoluteSiteUrl(article.author_display_photo?.trim());
   const shellStyle = is2K
-    ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none" }
+    ? {
+      width: "var(--site-content-width)",
+      maxWidth: "var(--site-content-width)",
+      paddingLeft: 0,
+      paddingRight: 0,
+    }
     : undefined;
   const heroImageWrapStyle = is2K
-    ? { display: "flex", justifyContent: "center", alignItems: "center" }
+    ? { display: "flex", justifyContent: "flex-start", alignItems: "center" }
     : undefined;
   const heroImageCardClassName = is2K
-    ? "w-fit max-w-full mx-auto rounded-xl overflow-hidden mb-7 shadow-sm"
+    ? "w-fit max-w-full mr-auto rounded-xl overflow-hidden mb-7 shadow-sm"
     : "w-full rounded-xl overflow-hidden mb-7 shadow-sm";
   const heroImageStyle = is2K
     ? {
@@ -901,8 +889,8 @@ export default function ArticleDetails() {
       maxWidth: "100%",
       maxHeight: "min(72vh, 820px)",
       objectFit: "contain",
-      objectPosition: "center",
-      margin: "0 auto",
+      objectPosition: "left center",
+      margin: "0",
     }
     : undefined;
 
@@ -984,7 +972,7 @@ export default function ArticleDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
+    <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
 
       <Helmet>
         <title>{seoTitle}</title>
@@ -1032,7 +1020,7 @@ export default function ArticleDetails() {
       </Helmet>
 
       <div
-        className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start"
+        className="max-w-[1030px] mx-auto px-4 sm:px-6 pb-8 pt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start"
         style={shellStyle}
       >
 
@@ -1070,7 +1058,7 @@ export default function ArticleDetails() {
             )}
             {date && (
               <span className="flex items-center gap-1.5 text-gray-500">
-                <Clock size={13} /> {formatDate(date)}
+                <Clock size={13} /> {formatArticleDateTimeIST(article)}
               </span>
             )}
           </div>
@@ -1201,7 +1189,7 @@ export default function ArticleDetails() {
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold text-slate-900 line-clamp-2 leading-snug">{rel.title}</p>
                         <span className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
-                          <Clock size={10} />{formatDate(rel.published_at || rel.created_at)}
+                          <Clock size={10} />{formatArticleDateTimeIST(rel)}
                         </span>
                       </div>
                     </div>
@@ -1252,7 +1240,7 @@ export default function ArticleDetails() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-semibold text-slate-900 line-clamp-2 leading-snug">{a.title}</p>
                           <span className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
-                            <Clock size={10} />{formatDate(a.published_at || a.created_at)}
+                            <Clock size={10} />{formatArticleDateTimeIST(a)}
                           </span>
                         </div>
                       </div>

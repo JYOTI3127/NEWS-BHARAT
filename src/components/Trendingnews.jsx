@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo, useRef, memo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
-import AdvertisementSlot from "./AdvertisementSlot";
 
-const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read");
+const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read&page=1&limit=10");
 
 // ── Helpers ───────────────────────────────────────────────────
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
@@ -13,7 +12,7 @@ const getArticleFallbackImage = (a) => a?.image || a?.image_url || "";
 const INDIA_TZ = "Asia/Kolkata";
 
 const getArticleDateValue = (article) => {
-  const raw = article?.published_at || article?.created_at || null;
+  const raw = article?.published_date || article?.published_at || article?.created_at || null;
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -281,6 +280,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
 
 // ── Feature Cards ─────────────────────────────────────────────
 const FeatureCards = memo(({ articles, loading, is2K }) => {
+  const CARDS_PER_PAGE = 2;
   const [page, setPage]       = useState(0);
   const [animDir, setAnimDir] = useState(null);
   const timerRef = useRef(null);
@@ -290,7 +290,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
     () => articles.filter((a) => getArticleImage(a)),
     [articles]
   );
-  const totalPages = Math.ceil(withImage.length / 3);
+  const totalPages = Math.ceil(withImage.length / CARDS_PER_PAGE);
   const safePage = totalPages > 0 ? page % totalPages : 0;
 
   useEffect(() => {
@@ -306,7 +306,10 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
     return () => clearInterval(timerRef.current);
   }, [loading, withImage.length, totalPages]);
 
-  const cards = withImage.slice(safePage * 3, safePage * 3 + 3);
+  const cards = withImage.slice(
+    safePage * CARDS_PER_PAGE,
+    safePage * CARDS_PER_PAGE + CARDS_PER_PAGE
+  );
   const transitionStyle = {
     opacity:   animDir === "out" ? 0 : 1,
     transform: animDir === "out" ? "translateY(10px)" : "translateY(0px)",
@@ -316,7 +319,7 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
   if (loading) {
     return (
       <div className="tn-feature-cards">
-        {Array.from({ length: 3 }).map((_, i) => (
+        {Array.from({ length: CARDS_PER_PAGE }).map((_, i) => (
           <div key={i} className="tn-feature-card">
             <div className="tn-feature-card-img-wrap" style={{ background: "#e8e8e8" }} />
             <div className="tn-feature-card-body" style={{ padding: "10px 12px" }}>
@@ -383,7 +386,7 @@ const LiveUpdates = memo(({ is2K }) => {
       .then((data) => {
         if (ignore) return;
         const list   = Array.isArray(data) ? data : data?.results || [];
-        const sorted = list.sort((a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0));
+        const sorted = list.sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
         setSixtyArticles(sorted);
         setLoading(false);
       })
@@ -467,7 +470,7 @@ export default function TrendingNews({ articles: passedArticles = [], categories
     const list = Array.isArray(passedArticles) ? passedArticles : passedArticles?.results || [];
     return list
       .filter((a) => a.status === "published" || a.image_url)
-      .sort((a, b) => new Date(b.published_at || b.created_at || 0) - new Date(a.published_at || a.created_at || 0));
+      .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
   }, [passedArticles]);
 
   const categories = useMemo(() => {
@@ -523,13 +526,6 @@ export default function TrendingNews({ articles: passedArticles = [], categories
             <LiveUpdates />
           </div>
         )}
-
-        <AdvertisementSlot
-          placement="home_after_trending"
-          variant="mediumRectangle"
-          className="home-after-trending-ad"
-          allowUnmatchedPlacement
-        />
       </div>
     </div>
   );

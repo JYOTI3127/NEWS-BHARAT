@@ -486,6 +486,8 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     primary_category = serializers.SerializerMethodField()
     canonical_url = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
+    published_at = serializers.SerializerMethodField()
+    published_date = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
@@ -499,7 +501,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'subtitle',                 
             'image_url', 'image_alt',
             'category', 'primary_category', 'categories',
-            'published_at', 'created_at', 'updated_at',
+            'published_at', 'published_date', 'created_at', 'updated_at',
             'is_updated', 'updated_display', 'updated_label',
             'canonical_url', 'public_url', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
@@ -531,6 +533,16 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     def get_public_url(self, obj):
         return article_url(obj)
 
+    def get_effective_published_at(self, obj):
+        return getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+
+    def get_published_at(self, obj):
+        published_at = self.get_effective_published_at(obj)
+        return published_at.isoformat() if published_at else None
+
+    def get_published_date(self, obj):
+        return self.get_published_at(obj)
+
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():
             return obj.author_display_name.strip()
@@ -541,7 +553,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     def get_effective_updated_at(self, obj):
         return (
             getattr(obj, 'updated_at', None)
-            or getattr(obj, 'published_at', None)
+            or self.get_effective_published_at(obj)
             or getattr(obj, 'created_at', None)
         )
 
@@ -564,7 +576,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             pass
 
         updated_at = self.get_effective_updated_at(obj)
-        published_at = getattr(obj, 'published_at', None)
+        published_at = self.get_effective_published_at(obj)
         if updated_at and published_at:
             return updated_at > published_at + timedelta(minutes=1)
         return False

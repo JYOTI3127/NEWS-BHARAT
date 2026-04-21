@@ -518,7 +518,7 @@ def article_list(request):
             page = 1
         use_full_payload = str(request.GET.get('full', '')).lower() in {'1', 'true', 'yes'}
 
-        cache_key = f"articles:list:v3:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
+        cache_key = f"articles:list:v4:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -548,7 +548,7 @@ def article_list(request):
                 'author__last_name',
                 'author_display_name',
             )
-            .order_by('-published_at', '-created_at')
+            .order_by('-created_at')
         )
         if category:
             articles = articles.filter(categories__slug=category).distinct()

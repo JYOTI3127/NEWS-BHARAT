@@ -19405,6 +19405,32 @@ tr.art-row td:has(.art-cat-text) {
 .cq-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 .cq-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+.email-clear-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px;
+}
+.email-count {
+  font-size: 11px;
+  color: #888;
+}
+.email-clear-btn {
+  font-size: 11px;
+  color: #c0392b;
+  background: none;
+  border: 1px solid #f5c0b8;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.email-clear-btn:hover {
+  background: #fff0ee;
+}
+
+
+
 /* =============================================
    RESPONSIVE
    ============================================= */

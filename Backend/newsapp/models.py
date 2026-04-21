@@ -197,6 +197,9 @@ class Article(models.Model):
                 # ✅ ENSURE published_at set
                 if self.status == "published" and not self.published_at:
                     self.published_at = timezone.now()
+                    if update_fields is not None:
+                        update_fields.add('published_at')
+                        kwargs['update_fields'] = update_fields
     
                     from newsapp.signals import ping_google_sitemap
                     ping_google_sitemap()
@@ -209,6 +212,9 @@ class Article(models.Model):
             # ✅ NEW OBJECT CASE
             if self.status == "published" and not self.published_at:
                 self.published_at = timezone.now()
+                if update_fields is not None:
+                    update_fields.add('published_at')
+                    kwargs['update_fields'] = update_fields
     
         self.full_clean()
         super().save(*args, **kwargs)

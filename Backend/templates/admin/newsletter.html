@@ -416,12 +416,32 @@
     function renderTestEmails() {
       const el = document.getElementById('test-emails-display');
       if (!el) return;
-      el.innerHTML = testEmails.map((e, i) => `<div class="email-tag" style="background:#f0f5ff;border-color:#c5d8ff;"><span>🧪 ${e}</span><button class="email-remove" onclick="removeEmail('test',${i})">×</button></div>`).join('');
+      el.innerHTML = (testEmails.length ? `<div class="email-clear-row"><span class="email-count">${testEmails.length} recipient${testEmails.length > 1 ? 's' : ''}</span><button class="email-clear-btn" onclick="clearAllEmails('test')">Clear All</button></div>` : '') +
+      testEmails.map((e, i) => `<div class="email-tag" style="background:#f0f5ff;border-color:#c5d8ff;"><span>🧪 ${e}</span><button class="email-remove" onclick="removeEmail('test',${i})">×</button></div>`).join('');
       const note = document.getElementById('test-note');
       if (!note) return;
       note.textContent = testEmails.length
         ? `Will send to: ${testEmails.slice(0, 2).join(', ')}${testEmails.length > 2 ? ` +${testEmails.length - 2} more` : ''}`
         : 'Add test recipient emails below. Test newsletter sirf unhi addresses par jayega.';
+    }
+
+    function clearAllEmails(type) {
+      const labels = { static: 'static recipients', custom: 'custom recipients', test: 'test recipients' };
+      if (!confirm(`Are you sure you want to remove all ${labels[type]}?`)) return;
+      if (type === 'static') {
+        staticEmails = [];
+        localStorage.setItem('n4b_static_emails', JSON.stringify(staticEmails));
+        renderEmailLists();
+      } else if (type === 'custom') {
+        customEmails = [];
+        persistCustomEmails();
+        renderEmailLists();
+      } else if (type === 'test') {
+        testEmails = [];
+        localStorage.setItem('n4b_test_emails', JSON.stringify(testEmails));
+        renderTestEmails();
+      }
+      showStatus(`All ${labels[type]} removed.`);
     }
 
     async function loadArticles() {
@@ -562,8 +582,14 @@
     }
 
     function renderEmailLists() {
-      document.getElementById('static-emails').innerHTML = staticEmails.map((e, i) => `<div class="email-tag"><span>${e}</span><button class="email-remove" onclick="removeEmail('static',${i})">×</button></div>`).join('');
-      document.getElementById('custom-emails').innerHTML = customEmails.map((e, i) => `<div class="custom-email-row"><span>${e}</span><button class="email-remove" onclick="removeEmail('custom',${i})">×</button></div>`).join('');
+      const staticWrap = document.getElementById('static-emails');
+      const customWrap = document.getElementById('custom-emails');
+
+      staticWrap.innerHTML = (staticEmails.length ? `<div class="email-clear-row"><span class="email-count">${staticEmails.length} recipient${staticEmails.length > 1 ? 's' : ''}</span><button class="email-clear-btn" onclick="clearAllEmails('static')">Clear All</button></div>` : '') +
+        staticEmails.map((e, i) => `<div class="email-tag"><span>${e}</span><button class="email-remove" onclick="removeEmail('static',${i})">×</button></div>`).join('');
+
+      customWrap.innerHTML = (customEmails.length ? `<div class="email-clear-row"><span class="email-count">${customEmails.length} recipient${customEmails.length > 1 ? 's' : ''}</span><button class="email-clear-btn" onclick="clearAllEmails('custom')">Clear All</button></div>` : '') +
+        customEmails.map((e, i) => `<div class="custom-email-row"><span>${e}</span><button class="email-remove" onclick="removeEmail('custom',${i})">×</button></div>`).join('');
     }
     function uniqueEmails(values) {
       return parseEmailBatch(Array.isArray(values) ? values.join(' ') : values);

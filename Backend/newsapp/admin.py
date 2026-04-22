@@ -804,8 +804,10 @@ class NewsAdminSite(AdminSite):
 
         try:
             extra_context['ad_slot'] = HomepageSlot.objects.filter(slot_name='ad_banner').first()
+            extra_context['ad_page_choices'] = HomepageAdBanner.PAGE_CHOICES
         except Exception:
             extra_context['ad_slot'] = None
+            extra_context['ad_page_choices'] = []
 
         try:
             saved_banners = {
@@ -947,7 +949,7 @@ class HomepageSlotAdmin(admin.ModelAdmin):
 
 
 class HomepageAdBannerAdmin(admin.ModelAdmin):
-    list_display = ('placement', 'size', 'image_preview', 'link_url', 'is_active', 'updated_at')
+    list_display = ('placement', 'size', 'target_page_labels', 'image_preview', 'link_url', 'is_active', 'updated_at')
     list_filter = ('placement', 'is_active')
     readonly_fields = ('updated_at',)
 

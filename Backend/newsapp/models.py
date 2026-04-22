@@ -371,12 +371,33 @@ class HomepageSlot(models.Model):
 
 
 class HomepageAdBanner(models.Model):
+    PAGE_HOME = 'home'
+    PAGE_ARTICLE_DETAIL = 'article_detail'
+    PAGE_CATEGORY = 'category'
+    PAGE_SEARCH = 'search'
+    PAGE_ABOUT = 'about'
+    PAGE_CONTACT = 'contact'
+    PAGE_PRIVACY = 'privacy'
+    PAGE_TERMS = 'terms'
+
     HOME_TOP = 'home_top'
     HOME_TOP_MOBILE = 'home_top_mobile'
     HOME_BHARAT_NUMBERS_RIGHT = 'home_bharat_numbers_right'
     HOME_BHARAT_STARTUPS_RIGHT = 'home_bharat_startups_right'
     HOME_SIDE_LEFT = 'home_side_left'
     HOME_SIDE_RIGHT = 'home_side_right'
+
+    PAGE_CHOICES = [
+        (PAGE_HOME, 'Homepage'),
+        (PAGE_ARTICLE_DETAIL, 'Article Detail Pages'),
+        (PAGE_CATEGORY, 'Category Pages'),
+        (PAGE_SEARCH, 'Search Page'),
+        (PAGE_ABOUT, 'About Page'),
+        (PAGE_CONTACT, 'Contact Page'),
+        (PAGE_PRIVACY, 'Privacy Policy Page'),
+        (PAGE_TERMS, 'Terms Page'),
+    ]
+    DEFAULT_TARGET_PAGES = [PAGE_HOME]
 
     PLACEMENT_CHOICES = [
         (HOME_TOP, 'Home Top'),
@@ -410,6 +431,7 @@ class HomepageAdBanner(models.Model):
     image_url = models.URLField(blank=True, default='')
     link_url = models.URLField(blank=True, default='')
     alt = models.CharField(max_length=255, blank=True, default='Sponsored advertisement')
+    target_pages = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -436,6 +458,12 @@ class HomepageAdBanner(models.Model):
 
     def clean(self):
         super().clean()
+        allowed_pages = {page for page, _label in self.PAGE_CHOICES}
+        pages = self.target_pages if isinstance(self.target_pages, list) else []
+        self.target_pages = [
+            page for page in dict.fromkeys(str(page).strip() for page in pages)
+            if page in allowed_pages
+        ]
         if self.image and self.placement in self.PLACEMENT_DIMENSIONS:
             expected_width, expected_height = self.PLACEMENT_DIMENSIONS[self.placement]
             image_width, image_height = get_image_dimensions(self.image)
@@ -446,6 +474,12 @@ class HomepageAdBanner(models.Model):
 
     def __str__(self):
         return f'Homepage ad {self.placement} ({self.size})'
+
+    @property
+    def target_page_labels(self):
+        labels = dict(self.PAGE_CHOICES)
+        pages = self.target_pages if isinstance(self.target_pages, list) else []
+        return ', '.join(labels.get(page, page) for page in pages) or 'No pages'
     
 
 class MetalRate(models.Model):

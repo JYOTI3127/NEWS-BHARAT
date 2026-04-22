@@ -1052,6 +1052,7 @@ def dashboard_view(request):
         "latest_slot":                   latest_slot,
         "ad_slot":                       ad_slot,
         "ad_banner_rows":                ad_banner_rows,
+        "ad_page_choices":               HomepageAdBanner.PAGE_CHOICES,
         "published_articles_for_picker": published_articles_for_picker,
         "categories":                    categories,
         "mp3_categories":                categories,
@@ -1069,6 +1070,24 @@ def _get_or_create_slot(slot_name):
         defaults={'mode': 'auto', 'is_active': True}
     )
     return slot
+
+
+def _normalize_ad_target_pages(raw_pages):
+    allowed_pages = {page for page, _label in HomepageAdBanner.PAGE_CHOICES}
+    if isinstance(raw_pages, str):
+        try:
+            parsed = json.loads(raw_pages)
+            raw_pages = parsed if isinstance(parsed, list) else [raw_pages]
+        except json.JSONDecodeError:
+            raw_pages = [raw_pages]
+    if not isinstance(raw_pages, list):
+        raw_pages = []
+
+    pages = [
+        page for page in dict.fromkeys(str(page).strip() for page in raw_pages)
+        if page in allowed_pages
+    ]
+    return pages or list(HomepageAdBanner.DEFAULT_TARGET_PAGES)
 
 
 @staff_member_required
@@ -1142,12 +1161,16 @@ def update_latest_news_slot(request):
 
 def _serialize_homepage_ad_banner(request, banner):
     image_url = request.build_absolute_uri(banner.image.url) if banner.image else banner.image_url
+    target_pages = _normalize_ad_target_pages(getattr(banner, 'target_pages', []))
+    target_page_labels = dict(HomepageAdBanner.PAGE_CHOICES)
     item = {
         'placement': banner.placement,
         'size': banner.size,
         'width': banner.width,
         'height': banner.height,
         'breakpoint': banner.breakpoint,
+        'target_pages': target_pages,
+        'target_page_labels': [target_page_labels.get(page, page) for page in target_pages],
         'is_active': bool(banner.is_active and image_url),
         'stored_is_active': bool(banner.is_active),
         'image_url': image_url or '',
@@ -1163,12 +1186,16 @@ def _serialize_homepage_ad_banner(request, banner):
 
 def _empty_homepage_ad_banner(placement):
     width, height = HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement, (None, None))
+    target_pages = list(HomepageAdBanner.DEFAULT_TARGET_PAGES)
+    target_page_labels = dict(HomepageAdBanner.PAGE_CHOICES)
     return {
         'placement': placement,
         'size': f'{width}x{height}' if width and height else '',
         'width': width,
         'height': height,
         'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS.get(placement, ''),
+        'target_pages': target_pages,
+        'target_page_labels': [target_page_labels.get(page, page) for page in target_pages],
         'is_active': False,
         'stored_is_active': False,
         'image_url': '',
@@ -1248,6 +1275,9 @@ def update_ad_slot(request):
             banner.link_url = request.POST.get(f'ad_link_url_{placement}', '').strip()
             banner.alt = request.POST.get(f'ad_alt_{placement}', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
             banner.is_active = request.POST.get(f'is_active_{placement}', 'false').lower() in ('true', '1', 'on')
+            banner.target_pages = _normalize_ad_target_pages(
+                request.POST.get(f'ad_pages_{placement}', '')
+            )
 
             upload = request.FILES.get(f'ad_image_{placement}')
             image_url = request.POST.get(f'ad_image_url_{placement}', '').strip()
@@ -1285,6 +1315,7 @@ def update_ad_slot(request):
         legacy_banner.link_url = request.POST.get('ad_link_url', '').strip()
         legacy_banner.alt = request.POST.get('alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
         legacy_banner.is_active = slot.is_active
+        legacy_banner.target_pages = _normalize_ad_target_pages(request.POST.get('ad_pages', ''))
         if request.FILES.get('ad_image'):
             legacy_banner.image = request.FILES['ad_image']
             legacy_banner.image_url = ''
@@ -1334,6 +1365,9 @@ def update_ad_slot(request):
 @require_GET
 def homepage_ad_banner(request):
     requested_placement = (request.GET.get('placement') or '').strip()
+    requested_page = (request.GET.get('page') or '').strip()
+    allowed_pages = {page for page, _label in HomepageAdBanner.PAGE_CHOICES}
+    requested_page = requested_page if requested_page in allowed_pages else ''
     allowed_placements = [placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
 
     if requested_placement:
@@ -1341,10 +1375,13 @@ def homepage_ad_banner(request):
             return JsonResponse({'placement': requested_placement, 'is_active': False})
         banner = HomepageAdBanner.objects.filter(placement=requested_placement).first()
         item = _serialize_homepage_ad_banner(request, banner) if banner else _empty_homepage_ad_banner(requested_placement)
+        if requested_page and requested_page not in item['target_pages']:
+            return JsonResponse({'placement': requested_placement, 'page': requested_page, 'is_active': False})
         if not item['is_active']:
             return JsonResponse({'placement': requested_placement, 'is_active': False})
         return JsonResponse({
             'placement': item['placement'],
+            'page': requested_page,
             'is_active': True,
             'image_url': item['image_url'],
             'ad_image_url': item['ad_image_url'],
@@ -1352,6 +1389,7 @@ def homepage_ad_banner(request):
             'ad_image': item['ad_image'],
             'link_url': item['link_url'],
             'alt': item['alt'],
+            'target_pages': item['target_pages'],
         })
 
     requested_size = (request.GET.get('size') or '').strip()
@@ -1364,9 +1402,19 @@ def homepage_ad_banner(request):
 
     banners = HomepageAdBanner.objects.filter(placement__in=placements)
     payload = _homepage_ad_banner_payload(request, banners, placements=placements)
+    if requested_page:
+        filtered_items = [
+            item for item in payload['banners']
+            if requested_page in item['target_pages']
+        ]
+        payload = {
+            'banners': filtered_items,
+            'by_placement': {item['placement']: item for item in filtered_items},
+        }
     first_active = next((item for item in payload['banners'] if item['is_active']), None)
 
     return JsonResponse({
+        'page': requested_page,
         'is_active': bool(first_active),
         'has_slot': bool(payload['banners']),
         'stored_is_active': any(item['stored_is_active'] for item in payload['banners']),

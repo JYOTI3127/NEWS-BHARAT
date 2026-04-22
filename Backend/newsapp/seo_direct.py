@@ -851,7 +851,7 @@ class IndexNow:
             )
             success = resp.status_code in (200, 202)
             if success:
-                logger.info(f"[SEO] IndexNow accepted {len(urls)} URL(s), status={resp.status_code}")
+                logger.warning(f"[SEO] IndexNow accepted {len(urls)} URL(s), status={resp.status_code}")
             else:
                 logger.warning(f"[SEO] IndexNow failed {resp.status_code}: {resp.text[:200]}")
             return {

@@ -54,7 +54,7 @@ def register():
 
         try:
             result = submit_article_everywhere(instance)
-            logger.info(
+            logger.warning(
                 f"[SEO Signal] '{instance.slug}' submitted | "
                 f"google={result.get('google')} | indexnow={result.get('indexnow')}"
             )

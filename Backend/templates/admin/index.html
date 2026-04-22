@@ -23,6 +23,52 @@
   box-shadow: 0 4px 20px rgba(184,1,0,0.13);
   transform: translateY(-2px);
 }
+.ad-size-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ad-page-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 7px 0 10px;
+}
+.ad-page-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+.ad-page-check input {
+  width: 14px;
+  height: 14px;
+  accent-color: #b80100;
+  flex: 0 0 auto;
+}
+.ad-page-check:has(input:checked) {
+  border-color: #f0aaa9;
+  background: #fff5f5;
+  color: #991b1b;
+}
+@media (max-width: 1180px) {
+  .ad-size-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .ad-size-grid,
+  .ad-page-checks {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 {% endblock %}
 
@@ -350,11 +396,14 @@
           <option value="{{ row.placement }}" selected>{{ row.placement }}</option>
         </select>
         <label class="hpc-field-label">Pages</label>
-        <select class="hpc-input" id="adPages_{{ row.placement }}" multiple size="4">
+        <div class="ad-page-checks" id="adPages_{{ row.placement }}">
           {% for page_key,page_label in ad_page_choices %}
-          <option value="{{ page_key }}" {% if row.banner and page_key in row.banner.target_pages %}selected{% elif page_key == 'home' and not row.banner.target_pages %}selected{% endif %}>{{ page_label }}</option>
+          <label class="ad-page-check">
+            <input type="checkbox" value="{{ page_key }}" {% if row.banner and page_key in row.banner.target_pages %}checked{% elif page_key == 'home' and not row.banner.target_pages %}checked{% endif %}>
+            <span>{{ page_label }}</span>
+          </label>
           {% endfor %}
-        </select>
+        </div>
         <div class="ad-preview ad-preview--slot" id="adPreview_{{ row.placement }}">
           {% if row.banner and row.banner.image %}<img src="{{ row.banner.image.url }}" alt="{{ row.placement }} ad">
           {% elif row.banner and row.banner.image_url %}<img src="{{ row.banner.image_url }}" alt="{{ row.placement }} ad">
@@ -511,8 +560,8 @@ function getCsrf(){var el=document.querySelector('[name=csrfmiddlewaretoken]');v
 function getActiveHomepageTab(){var panel=document.querySelector('.hpc-panel.active');return panel?panel.id.replace('hpc-',''):'hero';}
 async function saveHeroControl(){var r=await fetch('/api/homepage/hero/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({main_article_id:document.getElementById('heroMainId').value||null,overlay_article_1:document.getElementById('heroOverlay1').value||null,overlay_article_2:document.getElementById('heroOverlay2').value||null,overlay_article_3:document.getElementById('heroOverlay3').value||null})});if(!r.ok)throw new Error('Hero save failed');return r.json();}
 async function saveLatestNewsControl(){var lm=document.getElementById('lnMode').value;var r=await fetch('/api/homepage/latest_news/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({mode:lm,display_count:document.getElementById('lnCount').value,category_id:document.getElementById('lnCat').value||null,manual_ids:lm==='manual'?(document.getElementById('lnManualIds').value||'').split(',').filter(Boolean).map(Number):[]})});if(!r.ok)throw new Error('Latest news save failed');return r.json();}
-function getSelectedAdPages(placement){var el=document.getElementById('adPages_'+placement);if(!el)return['home'];var pages=Array.from(el.selectedOptions).map(function(opt){return opt.value;}).filter(Boolean);return pages.length?pages:['home'];}
-function setSelectedAdPages(placement,pages){var el=document.getElementById('adPages_'+placement);if(!el)return;pages=Array.isArray(pages)&&pages.length?pages:['home'];Array.from(el.options).forEach(function(opt){opt.selected=pages.indexOf(opt.value)!==-1;});}
+function getSelectedAdPages(placement){var el=document.getElementById('adPages_'+placement);if(!el)return['home'];var pages=Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(function(inp){return inp.value;}).filter(Boolean);return pages.length?pages:['home'];}
+function setSelectedAdPages(placement,pages){var el=document.getElementById('adPages_'+placement);if(!el)return;pages=Array.isArray(pages)&&pages.length?pages:['home'];Array.from(el.querySelectorAll('input[type="checkbox"]')).forEach(function(inp){inp.checked=pages.indexOf(inp.value)!==-1;});}
 async function saveAdBannerControl(){var afd=new FormData();document.querySelectorAll('.ad-size-card').forEach(function(card){var placement=card.dataset.placement;var af=document.getElementById('adFileInp_'+placement).files[0];afd.append('ad_link_url_'+placement,document.getElementById('adLinkUrl_'+placement).value);afd.append('ad_alt_'+placement,document.getElementById('adAlt_'+placement).value);afd.append('is_active_'+placement,document.getElementById('adActive_'+placement).checked?'true':'false');afd.append('ad_pages_'+placement,JSON.stringify(getSelectedAdPages(placement)));if(af){afd.append('ad_image_'+placement,af);}else{afd.append('ad_image_url_'+placement,document.getElementById('adImageUrl_'+placement).value);}});var r=await fetch('/api/homepage/ad_banner/',{method:'POST',headers:{'X-CSRFToken':getCsrf()},body:afd});var data=await r.json().catch(function(){return{};});if(!r.ok){throw new Error(data.error||'Ad banner save failed');}(data.banners||[]).forEach(function(b){if(b.image_url){setAdPreview(b.placement,b.image_url);var u=document.getElementById('adImageUrl_'+b.placement);if(u)u.value=b.image_url.indexOf('/media/')===-1?b.image_url:'';}var l=document.getElementById('adLinkUrl_'+b.placement);if(l)l.value=b.link_url||'';var alt=document.getElementById('adAlt_'+b.placement);if(alt)alt.value=b.alt||'Sponsored advertisement';var a=document.getElementById('adActive_'+b.placement);if(a)a.checked=!!b.stored_is_active;setSelectedAdPages(b.placement,b.target_pages);var f=document.getElementById('adFileInp_'+b.placement);if(f)f.value='';});return data;}
 async function saveHomepageControl(){var btn=document.getElementById('hpcSaveBtn');btn.classList.add('saving');btn.innerHTML='Saving…';try{var active=getActiveHomepageTab();if(active==='ad'){await saveAdBannerControl();}else if(active==='latest'){await saveLatestNewsControl();}else{await saveHeroControl();}btn.classList.remove('saving');btn.classList.add('saved');btn.innerHTML='&#10003; Saved!';setTimeout(function(){btn.classList.remove('saved');btn.innerHTML='Save Changes';},2500);}catch(e){console.error(e);btn.classList.remove('saving');btn.innerHTML='&#x2715; '+(e.message||'Error');btn.style.background='#dc2626';setTimeout(function(){btn.style.background='';btn.innerHTML='Save Changes';},3000);}}
 

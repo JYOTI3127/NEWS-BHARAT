@@ -829,24 +829,37 @@ class GoogleIndexingAPI:
 # ════════════════════════════════════════════════════════════
 
 class IndexNow:
-    ENDPOINT = "https://api.indexnow.org/indexnow"
+    ENDPOINT = getattr(settings, "SEO_INDEXNOW_ENDPOINT", "https://api.indexnow.org/indexnow")
 
     @classmethod
     def submit(cls, urls) -> dict:
         if isinstance(urls, str):
             urls = [urls]
         key  = SEO["INDEXNOW_KEY"]
-        host = SEO["SITE_URL"].replace("https://", "").replace("http://", "")
+        site_url = SEO["SITE_URL"].rstrip("/")
+        host = site_url.replace("https://", "").replace("http://", "").strip("/")
+        if not key:
+            return {"success": False, "error": "IndexNow key is missing", "urls": urls}
         try:
             resp = requests.post(
                 cls.ENDPOINT,
                 json={"host": host, "key": key,
-                      "keyLocation": f"{SEO['SITE_URL']}/{key}.txt",
+                      "keyLocation": f"{site_url}/{key}.txt",
                       "urlList": urls},
                 headers={"Content-Type": "application/json; charset=utf-8"},
                 timeout=8,
             )
-            return {"success": resp.status_code in (200, 202), "urls": urls}
+            success = resp.status_code in (200, 202)
+            if success:
+                logger.info(f"[SEO] IndexNow accepted {len(urls)} URL(s), status={resp.status_code}")
+            else:
+                logger.warning(f"[SEO] IndexNow failed {resp.status_code}: {resp.text[:200]}")
+            return {
+                "success": success,
+                "status": resp.status_code,
+                "response": resp.text[:200],
+                "urls": urls,
+            }
         except Exception as e:
             return {"success": False, "error": str(e), "urls": urls}
 

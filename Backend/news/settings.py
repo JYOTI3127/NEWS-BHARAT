@@ -205,15 +205,11 @@ CRICKET_API_KEY = os.getenv("CRICKET_API_KEY")
 
 CRONJOBS = [
     ('*/1 * * * *', 'newsapp.scheduling.publish_due_articles_cron'),
-    ('*/1 * * * *', 'newsapp.scheduling.flush_frontend_build_batch_cron'),
 ]
 
 FRONTEND_BUILD_HOOK_URL = os.environ.get("FRONTEND_BUILD_HOOK_URL", "")
 FRONTEND_BUILD_HOOK_TOKEN = os.environ.get("FRONTEND_BUILD_HOOK_TOKEN", "")
 FRONTEND_BUILD_HOOK_TIMEOUT = int(os.environ.get("FRONTEND_BUILD_HOOK_TIMEOUT", "10"))
-FRONTEND_BUILD_HOOK_DEBOUNCE_SECONDS = int(
-    os.environ.get("FRONTEND_BUILD_HOOK_DEBOUNCE_SECONDS", "120")
-)
 FRONTEND_BUILD_EVENT_PUBLISHED = os.environ.get(
     "FRONTEND_BUILD_EVENT_PUBLISHED",
     "article-published",
@@ -225,20 +221,6 @@ FRONTEND_BUILD_EVENT_UPDATED = os.environ.get(
 FRONTEND_BUILD_EVENT_FALLBACK = os.environ.get(
     "FRONTEND_BUILD_EVENT_FALLBACK",
     "rebuild-frontend",
-)
-FRONTEND_BUILD_EVENT_BATCH = os.environ.get(
-    "FRONTEND_BUILD_EVENT_BATCH",
-    FRONTEND_BUILD_EVENT_FALLBACK,
-)
-FRONTEND_BUILD_EVENT_SCHEDULED_BATCH = os.environ.get(
-    "FRONTEND_BUILD_EVENT_SCHEDULED_BATCH",
-    "rebuild-frontend",
-)
-FRONTEND_BUILD_BATCH_THRESHOLD = int(
-    os.environ.get("FRONTEND_BUILD_BATCH_THRESHOLD", "1")
-)
-FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS = int(
-    os.environ.get("FRONTEND_BUILD_BATCH_MAX_WAIT_SECONDS", "0")
 )
 
 
@@ -316,10 +298,17 @@ if GCS_JSON:
 else:
     GS_CREDENTIALS = None
 
-SEO_SITE_URL = "https://news4bharat.com"
-SEO_SITE_NAME = "news4bharat"
+SEO_SITE_URL = os.environ.get("SEO_SITE_URL", "https://news4bharat.com").rstrip("/")
+SEO_SITE_NAME = os.environ.get("SEO_SITE_NAME", "news4bharat")
 
-SEO_INDEXNOW_KEY = "abc123xyz"
+SEO_INDEXNOW_KEY = os.environ.get(
+    "SEO_INDEXNOW_KEY",
+    "67749d6ca24547f0877d3d9cab170641",
+).strip()
+SEO_INDEXNOW_ENDPOINT = os.environ.get(
+    "SEO_INDEXNOW_ENDPOINT",
+    "https://api.indexnow.org/indexnow",
+)
 
 CACHES = {
     "default": {

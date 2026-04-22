@@ -10,7 +10,7 @@ urls.py mein mount karo:
 """
 
 import json
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import get_object_or_404, redirect
 from django.core.cache import cache
@@ -72,7 +72,9 @@ def view_robots(request):
 
 
 @require_GET
-def view_indexnow_key(request):
+def view_indexnow_key(request, key=None):
+    if key and key != SEO["INDEXNOW_KEY"]:
+        raise Http404("IndexNow key not found")
     return HttpResponse(SEO["INDEXNOW_KEY"], content_type="text/plain")
 
 

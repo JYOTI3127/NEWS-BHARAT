@@ -17,6 +17,7 @@ urlpatterns = [
     path("robots.txt",           seo_views.view_robots,           name="seo_robots"),
     path("manifest.webmanifest", seo_views.view_manifest,         name="seo_manifest"),
     path("indexnow-key.txt",     seo_views.view_indexnow_key,     name="seo_indexnow_key"),
+    re_path(r"^(?P<key>[-\w]+)\.txt$", seo_views.view_indexnow_key, name="seo_indexnow_key_file"),
 
     # Sitemaps
     path("sitemap_index.xml",      seo_views.view_sitemap_index,      name="seo_sitemap_index"),

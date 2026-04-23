@@ -53,5 +53,9 @@ urlpatterns = [
     path('newsletter/subscribe/', views.subscribe_newsletter, name='newsletter_subscribe'),
     path('newsletter/history/', views.newsletter_history, name='newsletter_history'),
     path('newsletter/brevo-webhook/', views.newsletter_brevo_webhook, name='newsletter_brevo_webhook'),
+
+    # ── Web Push Notifications ──
+    path('push/subscribe/', views.save_push_subscription, name='push_subscribe'),
+    path('push/vapid-key/', views.get_vapid_public_key,   name='push_vapid_key'),
 ]
 

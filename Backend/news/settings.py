@@ -322,3 +322,9 @@ CACHES = {
         }
     }
 }
+
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "private_key.pem")
+VAPID_CLAIMS = {
+    "sub": f"mailto:{os.environ.get('VAPID_CLAIMS_EMAIL', 'news4bharat11@gmail.com')}"
+}

@@ -200,9 +200,20 @@ class Article(models.Model):
                     if update_fields is not None:
                         update_fields.add('published_at')
                         kwargs['update_fields'] = update_fields
-    
+
                     from newsapp.signals import ping_google_sitemap
                     ping_google_sitemap()
+
+                    # ── Web Push Notification ──
+                    try:
+                        from newsapp.views import send_push_to_all
+                        send_push_to_all(
+                            title=self.title[:60],
+                            body=self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
+                            url=f"https://news4bharat.com/{self.slug}/",
+                        )
+                    except Exception as e:
+                        print(f"Push notification error: {e}")
     
             if self.assigned_to and self.status != 'draft':
                 if self.assigned_to.profile.status == "suspended":
@@ -215,6 +226,20 @@ class Article(models.Model):
                 if update_fields is not None:
                     update_fields.add('published_at')
                     kwargs['update_fields'] = update_fields
+
+                from newsapp.signals import ping_google_sitemap
+                ping_google_sitemap()
+
+                # ── Web Push Notification ──
+                try:
+                    from newsapp.views import send_push_to_all
+                    send_push_to_all(
+                        title=self.title[:60],
+                        body=self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
+                        url=f"https://news4bharat.com/{self.slug}/",
+                    )
+                except Exception as e:
+                    print(f"Push notification error: {e}")
     
         self.full_clean()
         super().save(*args, **kwargs)
@@ -999,3 +1024,18 @@ class Newsletter(models.Model):
 
     def __str__(self):
         return self.email
+
+class PushSubscription(models.Model):
+    """Website visitors ke browser push notification subscriptions"""
+    endpoint = models.TextField(unique=True)
+    p256dh   = models.TextField()
+    auth     = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active  = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Push Subscription'
+        verbose_name_plural = 'Push Subscriptions'
+
+    def __str__(self):
+        return f"Subscription {self.id} - {self.endpoint[:50]}"

@@ -3509,3 +3509,88 @@ def article_detail_by_slug(request, slug):
     serializer = ArticleSerializer(article, context={'request': request})
     cache.set(cache_key, serializer.data, 300)
     return Response(serializer.data)
+
+# ── Web Push Notifications ──
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from pywebpush import webpush, WebPushException
+from .models import PushSubscription
+
+@csrf_exempt
+def save_push_subscription(request):
+    """Frontend se subscription aayegi - yahan save hogi"""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            endpoint = data.get("endpoint")
+            p256dh   = data.get("keys", {}).get("p256dh")
+            auth     = data.get("keys", {}).get("auth")
+
+            if not all([endpoint, p256dh, auth]):
+                return JsonResponse({"status": "error", "message": "Invalid data"}, status=400)
+
+            PushSubscription.objects.update_or_create(
+                endpoint=endpoint,
+                defaults={
+                    "p256dh": p256dh,
+                    "auth": auth,
+                    "is_active": True
+                }
+            )
+            return JsonResponse({"status": "success"})
+
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+    return JsonResponse({"status": "error"}, status=405)
+
+
+def get_vapid_public_key(request):
+    """Frontend ko public key deta hai"""
+    from django.conf import settings
+    return JsonResponse({
+        "public_key": settings.VAPID_PUBLIC_KEY
+    })
+
+
+def send_push_to_all(title, body, url, icon="/logo.png"):
+    """Naya article publish hone pe yeh call hoga"""
+    from django.conf import settings
+
+    subscriptions = PushSubscription.objects.filter(is_active=True)
+    
+    if not subscriptions.exists():
+        print("No subscribers found")
+        return
+
+    failed = []
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {
+                        "p256dh": sub.p256dh,
+                        "auth":   sub.auth
+                    }
+                },
+                data=json.dumps({
+                    "title": title,
+                    "body":  body,
+                    "url":   url,
+                    "icon":  icon
+                }),
+                vapid_private_key=str(settings.VAPID_PRIVATE_KEY),
+                vapid_claims=settings.VAPID_CLAIMS
+            )
+        except WebPushException as e:
+            if "410" in str(e) or "404" in str(e):
+                # Subscription expire ho gayi - inactive karo
+                sub.is_active = False
+                sub.save()
+            failed.append(sub.id)
+            print(f"Failed for sub {sub.id}: {e}")
+
+    success_count = subscriptions.count() - len(failed)
+    print(f"✅ Sent: {success_count} | ❌ Failed: {len(failed)}")

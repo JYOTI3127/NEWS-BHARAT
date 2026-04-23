@@ -166,7 +166,18 @@ class Article(models.Model):
     
         if is_update:
             old_article = Article.objects.get(pk=self.pk)
-    
+            pushworthy_update = (
+                old_article.title != self.title or
+                old_article.subtitle != self.subtitle or
+                old_article.content != self.content or
+                old_article.meta_description != self.meta_description or
+                old_article.image != self.image or
+                old_article.image_url != self.image_url or
+                old_article.image_alt != self.image_alt or
+                old_article.primary_category_id != self.primary_category_id or
+                old_article.slug != self.slug
+            )
+     
             # Versioning Logic (Content Change)
             if (
                 old_article.title    != self.title or
@@ -214,7 +225,20 @@ class Article(models.Model):
                         )
                     except Exception as e:
                         print(f"Push notification error: {e}")
-    
+
+            elif old_article.status == "published" and self.status == "published" and pushworthy_update:
+                try:
+                    from newsapp.views import send_push_to_all
+                    from newsapp.seo_direct import article_url
+
+                    send_push_to_all(
+                        title=f"Updated: {self.title[:51]}" if len(self.title) > 51 else f"Updated: {self.title}",
+                        body=self.meta_description[:100] if self.meta_description else "Article update ho gaya hai. Latest version padhein.",
+                        url=article_url(self, "https://news4bharat.com"),
+                    )
+                except Exception as e:
+                    print(f"Push notification error: {e}")
+     
             if self.assigned_to and self.status != 'draft':
                 if self.assigned_to.profile.status == "suspended":
                     raise ValidationError("This reporter is suspended.")
@@ -373,6 +397,7 @@ class HomepageSlot(models.Model):
         blank=True,
         related_name='homepage_manual_slots'
     )
+    manual_order = models.JSONField(default=list, blank=True)
 
     ad_image = models.ImageField(upload_to='homepage_ads/', blank=True, null=True)
     ad_image_url = models.URLField(blank=True, default='')

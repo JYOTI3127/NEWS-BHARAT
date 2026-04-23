@@ -316,22 +316,41 @@
 
   <!-- LATEST NEWS TAB -->
   <div class="hpc-panel" id="hpc-latest">
+    <div class="ln-shell">
+      <div class="ln-topbar">
+        <div>
+          <div class="ln-eyebrow">Homepage feed curation</div>
+          <div class="ln-title">Latest News Layout</div>
+        </div>
+        <div class="ln-summary">
+          <div class="ln-summary-chip">
+            <span class="ln-summary-label">Mode</span>
+            <span class="ln-summary-value" id="lnModeSummary">{% if latest_slot and latest_slot.mode == 'manual' %}Manual{% else %}Auto{% endif %}</span>
+          </div>
+          <div class="ln-summary-chip">
+            <span class="ln-summary-label">Count</span>
+            <span class="ln-summary-value" id="lnCountSummary">{% if latest_slot %}{{ latest_slot.display_count }}{% else %}4{% endif %}</span>
+          </div>
+        </div>
+      </div>
     <div class="ln-mode-row">
       <button class="ln-mode-btn {% if not latest_slot or latest_slot.mode == 'auto' %}active{% endif %}" id="lnBtnAuto" onclick="setLnMode('auto')">Auto — latest published</button>
       <button class="ln-mode-btn {% if latest_slot and latest_slot.mode == 'manual' %}active{% endif %}" id="lnBtnManual" onclick="setLnMode('manual')">Manual — I choose</button>
+    </div>
+    <div class="ln-row">
+      <label>Show how many:</label>
+      <select class="ln-select" id="lnCount" onchange="syncLnSlotsCount()">
+        <option value="4" {% if not latest_slot or latest_slot.display_count == 4 %}selected{% endif %}>4 articles</option>
+        <option value="6" {% if latest_slot and latest_slot.display_count == 6 %}selected{% endif %}>6 articles</option>
+        <option value="8" {% if latest_slot and latest_slot.display_count == 8 %}selected{% endif %}>8 articles</option>
+        <option value="10" {% if latest_slot and latest_slot.display_count == 10 %}selected{% endif %}>10 articles</option>
+        <option value="12" {% if latest_slot and latest_slot.display_count == 12 %}selected{% endif %}>12 articles</option>
+      </select>
     </div>
     <div id="lnAutoBlock" style="{% if latest_slot and latest_slot.mode == 'manual' %}display:none{% endif %}">
       <div class="ln-auto-info">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         Latest published articles automatically fill this section. Just publish and it updates.
-      </div>
-      <div class="ln-row">
-        <label>Show how many:</label>
-        <select class="ln-select" id="lnCount">
-          <option value="4" {% if not latest_slot or latest_slot.display_count == 4 %}selected{% endif %}>4 articles</option>
-          <option value="6" {% if latest_slot and latest_slot.display_count == 6 %}selected{% endif %}>6 articles</option>
-          <option value="8" {% if latest_slot and latest_slot.display_count == 8 %}selected{% endif %}>8 articles</option>
-        </select>
       </div>
       <div class="ln-row">
         <label>Filter by category:</label>
@@ -344,23 +363,19 @@
       </div>
     </div>
     <div id="lnManualBlock" style="{% if not latest_slot or latest_slot.mode != 'manual' %}display:none{% endif %}">
-      <div class="ln-manual-list" id="lnManualList">
-        {% if latest_slot and latest_slot.mode == 'manual' and latest_slot.manual_articles.exists %}
-          {% for art in latest_slot.manual_articles.all %}
-          <div class="ln-manual-item">
-            <div class="ln-num">{{ forloop.counter }}</div>
-            <div class="ln-item-title">{{ art.title|truncatechars:60 }}</div>
-            <button class="ln-remove" onclick="removeLn({{ art.pk }})">Remove</button>
-          </div>
-          {% endfor %}
-        {% else %}
-          <div style="font-size:11px;color:#94a3b8;padding:4px 0">No articles selected yet.</div>
-        {% endif %}
+      <div class="ln-auto-info" style="margin-bottom:12px">
+        Choose exactly the articles you want. The number of slots follows the selected article count above.
       </div>
-      <button class="ln-add-btn" onclick="openLnPicker()">+ Add article</button>
+      <div class="ln-manual-head">
+        <div class="ln-manual-title-wrap">
+          <div class="ln-manual-title">Manual slot selection</div>
+          <div class="ln-manual-subtitle">Each slot appears in the same order on frontend.</div>
+        </div>
+      </div>
+      <div class="ln-manual-list" id="lnManualList"></div>
       <div class="picker-wrap" id="lnPickerWrap" style="margin-top:10px">
         <div class="picker-head">
-          <span class="picker-head-title">Add to Latest News</span>
+          <span class="picker-head-title" id="lnPickerTitle">Add to Latest News</span>
           <button class="picker-close" onclick="closeLnPicker()">Close</button>
         </div>
         <div class="picker-box">
@@ -374,6 +389,7 @@
     </div>
     <input type="hidden" id="lnMode"      value="{% if latest_slot %}{{ latest_slot.mode }}{% else %}auto{% endif %}">
     <input type="hidden" id="lnManualIds" value="{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_slot.manual_articles.all %}{{ art.pk }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+    </div>
   </div>
 
   <!-- AD BANNER TAB -->
@@ -529,7 +545,8 @@
 
 <script>
 var HPC_ARTICLES=[{% for a in published_articles_for_picker %}{id:{{a.pk}},title:"{{a.title|escapejs}}",cat:"{% if a.categories.first %}{{a.categories.first.name|escapejs}}{% endif %}",image:"{% if a.image %}{{a.image.url}}{% elif a.image_url %}{{a.image_url}}{% endif %}",date:"{{a.published_at|date:'M d, Y'|default:a.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% empty %}{% endfor %}];
-var lnArticles=[{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_slot.manual_articles.all %}{id:{{art.pk}},title:"{{art.title|escapejs}}"}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
+var lnArticles=[{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_manual_articles %}{id:{{art.pk}},title:"{{art.title|escapejs}}",cat:"{% if art.categories.first %}{{art.categories.first.name|escapejs}}{% endif %}",image:"{% if art.image %}{{art.image.url}}{% elif art.image_url %}{{art.image_url}}{% endif %}",date:"{{art.published_at|date:'M d, Y'|default:art.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
+var _lnPickerSlotIndex=0;
 
 function hpcTab(btn,id){document.querySelectorAll('.hpc-tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.hpc-panel').forEach(function(p){p.classList.remove('active');});btn.classList.add('active');document.getElementById('hpc-'+id).classList.add('active');}
 
@@ -541,13 +558,23 @@ function renderPicker(q){var list=document.getElementById('pickerList');var f=HP
 function selectHeroArticle(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;if(_pickerTarget==='hero_main'){document.getElementById('heroMainId').value=id;var slot=document.getElementById('heroMainSlot');var ih=art.image?'<img class="hero-img" src="'+art.image+'" alt="">':'<div class="hero-slot-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No image</p></div>';slot.innerHTML=ih+'<div class="hero-overlay"><div class="hero-overlay-cat">'+(art.cat||'')+'</div><div class="hero-overlay-title">'+art.title.substring(0,80)+'</div></div><button class="hero-change-btn" onclick="openPicker(\'hero_main\')">Change</button>';slot.classList.add('filled');}else{var n=_pickerTarget.replace('overlay_','');document.getElementById('heroOverlay'+n).value=id;var te=document.getElementById('overlayTitle'+n);te.textContent=art.title.substring(0,42);te.classList.remove('empty');document.getElementById('overlayMeta'+n).textContent=(art.cat||'—');}closePicker();}
 function clearOverlay(e,n){e.stopPropagation();document.getElementById('heroOverlay'+n).value='';var t=document.getElementById('overlayTitle'+n);t.textContent='— Select article';t.classList.add('empty');document.getElementById('overlayMeta'+n).textContent='Click to pick';}
 
-function setLnMode(mode){document.getElementById('lnMode').value=mode;if(mode==='auto'){document.getElementById('lnBtnAuto').classList.add('active');document.getElementById('lnBtnManual').classList.remove('active');document.getElementById('lnAutoBlock').style.display='';document.getElementById('lnManualBlock').style.display='none';}else{document.getElementById('lnBtnAuto').classList.remove('active');document.getElementById('lnBtnManual').classList.add('active');document.getElementById('lnAutoBlock').style.display='none';document.getElementById('lnManualBlock').style.display='';renderLnList();}}
+function refreshLnSummary(){var modeEl=document.getElementById('lnModeSummary');var countEl=document.getElementById('lnCountSummary');if(modeEl)modeEl.textContent=document.getElementById('lnMode').value==='manual'?'Manual':'Auto';if(countEl)countEl.textContent=document.getElementById('lnCount').value||'4';}
+function setLnMode(mode){document.getElementById('lnMode').value=mode;if(mode==='auto'){document.getElementById('lnBtnAuto').classList.add('active');document.getElementById('lnBtnManual').classList.remove('active');document.getElementById('lnAutoBlock').style.display='';document.getElementById('lnManualBlock').style.display='none';}else{document.getElementById('lnBtnAuto').classList.remove('active');document.getElementById('lnBtnManual').classList.add('active');document.getElementById('lnAutoBlock').style.display='none';document.getElementById('lnManualBlock').style.display='';renderLnList();}refreshLnSummary();}
 function renderLnList(){var list=document.getElementById('lnManualList');if(!lnArticles.length){list.innerHTML='<div style="font-size:11px;color:#94a3b8;padding:4px 0">No articles selected yet.</div>';return;}list.innerHTML=lnArticles.map(function(a,i){return'<div class="ln-manual-item"><div class="ln-num">'+(i+1)+'</div><div class="ln-item-title">'+a.title+'</div><button class="ln-remove" onclick="removeLn('+a.id+')">Remove</button></div>';}).join('');document.getElementById('lnManualIds').value=lnArticles.map(function(a){return a.id;}).join(',');}
 function removeLn(id){lnArticles=lnArticles.filter(function(a){return a.id!==id;});renderLnList();}
 function openLnPicker(){document.getElementById('lnPickerWrap').classList.add('open');document.getElementById('lnSearchInp').value='';renderLnPicker('');}
 function closeLnPicker(){document.getElementById('lnPickerWrap').classList.remove('open');}
 function renderLnPicker(q){var list=document.getElementById('lnPickerList');var sids=lnArticles.map(function(a){return a.id;});var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var sel=sids.indexOf(a.id)!==-1;var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';var btn=sel?'<button class="picker-sel-btn" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5" onclick="removeLn('+a.id+');renderLnPicker(document.getElementById(\'lnSearchInp\').value);event.stopPropagation()">Remove</button>':'<button class="picker-sel-btn" onclick="addLn('+a.id+');event.stopPropagation()">Add</button>';return'<div class="picker-item'+(sel?' selected':'')+'"><div class="picker-thumb">'+th+'</div><div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'—')+' · '+a.date+'</div></div>'+btn+'</div>';}).join('');}
 function addLn(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art||lnArticles.find(function(a){return a.id===id;}))return;lnArticles.push(art);renderLnList();renderLnPicker(document.getElementById('lnSearchInp').value);}
+
+// Latest News manual mode overrides: fixed slots based on selected count.
+function syncLnSlotsCount(){var count=parseInt(document.getElementById('lnCount').value||'4',10)||4;lnArticles=lnArticles.filter(Boolean).slice(0,count);while(lnArticles.length<count)lnArticles.push(null);document.getElementById('lnManualIds').value=lnArticles.filter(Boolean).map(function(a){return a.id;}).join(',');refreshLnSummary();if(document.getElementById('lnMode').value==='manual')renderLnList();}
+function renderLnList(){var list=document.getElementById('lnManualList');if(!list)return;var count=parseInt(document.getElementById('lnCount').value||'4',10)||4;if(!lnArticles.length)syncLnSlotsCount();list.innerHTML=Array.from({length:count}).map(function(_,i){var a=lnArticles[i];return'<div class="ln-manual-item"><div class="ln-num">'+(i+1)+'</div><div class="ln-item-main"><div class="ln-item-title'+(a?'':' empty')+'">'+(a?a.title:'Select article for slot '+(i+1))+'</div>'+(a?'<div class="ln-item-meta">'+(a.cat||'General')+' · '+a.date+'</div>':'<div class="ln-item-meta empty">No article selected yet</div>')+'</div><div class="ln-item-actions"><button class="ln-remove" onclick="openLnPicker('+i+')">'+(a?'Change':'Select')+'</button>'+(a?'<button class="ln-remove ln-remove-danger" onclick="removeLn('+i+')">Clear</button>':'')+'</div></div>';}).join('');document.getElementById('lnManualIds').value=lnArticles.filter(Boolean).map(function(a){return a.id;}).join(',');refreshLnSummary();}
+function removeLn(index){lnArticles[index]=null;renderLnList();}
+function openLnPicker(index){_lnPickerSlotIndex=index||0;var title=document.getElementById('lnPickerTitle');if(title)title.textContent='Select article for slot '+(_lnPickerSlotIndex+1);document.getElementById('lnPickerWrap').classList.add('open');document.getElementById('lnSearchInp').value='';renderLnPicker('');}
+function renderLnPicker(q){var list=document.getElementById('lnPickerList');var sids=lnArticles.map(function(a){return a&&a.id;});var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var sel=sids.indexOf(a.id)!==-1;var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';var btn=sel?'<button class="picker-sel-btn" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5" onclick="removeLnById('+a.id+');renderLnPicker(document.getElementById(\'lnSearchInp\').value);event.stopPropagation()">Remove</button>':'<button class="picker-sel-btn" onclick="addLn('+a.id+');event.stopPropagation()">Select</button>';return'<div class="picker-item'+(sel?' selected':'')+'"><div class="picker-thumb">'+th+'</div><div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'â€”')+' Â· '+a.date+'</div></div>'+btn+'</div>';}).join('');}
+function removeLnById(id){lnArticles=lnArticles.map(function(a){return a&&a.id===id?null:a;});renderLnList();}
+function addLn(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;lnArticles=lnArticles.map(function(a){return a&&a.id===id?null:a;});lnArticles[_lnPickerSlotIndex]=art;renderLnList();closeLnPicker();}
 
 function adPlaceholder(placement,msg){return'<div class="ad-preview-ph"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>'+(msg||('No '+placement+' ad set'))+'</p></div>';}
 function setAdPreview(placement,url,msg){var box=document.getElementById('adPreview_'+placement);if(!box)return;if(url){box.innerHTML='<img src="'+url+'" style="max-width:100%;max-height:120px">';}else{box.innerHTML=adPlaceholder(placement,msg);}}
@@ -566,6 +593,7 @@ async function saveAdBannerControl(){var afd=new FormData();document.querySelect
 async function saveHomepageControl(){var btn=document.getElementById('hpcSaveBtn');btn.classList.add('saving');btn.innerHTML='Saving…';try{var active=getActiveHomepageTab();if(active==='ad'){await saveAdBannerControl();}else if(active==='latest'){await saveLatestNewsControl();}else{await saveHeroControl();}btn.classList.remove('saving');btn.classList.add('saved');btn.innerHTML='&#10003; Saved!';setTimeout(function(){btn.classList.remove('saved');btn.innerHTML='Save Changes';},2500);}catch(e){console.error(e);btn.classList.remove('saving');btn.innerHTML='&#x2715; '+(e.message||'Error');btn.style.background='#dc2626';setTimeout(function(){btn.style.background='';btn.innerHTML='Save Changes';},3000);}}
 
 document.addEventListener('DOMContentLoaded',function(){
+  syncLnSlotsCount();
   var now=new Date();function fmt(d){return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
   var ago=new Date(now);ago.setMonth(now.getMonth()-3);
   var dr=document.getElementById('currentDateRange');if(dr)dr.textContent=fmt(ago)+' – '+fmt(now);

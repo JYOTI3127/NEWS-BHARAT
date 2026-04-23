@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models import F
+from django.db.models import Case, When, IntegerField
 from datetime import datetime, timedelta
 import requests
 from django.conf import settings
@@ -981,6 +982,13 @@ def dashboard_view(request):
     except Exception:
         latest_slot = None
 
+    latest_manual_articles = []
+    if latest_slot and latest_slot.mode == 'manual':
+        try:
+            latest_manual_articles = list(_ordered_slot_manual_articles(latest_slot))
+        except Exception:
+            latest_manual_articles = []
+
     try:
         ad_slot = HomepageSlot.objects.filter(slot_name='ad_banner').first()
     except Exception:
@@ -1041,6 +1049,7 @@ def dashboard_view(request):
         "issues_fact_checks":            issues_fact_checks,
         "hero_slot":                     hero_slot,
         "latest_slot":                   latest_slot,
+        "latest_manual_articles":        latest_manual_articles,
         "ad_slot":                       ad_slot,
         "ad_banner_rows":                ad_banner_rows,
         "ad_page_choices":               HomepageAdBanner.PAGE_CHOICES,
@@ -1061,6 +1070,58 @@ def _get_or_create_slot(slot_name):
         defaults={'mode': 'auto', 'is_active': True}
     )
     return slot
+
+
+def _normalize_latest_manual_ids(raw_ids, max_count):
+    if not isinstance(raw_ids, list):
+        return []
+
+    cleaned = []
+    for raw_id in raw_ids:
+        try:
+            article_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if article_id not in cleaned:
+            cleaned.append(article_id)
+        if len(cleaned) >= max_count:
+            break
+    return cleaned
+
+
+def _ordered_slot_manual_articles(slot):
+    manual_order = [
+        article_id for article_id in (getattr(slot, 'manual_order', []) or [])
+        if isinstance(article_id, int)
+    ]
+    if not manual_order:
+        return Article.objects.none()
+
+    preserved_order = Case(
+        *[When(pk=article_id, then=position) for position, article_id in enumerate(manual_order)],
+        output_field=IntegerField(),
+    )
+    return (
+        Article.objects.filter(pk__in=manual_order, status='published')
+        .select_related('author', 'primary_category')
+        .prefetch_related('categories')
+        .order_by(preserved_order)
+    )
+
+
+def _latest_news_queryset(slot):
+    count = max(1, min(int(getattr(slot, 'display_count', 4) or 4), 12))
+    if slot.mode == 'manual':
+        return _ordered_slot_manual_articles(slot)[:count]
+
+    queryset = (
+        Article.objects.filter(status='published')
+        .select_related('author', 'primary_category')
+        .prefetch_related('categories')
+    )
+    if getattr(slot, 'category_filter_id', None):
+        queryset = queryset.filter(categories=slot.category_filter_id)
+    return queryset.order_by('-updated_at', '-published_at', '-created_at')[:count]
 
 
 def _normalize_ad_target_pages(raw_pages):
@@ -1127,27 +1188,54 @@ def update_latest_news_slot(request):
     slot.mode = mode
 
     try:
-        slot.display_count = int(data.get('display_count', 4))
+        slot.display_count = max(1, min(int(data.get('display_count', 4)), 12))
     except (ValueError, TypeError):
         slot.display_count = 4
 
     cat_id = data.get('category_id')
     slot.category_filter = Category.objects.filter(pk=cat_id).first() if cat_id else None
 
+    manual_ids = _normalize_latest_manual_ids(data.get('manual_ids', []), slot.display_count)
+    slot.manual_order = manual_ids if mode == 'manual' else []
     slot.save()
 
     if mode == 'manual':
-        manual_ids = data.get('manual_ids', [])
-        if isinstance(manual_ids, list):
-            slot.manual_articles.set(
-                Article.objects.filter(pk__in=manual_ids, status='published')
-            )
-        else:
-            slot.manual_articles.clear()
+        slot.manual_articles.set(
+            Article.objects.filter(pk__in=manual_ids, status='published')
+        )
     else:
         slot.manual_articles.clear()
 
     return JsonResponse({'status': 'saved', 'slot': 'latest_news'})
+
+
+@require_GET
+def homepage_latest_news_current(request):
+    slot = (
+        HomepageSlot.objects.filter(slot_name='latest_news')
+        .select_related('category_filter')
+        .first()
+    )
+    if not slot:
+        slot = _get_or_create_slot('latest_news')
+
+    articles = _latest_news_queryset(slot)
+    serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})
+    return JsonResponse({
+        'slot': 'latest_news',
+        'mode': slot.mode,
+        'display_count': slot.display_count,
+        'category': (
+            {
+                'id': slot.category_filter_id,
+                'name': slot.category_filter.name,
+                'slug': slot.category_filter.slug,
+            }
+            if slot.category_filter_id else None
+        ),
+        'manual_order': list(getattr(slot, 'manual_order', []) or []),
+        'articles': serializer.data,
+    })
 
 
 def _serialize_homepage_ad_banner(request, banner):

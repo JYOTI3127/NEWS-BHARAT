@@ -46,6 +46,7 @@ urlpatterns = [
     path('settings/tag-creation-perm/', views.save_tag_creation_perm, name='save_tag_perm'),
     path('homepage/hero/',        views.update_hero_slot,        name='hp_hero'),
     path('homepage/latest_news/', views.update_latest_news_slot, name='hp_latest'),
+    path('homepage/latest_news/current/', views.homepage_latest_news_current, name='hp_latest_current'),
     path('homepage/ad_banner/',   views.update_ad_slot,          name='hp_ad'),
     path('homepage/ad_banner/current/', views.homepage_ad_banner, name='hp_ad_current'),
     path('admin/media-library/', media_library_view, name='admin_media_library'),

@@ -166,16 +166,14 @@ class Article(models.Model):
     
         if is_update:
             old_article = Article.objects.get(pk=self.pk)
-            pushworthy_update = (
-                old_article.title != self.title or
-                old_article.subtitle != self.subtitle or
-                old_article.content != self.content or
-                old_article.meta_description != self.meta_description or
-                old_article.image != self.image or
-                old_article.image_url != self.image_url or
-                old_article.image_alt != self.image_alt or
-                old_article.primary_category_id != self.primary_category_id or
-                old_article.slug != self.slug
+            pushworthy_update = any(
+                getattr(old_article, field.attname) != getattr(self, field.attname)
+                for field in self._meta.concrete_fields
+                if field.attname not in {
+                    'id',
+                    'created_at',
+                    'updated_at',
+                }
             )
      
             # Versioning Logic (Content Change)

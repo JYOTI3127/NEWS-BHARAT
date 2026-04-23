@@ -5,10 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 
 import {
   BarChart2, Search, Mic, Menu, X, Radio, FileText,
-  TrendingUp, TrendingDown, ChevronDown, Flame, Globe,
+  TrendingUp, ChevronDown, Flame, Globe,
   Trophy, Cpu, Film, Heart, PenLine, Zap, GraduationCap,
   Leaf, Video, Camera, MoreHorizontal, Newspaper, CloudSun,
+  Bell, CalendarDays, Clock3, Languages, Linkedin, Instagram, Youtube,
 } from "lucide-react";
+
 import "../Navbar.css";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
@@ -42,7 +44,7 @@ const LiveClock = memo(() => {
 // Utilities — same as before
 // ─────────────────────────────────────────────
 const deferNonCritical = (callback, timeout = 1200) => {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === "undefined") return () => { };
   if ("requestIdleCallback" in window) {
     const id = window.requestIdleCallback(callback, { timeout });
     return () => window.cancelIdleCallback?.(id);
@@ -51,28 +53,59 @@ const deferNonCritical = (callback, timeout = 1200) => {
   return () => window.clearTimeout(id);
 };
 
+const getWeatherTemperature = (weather) => {
+  const candidates = [
+    weather?.temperature,
+    weather?.temp,
+    weather?.temp_c,
+    weather?.current?.temperature,
+    weather?.current?.temp,
+    weather?.current?.temp_c,
+    weather?.main?.temp,
+  ];
+
+  const value = candidates.map(Number).find(Number.isFinite);
+  if (!Number.isFinite(value)) return "";
+  return `${Math.round(value)}°C`;
+};
+
+const getWeatherCity = (weather) =>
+  weather?.city ||
+  weather?.name ||
+  weather?.location?.name ||
+  weather?.location?.city ||
+  "Delhi";
+
+const getWeatherCondition = (weather) =>
+  weather?.condition ||
+  weather?.weather ||
+  weather?.current?.condition?.text ||
+  weather?.current?.weather ||
+  weather?.description ||
+  "";
+
 const CATEGORY_ICON_MAP = {
-  "Breaking News":             Flame,
-  "World News":                Globe,
-  "Business":                  TrendingUp,
-  "Technology":                Cpu,
-  "Sports":                    Trophy,
-  "Entertainment":             Film,
-  "Health":                    Heart,
-  "Education":                 GraduationCap,
-  "Automobile":                Video,
-  "National":                  Globe,
-  "Political":                 PenLine,
-  "States of Bharat":          Globe,
-  "Bharat's BFSI":             BarChart2,
-  "Bharat in Numbers":         BarChart2,
-  "Bharat Opinions":           PenLine,
-  "Bharat's Startups":         Zap,
-  "Bharat 2047":               Flame,
-  "Bharat By 2047":            Flame,
-  "Artificial Intelligence":   Cpu,
-  "Trending":                  TrendingUp,
-  "60-Second Read":            Zap,
+  "Breaking News": Flame,
+  "World News": Globe,
+  "Business": TrendingUp,
+  "Technology": Cpu,
+  "Sports": Trophy,
+  "Entertainment": Film,
+  "Health": Heart,
+  "Education": GraduationCap,
+  "Automobile": Video,
+  "National": Globe,
+  "Political": PenLine,
+  "States of Bharat": Globe,
+  "Bharat's BFSI": BarChart2,
+  "Bharat in Numbers": BarChart2,
+  "Bharat Opinions": PenLine,
+  "Bharat's Startups": Zap,
+  "Bharat 2047": Flame,
+  "Bharat By 2047": Flame,
+  "Artificial Intelligence": Cpu,
+  "Trending": TrendingUp,
+  "60-Second Read": Zap,
 };
 
 const FALLBACK_ICONS = [
@@ -104,9 +137,9 @@ const makeSlug = (slug, label) => {
 
 const SLUG_OVERRIDES = {
   "bharat-in-numbers": "bharat-in-numbers",
-  "states-of-bharat":  "state-of-bharat",
-  "bharats-startups":  "bharat-startups",
-  "breaking-news":     "breaking-news",
+  "states-of-bharat": "state-of-bharat",
+  "bharats-startups": "bharat-startups",
+  "breaking-news": "breaking-news",
 };
 
 const getFinalSlug = (slug, label) => {
@@ -117,7 +150,7 @@ const getFinalSlug = (slug, label) => {
 const getSearchResultHref = (item) => {
   const articlePath = getArticlePath(item);
   if (articlePath) return articlePath;
-  if (item?.url)  return item.url;
+  if (item?.url) return item.url;
   if (item?.link) return item.link;
   return "#";
 };
@@ -147,7 +180,7 @@ const stripHtml = (value) => {
 };
 
 const getSearchPreview = (item) => {
-  const raw     = item?.description || item?.summary || item?.excerpt || "";
+  const raw = item?.description || item?.summary || item?.excerpt || "";
   const cleaned = stripHtml(raw);
   if (!cleaned) return "";
   const trimmed = cleaned.slice(0, 110).trim();
@@ -192,34 +225,38 @@ const NAV_SECTIONS = [
     Icon: TrendingUp,
     slug: "bharat-economy",
     subcategories: [
-      { label: "Macro Economy",           topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"] },
-      { label: "Government Policy",       topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"] },
-      { label: "Industry & Sectors",      topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"] },
-      { label: "Corporate & Companies",   topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"] },
+      { label: "Macro Economy", topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"] },
+      { label: "Government Policy", topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"] },
+      { label: "Industry & Sectors", topics: ["Manufacturing", "Agriculture", "Rural Economy", "Infrastructure & Construction", "Energy & Power", "Telecom & Digital"] },
+      { label: "Corporate & Companies", topics: ["Corporate News", "Mergers & Acquisitions", "Company Results", "Business Leaders & Interviews"] },
       { label: "MSME & Entrepreneurship", topics: ["MSME Policies", "Small Business Stories"] },
     ],
   },
-  { label: "Bharat's BFSI",          slug: "bfsi",            Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
-  { label: "Bharat Opinions",         slug: "bharat-opinions", Icon: PenLine,   links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
-  { label: "Technology",              slug: "technology",      Icon: Cpu },
-  { label: "Artificial Intelligence", slug: "ai",              Icon: Cpu },
-  { label: "Bharat By 2047",          slug: "bharat-2047",     Icon: Flame },
+  { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
+  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Technology", slug: "technology", Icon: Cpu },
+  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
+  { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
 ];
 
 const navLinks = [
   { label: "Breaking News", path: "/category/breaking-news" },
   { label: "World News", path: "/category/world-news" },
   { label: "Business", path: "/category/bharat-economy" },
+  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
+  { label: "Bharat Numbers", path: "/category/bharat-in-numbers" },
   { label: "Technology", path: "/category/technology" },
   { label: "Sports", path: "/category/sports" },
-  { label: "Entertainment", path: "/category/entertainment" },
   { label: "Health", path: "/category/health" },
+  { label: "Entertainment", path: "/category/entertainment" },
   { label: "Education", path: "/category/education" },
   { label: "Automobile", path: "/category/automobile" },
   { label: "National", path: "/category/national" },
   { label: "Political", path: "/category/politics" },
   { label: "Trending", path: "/category/trending" },
 ];
+
+const DESKTOP_VISIBLE_NAV_COUNT = 8;
 
 const uniqueNavLinksByPath = (links) => {
   const seen = new Set();
@@ -246,65 +283,6 @@ const LogoScroll = memo(() => (
   <div className="logo-scroll">
     <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
-));
-
-// ─────────────────────────────────────────────
-// ✅ FIX 3: TickerContent — bahar + memo + props se data
-// Pehle: Header ke andar tha → har Navbar render pe naya function
-// Ab: Bahar + memo → sirf tab re-render jab market data change ho
-// ─────────────────────────────────────────────
-const TickerContent = memo(({ sensexPrice, sensexChange, sensexTrend, niftyPrice, niftyChange, niftyTrend, goldPrice, goldChange, silverPrice, silverChange }) => (
-  <>
-    <span className="ticker-item">
-      Sensex&nbsp;<strong>{sensexPrice ? Number(sensexPrice).toLocaleString("en-IN") : "..."}</strong>
-      {sensexChange !== null && (
-        <span className={sensexTrend === "up" ? "up" : "down"}>
-          {sensexTrend === "up" ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {sensexTrend === "up" ? "+" : "-"}{Math.abs(sensexChange)}
-        </span>
-      )}
-    </span>
-    <span className="ticker-sep">|</span>
-    <span className="ticker-item">
-      Nifty 50&nbsp;<strong>{niftyPrice ? Number(niftyPrice).toLocaleString("en-IN") : "..."}</strong>
-      {niftyChange !== null && (
-        <span className={niftyTrend === "up" ? "up" : "down"}>
-          {niftyTrend === "up" ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {niftyTrend === "up" ? "+" : "-"}{Math.abs(niftyChange)}
-        </span>
-      )}
-    </span>
-    <span className="ticker-sep">|</span>
-    <span className="ticker-item">
-      USD/INR&nbsp;<strong>83.42</strong>
-      <span className="down"><TrendingDown size={11} /> -0.05</span>
-    </span>
-    <span className="ticker-sep">|</span>
-    <span className="ticker-item commodity gold">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="#c8a400"><circle cx="12" cy="12" r="10" /></svg>
-      GOLD
-      {goldPrice && <strong className="ml-[2px]">₹{Number(goldPrice).toLocaleString("en-IN")}</strong>}
-      {goldChange !== null && (
-        <span className={goldChange >= 0 ? "up" : "down"}>
-          {goldChange >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {goldChange >= 0 ? "+" : ""}{goldChange}%
-        </span>
-      )}
-    </span>
-    <span className="ticker-sep">|</span>
-    <span className="ticker-item commodity silver">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="#aaaaaa"><circle cx="12" cy="12" r="10" /></svg>
-      SILVER
-      {silverPrice && <strong className="ml-[2px]">₹{Number(silverPrice).toLocaleString("en-IN")}</strong>}
-      {silverChange !== null && (
-        <span className={silverChange >= 0 ? "up" : "down"}>
-          {silverChange >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {silverChange >= 0 ? "+" : ""}{silverChange}%
-        </span>
-      )}
-    </span>
-    <span className="ticker-sep mr-0">|</span>
-  </>
 ));
 
 // ─────────────────────────────────────────────
@@ -345,66 +323,67 @@ const useIsMobile = () => {
 // Main Header Component
 // ─────────────────────────────────────────────
 const Header = () => {
-  const [isScrolled, setIsScrolled]               = useState(false);
-  const [isOpen, setIsOpen]                       = useState(false);
-  const [expandedSection, setExpandedSection]     = useState(null);
-  const [expandedSubcat, setExpandedSubcat]       = useState(null);
-  const [navSections, setNavSections]             = useState(NAV_SECTIONS);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedSubcat, setExpandedSubcat] = useState(null);
+  const [navSections, setNavSections] = useState(NAV_SECTIONS);
   const [navSectionsLoaded, setNavSectionsLoaded] = useState(false);
-
-  const [_weather, setWeather]  = useState(null);
-  const [metals, setMetals]     = useState(null);
-  const [markets, setMarkets]   = useState(null);
+  const [weather, setWeather] = useState(null);
 
   // ✅ FIX: date alag state — time LiveClock handle karega
-  const [_date, setDate] = useState(
+  const [date, setDate] = useState(
     () => new Date().toLocaleDateString("en-IN", {
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     })
   );
 
-  const [searchQuery, setSearchQuery]     = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching]     = useState(false);
-  const [showResults, setShowResults]     = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [categorySearchResults, setCategorySearchResults] = useState([]);
   const [isCategorySearching, setIsCategorySearching] = useState(false);
   const [showCategoryResults, setShowCategoryResults] = useState(false);
-  const [headerHeight, setHeaderHeight]   = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [showMoreNav, setShowMoreNav] = useState(false);
 
   // ✅ Hooks — clean
   const isMobile = useIsMobile();
-  const is2K     = useIs2K();
+  const is2K = useIs2K();
 
-  const searchRef               = useRef(null);
-  const drawerSearchRef         = useRef(null);
-  const searchDebounceRef       = useRef(null);
+  const searchRef = useRef(null);
+  const drawerSearchRef = useRef(null);
+  const searchDebounceRef = useRef(null);
   const categorySearchDebounceRef = useRef(null);
   const categorySearchRequestRef = useRef(0);
-  const headerRef               = useRef(null);
+  const headerRef = useRef(null);
   const measuredHeaderHeightRef = useRef(0);
-  const navigate                = useNavigate();
+  const navMoreRef = useRef(null);
+  const navigate = useNavigate();
 
   const extra2KNavLinks = [
-    { label: "AI",                 path: "/category/ai" },
-    { label: "Bharat Explainers",  path: "/category/bharat-explainers" },
-    { label: "Bharat Numbers",     path: "/category/bharat-in-numbers" },
-    { label: "Bharat Startups",    path: "/category/bharat-startups" },
-    { label: "BFSI",               path: "/category/bfsi" },
-    { label: "Bharat 2047",        path: "/category/bharat-2047" },
-    { label: "Opinions",           path: "/category/bharat-opinions" },
-    { label: "States",             path: "/category/state-of-bharat" },
-    { label: "60 Sec Read",        path: "/category/60-second-read" },
+    { label: "AI", path: "/category/ai" },
+    { label: "Bharat Explainers", path: "/category/bharat-explainers" },
+    { label: "Bharat Numbers", path: "/category/bharat-in-numbers" },
+    { label: "Bharat Startups", path: "/category/bharat-startups" },
+    { label: "BFSI", path: "/category/bfsi" },
+    { label: "Bharat 2047", path: "/category/bharat-2047" },
+    { label: "Opinions", path: "/category/bharat-opinions" },
+    { label: "States", path: "/category/state-of-bharat" },
+    { label: "60 Sec Read", path: "/category/60-second-read" },
   ];
   const visibleNavLinks = is2K ? uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]) : navLinks;
+  const primaryNavLinks = visibleNavLinks.slice(0, DESKTOP_VISIBLE_NAV_COUNT);
+  const overflowNavLinks = visibleNavLinks.slice(DESKTOP_VISIBLE_NAV_COUNT);
 
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
     if (isMobile) return;
     const fetchDate = async () => {
       try {
-        const res  = await fetch(apiUrl("/datetime/"));
+        const res = await fetch(apiUrl("/datetime/"));
         const data = await res.json();
         setDate(
           data.date || data.formatted_date ||
@@ -425,13 +404,13 @@ const Header = () => {
     if (!isOpen || navSectionsLoaded) return;
     const fetchCategories = async () => {
       try {
-        const res    = await fetch(apiUrl("/categories/"));
-        const data   = await res.json();
+        const res = await fetch(apiUrl("/categories/"));
+        const data = await res.json();
         const active = data.filter(cat => cat.status === "active");
         const sections = active.map(cat => {
-          const subKeys     = Object.keys(cat.sub_categories || {});
+          const subKeys = Object.keys(cat.sub_categories || {});
           let subcategories = null;
-          let links         = null;
+          let links = null;
           if (subKeys.length > 1) {
             subcategories = subKeys.map(key => ({ label: key, topics: cat.sub_categories[key] }));
           } else if (subKeys.length === 1 && (cat.sub_categories[subKeys[0]] || []).length > 0) {
@@ -444,10 +423,10 @@ const Header = () => {
           }
           return {
             label: cat.name,
-            slug:  cat.slug,
-            Icon:  getIconForCategory(cat.name, cat.slug),
+            slug: cat.slug,
+            Icon: getIconForCategory(cat.name, cat.slug),
             ...(subcategories && { subcategories }),
-            ...(links         && { links }),
+            ...(links && { links }),
           };
         });
         setNavSections(sections);
@@ -468,8 +447,8 @@ const Header = () => {
     setIsSearching(true);
     setShowResults(true);
     try {
-      const res     = await fetch(apiUrl(`/search/articles/?q=${encodeURIComponent(query)}`));
-      const data    = await res.json();
+      const res = await fetch(apiUrl(`/search/articles/?q=${encodeURIComponent(query)}`));
+      const data = await res.json();
       const results = Array.isArray(data)
         ? data
         : (data.results || data.articles || data.data || data.items || []);
@@ -537,7 +516,7 @@ const Header = () => {
   }, [fetchSearchResults]);
 
   const handleSearchKeyDown = useCallback((e) => {
-    if (e.key === "Enter")  { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); fetchSearchResults(searchQuery); }
+    if (e.key === "Enter") { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); fetchSearchResults(searchQuery); }
     if (e.key === "Escape") setShowResults(false);
   }, [fetchSearchResults, searchQuery]);
 
@@ -578,6 +557,9 @@ const Header = () => {
       if (drawerSearchRef.current && !drawerSearchRef.current.contains(e.target)) {
         setShowCategoryResults(false);
       }
+      if (navMoreRef.current && !navMoreRef.current.contains(e.target)) {
+        setShowMoreNav(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -590,54 +572,25 @@ const Header = () => {
     setShowResults(false);
   }, [isOpen]);
 
-  // Weather
   useEffect(() => {
     if (isMobile) return;
     const fetchWeather = async () => {
       try {
-        const r    = await fetch(apiUrl("/weather/?city=Delhi"));
-        const data = await r.json();
+        const response = await fetch(apiUrl("/weather/?city=Delhi"));
+        const data = await response.json();
         setWeather(data);
       } catch (error) {
         void error;
       }
     };
+
     const cancelDeferred = deferNonCritical(fetchWeather, 5200);
-    const iv = setInterval(fetchWeather, 10 * 60 * 1000);
-    return () => { cancelDeferred(); clearInterval(iv); };
+    const intervalId = setInterval(fetchWeather, 10 * 60 * 1000);
+    return () => {
+      cancelDeferred();
+      clearInterval(intervalId);
+    };
   }, [isMobile]);
-
-  // Metals
-  useEffect(() => {
-    const fetchMetals = async () => {
-      try {
-        const r    = await fetch(apiUrl("/metal-ticker/"));
-        const data = await r.json();
-        setMetals(data);
-      } catch (error) {
-        void error;
-      }
-    };
-    const cancelDeferred = deferNonCritical(fetchMetals, 4600);
-    const iv = setInterval(fetchMetals, 15 * 60 * 1000);
-    return () => { cancelDeferred(); clearInterval(iv); };
-  }, []);
-
-  // Markets
-  useEffect(() => {
-    const fetchMarkets = async () => {
-      try {
-        const r    = await fetch(apiUrl("/market-indices/"));
-        const data = await r.json();
-        setMarkets(data);
-      } catch (error) {
-        void error;
-      }
-    };
-    const cancelDeferred = deferNonCritical(fetchMarkets, 4200);
-    const iv = setInterval(fetchMarkets, 5 * 60 * 1000);
-    return () => { cancelDeferred(); clearInterval(iv); };
-  }, []);
 
   // Scroll
   useEffect(() => {
@@ -676,7 +629,7 @@ const Header = () => {
       return () => window.removeEventListener("resize", applyCurrentHeight);
     }
     const observer = new ResizeObserver((entries) => {
-      const entry      = entries[0];
+      const entry = entries[0];
       const nextHeight = Math.round(entry?.contentRect?.height || 0);
       if (nextHeight > 0) syncMeasuredHeight(nextHeight);
     });
@@ -685,7 +638,7 @@ const Header = () => {
   }, [isScrolled, isMobile]);
 
   useEffect(() => {
-    if (!isMobile && isScrolled) { setHeaderHeight(44); return; }
+    if (!isMobile && isScrolled) { setHeaderHeight(56); return; }
     if (measuredHeaderHeightRef.current > 0) setHeaderHeight(measuredHeaderHeightRef.current);
   }, [isScrolled, isMobile]);
 
@@ -712,21 +665,18 @@ const Header = () => {
     navigate(path);
   }, [navigate]);
 
-  // Market data
-  const sensexPrice  = markets?.sensex?.price  ?? null;
-  const sensexChange = markets?.sensex?.change ?? null;
-  const sensexTrend  = markets?.sensex?.trend  ?? "up";
-  const niftyPrice   = markets?.nifty?.price   ?? null;
-  const niftyChange  = markets?.nifty?.change  ?? null;
-  const niftyTrend   = markets?.nifty?.trend   ?? "up";
-  const goldPrice    = metals?.gold?.price     ?? null;
-  const goldChange   = metals?.gold?.change    ?? null;
-  const silverPrice  = metals?.silver?.price   ?? null;
-  const silverChange = metals?.silver?.change  ?? null;
+  const handleTranslateToHindi = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const translateUrl = new URL("https://translate.google.com/translate");
+    translateUrl.searchParams.set("sl", "en");
+    translateUrl.searchParams.set("tl", "hi");
+    translateUrl.searchParams.set("u", window.location.href);
+    window.open(translateUrl.toString(), "_blank", "noopener,noreferrer");
+  }, []);
 
-  const tickerBarClasses = isMobile
-    ? "flex flex-nowrap items-center px-2.5 py-1 border-b border-slate-200"
-    : `overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isScrolled ? "max-h-0 opacity-0 border-b-0 py-0" : "max-h-[200px] opacity-100 border-b border-slate-200 py-1"}`;
+  const weatherCity = getWeatherCity(weather);
+  const weatherTemperature = getWeatherTemperature(weather);
+  const weatherCondition = getWeatherCondition(weather);
 
   const topBarClasses = isMobile
     ? "hidden"
@@ -809,9 +759,9 @@ const Header = () => {
         <div className="drawer-scroll">
           {navSections.map(({ label, slug, Icon, links, subcategories }) => {
             const sectionOpen = expandedSection === label;
-            const hasSubcats  = subcategories && subcategories.length > 0;
-            const hasLinks    = links && links.length > 0;
-            const finalSlug   = getFinalSlug(slug, label);
+            const hasSubcats = subcategories && subcategories.length > 0;
+            const hasLinks = links && links.length > 0;
+            const finalSlug = getFinalSlug(slug, label);
 
             return (
               <div className="drawer-section" key={label}>
@@ -884,107 +834,163 @@ const Header = () => {
           })}
         </div>
 
-        {/* <div className="drawer-foot">
+        <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
             {["Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>
-        </div> */}
+        </div>
       </aside>
 
       {/* ══ HEADER ══ */}
       <header ref={headerRef} className={`header-wrapper${isScrolled ? " scrolled" : ""}${is2K ? " is-2k" : ""}`}>
 
-        {/* Ticker Bar */}
-        {/* <div className={tickerBarClasses}>
-          <div className="header-shell ticker-shell">
-            <div className="ticker-left">
-              <BarChart2 size={14} className="ticker-icon" />
-              <span className="ticker-label">Markets :</span>
-            </div>
-            <div className="ticker-scroll-track">
-              <div className="ticker-scroll-inner">
-                {/* ✅ TickerContent memo — sirf market data change hone par re-render */}
-                {/* <TickerContent
-                  sensexPrice={sensexPrice}
-                  sensexChange={sensexChange}
-                  sensexTrend={sensexTrend}
-                  niftyPrice={niftyPrice}
-                  niftyChange={niftyChange}
-                  niftyTrend={niftyTrend}
-                  goldPrice={goldPrice}
-                  goldChange={goldChange}
-                  silverPrice={silverPrice}
-                  silverChange={silverChange}
-                />
-              </div>
-            </div>
-            <div className="ticker-actions flex items-center gap-2 flex-nowrap flex-shrink-0 hidden md:flex">
-              <button className="btn-flag topbar-hindi-btn">
-                <svg width="16" height="11" viewBox="0 0 16 11">
-                  <rect width="16" height="3.67" fill="#FF9933" />
-                  <rect y="3.67" width="16" height="3.67" fill="white" />
-                  <rect y="7.33" width="16" height="3.67" fill="#138808" />
-                  <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
-                </svg>
-                हिंदी
-              </button>
-            </div>
-          </div>
-        </div>  */}
 
-        {/* Top Bar — Search + Date/Time */}
+        {/* Top Bar — Exclusive Interviews + Social */}
         {!isScrolled && (
           <div className={`top-bar ${topBarClasses}`}>
+            <div className="header-shell top-bar-shell">
+              <Link
+                to="/category/bharat-opinions?subcategory=Interviews"
+                className="top-exclusive-link"
+                aria-label="Open Exclusive Interviews page"
+              >
+                <FileText size={14} aria-hidden="true" />
+                <span>Exclusive Articles & Interviews</span>
+              </Link>
+
+              <div className="top-social-links" aria-label="Follow us on social media">
+                <a
+                  href="https://www.linkedin.com/company/news4bharat"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="top-social-link"
+                  aria-label="LinkedIn"
+                >
+                  <Linkedin size={14} aria-hidden="true" />
+                </a>
+                <a
+                  href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="top-social-link"
+                  aria-label="Instagram"
+                >
+                  <Instagram size={14} aria-hidden="true" />
+                </a>
+                <a
+                  href="https://youtube.com/@news4bharat-p1w?si=IDAN0BepU_mRjB0w"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="top-social-link"
+                  aria-label="YouTube"
+                >
+                  <Youtube size={14} aria-hidden="true" />
+                </a>
+                <a
+                  href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="top-social-link"
+                  aria-label="X (Twitter)"
+                >
+                  <span className="top-social-x" aria-hidden="true">X</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!isScrolled && (
+          <div className={`navbar-search-bar ${topBarClasses}`}>
             <div className="header-shell">
               <div className="search-row">
-                <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
-                  <Search size={14} className="search-icon" />
-                  <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Search news..."
-                    name="navbar-article-search"
-                    autoComplete="off"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={() => !isOpen && searchResults.length > 0 && setShowResults(true)}
-                  />
-                  <Mic size={14} className="mic-icon" />
-                  {!isOpen && showResults && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
-                      {isSearching ? (
-                        <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
-                      ) : searchResults.length === 0 ? (
-                        <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
-                      ) : (
-                        searchResults.map((item, idx) => (
-                          <Link
-                            key={idx}
-                            to={getSearchResultHref(item)}
-                            className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
-                            onClick={() => setShowResults(false)}
-                          >
-                            {(item.category || item.tag || item.type) && (
-                              <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
-                                {item.category || item.tag || item.type}
-                              </span>
-                            )}
-                            <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
-                            {getSearchPreview(item) && (
-                              <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{getSearchPreview(item)}</span>
-                            )}
-                          </Link>
-                        ))
-                      )}
-                    </div>
-                  )}
+                <div className="search-left-meta" aria-label="Date and time">
+                  <span className="top-meta-pill top-datetime">
+                    <CalendarDays size={14} aria-hidden="true" />
+                    <span>{date}</span>
+                    <span className="top-datetime-sep">|</span>
+                    <span><LiveClock /> IST</span>
+                  </span>
+                  <Link to="/weather" className="top-meta-pill top-weather" aria-label="Open weather page">
+                    <CloudSun size={15} aria-hidden="true" />
+                    <span>
+                      {weatherCity}
+                      {weatherTemperature ? ` ${weatherTemperature}` : ""}
+                      {weatherCondition ? (
+                        <span className="top-weather-condition">, {weatherCondition}</span>
+                      ) : null}
+                    </span>
+                  </Link>
                 </div>
 
+                <div className="search-center">
+                  <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
+                    <Search size={14} className="search-icon" />
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search news..."
+                      name="navbar-article-search"
+                      autoComplete="off"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
+                      onFocus={() => !isOpen && searchResults.length > 0 && setShowResults(true)}
+                    />
+                    <Mic size={14} className="mic-icon" />
+                    {!isOpen && showResults && (
+                      <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 border-t-0 rounded-b-[8px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[360px] overflow-y-auto" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: "#fff" }}>
+                        {isSearching ? (
+                          <div className="px-4 py-3 text-xs text-slate-500">Searching...</div>
+                        ) : searchResults.length === 0 ? (
+                          <div className="px-4 py-3 text-xs text-slate-500">No results found for "{searchQuery}"</div>
+                        ) : (
+                          searchResults.map((item, idx) => (
+                            <Link
+                              key={idx}
+                              to={getSearchResultHref(item)}
+                              className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
+                              onClick={() => setShowResults(false)}
+                            >
+                              {(item.category || item.tag || item.type) && (
+                                <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
+                                  {item.category || item.tag || item.type}
+                                </span>
+                              )}
+                              <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
+                              {getSearchPreview(item) && (
+                                <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{getSearchPreview(item)}</span>
+                              )}
+                            </Link>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
+                <div className="top-actions search-actions" aria-label="Search tools">
+                  <button
+                    type="button"
+                    className="top-action-btn"
+                    onClick={handleTranslateToHindi}
+                    aria-label="Translate this page from English to Hindi"
+                  >
+                    <Languages size={14} aria-hidden="true" />
+                    <span>EN to HI</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="top-icon-button"
+                    aria-label="Notifications"
+                  >
+                    <Bell size={15} aria-hidden="true" />
+                    <span className="notification-dot" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1003,22 +1009,63 @@ const Header = () => {
             </div>
 
             <ul className="nav-links">
-              {visibleNavLinks.map((link, idx) => (
+              {primaryNavLinks.map((link, idx) => (
                 <Link key={`${link.path}-${idx}`} to={link.path} className="nav-link">
                   {link.label}
                 </Link>
               ))}
+              {overflowNavLinks.length > 0 && (
+                <li
+                  className={`nav-more${showMoreNav ? " open" : ""}`}
+                  ref={navMoreRef}
+                >
+                  <button
+                    type="button"
+                    className="nav-more-button"
+                    aria-expanded={showMoreNav}
+                    aria-label="Show more categories"
+                    onClick={() => setShowMoreNav((current) => !current)}
+                  >
+                    <MoreHorizontal size={18} aria-hidden="true" />
+                  </button>
+                  <div className="nav-more-menu">
+                    {overflowNavLinks.map((link) => (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        className="nav-more-link"
+                        onClick={() => setShowMoreNav(false)}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </li>
+              )}
             </ul>
 
             <div className="mobile-nav-actions">
-              <button className="btn-flag navbar-hindi-btn">
+              <button
+                type="button"
+                className="btn-flag navbar-hindi-btn"
+                onClick={handleTranslateToHindi}
+                aria-label="Translate this page from English to Hindi"
+              >
                 <svg width="14" height="10" viewBox="0 0 16 11">
                   <rect width="16" height="3.67" fill="#FF9933" />
                   <rect y="3.67" width="16" height="3.67" fill="white" />
                   <rect y="7.33" width="16" height="3.67" fill="#138808" />
                   <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
                 </svg>
-                हिंदी
+                EN to HI
+              </button>
+              <button
+                type="button"
+                className="navbar-notification-btn"
+                aria-label="Notifications"
+              >
+                <Bell size={15} aria-hidden="true" />
+                <span className="notification-dot" aria-hidden="true" />
               </button>
             </div>
           </div>

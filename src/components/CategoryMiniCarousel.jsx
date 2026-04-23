@@ -36,7 +36,13 @@ const useCardsPerPage = () => {
   return cardsPerPage;
 };
 
-export default function CategoryMiniCarousel({ title, slugs, categoryPath, adPlacement }) {
+export default function CategoryMiniCarousel({
+  title,
+  slugs,
+  categoryPath,
+  adPlacement,
+  adPage = "home",
+}) {
   const navigate = useNavigate();
   const cardsPerPage = useCardsPerPage();
   const [articles, setArticles] = useState([]);
@@ -170,6 +176,7 @@ export default function CategoryMiniCarousel({ title, slugs, categoryPath, adPla
         <div className="cmc-ad-column" aria-label={`${title} advertisement space`}>
           {adPlacement ? (
             <AdvertisementSlot
+              page={adPage}
               placement={adPlacement}
               variant="mediumRectangle"
               className="cmc-section-ad"

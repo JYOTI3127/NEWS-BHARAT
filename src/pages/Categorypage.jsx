@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import AdvertisementSlot from "../components/AdvertisementSlot";
 
 const useViewportWidth = () => {
   const getValue = () =>
@@ -183,6 +184,21 @@ export default function CategoryPage() {
           </span>
         </div>
       </div>
+
+      <AdvertisementSlot
+        page="category"
+        placement="home_top"
+        variant="leaderboard"
+        className="home-top-ad home-top-ad--desktop"
+        minWidth={769}
+      />
+      <AdvertisementSlot
+        page="category"
+        placement="home_top_mobile"
+        variant="mobileStrip"
+        className="home-top-ad home-top-ad--mobile"
+        maxWidth={768}
+      />
 
       <div
         className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6 py-[28px] grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-7 items-start"

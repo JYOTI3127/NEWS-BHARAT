@@ -13,6 +13,7 @@ import {
   getCanonicalArticleUrl,
   getArticlePath,
 } from "../lib/articleUrl";
+import AdvertisementSlot from "../components/AdvertisementSlot";
 
 const SITE_URL = "https://news4bharat.com";
 const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
@@ -1019,6 +1020,21 @@ export default function ArticleDetails() {
         </script>
       </Helmet>
 
+      <AdvertisementSlot
+        page="article_detail"
+        placement="home_top"
+        variant="leaderboard"
+        className="home-top-ad home-top-ad--desktop"
+        minWidth={769}
+      />
+      <AdvertisementSlot
+        page="article_detail"
+        placement="home_top_mobile"
+        variant="mobileStrip"
+        className="home-top-ad home-top-ad--mobile"
+        maxWidth={768}
+      />
+
       <div
         className="max-w-[1030px] mx-auto px-4 sm:px-6 pb-8 pt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start"
         style={shellStyle}
@@ -1058,7 +1074,10 @@ export default function ArticleDetails() {
             )}
             {date && (
               <span className="flex items-center gap-1.5 text-gray-500">
-                <Clock size={13} /> {formatArticleDateTimeIST(article)}
+                <Clock size={13} />
+                {article.updated_display
+                  ? article.updated_display
+                  : formatArticleDateTimeIST(article)}
               </span>
             )}
           </div>

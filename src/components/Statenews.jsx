@@ -49,35 +49,46 @@ const getSortTimestamp = (article) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+/* NAYA */
 const normalizeAllStatesResponse = (data) => {
   const states = Array.isArray(data?.states) && data.states.length > 0
     ? data.states
     : stateList;
 
+  let articles = [];
+
   if (Array.isArray(data?.results)) {
-    return { states, articles: data.results };
+    articles = data.results;
+  } else if (Array.isArray(data)) {
+    articles = data;
+  } else {
+    const groupedArticles =
+      data?.results && !Array.isArray(data.results) && typeof data.results === "object"
+        ? data.results
+        : {};
+
+    articles = states.flatMap((state) => {
+      const stateArticles = Array.isArray(groupedArticles[state]) ? groupedArticles[state] : [];
+      return stateArticles.map((article) => ({
+        ...article,
+        selected_state_name: state,
+      }));
+    });
   }
 
-  if (Array.isArray(data)) {
-    return { states, articles: data };
-  }
-
-  const groupedArticles =
-    data?.results && !Array.isArray(data.results) && typeof data.results === "object"
-      ? data.results
-      : {};
-
-  const articles = states.flatMap((state) => {
-    const stateArticles = Array.isArray(groupedArticles[state]) ? groupedArticles[state] : [];
-    return stateArticles.map((article) => ({
-      ...article,
-      selected_state_name: state,
-    }));
+  // ✅ Duplicate articles hatao — same id wale sirf ek baar aayenge
+  const seen = new Set();
+  const unique = articles.filter((a) => {
+    const key = String(a?.id || a?.slug || "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 
-  return { states, articles };
+  return { states, articles: unique };
 };
 
+/* PURANA */
 const normalizeSingleStateResponse = (data, fallbackState) => {
   const stateName = data?.state || fallbackState;
   const articles = Array.isArray(data?.results)
@@ -163,18 +174,18 @@ function ArticleImg({ src, alt, style, priority = false }) {
 
 // ── Main Component ────────────────────────────────────────────
 export default function StateNews() {
-  const [activeState,     setActiveState]    = useState(null);
-  const [stateArticles,   setStateArticles]  = useState([]);
+  const [activeState, setActiveState] = useState(null);
+  const [stateArticles, setStateArticles] = useState([]);
   const [startupArticles, setStartupArticles] = useState([]);
   const [availableStates, setAvailableStates] = useState(stateList);
-  const [statePage,       setStatePage]       = useState(1);
-  const [hasMoreStates,   setHasMoreStates]   = useState(false);
-  const [stateLoading,    setStateLoading]   = useState(true);
-  const [startupLoading,  setStartupLoading] = useState(true);
+  const [statePage, setStatePage] = useState(1);
+  const [hasMoreStates, setHasMoreStates] = useState(false);
+  const [stateLoading, setStateLoading] = useState(true);
+  const [startupLoading, setStartupLoading] = useState(true);
 
-  const tabsRef  = useRef(null);
+  const tabsRef = useRef(null);
   const navigate = useNavigate();
-  const bp       = useBreakpoint();
+  const bp = useBreakpoint();
 
   const isMobile = ["s", "m", "l", "mobile"].includes(bp);
   const isTablet = bp === "tablet";
@@ -196,7 +207,7 @@ export default function StateNews() {
           setAvailableStates((prev) =>
             prev.includes(stateName) ? prev : [...prev, stateName]
           );
-          setHasMoreStates(hasNext);
+        setHasMoreStates(false);
           setStateArticles((prev) =>
             statePage === 1
               ? sorted
@@ -234,10 +245,10 @@ export default function StateNews() {
       .catch(() => setStartupLoading(false));
   }, []);
 
-  const featuredCard   = stateArticles[0] || null;
+  const featuredCard = stateArticles[0] || null;
   const bottomLeftCard = stateArticles[1] || null;
-  const midCards       = stateArticles.slice(2, 6);
-  const sidebarItems   = startupArticles.slice(0, 6);
+  const midCards = stateArticles.slice(2, 6);
+  const sidebarItems = startupArticles.slice(0, 6);
 
   const goToArticle = (article) => {
     const articlePath = getArticlePath(article);
@@ -255,11 +266,11 @@ export default function StateNews() {
       className="sn-wrap"
       style={is2K
         ? {
-            width: "min(1820px, calc(100% - 96px))",
-            maxWidth: "none",
-            margin: "0 auto",
-            padding: "24px 0",
-          }
+          width: "min(1820px, calc(100% - 96px))",
+          maxWidth: "none",
+          margin: "0 auto",
+          padding: "24px 0",
+        }
         : undefined}
     >
       <style>{`
@@ -415,18 +426,18 @@ export default function StateNews() {
           >
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="sn-mid-card" style={{ display: "flex", gap: "8px" }}>
-                    <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
-                    <div style={{ flex: 1 }}>
-                      <Sk h="10px" w="50px" mb="5px" />
-                      <Sk h="12px" w="95%" mb="4px" />
-                      <Sk h="10px" w="40px" mb="0" />
-                    </div>
+                <div key={i} className="sn-mid-card" style={{ display: "flex", gap: "8px" }}>
+                  <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                  <div style={{ flex: 1 }}>
+                    <Sk h="10px" w="50px" mb="5px" />
+                    <Sk h="12px" w="95%" mb="4px" />
+                    <Sk h="10px" w="40px" mb="0" />
                   </div>
-                ))
+                </div>
+              ))
               : midCards.length === 0
-              ? <div style={{ color: "#bbb", fontSize: 12, padding: "8px 0" }}>No more articles</div>
-              : midCards.map((card) => (
+                ? <div style={{ color: "#bbb", fontSize: 12, padding: "8px 0" }}>No more articles</div>
+                : midCards.map((card) => (
                   <div
                     className="sn-mid-card"
                     key={card.id}
@@ -524,17 +535,17 @@ export default function StateNews() {
           <div className="sn-defence-scroll" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {startupLoading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="sn-defence-item" style={{ display: "flex", gap: "8px" }}>
-                    <div style={{ flexShrink: 0, width: 64, height: 50, borderRadius: 5, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
-                    <div style={{ flex: 1 }}>
-                      <Sk h="11px" w="95%" mb="4px" />
-                      <Sk h="10px" w="40px" mb="0" />
-                    </div>
+                <div key={i} className="sn-defence-item" style={{ display: "flex", gap: "8px" }}>
+                  <div style={{ flexShrink: 0, width: 64, height: 50, borderRadius: 5, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                  <div style={{ flex: 1 }}>
+                    <Sk h="11px" w="95%" mb="4px" />
+                    <Sk h="10px" w="40px" mb="0" />
                   </div>
-                ))
+                </div>
+              ))
               : sidebarItems.length === 0
-              ? <div style={{ padding: "12px 0", color: "#bbb", fontSize: 12, textAlign: "center" }}>No articles yet</div>
-              : sidebarItems.map((item) => (
+                ? <div style={{ padding: "12px 0", color: "#bbb", fontSize: 12, textAlign: "center" }}>No articles yet</div>
+                : sidebarItems.map((item) => (
                   <div
                     className="sn-defence-item"
                     key={item.id}
@@ -556,7 +567,7 @@ export default function StateNews() {
         </div>
 
       </div>
-      {activeState && hasMoreStates && (
+      {/* {activeState && hasMoreStates && (
         <div className="sn-load-more-wrap">
           <button
             type="button"
@@ -567,7 +578,7 @@ export default function StateNews() {
             {stateLoading ? "Loading..." : `Load More ${activeState}`}
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

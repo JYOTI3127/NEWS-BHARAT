@@ -61,12 +61,37 @@ const pickAdForPlacement = (payload, placement, allowUnmatchedPlacement) => {
   return null;
 };
 
-const buildCandidateUrls = (placement) => [
-  apiUrl(`/homepage/ad_banner/current/?placement=${encodeURIComponent(placement)}`),
-  apiUrl(`/homepage/ad_banners/current/?placement=${encodeURIComponent(placement)}`),
-  apiUrl(`/homepage/ad_banner/${encodeURIComponent(placement)}/current/`),
-  apiUrl("/homepage/ad_banner/current/"),
-];
+const buildCurrentAdPath = (endpoint, { page, placement, size }) => {
+  const params = new URLSearchParams();
+  const normalizedPage = String(page || "").trim();
+  const normalizedPlacement = String(placement || "").trim();
+  const normalizedSize = String(size || "").trim();
+
+  if (normalizedPage) params.set("page", normalizedPage);
+  if (normalizedPlacement) params.set("placement", normalizedPlacement);
+  if (normalizedSize) params.set("size", normalizedSize);
+
+  const query = params.toString();
+  return `/homepage/${endpoint}/current/${query ? `?${query}` : ""}`;
+};
+
+const buildCandidateUrls = ({ page, placement, size }) => {
+  const normalizedPage = String(page || "").trim();
+
+  if (normalizedPage) {
+    return [
+      apiUrl(buildCurrentAdPath("ad_banner", { page, placement, size })),
+      apiUrl(buildCurrentAdPath("ad_banners", { page, placement, size })),
+    ];
+  }
+
+  return [
+    apiUrl(buildCurrentAdPath("ad_banner", { placement, size })),
+    apiUrl(buildCurrentAdPath("ad_banners", { placement, size })),
+    apiUrl(`/homepage/ad_banner/${encodeURIComponent(placement)}/current/`),
+    apiUrl("/homepage/ad_banner/current/"),
+  ];
+};
 
 const buildViewportQuery = ({ minWidth, maxWidth }) => {
   const parts = [];
@@ -101,7 +126,9 @@ const useViewportMatch = (query) =>
   );
 
 function AdvertisementSlot({
+  page,
   placement,
+  size: requestedSize,
   variant = "leaderboard",
   className = "",
   allowUnmatchedPlacement = false,
@@ -113,7 +140,10 @@ function AdvertisementSlot({
   const [dismissed, setDismissed] = useState(false);
 
   const size = SLOT_SIZES[variant] || SLOT_SIZES.leaderboard;
-  const candidateUrls = useMemo(() => buildCandidateUrls(placement), [placement]);
+  const candidateUrls = useMemo(
+    () => buildCandidateUrls({ page, placement, size: requestedSize }),
+    [page, placement, requestedSize]
+  );
   const viewportQuery = useMemo(
     () => buildViewportQuery({ minWidth, maxWidth }),
     [maxWidth, minWidth]

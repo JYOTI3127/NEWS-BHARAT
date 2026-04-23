@@ -1,6 +1,13 @@
 import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchArticlePage, fetchArticles, fetchCategories, getListFromResponse } from '../lib/api';
+import {
+  fetchArticlePage,
+  fetchArticles,
+  fetchCategories,
+  fetchHomepageLatestNewsCurrent,
+  getLatestNewsArticlesFromResponse,
+  getListFromResponse,
+} from '../lib/api';
 
 import NewsBanner from '../components/Banner';
 import TrendingNews from '../components/Trendingnews';
@@ -100,7 +107,7 @@ const Home = () => {
 
   const { data: articlesData, isLoading: articlesLoading } = useQuery({
     queryKey: ['articles'],
-    queryFn: fetchArticles,
+    queryFn: () => fetchArticlePage({ page: 1, limit: 50 }), // ← sirf ek call — fast!
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -113,6 +120,14 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: latestNewsData, isLoading: latestNewsLoading } = useQuery({
+    queryKey: ['homepage-latest-news-current'],
+    queryFn: fetchHomepageLatestNewsCurrent,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const { data: bannerArticlesData, isLoading: bannerArticlesLoading } = useQuery({
     queryKey: ['banner-articles'],
     queryFn: () => fetchArticlePage({ page: 1, limit: 5 }),
@@ -120,7 +135,18 @@ const Home = () => {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const { data: breakingNewsData } = useQuery({
+    queryKey: ['breaking-news-fast'],
+    queryFn: () => fetchArticlePage({ page: 1, limit: 9, category: 'breaking-news' }),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
+  const breakingArticles = React.useMemo(
+    () => getListFromResponse(breakingNewsData),
+    [breakingNewsData]
+  );
   const allArticles = React.useMemo(() => {
     return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
   }, [articlesData]);
@@ -128,6 +154,11 @@ const Home = () => {
   const bannerArticles = React.useMemo(
     () => getListFromResponse(bannerArticlesData),
     [bannerArticlesData]
+  );
+
+  const latestNewsArticles = React.useMemo(
+    () => getLatestNewsArticlesFromResponse(latestNewsData),
+    [latestNewsData]
   );
 
   return (
@@ -144,102 +175,104 @@ const Home = () => {
       </aside>
 
       <main className="home-main-column">
-      <a
-        href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx"
-        className="home-whatsapp-float"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Open News4Bharat on WhatsApp"
-        title="WhatsApp"
-      >
-        <WhatsAppFloatingIcon />
-      </a>
+        <a
+          href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx"
+          className="home-whatsapp-float"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open News4Bharat on WhatsApp"
+          title="WhatsApp"
+        >
+          <WhatsAppFloatingIcon />
+        </a>
 
-      <div className="home-section-align">
-        <Profiler id="NewsBanner" onRender={onRenderCallback}>
-          <NewsBanner articles={bannerArticles} loading={bannerArticlesLoading} />
-        </Profiler>
-      </div>
+        <div className="home-section-align">
+          <Profiler id="NewsBanner" onRender={onRenderCallback}>
+            <NewsBanner articles={bannerArticles} loading={bannerArticlesLoading} />
+          </Profiler>
+        </div>
 
-      <AdvertisementSlot
-        page="home"
-        placement="home_top"
-        variant="leaderboard"
-        className="home-top-ad home-top-ad--desktop"
-        minWidth={769}
-      />
-      <AdvertisementSlot
-        page="home"
-        placement="home_top_mobile"
-        variant="mobileStrip"
-        className="home-top-ad home-top-ad--mobile"
-        maxWidth={768}
-      />
+        <AdvertisementSlot
+          page="home"
+          placement="home_top"
+          variant="leaderboard"
+          className="home-top-ad home-top-ad--desktop"
+          minWidth={769}
+        />
+        <AdvertisementSlot
+          page="home"
+          placement="home_top_mobile"
+          variant="mobileStrip"
+          className="home-top-ad home-top-ad--mobile"
+          maxWidth={768}
+        />
 
-      {/* <section className="w-full px-4 sm:px-6 pt-5">
+        {/* <section className="w-full px-4 sm:px-6 pt-5">
         <div className="mx-auto max-w-[1240px] rounded-2xl border border-[#ece5dd] bg-white/80 px-4 py-4 text-sm leading-7 text-[#5f5a53] shadow-[0_1px_4px_rgba(0,0,0,0.03)] sm:px-6">
           News4Bharat brings breaking India news, economy coverage, politics updates, startup stories, state reporting, and Bharat explainers with verified reporting and clear context for everyday readers.
         </div>
       </section> */}
 
-      <div className="home-section-align">
-        <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
-          <BreakingNewsSection articles={allArticles} />
-        </Profiler>
-      </div>
+        <div className="home-section-align">
+          <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
+            <BreakingNewsSection articles={allArticles} />
+          </Profiler>
+        </div>
 
-      <div className="home-section-align">
-        <Profiler id="TrendingNews" onRender={onRenderCallback}>
-          <TrendingNews
-            articles={allArticles}
-            categories={categoriesData}
-            loading={articlesLoading}
+        <div className="home-section-align">
+          <Profiler id="TrendingNews" onRender={onRenderCallback}>
+            <TrendingNews
+              articles={allArticles}
+              categories={categoriesData}
+              loading={articlesLoading}
+              latestNewsArticles={latestNewsArticles}
+              latestNewsLoading={latestNewsLoading}
+            />
+          </Profiler>
+        </div>
+
+        <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
+          <VisualStoriesWithScore articles={allArticles} />
+        </DeferredSection>
+
+        <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash} className="home-section-align">
+          <NewsPortalSection articles={allArticles} />
+        </DeferredSection>
+
+        <DeferredSection id="BharatInNumbers" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+          <CategoryMiniCarousel
+            title="Bharat in Numbers"
+            slugs={BHARAT_NUMBERS_SLUGS}
+            categoryPath="/category/bharat-in-numbers"
+            adPlacement="home_bharat_numbers_right"
           />
-        </Profiler>
-      </div>
+        </DeferredSection>
 
-      <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
-        <VisualStoriesWithScore articles={allArticles} />
-      </DeferredSection>
+        <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash} className="home-section-align">
+          <StateNews articles={allArticles} />
+        </DeferredSection>
 
-      <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash} className="home-section-align">
-        <NewsPortalSection articles={allArticles} />
-      </DeferredSection>
+        <DeferredSection id="BharatStartups" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+          <CategoryMiniCarousel
+            title="Bharat of Startups"
+            slugs={BHARAT_STARTUPS_SLUGS}
+            categoryPath="/category/bharat-startups"
+            adPlacement="home_bharat_startups_right"
+          />
+        </DeferredSection>
 
-      <DeferredSection id="BharatInNumbers" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
-        <CategoryMiniCarousel
-          title="Bharat in Numbers"
-          slugs={BHARAT_NUMBERS_SLUGS}
-          categoryPath="/category/bharat-in-numbers"
-          adPlacement="home_bharat_numbers_right"
-        />
-      </DeferredSection>
+        <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash} className="home-section-align">
+          <HomeCategorySections articles={allArticles} />
+        </DeferredSection>
 
-      <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash} className="home-section-align">
-        <StateNews articles={allArticles} />
-      </DeferredSection>
+        <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
+          <MoreStoriesSection articles={allArticles} />
+        </DeferredSection>
 
-      <DeferredSection id="BharatStartups" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
-        <CategoryMiniCarousel
-          title="Bharat of Startups"
-          slugs={BHARAT_STARTUPS_SLUGS}
-          categoryPath="/category/bharat-startups"
-          adPlacement="home_bharat_startups_right"
-        />
-      </DeferredSection>
-
-      <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash} className="home-section-align">
-        <HomeCategorySections articles={allArticles} />
-      </DeferredSection>
-
-      <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
-        <MoreStoriesSection articles={allArticles} />
-      </DeferredSection>
-
-      {/* ✅ #newsletter hash hone par forceRender=true — Newsletter turant DOM mein aayega */}
-      <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
-        <Newsletter />
-      </DeferredSection>
+        {/* ✅ #newsletter hash hone par forceRender=true — Newsletter turant DOM mein aayega */}
+        <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
+          <Newsletter />
+        </DeferredSection>
       </main>
 
       <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">

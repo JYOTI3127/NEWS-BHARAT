@@ -9,40 +9,12 @@ const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read&page=1&limi
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const getArticleImage         = (a) => a?.image_url || a?.image || "";
 const getArticleFallbackImage = (a) => a?.image || a?.image_url || "";
-const INDIA_TZ = "Asia/Kolkata";
 
 const getArticleDateValue = (article) => {
   const raw = article?.published_date || article?.published_at || article?.created_at || null;
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const formatIndiaDateKey = (value) =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: INDIA_TZ, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(value);
-
-const indiaMidnight = (dateKey) => new Date(`${dateKey}T00:00:00+05:30`);
-
-// ✅ This week ka filter — Sunday se aaj tak (India timezone)
-const isArticleFromThisWeekInIndia = (article) => {
-  const articleDate = getArticleDateValue(article);
-  if (!articleDate) return false;
-  const now = new Date();
-  if (articleDate.getTime() > now.getTime()) return false;
-
-  const todayStr = formatIndiaDateKey(now);
-  const todayIndia = indiaMidnight(todayStr);
-  const dayOfWeek = todayIndia.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-
-  const weekStart = new Date(todayIndia);
-  weekStart.setUTCDate(todayIndia.getUTCDate() - dayOfWeek);
-
-  const articleStr = formatIndiaDateKey(articleDate);
-  const articleDay = indiaMidnight(articleStr);
-
-  return articleDay.getTime() >= weekStart.getTime();
 };
 
 const formatArticleDateTime = (article) => {
@@ -62,6 +34,18 @@ const formatArticleDateTime = (article) => {
   });
 
   return `${datePart} | ${timePart}`.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+};
+
+const getLatestNewsDateLabel = (article) => {
+  const updatedDisplay = String(article?.updated_display || "").trim();
+  if (updatedDisplay) return updatedDisplay;
+
+  const publishedAt = String(
+    article?.published_at || article?.published_date || ""
+  ).trim();
+  if (!publishedAt) return "";
+
+  return formatArticleDateTime({ published_at: publishedAt }) || publishedAt;
 };
 
 // ─────────────────────────────────────────────
@@ -178,7 +162,7 @@ const TrendingBar = memo(({ categories, is2K, is320 }) => {
 // ── Latest News (All About This Week) ────────────────────────
 const LatestNews = memo(({ articles, loading, is2K }) => {
   const visibleArticles = useMemo(
-    () => articles.filter(isArticleFromThisWeekInIndia),
+    () => (Array.isArray(articles) ? articles.filter(Boolean) : []),
     [articles]
   );
   const scrollRef = useRef(null);
@@ -219,7 +203,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
       className="tn-latest-news"
       style={is2K ? { maxHeight: 430, padding: 18 } : undefined}
     >
-      <SecHeader title="All About This Week" />
+      <SecHeader title="Latest News" />
       <style>{`
         .news-ticker-item:hover .news-ticker-title { color: #D80100 !important; }
         .news-ticker-title { transition: color 0.2s ease; }
@@ -236,7 +220,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
           ))}
         </div>
       ) : visibleArticles.length === 0 ? (
-        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found for this week.</div>
+        <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No latest articles found.</div>
       ) : (
         <div
           ref={scrollRef}
@@ -264,9 +248,9 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
                     {desc.slice(0, 130)}{desc.length > 130 ? "..." : ""}
                   </div>
                 ) : null}
-                {formatArticleDateTime(article) && (
+                {getLatestNewsDateLabel(article) && (
                   <div style={{ marginTop: 6, color: "#6b7280", fontSize: 11, fontWeight: 700, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
-                    {formatArticleDateTime(article)}
+                    {getLatestNewsDateLabel(article)}
                   </div>
                 )}
               </Link>
@@ -463,7 +447,13 @@ const LiveUpdates = memo(({ is2K }) => {
 
 // ── Banner ────────────────────────────────────────────────────
 // ── Main Component ────────────────────────────────────────────
-export default function TrendingNews({ articles: passedArticles = [], categories: passedCategories = [], loading: passedLoading = false }) {
+export default function TrendingNews({
+  articles: passedArticles = [],
+  categories: passedCategories = [],
+  loading: passedLoading = false,
+  latestNewsArticles: passedLatestNewsArticles = [],
+  latestNewsLoading = false,
+}) {
   const { is4K, is2K, is320 } = useScreenSize();
 
   const articles = useMemo(() => {
@@ -492,6 +482,14 @@ export default function TrendingNews({ articles: passedArticles = [], categories
     return result;
   }, [passedCategories, articles]);
 
+  const latestNewsArticles = useMemo(() => {
+    const list = Array.isArray(passedLatestNewsArticles)
+      ? passedLatestNewsArticles.filter(Boolean)
+      : [];
+    if (list.length > 0) return list;
+    return articles;
+  }, [passedLatestNewsArticles, articles]);
+
   const twoKInnerStyle = is2K ? { width: "min(1820px, calc(100% - 96px))", maxWidth: "none", margin: "0 auto", padding: "34px 0 38px" } : undefined;
   const twoKGridStyle  = is2K ? { gridTemplateColumns: "560px minmax(0, 1fr) 260px", gap: "18px", height: "360px", alignItems: "stretch" } : undefined;
 
@@ -509,7 +507,11 @@ export default function TrendingNews({ articles: passedArticles = [], categories
       <div className="tn-inner" style={twoKInnerStyle}>
         <div className="tn-grid" style={twoKGridStyle}>
           <div className="col-news">
-            <LatestNews articles={articles} loading={passedLoading} is2K={is2K} />
+            <LatestNews
+              articles={latestNewsArticles}
+              loading={latestNewsLoading && latestNewsArticles.length === 0}
+              is2K={is2K}
+            />
           </div>
           <div className="col-cards">
             <FeatureCards articles={articles} loading={passedLoading} is2K={is2K} />

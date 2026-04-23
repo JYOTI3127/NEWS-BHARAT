@@ -192,18 +192,8 @@ export default function BottomNav() {
           { cache: "no-store" }
         );
         const data = await res.json();
-
         const articles = Array.isArray(data) ? data : (data.results ?? []);
-        let publishedArticles = getOnlyBharatExplainers(articles);
-
-        if (publishedArticles.length === 0) {
-          const fallbackRes = await fetch(apiUrl("/articles/?page=1&limit=100"), { cache: "no-store" });
-          const fallbackData = await fallbackRes.json();
-          const fallbackArticles = Array.isArray(fallbackData) ? fallbackData : (fallbackData.results ?? []);
-          publishedArticles = getOnlyBharatExplainers(fallbackArticles);
-        }
-
-        const latest = sortLatestArticles(publishedArticles).slice(0, 2);
+        const latest = sortLatestArticles(articles).slice(0, 2);
 
         setBreakingNewsItems(latest);
         setCachedBreakingNews(latest);

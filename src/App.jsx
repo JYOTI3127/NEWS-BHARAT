@@ -74,33 +74,33 @@ function PageLoader() {
 }
 
 function LegacyArticleRedirect() {
-  const { slug, categorySlug } = useParams();
+  const { slug } = useParams();
   const [targetPath, setTargetPath] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     const resolveLegacyPath = async () => {
-      const routeCandidates = Array.from(
-        new Set(
-          [
-            categorySlug && slug ? `${categorySlug}/${slug}` : "",
-            slug,
-          ]
-            .map((value) => String(value || "").trim())
-            .filter(Boolean)
-        )
-      );
+      const pathParts =
+        typeof window !== "undefined"
+          ? window.location.pathname.split("/").filter(Boolean)
+          : [];
+      const articleSlug = String(
+        pathParts[pathParts.length - 1] || slug || ""
+      ).trim();
+
+      if (!articleSlug) {
+        setTargetPath("/");
+        return;
+      }
 
       try {
-        for (const candidate of routeCandidates) {
-          const response = await fetch(
-            apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
-            { cache: "no-store" }
-          );
+        const response = await fetch(
+          apiUrl(`/articles/slug/${encodeURIComponent(articleSlug)}/`),
+          { cache: "no-store" }
+        );
 
-          if (!response.ok) continue;
-
+        if (response.ok) {
           const data = await response.json();
           const article = Array.isArray(data) ? data[0] : data;
           const nextPath = getArticlePath(article);
@@ -123,7 +123,7 @@ function LegacyArticleRedirect() {
     return () => {
       cancelled = true;
     };
-  }, [categorySlug, slug]);
+  }, [slug]);
 
   if (targetPath) {
     return <Navigate to={targetPath} replace />;

@@ -171,30 +171,12 @@ const fetchCategoryArticles = async (slug) => {
 };
 
 const fetchMergedArticles = async () => {
-  const articleMap = new Map();
-  const baseArticles = normalizeArticles(await fetchArticles());
-  baseArticles.forEach((article) => mergeArticleIntoMap(articleMap, article));
-
-  try {
-    const categories = await fetchCategories();
-    const categoryResults = await Promise.all(
-      categories
-        .map((category) => String(category?.slug || "").trim().toLowerCase())
-        .filter(Boolean)
-        .map(async (slug) => ({
-          slug,
-          articles: await fetchCategoryArticles(slug),
-        }))
-    );
-
-    categoryResults.forEach(({ slug, articles }) => {
-      articles.forEach((article) => mergeArticleIntoMap(articleMap, article, slug));
-    });
-  } catch {
-    return baseArticles;
-  }
-
-  return normalizeArticles([...articleMap.values()]);
+  const response = await fetch(
+    `${API_BASE}/articles/?page=1&limit=500`
+  );
+  if (!response.ok) return [];
+  const data = await response.json();
+  return normalizeArticles(data);
 };
 
 function StoryCard({ article }) {

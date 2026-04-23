@@ -345,6 +345,9 @@ const normalizeArticleContent = (html) => {
   }
 
   const doc = new DOMParser().parseFromString(normalized, "text/html");
+  Array.from(
+    doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")
+  ).forEach((node) => node.remove());
   const elements = doc.body.querySelectorAll("*");
 
   elements.forEach((element) => {
@@ -563,21 +566,20 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
 
 export default function ArticleDetails() {
   const params = useParams();
-  const routeParam = params.slug || params.id;
+  const routeParam = params.slug || params.id || "";
   const categorySlug = params.categorySlug || "";
+  const articleSlug = useMemo(() => {
+    if (typeof window === "undefined") {
+      return String(routeParam || "").trim();
+    }
+
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    const lastSegment = parts[parts.length - 1] || "";
+    return String(lastSegment || routeParam || "").trim();
+  }, [routeParam]);
   const articleLookupCandidates = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [
-            categorySlug && routeParam ? `${categorySlug}/${routeParam}` : "",
-            routeParam,
-          ]
-            .map((value) => String(value || "").trim())
-            .filter(Boolean)
-        )
-      ),
-    [categorySlug, routeParam]
+    () => (articleSlug ? [articleSlug] : []),
+    [articleSlug]
   );
   const is2K = useIs2K();
 
@@ -653,7 +655,7 @@ export default function ArticleDetails() {
 
         if (!detailResponse) {
           const requestedPath =
-            categorySlug && routeParam ? `/${categorySlug}/${routeParam}/` : "";
+            categorySlug && articleSlug ? `/${categorySlug}/${articleSlug}/` : "";
           const listMatch = sortedList.find((candidate) => {
             const articlePath = getArticlePath(candidate);
             const slug = String(candidate?.slug || "").trim();
@@ -690,7 +692,7 @@ export default function ArticleDetails() {
     loadArticle();
 
     return () => controller.abort();
-  }, [articleLookupCandidates, categorySlug, routeParam]);
+  }, [articleLookupCandidates, articleSlug, categorySlug]);
 
   useEffect(() => {
     if (article?.title) {
@@ -702,14 +704,14 @@ export default function ArticleDetails() {
   }, [article?.title]);
 
   useEffect(() => {
-    if (!routeParam) return;
+    if (!articleSlug) return;
     if (!article && !notFound && !loadError) return;
 
     const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
     const rafId = window.requestAnimationFrame(emitReady);
 
     return () => window.cancelAnimationFrame(rafId);
-  }, [article, loadError, notFound, routeParam]);
+  }, [article, articleSlug, loadError, notFound]);
 
   useEffect(() => {
     if (!article || !mainArticleRef.current || !moreInListRef.current) return;
@@ -745,7 +747,7 @@ export default function ArticleDetails() {
       resizeObserver?.disconnect();
       window.removeEventListener("resize", updateMoreInHeight);
     };
-  }, [article, allArticles.length, routeParam]);
+  }, [article, allArticles.length, articleSlug]);
 
   const sidebarBaseArticles = article
     ? allArticles.filter(

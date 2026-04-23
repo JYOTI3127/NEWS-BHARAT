@@ -163,4 +163,10 @@ export const fetchArticles = async () => {
   return fetchPaginatedArticles({ limit: 10 });
 };
 
+export const fetchHomepageLatestNewsCurrent = () =>
+  fetchJson("/homepage/latest_news/current/");
+
+export const getLatestNewsArticlesFromResponse = (data) =>
+  Array.isArray(data?.articles) ? data.articles : getListFromResponse(data);
+
 export const fetchCategories = () => fetchJson("/categories/");

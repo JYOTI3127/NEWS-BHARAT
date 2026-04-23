@@ -974,6 +974,16 @@ export default function ArticleDetails() {
 
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
+      <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
+        <AdvertisementSlot
+          page="home"
+          placement="home_side_left"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--left"
+          dismissible
+          minWidth={1024}
+        />
+      </aside>
 
       <Helmet>
         <title>{seoTitle}</title>
@@ -1271,6 +1281,17 @@ export default function ArticleDetails() {
           })()}
         </aside>
       </div>
+
+      <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
+        <AdvertisementSlot
+          page="home"
+          placement="home_side_right"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--right"
+          dismissible
+          minWidth={1024}
+        />
+      </aside>
     </div>
   );
 }

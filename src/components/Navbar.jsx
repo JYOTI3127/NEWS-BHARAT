@@ -243,8 +243,6 @@ const navLinks = [
   { label: "Breaking News", path: "/category/breaking-news" },
   { label: "World News", path: "/category/world-news" },
   { label: "Business", path: "/category/bharat-economy" },
-  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
-  { label: "Bharat Numbers", path: "/category/bharat-in-numbers" },
   { label: "Technology", path: "/category/technology" },
   { label: "Sports", path: "/category/sports" },
   { label: "Health", path: "/category/health" },
@@ -254,6 +252,7 @@ const navLinks = [
   { label: "National", path: "/category/national" },
   { label: "Political", path: "/category/politics" },
   { label: "Trending", path: "/category/trending" },
+  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
 ];
 
 const DESKTOP_VISIBLE_NAV_COUNT = 8;
@@ -266,6 +265,35 @@ const uniqueNavLinksByPath = (links) => {
     seen.add(key);
     return true;
   });
+};
+
+const PUSH_VAPID_KEY_URL = "https://news4bharat.com/api/push/vapid-key/";
+const PUSH_SUBSCRIBE_URL = "https://news4bharat.com/api/push/subscribe/";
+const LIVE_VAPID_PUBLIC_KEY = "BJ-tbAcljktBC5rfkAWNi7pkhFn_s6pHHd9fo6GwZBi_olNVUxltcE0ErPM6qHTNhX2oCMVpwUOmmD6qhI7LNSE";
+const PUSH_STATE_STORAGE_KEY = "news4bharat_push_subscribed";
+
+const toVapidKeyUint8Array = (value) => {
+  const normalizedValue = String(value || "").trim();
+  const padded = `${normalizedValue}${"=".repeat((4 - (normalizedValue.length % 4)) % 4)}`;
+  const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+};
+
+const getVapidPublicKeyFromResponse = (data) => {
+  const candidates = [
+    data?.public_key,
+    data?.publicKey,
+    data?.vapid_key,
+    data?.vapidKey,
+    data?.key,
+    data?.data?.public_key,
+    data?.data?.publicKey,
+    data?.result?.public_key,
+    data?.result?.publicKey,
+  ];
+
+  return candidates.find((candidate) => typeof candidate === "string" && candidate.trim()) || "";
 };
 
 // ─────────────────────────────────────────────
@@ -348,6 +376,8 @@ const Header = () => {
   const [showCategoryResults, setShowCategoryResults] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [showMoreNav, setShowMoreNav] = useState(false);
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
 
   // ✅ Hooks — clean
   const isMobile = useIsMobile();
@@ -592,6 +622,54 @@ const Header = () => {
     };
   }, [isMobile]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const syncPushState = async () => {
+      if (typeof window === "undefined") return;
+
+      const hasPushSupport =
+        "Notification" in window &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window;
+
+      if (!hasPushSupport) {
+        if (!ignore) setIsPushSubscribed(false);
+        return;
+      }
+
+      try {
+        const registration =
+          (await navigator.serviceWorker.getRegistration("/sw.js")) ||
+          (await navigator.serviceWorker.getRegistration());
+
+        const existingSubscription =
+          await registration?.pushManager?.getSubscription?.();
+
+        if (ignore) return;
+        const subscribed = Boolean(existingSubscription);
+        setIsPushSubscribed(subscribed);
+
+        if (subscribed) {
+          window.localStorage.setItem(PUSH_STATE_STORAGE_KEY, "1");
+        } else {
+          window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        }
+      } catch (error) {
+        void error;
+        if (ignore) return;
+        const storedValue = window.localStorage.getItem(PUSH_STATE_STORAGE_KEY);
+        setIsPushSubscribed(storedValue === "1");
+      }
+    };
+
+    syncPushState();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   // Scroll
   useEffect(() => {
     if (window.innerWidth <= 768) { setIsScrolled(false); return; }
@@ -674,9 +752,111 @@ const Header = () => {
     window.open(translateUrl.toString(), "_blank", "noopener,noreferrer");
   }, []);
 
+  const fetchVapidPublicKey = useCallback(async () => {
+    try {
+      const response = await fetch(PUSH_VAPID_KEY_URL);
+      if (!response.ok) {
+        throw new Error(`VAPID key API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const liveVapidKey = getVapidPublicKeyFromResponse(data);
+      if (liveVapidKey) return liveVapidKey;
+    } catch (error) {
+      console.error("Could not fetch live VAPID key. Using fallback key.", error);
+    }
+
+    return LIVE_VAPID_PUBLIC_KEY;
+  }, []);
+
+  const handleNotificationClick = useCallback(async () => {
+    if (typeof window === "undefined" || isPushLoading) return;
+
+    const hasPushSupport =
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window;
+
+    if (!hasPushSupport) {
+      window.alert("Push notifications are not supported in this browser.");
+      return;
+    }
+
+    setIsPushLoading(true);
+
+    try {
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setIsPushSubscribed(false);
+        window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const existingSubscription = await registration.pushManager.getSubscription();
+
+      if (existingSubscription) {
+        await existingSubscription.unsubscribe();
+        setIsPushSubscribed(false);
+        window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        return;
+      }
+
+      const vapidPublicKey = await fetchVapidPublicKey();
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: toVapidKeyUint8Array(vapidPublicKey),
+      });
+
+      const subscriptionJson = subscription.toJSON();
+      const payload = {
+        endpoint: subscriptionJson.endpoint,
+        keys: {
+          p256dh: subscriptionJson.keys?.p256dh || "",
+          auth: subscriptionJson.keys?.auth || "",
+        },
+      };
+
+      const subscribeResponse = await fetch(PUSH_SUBSCRIBE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!subscribeResponse.ok) {
+        await subscription.unsubscribe().catch(() => { });
+        throw new Error(`Push subscribe API failed: ${subscribeResponse.status}`);
+      }
+
+      setIsPushSubscribed(true);
+      window.localStorage.setItem(PUSH_STATE_STORAGE_KEY, "1");
+    } catch (error) {
+      console.error("Push subscription flow failed:", error);
+      setIsPushSubscribed(false);
+      window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+      window.alert("Notification setup failed. Please try again.");
+    } finally {
+      setIsPushLoading(false);
+    }
+  }, [fetchVapidPublicKey, isPushLoading]);
+
   const weatherCity = getWeatherCity(weather);
   const weatherTemperature = getWeatherTemperature(weather);
   const weatherCondition = getWeatherCondition(weather);
+  const notificationButtonLabel = isPushSubscribed
+    ? "Disable notifications"
+    : "Enable notifications";
+  const notificationButtonTitle = isPushLoading
+    ? "Updating notification preference..."
+    : isPushSubscribed
+      ? "You are subscribed. Click to unsubscribe."
+      : "Click to subscribe for notifications.";
+  const desktopNotificationClassName = `top-icon-button${isPushSubscribed ? " is-subscribed" : ""}${isPushLoading ? " is-loading" : ""}`;
+  const mobileNotificationClassName = `navbar-notification-btn${isPushSubscribed ? " is-subscribed" : ""}${isPushLoading ? " is-loading" : ""}`;
 
   const topBarClasses = isMobile
     ? "hidden"
@@ -852,14 +1032,34 @@ const Header = () => {
         {!isScrolled && (
           <div className={`top-bar ${topBarClasses}`}>
             <div className="header-shell top-bar-shell">
-              <Link
-                to="/category/bharat-opinions?subcategory=Interviews"
-                className="top-exclusive-link"
-                aria-label="Open Exclusive Interviews page"
-              >
-                <FileText size={14} aria-hidden="true" />
-                <span>Exclusive Articles & Interviews</span>
-              </Link>
+              <div className="top-bar-left">
+                <div className="top-meta" aria-label="Date and time">
+                  <span className="top-meta-pill top-datetime">
+                    <CalendarDays size={14} aria-hidden="true" />
+                    <span>{date}</span>
+                    <span className="top-datetime-sep">|</span>
+                    <span><LiveClock /> IST</span>
+                  </span>
+                  <Link to="/weather" className="top-meta-pill top-weather" aria-label="Open weather page">
+                    <CloudSun size={15} aria-hidden="true" />
+                    <span>
+                      {weatherCity}
+                      {weatherTemperature ? ` ${weatherTemperature}` : ""}
+                      {weatherCondition ? (
+                        <span className="top-weather-condition">, {weatherCondition}</span>
+                      ) : null}
+                    </span>
+                  </Link>
+                </div>
+                <Link
+                  to="/category/bharat-opinions"
+                  className="top-exclusive-link"
+                  aria-label="Open Exclusive Interviews page"
+                >
+                  <FileText size={14} aria-hidden="true" />
+                  <span>Exclusive Articles & Interviews</span>
+                </Link>
+              </div>
 
               <div className="top-social-links" aria-label="Follow us on social media">
                 <a
@@ -907,25 +1107,6 @@ const Header = () => {
           <div className={`navbar-search-bar ${topBarClasses}`}>
             <div className="header-shell">
               <div className="search-row">
-                <div className="search-left-meta" aria-label="Date and time">
-                  <span className="top-meta-pill top-datetime">
-                    <CalendarDays size={14} aria-hidden="true" />
-                    <span>{date}</span>
-                    <span className="top-datetime-sep">|</span>
-                    <span><LiveClock /> IST</span>
-                  </span>
-                  <Link to="/weather" className="top-meta-pill top-weather" aria-label="Open weather page">
-                    <CloudSun size={15} aria-hidden="true" />
-                    <span>
-                      {weatherCity}
-                      {weatherTemperature ? ` ${weatherTemperature}` : ""}
-                      {weatherCondition ? (
-                        <span className="top-weather-condition">, {weatherCondition}</span>
-                      ) : null}
-                    </span>
-                  </Link>
-                </div>
-
                 <div className="search-center">
                   <div className="search-box relative" ref={searchRef} style={{ position: "relative" }}>
                     <Search size={14} className="search-icon" />
@@ -984,8 +1165,11 @@ const Header = () => {
                   </button>
                   <button
                     type="button"
-                    className="top-icon-button"
-                    aria-label="Notifications"
+                    className={desktopNotificationClassName}
+                    onClick={handleNotificationClick}
+                    disabled={isPushLoading}
+                    aria-label={notificationButtonLabel}
+                    title={notificationButtonTitle}
                   >
                     <Bell size={15} aria-hidden="true" />
                     <span className="notification-dot" aria-hidden="true" />
@@ -1061,8 +1245,11 @@ const Header = () => {
               </button>
               <button
                 type="button"
-                className="navbar-notification-btn"
-                aria-label="Notifications"
+                className={mobileNotificationClassName}
+                onClick={handleNotificationClick}
+                disabled={isPushLoading}
+                aria-label={notificationButtonLabel}
+                title={notificationButtonTitle}
               >
                 <Bell size={15} aria-hidden="true" />
                 <span className="notification-dot" aria-hidden="true" />

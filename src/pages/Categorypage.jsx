@@ -23,7 +23,7 @@ const useViewportWidth = () => {
   return viewportWidth;
 };
 
-// ✅ AM/PM ke saath time
+// AM/PM ke saath time
 const formatViews = (v) => {
   if (!v) return "";
   if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
@@ -107,7 +107,7 @@ export default function CategoryPage() {
         const normalized = finalArticles.map((a) => ({
           ...a,
           image: a.image_url || a.image || null,
-          // ✅ display_author_name API se aata hai "News4Bharat"
+          // display_author_name API se aata hai "News4Bharat"
           // author: a.display_author_name || a.author_display_name || "News4Bharat",
           author: "News4Bharat",
           description: a.subtitle || (a.content ? stripHtml(a.content).slice(0, 150) : ""),
@@ -143,7 +143,7 @@ export default function CategoryPage() {
     }
 
     if (viewportWidth >= 1280) {
-      return { height: "500px" };
+      return { height: "365px" };
     }
 
     if (viewportWidth >= 1024) {
@@ -168,12 +168,22 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
+      <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
+        <AdvertisementSlot
+          page="home"
+          placement="home_side_left"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--left"
+          dismissible
+          minWidth={1024}
+        />
+      </aside>
 
       {/* Category Header */}
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
         <div className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
-            {subFilter ? `${category?.name || slug} › ${subFilter}` : (category?.name || slug)}
+            {subFilter ? `${category?.name || slug} > ${subFilter}` : (category?.name || slug)}
           </h1>
           {category?.description && (
             <p className="text-[13px] text-[#666] mb-2 leading-[1.6]">{category.description}</p>
@@ -231,11 +241,11 @@ export default function CategoryPage() {
                   </h2>
                   <p className="text-[13.5px] text-[#555] mb-[14px] leading-[1.7]">{heroArticle.description}</p>
                   <div className="flex flex-wrap gap-3 sm:gap-4">
-                    {/* ✅ Author — News4Bharat dikhega */}
+                    {/* Author - News4Bharat dikhega */}
                     <span className="inline-flex items-center text-[11.5px] text-[#D80100] font-semibold">
                       <User size={12} className="mr-1" />{heroArticle.author}
                     </span>
-                    {/* ✅ Time AM/PM ke saath */}
+                    {/* Time AM/PM ke saath */}
                     <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
                       <Clock size={12} className="mr-1" />{formatArticleDateTimeIST(heroArticle)}
                     </span>
@@ -289,11 +299,11 @@ export default function CategoryPage() {
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        {/* ✅ Author red color mein */}
+                        {/* Author red color mein */}
                         <span className="flex items-center gap-1 text-red-600 font-semibold">
                           <User size={11} />{article.author}
                         </span>
-                        {/* ✅ AM/PM time */}
+                        {/* AM/PM time */}
                         <span className="flex items-center gap-1">
                           <Clock size={11} />{formatArticleDateTimeIST(article)}
                         </span>
@@ -458,6 +468,17 @@ export default function CategoryPage() {
 
         </aside>
       </div>
+
+      <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
+        <AdvertisementSlot
+          page="home"
+          placement="home_side_right"
+          variant="sideRail"
+          className="home-side-ad home-side-ad--right"
+          dismissible
+          minWidth={1024}
+        />
+      </aside>
     </div>
   );
 }

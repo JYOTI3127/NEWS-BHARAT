@@ -217,7 +217,6 @@ class ArticleSerializer(serializers.ModelSerializer):
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
-    updated_label = serializers.SerializerMethodField()
 
     # Audit trail - read only
     author             = UserSerializer(read_only=True)
@@ -264,7 +263,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             'author_display_instagram', 'author_display_facebook',
             'author_display_articles_count',
             'tags_list', 'secondary_keywords_list',
-            'is_updated', 'updated_display', 'updated_label',
+            'is_updated', 'updated_display',
         ]
 
     def get_category_details(self, obj):
@@ -296,11 +295,13 @@ class ArticleSerializer(serializers.ModelSerializer):
         return updated_at.isoformat() if updated_at else None
 
     def get_updated_display(self, obj):
+        if not self.get_is_updated(obj):
+            return ''
         updated_at = self.get_effective_updated_at(obj)
         if not updated_at:
             return ''
         updated_at = timezone.localtime(updated_at)
-        return updated_at.strftime('%b %d, %Y at %I:%M %p')
+        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
 
     def get_is_updated(self, obj):
         try:
@@ -314,12 +315,6 @@ class ArticleSerializer(serializers.ModelSerializer):
         if updated_at and published_at:
             return updated_at > published_at + timedelta(minutes=1)
         return False
-
-    def get_updated_label(self, obj):
-        if not self.get_is_updated(obj):
-            return ''
-        updated_display = self.get_updated_display(obj)
-        return f'Updated on {updated_display}' if updated_display else ''
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -487,12 +482,10 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     canonical_url = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     published_at = serializers.SerializerMethodField()
-    published_date = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
-    updated_label = serializers.SerializerMethodField()
     categories   = ArticleCategorySerializer(many=True, read_only=True)
 
     class Meta:
@@ -501,8 +494,8 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'subtitle',                 
             'image_url', 'image_alt',
             'category', 'primary_category', 'categories',
-            'published_at', 'published_date', 'created_at', 'updated_at',
-            'is_updated', 'updated_display', 'updated_label',
+            'published_at', 'created_at', 'updated_at',
+            'is_updated', 'updated_display',
             'canonical_url', 'public_url', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
@@ -540,9 +533,6 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         published_at = self.get_effective_published_at(obj)
         return published_at.isoformat() if published_at else None
 
-    def get_published_date(self, obj):
-        return self.get_published_at(obj)
-
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():
             return obj.author_display_name.strip()
@@ -562,11 +552,13 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         return updated_at.isoformat() if updated_at else None
 
     def get_updated_display(self, obj):
+        if not self.get_is_updated(obj):
+            return ''
         updated_at = self.get_effective_updated_at(obj)
         if not updated_at:
             return ''
         updated_at = timezone.localtime(updated_at)
-        return updated_at.strftime('%b %d, %Y at %I:%M %p')
+        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
 
     def get_is_updated(self, obj):
         try:
@@ -581,17 +573,14 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             return updated_at > published_at + timedelta(minutes=1)
         return False
 
-    def get_updated_label(self, obj):
-        if not self.get_is_updated(obj):
-            return ''
-        updated_display = self.get_updated_display(obj)
-        return f'Updated on {updated_display}' if updated_display else ''
-
 
 class ArticleListSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     primary_category = serializers.SerializerMethodField()
-    published_date = serializers.SerializerMethodField()
+    published_at = serializers.SerializerMethodField()
+    updated_at = serializers.SerializerMethodField()
+    is_updated = serializers.SerializerMethodField()
+    updated_display = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     canonical_url = serializers.SerializerMethodField()
 
@@ -605,7 +594,10 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'image_url',
             'image_alt',
             'primary_category',
-            'published_date',
+            'published_at',
+            'updated_at',
+            'is_updated',
+            'updated_display',
             'public_url',
             'canonical_url',
         ]
@@ -623,9 +615,22 @@ class ArticleListSerializer(serializers.ModelSerializer):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
 
-    def get_published_date(self, obj):
+    def get_published_at(self, obj):
         published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
         return published_at.isoformat() if published_at else None
+
+    def get_updated_at(self, obj):
+        return obj.updated_at.isoformat() if obj.updated_at else None
+
+    def get_is_updated(self, obj):
+        published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+        return bool(obj.updated_at and published_at and obj.updated_at > published_at + timedelta(minutes=1))
+
+    def get_updated_display(self, obj):
+        if not self.get_is_updated(obj) or not obj.updated_at:
+            return ''
+        updated_at = timezone.localtime(obj.updated_at)
+        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
 
     def get_public_url(self, obj):
         return article_url(obj)

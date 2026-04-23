@@ -341,16 +341,6 @@ def _save_article_from_request(request, article=None):
 
     if is_new:
         article = Article(author=request.user)
-    else:
-        publish_date_mode = data.get('publish_date_mode', 'now')
-        keep_original_publish_date = (
-            data.get('status') == 'published' and
-            publish_date_mode == 'original' and
-            old_published_at is not None
-        )
-        if not keep_original_publish_date:
-            # Business rule: edited article should surface with the latest update date.
-            article.created_at = timezone.now()
 
     article.title    = title
     article.subtitle = subtitle
@@ -391,7 +381,7 @@ def _save_article_from_request(request, article=None):
 
     if article.status == 'published':
         article.scheduled_at = None
-        if data.get('publish_date_mode') == 'original' and old_published_at is not None:
+        if old_published_at is not None:
             article.published_at = old_published_at
         else:
             article.published_at = timezone.now()
@@ -518,7 +508,7 @@ def article_list(request):
             page = 1
         use_full_payload = str(request.GET.get('full', '')).lower() in {'1', 'true', 'yes'}
 
-        cache_key = f"articles:list:v4:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
+        cache_key = f"articles:list:v5:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -548,7 +538,7 @@ def article_list(request):
                 'author__last_name',
                 'author_display_name',
             )
-            .order_by('-created_at')
+            .order_by('-updated_at', '-published_at', '-created_at')
         )
         if category:
             articles = articles.filter(categories__slug=category).distinct()
@@ -592,7 +582,7 @@ def articles_by_state(request):
             return Response({"error": "Category not found"}, status=404)
  
     # Cache check
-    cache_key = f"articles:state:{state}"
+    cache_key = f"articles:state:v2:{state}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
@@ -601,7 +591,7 @@ def articles_by_state(request):
     articles = Article.objects.filter(
         status='published',
         categories__slug='state-of-bharat',
-    ).select_related('author').prefetch_related('categories')
+    ).select_related('author').prefetch_related('categories').order_by('-updated_at', '-published_at', '-created_at')
  
     # Filtering logic bilkul same hai
     filtered = [
@@ -653,6 +643,7 @@ def articles_by_state(request):
             'image_alt',
             'published_at',
             'created_at',
+            'updated_at',
             'primary_category__id',
             'primary_category__name',
             'primary_category__slug',
@@ -663,12 +654,12 @@ def articles_by_state(request):
             'author__last_name',
             'author_display_name',
         )
-        .order_by('-created_at')
+        .order_by('-updated_at', '-published_at', '-created_at')
         .distinct()
     )
 
     if not state:
-        cache_key = "articles:state:index:v2"
+        cache_key = "articles:state:index:v3"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -701,7 +692,7 @@ def articles_by_state(request):
         cache.set(cache_key, payload, 300)
         return Response(payload)
 
-    cache_key = f"articles:state:v2:{state}:{page}:{limit}"
+    cache_key = f"articles:state:v3:{state}:{page}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)

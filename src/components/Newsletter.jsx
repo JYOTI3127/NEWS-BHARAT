@@ -93,7 +93,7 @@ export default function Newsletter() {
               Our Newsletter
             </p>
 
-            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[2.4rem] min-[1441px]:text-[2.45rem] min-[1800px]:text-[2rem] leading-tight m-0 self-start">
+            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[2rem] min-[1441px]:text-[2.1rem] min-[1800px]:text-[1.9rem] leading-tight m-0 self-start">
               Subscribe To Our Newsletter!
             </h2>
 

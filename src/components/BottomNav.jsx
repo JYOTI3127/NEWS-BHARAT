@@ -127,10 +127,16 @@ const MenuIcon = ({ active }) => (
 );
 
 const getSearchResultHref = (item) => {
+  const publicUrl = String(item?.public_url || "").trim();
+  if (publicUrl) return publicUrl;
+
+  const canonicalUrl = String(item?.canonical_url || "").trim();
+  if (canonicalUrl) return canonicalUrl;
+
   const articlePath = getArticlePath(item);
   if (articlePath) return articlePath;
   if (item?.url) return item.url;
-  if (item?.slug) return `/news/${item.slug}`;
+  if (item?.link) return item.link;
   return "/";
 };
 
@@ -287,6 +293,27 @@ export default function BottomNav() {
     fetchSearchResults(searchQuery);
   };
 
+  const handleSearchResultClick = (item) => {
+    const payload = item || {};
+    const directUrl = String(payload?.public_url || payload?.canonical_url || "").trim();
+    const fallbackUrl = getSearchResultHref(payload);
+    const finalUrl = directUrl || fallbackUrl || "/";
+
+    console.log("[Mobile Search] clicked item payload:", payload);
+    console.log("[Mobile Search] opening URL:", finalUrl);
+
+    closeSearch();
+
+    if (!finalUrl || finalUrl === "#") return;
+
+    if (directUrl) {
+      window.location.href = directUrl;
+      return;
+    }
+
+    navigate(finalUrl);
+  };
+
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchQuery("");
@@ -370,10 +397,7 @@ export default function BottomNav() {
                     <button
                       key={item?.id || item?.slug || `${item?.title || "result"}-${index}`}
                       type="button"
-                      onClick={() => {
-                        closeSearch();
-                        navigate(getSearchResultHref(item));
-                      }}
+                      onClick={() => handleSearchResultClick(item)}
                       className="block w-full border-b border-slate-100 bg-white px-3 py-3 text-left last:border-b-0 hover:bg-red-50"
                     >
                       <span className="block text-[13px] font-semibold leading-snug text-slate-900">

@@ -117,6 +117,59 @@ async function fetchWithRetry(url, retries = 3) {
 const getListFromApiResponse = (data) =>
   Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : data?.results || []
 
+const normalizeNextApiUrl = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+
+  try {
+    const parsed = new URL(raw, `${API_BASE}/`)
+    const apiOrigin = new URL(API_BASE).origin
+    if (parsed.origin !== apiOrigin) return ''
+    return parsed.toString()
+  } catch {
+    return ''
+  }
+}
+
+const fetchAllArticles = async ({ limit = 100, maxPages = 200 } = {}) => {
+  const allArticles = []
+  const seen = new Set()
+  const cacheBust = `_=${Date.now()}`
+  let page = 1
+  let nextUrl = `${API_BASE}/articles/?page=1&limit=${limit}&${cacheBust}`
+
+  while (nextUrl && page <= maxPages) {
+    const data = await fetchWithRetry(nextUrl)
+    const pageItems = getListFromApiResponse(data)
+
+    pageItems.forEach((article) => {
+      const key = String(article?.id || article?.slug || article?.public_url || '').trim()
+      if (key && seen.has(key)) return
+      if (key) seen.add(key)
+      allArticles.push(article)
+    })
+
+    if (Array.isArray(data)) break
+
+    const normalizedNext = normalizeNextApiUrl(data?.next)
+    if (normalizedNext) {
+      nextUrl = normalizedNext
+      page += 1
+      continue
+    }
+
+    if (data?.has_next === true) {
+      page = Number(data?.page || page) + 1
+      nextUrl = `${API_BASE}/articles/?page=${page}&limit=${limit}&${cacheBust}`
+      continue
+    }
+
+    break
+  }
+
+  return allArticles
+}
+
 const getGithubDispatchPayload = () => {
   if (!GITHUB_EVENT_PATH || !fs.existsSync(GITHUB_EVENT_PATH)) return null
 
@@ -434,8 +487,7 @@ async function getRoutesAndData() {
   // Articles
   try {
     const cacheBust = `_=${Date.now()}`
-    const data = await fetchWithRetry(`${API_BASE}/articles/?limit=100&${cacheBust}`)
-    const articles = getListFromApiResponse(data)
+    const articles = await fetchAllArticles({ limit: 100, maxPages: 200 })
     const sortedArticles = [...articles].sort(
       (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
     )

@@ -15,6 +15,7 @@ import BreakingNewsSection from '../components/BreakingNewsSection';
 import HomeCategorySections from '../components/HomeCategorySections';
 import AdvertisementSlot from '../components/AdvertisementSlot';
 import CategoryMiniCarousel from '../components/CategoryMiniCarousel';
+import FreshPopularShowcase from '../components/FreshPopularShowcase';
 
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
@@ -213,6 +214,14 @@ const Home = () => {
         </div>
       </section> */}
 
+
+
+        <div className="home-section-align">
+          <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
+            <FreshPopularShowcase articles={allArticles} />
+          </Profiler>
+        </div>
+
         <div className="home-section-align">
           <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
             <BreakingNewsSection articles={allArticles} />
@@ -248,7 +257,7 @@ const Home = () => {
           />
         </DeferredSection>
 
-        <DeferredSection id="StateNews" minHeight={560} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="StateNews" minHeight={500} forceRender={isNewsletterHash} className="home-section-align">
           <StateNews articles={allArticles} />
         </DeferredSection>
 

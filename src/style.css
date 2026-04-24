@@ -1492,7 +1492,7 @@ img {
    ============================================================ */
 .sn-wrap {
   background: #fff;
-  padding: 24px 32px;
+  /* padding: 24px 32px; */
   width: 100%;
   margin: 0 auto;
 }
@@ -1995,7 +1995,7 @@ img {
 .tn-inner {
   max-width: 1300px;
   /* margin: 0 auto; */
-  padding: 30px 32px;
+  /* padding: 30px 32px; */
   background: #fff;
 }
 

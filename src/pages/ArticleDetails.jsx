@@ -38,6 +38,62 @@ const truncateText = (value, maxLength) => {
   return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 };
 
+const normalizeSlugValue = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+
+const safeDecodeSlug = (value) => {
+  const normalized = normalizeSlugValue(value);
+  if (!normalized) return "";
+
+  try {
+    return normalizeSlugValue(decodeURIComponent(normalized));
+  } catch {
+    return normalized;
+  }
+};
+
+const collectSlugCandidates = (...values) => {
+  const seen = new Set();
+  const result = [];
+
+  const add = (value) => {
+    const normalized = normalizeSlugValue(value);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    result.push(normalized);
+  };
+
+  values.forEach((value) => {
+    const raw = normalizeSlugValue(value);
+    if (!raw) return;
+
+    const decoded = safeDecodeSlug(raw);
+    add(raw);
+    add(decoded);
+    add(raw.toLowerCase());
+    add(decoded.toLowerCase());
+  });
+
+  return result;
+};
+
+const getSlugFromUrlLikeValue = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+
+  try {
+    const parsed = new URL(normalized, SITE_URL);
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    return normalizeSlugValue(parts[parts.length - 1] || "");
+  } catch {
+    const cleaned = normalized.split("?")[0].split("#")[0];
+    const parts = cleaned.split("/").filter(Boolean);
+    return normalizeSlugValue(parts[parts.length - 1] || "");
+  }
+};
+
 const getBrowserTitle = (article) => {
   const apiMetaTitle = [
     article?.meta_title,
@@ -602,19 +658,18 @@ export default function ArticleDetails() {
   const params = useParams();
   const routeParam = params.slug || params.id || "";
   const categorySlug = params.categorySlug || "";
-  const articleSlug = useMemo(() => {
+  const articleLookupCandidates = useMemo(() => {
+    const fromRoute = normalizeSlugValue(routeParam);
+
     if (typeof window === "undefined") {
-      return String(routeParam || "").trim();
+      return collectSlugCandidates(fromRoute);
     }
 
     const parts = window.location.pathname.split("/").filter(Boolean);
     const lastSegment = parts[parts.length - 1] || "";
-    return String(lastSegment || routeParam || "").trim();
+    return collectSlugCandidates(lastSegment, fromRoute);
   }, [routeParam]);
-  const articleLookupCandidates = useMemo(
-    () => (articleSlug ? [articleSlug] : []),
-    [articleSlug]
-  );
+  const articleSlug = articleLookupCandidates[0] || "";
   const is2K = useIs2K();
 
   const [article, setArticle] = useState(null);
@@ -690,12 +745,22 @@ export default function ArticleDetails() {
         if (!detailResponse) {
           const requestedPath =
             categorySlug && articleSlug ? `/${categorySlug}/${articleSlug}/` : "";
+          const lookupSet = new Set(
+            articleLookupCandidates.map((value) => normalizeSlugValue(value).toLowerCase())
+          );
           const listMatch = sortedList.find((candidate) => {
             const articlePath = getArticlePath(candidate);
-            const slug = String(candidate?.slug || "").trim();
+            const slugCandidates = collectSlugCandidates(
+              candidate?.slug,
+              getSlugFromUrlLikeValue(candidate?.public_url),
+              getSlugFromUrlLikeValue(candidate?.canonical_url),
+              getSlugFromUrlLikeValue(candidate?.url),
+              getSlugFromUrlLikeValue(candidate?.link)
+            ).map((value) => normalizeSlugValue(value).toLowerCase());
+
             return (
               (requestedPath && articlePath === requestedPath) ||
-              articleLookupCandidates.includes(slug)
+              slugCandidates.some((slug) => lookupSet.has(slug))
             );
           });
 

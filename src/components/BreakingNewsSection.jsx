@@ -199,7 +199,6 @@ export default function BreakingNewsSection({ articles = [] }) {
               article={leftSecondaryArticle}
               className="
                 group grid grid-cols-[135px_minmax(0,1fr)] items-start gap-[9px] rounded-[10px] border-t border-dotted border-[#9a9a9a] p-[6px_2px_2px]
-                min-[1441px]:max-[2560px]:hidden
                 min-[1441px]:grid-cols-[150px_minmax(0,1fr)]
                 max-[768px]:grid-cols-[128px_minmax(0,1fr)]
                 max-[640px]:grid-cols-1 max-[640px]:h-auto
@@ -244,7 +243,8 @@ export default function BreakingNewsSection({ articles = [] }) {
                 max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
                 max-[375px]:grid-cols-[minmax(0,1fr)_82px]
                 max-[320px]:grid-cols-[minmax(0,1fr)_72px]
-                ${index >= 5 ? 'max-[1440px]:hidden' : ''}
+                ${index >= 4 ? 'max-[1440px]:hidden' : ''}
+                ${index >= 5 ? 'min-[1441px]:max-[2560px]:hidden' : ''}
               `}
             >
               <div className="min-w-0">

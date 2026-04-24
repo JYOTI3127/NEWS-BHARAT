@@ -143,14 +143,173 @@ const SLUG_OVERRIDES = {
   "breaking-news": "breaking-news",
 };
 
+const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
+
+const FALLBACK_STATES_OF_INDIA = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Jammu and Kashmir",
+];
+
+const FALLBACK_UNION_TERRITORIES = [
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
+const UNION_TERRITORIES_LOOKUP = new Set(
+  FALLBACK_UNION_TERRITORIES.map((value) => value.toLowerCase())
+);
+
+const toUniqueList = (values = []) => {
+  const seen = new Set();
+  const result = [];
+
+  values.forEach((value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(normalized);
+  });
+
+  return result;
+};
+
+const splitStatesAndUnionTerritories = (stateNames = []) => {
+  const states = [];
+  const unionTerritories = [];
+
+  stateNames.forEach((name) => {
+    const normalized = String(name || "").trim();
+    if (!normalized) return;
+
+    const key = normalized.toLowerCase();
+    if (UNION_TERRITORIES_LOOKUP.has(key)) {
+      unionTerritories.push(normalized);
+    } else {
+      states.push(normalized);
+    }
+  });
+
+  return {
+    states: toUniqueList([...states, ...FALLBACK_STATES_OF_INDIA]),
+    unionTerritories: toUniqueList([...unionTerritories, ...FALLBACK_UNION_TERRITORIES]),
+  };
+};
+
+const extractStatesFromByStateResponse = (data) => {
+  if (Array.isArray(data?.states)) return toUniqueList(data.states);
+
+  if (data?.results && typeof data.results === "object" && !Array.isArray(data.results)) {
+    return toUniqueList(Object.keys(data.results));
+  }
+
+  if (Array.isArray(data?.results)) {
+    return toUniqueList(
+      data.results
+        .map((item) => item?.selected_state_name || item?.state || item?.state_name)
+        .filter(Boolean)
+    );
+  }
+
+  if (Array.isArray(data)) {
+    return toUniqueList(
+      data
+        .map((item) => item?.selected_state_name || item?.state || item?.state_name)
+        .filter(Boolean)
+    );
+  }
+
+  return [];
+};
+
+const buildStateDrawerSubcategories = (existingSubCategories = {}, stateBuckets = null) => {
+  const rawEntries = Object.entries(existingSubCategories || {});
+  const normalizedGroups = rawEntries
+    .map(([label, topics]) => ({
+      label: String(label || "").trim(),
+      topics: Array.isArray(topics) ? topics : [],
+    }))
+    .filter((group) => group.label.length > 0);
+
+  const stateGroupFromApi = normalizedGroups.find((group) =>
+    group.label.toLowerCase().includes("state")
+  );
+  const utGroupFromApi = normalizedGroups.find((group) =>
+    group.label.toLowerCase().includes("union")
+  );
+
+  const statesLabel = stateGroupFromApi?.label || "States of India";
+  const unionLabel = utGroupFromApi?.label || "Union Territories";
+
+  const statesFromApi = stateGroupFromApi?.topics || [];
+  const utFromApi = utGroupFromApi?.topics || [];
+
+  const mergedStates = toUniqueList([
+    ...statesFromApi,
+    ...(stateBuckets?.states || []),
+    ...FALLBACK_STATES_OF_INDIA,
+  ]);
+  const mergedUTs = toUniqueList([
+    ...utFromApi,
+    ...(stateBuckets?.unionTerritories || []),
+    ...FALLBACK_UNION_TERRITORIES,
+  ]);
+
+  return [
+    { label: statesLabel, topics: mergedStates },
+    { label: unionLabel, topics: mergedUTs },
+  ];
+};
+
 const getFinalSlug = (slug, label) => {
   const s = makeSlug(slug, label);
   return SLUG_OVERRIDES[s] || s;
 };
 
 const getSearchResultHref = (item) => {
+  const publicUrl = String(item?.public_url || "").trim();
+  if (publicUrl) return publicUrl;
+
+  const canonicalUrl = String(item?.canonical_url || "").trim();
+  if (canonicalUrl) return canonicalUrl;
+
   const articlePath = getArticlePath(item);
   if (articlePath) return articlePath;
+
   if (item?.url) return item.url;
   if (item?.link) return item.link;
   return "#";
@@ -435,23 +594,59 @@ const Header = () => {
     if (!isOpen || navSectionsLoaded) return;
     const fetchCategories = async () => {
       try {
-        const res = await fetch(apiUrl("/categories/"));
-        const data = await res.json();
-        const active = data.filter(cat => cat.status === "active");
+        const [categoriesResult, byStateResult] = await Promise.allSettled([
+          fetch(apiUrl("/categories/")).then((res) => res.json()),
+          fetch(apiUrl("/articles/by-state/")).then((res) =>
+            res.ok ? res.json() : null
+          ),
+        ]);
+
+        const data =
+          categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+        const categoryList = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.results)
+            ? data.results
+            : [];
+        const active = categoryList.filter((cat) => cat?.status === "active");
+
+        const byStateData =
+          byStateResult.status === "fulfilled" ? byStateResult.value : null;
+        const stateBuckets = splitStatesAndUnionTerritories(
+          extractStatesFromByStateResponse(byStateData)
+        );
+
         const sections = active.map(cat => {
-          const subKeys = Object.keys(cat.sub_categories || {});
+          const normalizedSlug = String(cat?.slug || "").trim().toLowerCase();
+
           let subcategories = null;
           let links = null;
-          if (subKeys.length > 1) {
-            subcategories = subKeys.map(key => ({ label: key, topics: cat.sub_categories[key] }));
-          } else if (subKeys.length === 1 && (cat.sub_categories[subKeys[0]] || []).length > 0) {
-            const vals = cat.sub_categories[subKeys[0]];
-            if (subKeys[0] === "default") {
-              links = vals;
-            } else {
-              subcategories = [{ label: subKeys[0], topics: vals }];
+
+          if (STATE_CATEGORY_SLUGS.has(normalizedSlug)) {
+            subcategories = buildStateDrawerSubcategories(
+              cat?.sub_categories || {},
+              stateBuckets
+            );
+          } else {
+            const subKeys = Object.keys(cat.sub_categories || {});
+            if (subKeys.length > 1) {
+              subcategories = subKeys.map(key => ({ label: key, topics: cat.sub_categories[key] }));
+            } else if (subKeys.length === 1 && (cat.sub_categories[subKeys[0]] || []).length > 0) {
+              const vals = cat.sub_categories[subKeys[0]];
+              if (subKeys[0] === "default") {
+                links = vals;
+              } else {
+                subcategories = [{ label: subKeys[0], topics: vals }];
+              }
+            } else if (subKeys.length === 1 && subKeys[0] === "default") {
+              links = cat.sub_categories[subKeys[0]] || [];
             }
           }
+
+          if (STATE_CATEGORY_SLUGS.has(normalizedSlug) && (!subcategories || subcategories.length === 0)) {
+            subcategories = buildStateDrawerSubcategories({}, stateBuckets);
+          }
+
           return {
             label: cat.name,
             slug: cat.slug,
@@ -460,11 +655,29 @@ const Header = () => {
             ...(links && { links }),
           };
         });
-        setNavSections(sections);
+
+        setNavSections(sections.length > 0 ? sections : NAV_SECTIONS);
         setNavSectionsLoaded(true);
       } catch (err) {
         console.error("Categories API fail:", err.message);
-        setNavSections(NAV_SECTIONS);
+
+        const fallbackStateSubcategories = buildStateDrawerSubcategories(
+          {},
+          splitStatesAndUnionTerritories([])
+        );
+        const fallbackSections = NAV_SECTIONS.map((section) => {
+          if (!STATE_CATEGORY_SLUGS.has(String(section?.slug || "").toLowerCase())) {
+            return section;
+          }
+
+          return {
+            ...section,
+            subcategories: fallbackStateSubcategories,
+            links: undefined,
+          };
+        });
+
+        setNavSections(fallbackSections);
         setNavSectionsLoaded(true);
       }
     };
@@ -550,6 +763,28 @@ const Header = () => {
     if (e.key === "Enter") { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); fetchSearchResults(searchQuery); }
     if (e.key === "Escape") setShowResults(false);
   }, [fetchSearchResults, searchQuery]);
+
+  const handleSearchResultClick = useCallback((event, item) => {
+    const payload = item || {};
+    const directUrl = String(payload?.public_url || payload?.canonical_url || "").trim();
+    const fallbackUrl = getSearchResultHref(payload);
+    const finalUrl = directUrl || fallbackUrl;
+
+    console.log("[Search] clicked item payload:", payload);
+    console.log("[Search] opening URL:", finalUrl);
+
+    setShowResults(false);
+
+    if (!finalUrl || finalUrl === "#") {
+      event.preventDefault();
+      return;
+    }
+
+    if (directUrl) {
+      event.preventDefault();
+      window.location.href = directUrl;
+    }
+  }, []);
 
   const handleCategorySearchChange = useCallback((e) => {
     const val = e.target.value;
@@ -1154,7 +1389,7 @@ const Header = () => {
                               key={idx}
                               to={getSearchResultHref(item)}
                               className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
-                              onClick={() => setShowResults(false)}
+                              onClick={(event) => handleSearchResultClick(event, item)}
                             >
                               {(item.category || item.tag || item.type) && (
                                 <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">

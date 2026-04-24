@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist build node_modules/.vite && vite build && node prerender.mjs",
+    "build": "node -e \"const fs=require('fs'); ['dist','build','node_modules/.vite'].forEach((p)=>{try{fs.rmSync(p,{recursive:true,force:true});}catch{}})\" && vite build && node prerender.mjs",
     "build:static": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

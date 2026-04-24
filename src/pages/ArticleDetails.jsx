@@ -13,6 +13,7 @@ import {
   getCanonicalArticleUrl,
   getArticlePath,
 } from "../lib/articleUrl";
+import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 import AdvertisementSlot from "../components/AdvertisementSlot";
 
 const SITE_URL = "https://news4bharat.com";
@@ -773,7 +774,7 @@ export default function ArticleDetails() {
       });
       window.open("https://www.instagram.com/", "_blank");
     } else if (platform === "youtube") {
-      window.open("https://www.youtube.com/@news4bharat", "_blank");
+      window.open(YOUTUBE_CHANNEL_URL, "_blank");
     } else if (platform === "whatsapp") {
       window.open(`https://wa.me/?text=${encodeURIComponent(title + " " + url)}`, "_blank");
     } else if (platform === "linkedin") {

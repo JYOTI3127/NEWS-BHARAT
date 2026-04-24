@@ -14,6 +14,7 @@ import {
 import "../Navbar.css";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
 // ─────────────────────────────────────────────
 // ✅ FIX 1: LiveClock — alag component
@@ -252,7 +253,7 @@ const navLinks = [
   { label: "National", path: "/category/national" },
   { label: "Political", path: "/category/politics" },
   { label: "Trending", path: "/category/trending" },
-  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
+  { label: "Artificial Intelligence", path: "/category/ai" },
 ];
 
 const DESKTOP_VISIBLE_NAV_COUNT = 8;
@@ -1081,7 +1082,7 @@ const Header = () => {
                   <Instagram size={14} aria-hidden="true" />
                 </a>
                 <a
-                  href="https://youtube.com/@news4bharat-p1w?si=IDAN0BepU_mRjB0w"
+                  href={YOUTUBE_CHANNEL_URL}
                   target="_blank"
                   rel="noreferrer"
                   className="top-social-link"

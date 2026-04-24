@@ -2,6 +2,7 @@ import logo from "../assets/Logo 02 compact.png";
 import "../Footer.css";
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Youtube, Linkedin, X, MessageCircle } from "lucide-react";
+import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
 const WhatsAppIcon = ({ size = 17 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="currentColor">
@@ -146,7 +147,7 @@ export default function Footer() {
                 <path d="M18.244 2H21l-6.56 7.5L22 22h-6.828l-5.35-7.002L3.5 22H1l7.02-8.02L2 2h6.9l4.86 6.41L18.244 2zm-2.39 18h1.885L8.15 4H6.2l9.654 16z" />
               </svg>
             </a>
-            <a href="https://youtube.com/@news4bharat-p1w?si=IDAN0BepU_mRjB0w" className="ft-soc">
+            <a href={YOUTUBE_CHANNEL_URL} className="ft-soc">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.7 31.7 0 000 12a31.7 31.7 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.7 31.7 0 0024 12a31.7 31.7 0 00-.5-5.8zM9.6 15.5v-7l6.2 3.5-6.2 3.5z" />
               </svg>

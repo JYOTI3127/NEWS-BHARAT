@@ -4,6 +4,7 @@ import { FaFacebookF, FaInstagram, FaYoutube, FaLinkedin } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6";
 import { MdOutlineMailOutline } from "react-icons/md";
 import { IoCheckmarkCircle } from "react-icons/io5";
+import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSpSaJe57t9c-rjeiQXTigiJ_Z9JeF1w12Sm4fX_Mb-C5oIebysakUFIHz6aTJG6y3dA/exec";
 
@@ -440,7 +441,7 @@ export default function ComingSoon() {
             <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" target="_blank" rel="noreferrer" className="s-link" title="Facebook"><FaFacebookF /></a>
             <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" target="_blank" rel="noreferrer" className="s-link" title="Instagram"><FaInstagram /></a>
             <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="s-link" title="X / Twitter"><FaXTwitter /></a>
-            <a href="https://www.youtube.com/@News4Bharat-p1w" target="_blank" rel="noreferrer" className="s-link" title="YouTube"><FaYoutube /></a>
+            <a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noreferrer" className="s-link" title="YouTube"><FaYoutube /></a>
             <a href="https://www.linkedin.com/company/news4bharat/" target="_blank" rel="noreferrer" className="s-link" title="LinkedIn"><FaLinkedin /></a>
           </div>
 

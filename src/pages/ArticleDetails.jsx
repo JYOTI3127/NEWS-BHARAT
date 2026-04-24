@@ -39,7 +39,19 @@ const truncateText = (value, maxLength) => {
 };
 
 const getBrowserTitle = (article) => {
-  const apiMetaTitle = getPlainText(article?.meta_title);
+  const apiMetaTitle = [
+    article?.meta_title,
+    article?.metaTitle,
+    article?.seo_title,
+    article?.seoTitle,
+    article?.seo?.meta_title,
+    article?.seo?.metaTitle,
+    article?.seo?.seo_title,
+    article?.seo?.seoTitle,
+  ]
+    .map((value) => getPlainText(value))
+    .find(Boolean);
+
   if (apiMetaTitle) return apiMetaTitle;
 
   const baseTitle = String(article?.title || "").trim();
@@ -688,6 +700,45 @@ export default function ArticleDetails() {
           });
 
           if (listMatch && (listMatch.slug || listMatch.id)) {
+            const hasSeoTitle = [
+              listMatch?.meta_title,
+              listMatch?.metaTitle,
+              listMatch?.seo_title,
+              listMatch?.seoTitle,
+              listMatch?.seo?.meta_title,
+              listMatch?.seo?.metaTitle,
+              listMatch?.seo?.seo_title,
+              listMatch?.seo?.seoTitle,
+            ]
+              .map((value) => getPlainText(value))
+              .some(Boolean);
+
+            if (!hasSeoTitle && listMatch?.id) {
+              try {
+                const idDetailResponse = await fetch(
+                  apiUrl(`/articles/${encodeURIComponent(String(listMatch.id))}/`),
+                  {
+                    signal: controller.signal,
+                    cache: "no-store",
+                  }
+                );
+
+                if (idDetailResponse.ok) {
+                  const idDetailData = await idDetailResponse.json();
+                  const hydratedArticle = Array.isArray(idDetailData)
+                    ? idDetailData[0]
+                    : idDetailData;
+
+                  if (hydratedArticle && (hydratedArticle.slug || hydratedArticle.id)) {
+                    setArticle({ ...listMatch, ...hydratedArticle });
+                    return;
+                  }
+                }
+              } catch (error) {
+                if (error?.name === "AbortError") throw error;
+              }
+            }
+
             setArticle(listMatch);
             return;
           }
@@ -762,6 +813,11 @@ export default function ArticleDetails() {
       window.removeEventListener("resize", updateMoreInHeight);
     };
   }, [article, allArticles.length, articleSlug]);
+
+  useEffect(() => {
+    if (!article) return;
+    document.title = getBrowserTitle(article);
+  }, [article]);
 
   const sidebarBaseArticles = article
     ? allArticles.filter(

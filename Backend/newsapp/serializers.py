@@ -496,7 +496,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'category', 'primary_category', 'categories',
             'published_at', 'created_at', 'updated_at',
             'is_updated', 'updated_display',
-            'canonical_url', 'public_url', 'meta_description', 'focus_keyword',
+            'canonical_url', 'public_url', 'meta_title', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
             'selected_subcategories',

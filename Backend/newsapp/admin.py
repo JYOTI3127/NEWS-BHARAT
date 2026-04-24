@@ -1163,7 +1163,7 @@ class ArticleAdmin(admin.ModelAdmin):
         }),
         ('SEO', {
             'fields': (
-                'slug', 'canonical_url', 'meta_description',
+                'slug', 'canonical_url', 'meta_title', 'meta_description',
                 'focus_keyword', 'noindex', 'nofollow', 'in_sitemap'
             )
         }),

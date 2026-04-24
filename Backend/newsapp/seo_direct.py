@@ -567,7 +567,7 @@ class MetaEngine:
     def for_article(article) -> dict:
         base    = SEO["SITE_URL"]
         url     = article_url(article, base)
-        title   = article.title
+        title   = (getattr(article, "meta_title", "") or article.title).strip()
         desc    = article.meta_description or _strip(article.content, 160)
         img_url = article.get_image()
         if img_url and not img_url.startswith("http"):

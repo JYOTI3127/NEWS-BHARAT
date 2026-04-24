@@ -113,6 +113,7 @@ class Article(models.Model):
     # ── SEO fields ──
     slug             = models.SlugField(max_length=100, unique=True, blank=True)
     canonical_url    = models.URLField(blank=True)
+    meta_title       = models.TextField(blank=True, default='')
     meta_description = models.TextField(blank=True)
     focus_keyword    = models.CharField(max_length=100, blank=True)
     # FIX: secondary_keywords field
@@ -143,6 +144,9 @@ class Article(models.Model):
     deadline = models.DateTimeField(null=True, blank=True)
  
     def clean(self):
+        meta_title_words = len((self.meta_title or '').split())
+        if meta_title_words > 70:
+            raise ValidationError({'meta_title': 'Meta title can have at most 70 words.'})
         if self.assigned_to and self.pk:
             profile = self.assigned_to.profile
             for cat in self.categories.all():

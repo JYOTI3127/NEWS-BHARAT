@@ -58,5 +58,6 @@ urlpatterns = [
     # ── Web Push Notifications ──
     path('push/subscribe/', views.save_push_subscription, name='push_subscribe'),
     path('push/vapid-key/', views.get_vapid_public_key,   name='push_vapid_key'),
+    path('push/test/', views.send_test_push_notification, name='push_test'),
 ]
 

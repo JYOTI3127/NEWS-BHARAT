@@ -904,6 +904,11 @@ label.image-drop {
         <input type="hidden" id="ui_secondary_keywords" value="{{ original.secondary_keywords|default:'' }}">
       </div>
       <div class="seo-field">
+        <div class="seo-field-label">Meta Title <span class="seo-meta-char-badge" id="meta_title_count_badge">0/70</span></div>
+        <textarea class="seo-inp seo-meta-textarea" id="ui_meta_title" rows="2" placeholder="SEO title for search and social previews...">{{ original.meta_title|default:'' }}</textarea>
+        <div class="seo-hint" id="meta_title_hint">Aim for 1-70 words.</div>
+      </div>
+      <div class="seo-field">
         <div class="seo-field-label">Meta Description <span class="seo-meta-char-badge" id="meta_count_badge">0/160</span></div>
         <textarea class="seo-inp seo-meta-textarea" id="ui_meta_desc" rows="3" maxlength="160" placeholder="Compelling summary for search snippets (120–160 chars)...">{{ original.meta_description|default:'' }}</textarea>
         <div class="seo-meta-meter-wrap"><div class="seo-meta-meter-bar" id="meta_meter_bar"></div></div>
@@ -1658,6 +1663,7 @@ async function _asAutoSave(){
     formData.append('content',content);
     formData.append('status','draft');
     formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');
+    formData.append('meta_title',document.getElementById('ui_meta_title')?document.getElementById('ui_meta_title').value:'');
     formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');
     formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
     formData.append('secondary_keywords',_asSecondaryKwsValue());
@@ -3063,6 +3069,31 @@ function generateSlug(){
   }
 })();
 (function initMeta(){
+  const titleTa=document.getElementById('ui_meta_title');
+  function clampMetaTitle(){
+    if(!titleTa)return;
+    const words=titleTa.value.trim()?titleTa.value.trim().split(/\s+/):[];
+    if(words.length>70){
+      titleTa.value=words.slice(0,70).join(' ');
+    }
+  }
+  function updateTitleMeta(){
+    if(!titleTa)return;
+    clampMetaTitle();
+    const words=titleTa.value.trim()?titleTa.value.trim().split(/\s+/).filter(Boolean):[];
+    const badge=document.getElementById('meta_title_count_badge'),
+          hint=document.getElementById('meta_title_hint');
+    if(badge)badge.textContent=words.length+'/70';
+    if(hint){
+      hint.textContent=words.length===0?'Aim for 1-70 words.':words.length>60?'Almost at the limit.':'Looks good for SEO title.';
+    }
+    updateSeoScore();
+  }
+  if(titleTa){
+    titleTa.addEventListener('input',updateTitleMeta);
+    titleTa.addEventListener('blur',updateTitleMeta);
+    updateTitleMeta();
+  }
   const ta=document.getElementById('ui_meta_desc');
   if(!ta)return;
   function update(){
@@ -3101,12 +3132,14 @@ function syncNoindex(){
 }
 function updateSeoScore(){
   var titleEl=document.getElementById('ui_title'),
+      metaTitleEl=document.getElementById('ui_meta_title'),
       metaEl=document.getElementById('ui_meta_desc'),
       focusEl=document.getElementById('ui_focus_kw'),
       slugEl=document.getElementById('ui_slug'),
       imgUrlEl=document.getElementById('ui_image'),
       fileInput=document.getElementById('ui_image_file');
   const title=titleEl?titleEl.value:'',
+        metaTitle=metaTitleEl?metaTitleEl.value:'',
         content=nbEditor?(nbEditor.innerText||''):'',
         meta=metaEl?metaEl.value:'';
   const focusKw=(focusEl?focusEl.value:'').toLowerCase().trim(),
@@ -3115,14 +3148,16 @@ function updateSeoScore(){
   const urlVal=imgUrlEl?imgUrlEl.value:'';
   const hasImg=hasFile||(urlVal&&!urlVal.startsWith('blob:')&&urlVal.length>0);
   const words=content.trim().split(/\s+/).filter(Boolean).length,
-        first100=content.trim().split(/\s+/).slice(0,100).join(' ').toLowerCase();
+        first100=content.trim().split(/\s+/).slice(0,100).join(' ').toLowerCase(),
+        metaTitleWords=metaTitle.trim().split(/\s+/).filter(Boolean).length;
 
   const weights={
-    chk_title:12,chk_focus:8,chk_kw_title:15,chk_meta:12,chk_kw_meta:10,
+    chk_title:12,chk_meta_title:10,chk_focus:8,chk_kw_title:15,chk_meta:12,chk_kw_meta:10,
     chk_content:18,chk_kw_content:15,chk_slug:5,chk_image:5
   };
   const checks={
     chk_title:title.length>=30&&title.length<=70,
+    chk_meta_title:metaTitleWords>0&&metaTitleWords<=70,
     chk_focus:focusKw.length>0,
     chk_kw_title:focusKw.length>0&&title.toLowerCase().includes(focusKw),
     chk_meta:meta.length>=120&&meta.length<=160,
@@ -3157,7 +3192,7 @@ function updateSeoScore(){
     lblEl.textContent=label;
   }
 }
-['ui_title','ui_meta_desc','ui_focus_kw','ui_slug','ui_image'].forEach(function(id){
+['ui_title','ui_meta_title','ui_meta_desc','ui_focus_kw','ui_slug','ui_image'].forEach(function(id){
   const el=document.getElementById(id);
   if(el)el.addEventListener('input',updateSeoScore);
 });
@@ -3372,6 +3407,7 @@ async function submitArticle(forceStatus){
   formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');
   formData.append('canonical_url',document.getElementById('ui_canonical')?document.getElementById('ui_canonical').value:'');
   formData.append('primary_category',document.getElementById('ui_primary_category')?document.getElementById('ui_primary_category').value:'');
+  formData.append('meta_title',document.getElementById('ui_meta_title')?document.getElementById('ui_meta_title').value:'');
   formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');
   formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
   formData.append('secondary_keywords',document.getElementById('ui_secondary_keywords')?document.getElementById('ui_secondary_keywords').value:'');

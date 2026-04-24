@@ -29,6 +29,7 @@ from .models import UserProfile, LoginAttemptLog
 import os
 import uuid
 import re
+from pathlib import Path
 import google.generativeai as genai
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
@@ -96,6 +97,97 @@ def _invalidate_category_cache():
             cache.delete_pattern('categories:all:*')
     except Exception:
         pass
+
+
+def _normalize_meta_title(value):
+    value = str(value or '').strip()
+    if not value:
+        return ''
+    words = value.split()
+    return ' '.join(words[:70])
+
+
+def _normalize_category_tree(value):
+    if value in (None, ''):
+        return {}
+
+    if isinstance(value, str):
+        text = value.strip()
+        return text if text else ''
+
+    if isinstance(value, list):
+        normalized_list = []
+        for item in value:
+            normalized_item = _normalize_category_tree(item)
+            if normalized_item in ({}, [], ''):
+                continue
+            normalized_list.append(normalized_item)
+        return normalized_list
+
+    if isinstance(value, dict):
+        normalized_dict = {}
+        for key, item in value.items():
+            clean_key = str(key).strip()
+            if not clean_key:
+                continue
+            normalized_item = _normalize_category_tree(item)
+            if normalized_item in ({}, [], ''):
+                continue
+            normalized_dict[clean_key] = normalized_item
+        return normalized_dict
+
+    text = str(value).strip()
+    return text if text else ''
+
+
+def _category_tree_matches(value, query):
+    query = str(query or '').strip().lower()
+    if not query:
+        return False
+
+    if isinstance(value, str):
+        return query in value.lower()
+
+    if isinstance(value, list):
+        return any(_category_tree_matches(item, query) for item in value)
+
+    if isinstance(value, dict):
+        return any(
+            query in str(key).lower() or _category_tree_matches(item, query)
+            for key, item in value.items()
+        )
+
+    return query in str(value).lower()
+
+
+def _category_tree_match_paths(value, query, parent_path=''):
+    matches = []
+    query = str(query or '').strip().lower()
+
+    if isinstance(value, str):
+        if query and query in value.lower():
+            matches.append(parent_path or value)
+        return matches
+
+    if isinstance(value, list):
+        for item in value:
+            item_label = item if isinstance(item, str) else ''
+            item_path = f"{parent_path} > {item_label}".strip(' >') if item_label else parent_path
+            matches.extend(_category_tree_match_paths(item, query, item_path))
+        return matches
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            current_path = f"{parent_path} > {key}".strip(' >')
+            if query and query in str(key).lower():
+                matches.append(current_path)
+            matches.extend(_category_tree_match_paths(item, query, current_path))
+        return matches
+
+    text = str(value).strip()
+    if text and query in text.lower():
+        matches.append(parent_path or text)
+    return matches
 
 
 def _is_current_article_image_url(article, url_value, request=None):
@@ -399,6 +491,7 @@ def _save_article_from_request(request, article=None):
     raw_slug = data.get('slug', '').strip()
     article.slug = slugify(raw_slug.strip('/').split('/')[-1])
     article.canonical_url      = normalize_article_canonical(data.get('canonical_url', ''), article.slug)
+    article.meta_title         = _normalize_meta_title(data.get('meta_title', ''))
     article.meta_description   = data.get('meta_description', '').strip()
     article.focus_keyword      = data.get('focus_keyword', '').strip()
     article.secondary_keywords = data.get('secondary_keywords', '').strip()
@@ -1863,12 +1956,21 @@ def live_category_search_api(request):
             "error": "Query must be at least 2 characters"
         }, status=400)
 
-    categories = (
+    categories_qs = (
         Category.objects.filter(status='active')
-        .filter(Q(name__icontains=query) | Q(slug__icontains=query))
         .annotate(article_count=Count('articles', filter=Q(articles__status='published')))
-        .order_by('-article_count', 'name')[:limit]
+        .order_by('-article_count', 'name')
     )
+
+    matching_categories = []
+    for cat in categories_qs:
+        sub_tree = _normalize_category_tree(cat.sub_categories)
+        matches_self = query.lower() in (cat.name or '').lower() or query.lower() in (cat.slug or '').lower()
+        matches_tree = _category_tree_matches(sub_tree, query)
+        if matches_self or matches_tree:
+            matching_categories.append((cat, sub_tree))
+        if len(matching_categories) >= limit:
+            break
 
     categories_data = [
         {
@@ -1878,8 +1980,10 @@ def live_category_search_api(request):
             "description": cat.description or "",
             "article_count": cat.article_count,
             "url": f"/category/{clean_url_segment(cat.slug)}/",
+            "sub_categories": sub_tree if isinstance(sub_tree, (dict, list)) else {},
+            "matched_sub_categories": _category_tree_match_paths(sub_tree, query),
         }
-        for cat in categories
+        for cat, sub_tree in matching_categories
     ]
 
     return JsonResponse({
@@ -2826,6 +2930,7 @@ def newsletter_view(request):
             'created_at',
             'updated_at',
             'canonical_url',
+            'meta_title',
             'meta_description',
             'focus_keyword',
             'secondary_keywords',
@@ -3642,21 +3747,60 @@ def get_vapid_public_key(request):
     })
 
 
-def send_push_to_all(title, body, url, icon="/logo.png"):
+def _resolve_vapid_private_key():
+    private_key = str(getattr(settings, "VAPID_PRIVATE_KEY", "") or "").strip()
+    if not private_key:
+        return ""
+
+    key_path = Path(private_key)
+    if key_path.is_file():
+        return str(key_path)
+
+    if not key_path.is_absolute():
+        base_dir = Path(getattr(settings, "BASE_DIR", Path.cwd()))
+        candidate = base_dir / private_key
+        if candidate.is_file():
+            return str(candidate)
+
+    return private_key
+
+
+def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
     """Naya article publish hone pe yeh call hoga"""
     from django.conf import settings
 
     if not settings.VAPID_PUBLIC_KEY or not settings.VAPID_PRIVATE_KEY:
-        print("Push notification skipped: VAPID keys are not configured")
-        return
+        message = "Push notification skipped: VAPID keys are not configured"
+        print(message)
+        report = {
+            "ok": False,
+            "message": message,
+            "total": 0,
+            "sent": 0,
+            "failed": 0,
+            "failed_ids": [],
+        }
+        return report if return_report else None
+
+    vapid_private_key = _resolve_vapid_private_key()
 
     subscriptions = PushSubscription.objects.filter(is_active=True)
-    
+
     if not subscriptions.exists():
-        print("No subscribers found")
-        return
+        message = "No subscribers found"
+        print(message)
+        report = {
+            "ok": False,
+            "message": message,
+            "total": 0,
+            "sent": 0,
+            "failed": 0,
+            "failed_ids": [],
+        }
+        return report if return_report else None
 
     failed = []
+    failure_details = []
     for sub in subscriptions:
         try:
             webpush(
@@ -3673,7 +3817,7 @@ def send_push_to_all(title, body, url, icon="/logo.png"):
                     "url":   url,
                     "icon":  icon
                 }),
-                vapid_private_key=str(settings.VAPID_PRIVATE_KEY),
+                vapid_private_key=vapid_private_key,
                 vapid_claims=settings.VAPID_CLAIMS
             )
         except WebPushException as e:
@@ -3682,7 +3826,39 @@ def send_push_to_all(title, body, url, icon="/logo.png"):
                 sub.is_active = False
                 sub.save()
             failed.append(sub.id)
+            failure_details.append({
+                "subscription_id": sub.id,
+                "endpoint": sub.endpoint[:120],
+                "error": str(e),
+            })
             print(f"Failed for sub {sub.id}: {e}")
 
     success_count = subscriptions.count() - len(failed)
     print(f"✅ Sent: {success_count} | ❌ Failed: {len(failed)}")
+    report = {
+        "ok": success_count > 0,
+        "message": "Push send completed",
+        "total": subscriptions.count(),
+        "sent": success_count,
+        "failed": len(failed),
+        "failed_ids": failed,
+        "failures": failure_details,
+    }
+    return report if return_report else None
+
+
+@staff_member_required
+@require_POST
+def send_test_push_notification(request):
+    payload = {
+        "title": request.POST.get("title") or "News4Bharat Test Alert",
+        "body": request.POST.get("body") or "Ye backend se bheja gaya test push hai.",
+        "url": request.POST.get("url") or "https://news4bharat.com/",
+        "icon": request.POST.get("icon") or "/logo.png",
+    }
+    report = send_push_to_all(return_report=True, **payload)
+    return JsonResponse({
+        "status": "ok" if report and report.get("ok") else "error",
+        "payload": payload,
+        "report": report or {},
+    }, status=200 if report and report.get("total", 0) >= 0 else 500)

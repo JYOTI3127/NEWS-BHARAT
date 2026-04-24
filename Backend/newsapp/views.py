@@ -194,6 +194,75 @@ def _category_tree_match_paths(value, query, parent_path=''):
     return matches
 
 
+def _flatten_category_search_results(category, value, query, parent_path=''):
+    results = []
+    query = str(query or '').strip().lower()
+    category_slug = clean_url_segment(category.slug)
+    base_url = f"/category/{category_slug}/"
+
+    def normalize_path(path):
+        parts = [part.strip() for part in str(path or '').split('>') if part.strip()]
+        parts = [part for part in parts if part.lower() != 'default']
+        return ' > '.join(parts)
+
+    if isinstance(value, str):
+        label = value.strip()
+        if label and query in label.lower():
+            path = normalize_path(f"{parent_path} > {label}".strip(" >"))
+            results.append({
+                "type": "subcategory" if parent_path else "category",
+                "label": label,
+                "name": label,
+                "slug": clean_url_segment(label),
+                "parent_category": category.name,
+                "parent_slug": category.slug,
+                "path": path or label,
+                "url": f"{base_url}?q={clean_url_segment(label)}",
+            })
+        return results
+
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, str):
+                label = item.strip()
+                if label and query in label.lower():
+                    path = normalize_path(f"{parent_path} > {label}".strip(" >"))
+                    results.append({
+                        "type": "subcategory" if parent_path else "category",
+                        "label": label,
+                        "name": label,
+                        "slug": clean_url_segment(label),
+                        "parent_category": category.name,
+                        "parent_slug": category.slug,
+                        "path": path or label,
+                        "url": f"{base_url}?q={clean_url_segment(label)}",
+                    })
+            else:
+                results.extend(_flatten_category_search_results(category, item, query, parent_path))
+        return results
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_label = str(key).strip()
+            current_path = f"{parent_path} > {key_label}".strip(" >")
+            if key_label and query in key_label.lower():
+                path = normalize_path(current_path)
+                results.append({
+                    "type": "subcategory" if parent_path else "category_section",
+                    "label": key_label,
+                    "name": key_label,
+                    "slug": clean_url_segment(key_label),
+                    "parent_category": category.name,
+                    "parent_slug": category.slug,
+                    "path": path or key_label,
+                    "url": f"{base_url}?q={clean_url_segment(key_label)}",
+                })
+            results.extend(_flatten_category_search_results(category, item, query, current_path))
+        return results
+
+    return results
+
+
 def _is_current_article_image_url(article, url_value, request=None):
     if not url_value or not getattr(article, 'image', None):
         return False
@@ -1950,6 +2019,7 @@ def search_api(request):
 @require_GET
 def live_category_search_api(request):
     query = request.GET.get('q', '').strip()
+    query_lower = query.lower()
     limit = min(int(request.GET.get('limit', 10)), 20)
 
     if len(query) < 2:
@@ -1967,13 +2037,42 @@ def live_category_search_api(request):
     )
 
     matching_categories = []
+    flattened_results = []
+    seen_result_keys = set()
     for cat in categories_qs:
         sub_tree = _normalize_category_tree(cat.sub_categories)
-        matches_self = query.lower() in (cat.name or '').lower() or query.lower() in (cat.slug or '').lower()
+        matches_self = query_lower in (cat.name or '').lower() or query_lower in (cat.slug or '').lower()
         matches_tree = _category_tree_matches(sub_tree, query)
         if matches_self or matches_tree:
             matching_categories.append((cat, sub_tree))
-        if len(matching_categories) >= limit:
+            if matches_self:
+                result = {
+                    "type": "category",
+                    "label": cat.name,
+                    "name": cat.name,
+                    "slug": cat.slug,
+                    "parent_category": None,
+                    "parent_slug": None,
+                    "path": cat.name,
+                    "url": f"/category/{clean_url_segment(cat.slug)}/",
+                    "article_count": cat.article_count,
+                    "description": cat.description or "",
+                }
+                key = ("category", cat.slug)
+                if key not in seen_result_keys:
+                    seen_result_keys.add(key)
+                    flattened_results.append(result)
+
+            for item in _flatten_category_search_results(cat, sub_tree, query):
+                key = (item.get("type"), item.get("path"))
+                if key in seen_result_keys:
+                    continue
+                seen_result_keys.add(key)
+                item["article_count"] = cat.article_count
+                item["description"] = cat.description or ""
+                flattened_results.append(item)
+
+        if len(flattened_results) >= limit and len(matching_categories) >= limit:
             break
 
     categories_data = [
@@ -1992,7 +2091,8 @@ def live_category_search_api(request):
 
     return JsonResponse({
         "query": query,
-        "total": len(categories_data),
+        "total": len(flattened_results[:limit]),
+        "results": flattened_results[:limit],
         "categories": categories_data,
     })
 

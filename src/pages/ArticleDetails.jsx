@@ -38,6 +38,15 @@ const truncateText = (value, maxLength) => {
   return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 };
 
+const getBrowserTitle = (article) => {
+  const apiMetaTitle = getPlainText(article?.meta_title);
+  if (apiMetaTitle) return apiMetaTitle;
+
+  const baseTitle = String(article?.title || "").trim();
+  if (!baseTitle) return `Latest News | ${SITE_NAME}`;
+  return `${baseTitle.substring(0, 70)} | ${SITE_NAME}`;
+};
+
 const toAbsoluteSiteUrl = (value) => {
   const normalized = String(value || "").trim();
   if (!normalized) return null;
@@ -339,7 +348,9 @@ const normalizeArticleContent = (html) => {
 
   let normalized = html
     .replace(/<\/?font\b[^>]*>/gi, "")
-    .replace(/\s(?:size|face)=["'][^"']*["']/gi, "");
+    .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
+    .replace(/<h1(\b[^>]*)>/gi, "<h2$1>")
+    .replace(/<\/h1>/gi, "</h2>");
 
   if (typeof window === "undefined" || typeof DOMParser === "undefined") {
     return normalized;
@@ -349,6 +360,16 @@ const normalizeArticleContent = (html) => {
   Array.from(
     doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")
   ).forEach((node) => node.remove());
+
+  Array.from(doc.body.querySelectorAll("h1")).forEach((heading) => {
+    const replacement = doc.createElement("h2");
+    Array.from(heading.attributes).forEach((attribute) =>
+      replacement.setAttribute(attribute.name, attribute.value)
+    );
+    replacement.innerHTML = heading.innerHTML;
+    heading.replaceWith(replacement);
+  });
+
   const elements = doc.body.querySelectorAll("*");
 
   elements.forEach((element) => {
@@ -695,14 +716,6 @@ export default function ArticleDetails() {
     return () => controller.abort();
   }, [articleLookupCandidates, articleSlug, categorySlug]);
 
-  useEffect(() => {
-    if (article?.title) {
-      document.title = `${article.title} | News4Bharat`;
-    }
-    return () => {
-      document.title = "News4Bharat — Latest News on India";
-    };
-  }, [article?.title]);
 
   useEffect(() => {
     if (!articleSlug) return;
@@ -909,7 +922,7 @@ export default function ArticleDetails() {
     truncateText(plainArticleContent, 220) ||
     article.title;
 
-  const seoTitle = `${article.title} | ${SITE_NAME}`;
+  const seoTitle = getBrowserTitle(article);
   const metaDescription =
     getPlainText(article.meta_description) ||
     articleSummaryText ||
@@ -1124,7 +1137,6 @@ export default function ArticleDetails() {
             contentRef={articleContentRef}
             className="article-content text-gray-700 text-left md:text-justify
   [&_p]:text-[16px] [&_p]:leading-[1.6] [&_p]:mb-[1.2rem]
-  [&_h1]:text-[18px] [&_h1]:leading-[1.4] [&_h1]:mb-[1.2rem] [&_h1]:font-bold
   [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
   [&_h3]:text-[18px] [&_h3]:leading-[1.4] [&_h3]:mb-[1.2rem] [&_h3]:font-bold
   [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6

@@ -3646,6 +3646,10 @@ def send_push_to_all(title, body, url, icon="/logo.png"):
     """Naya article publish hone pe yeh call hoga"""
     from django.conf import settings
 
+    if not settings.VAPID_PUBLIC_KEY or not settings.VAPID_PRIVATE_KEY:
+        print("Push notification skipped: VAPID keys are not configured")
+        return
+
     subscriptions = PushSubscription.objects.filter(is_active=True)
     
     if not subscriptions.exists():

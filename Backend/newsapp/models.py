@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.db import models
 from django.contrib.auth.models import User
@@ -153,6 +153,8 @@ class Article(models.Model):
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
         update_fields = kwargs.get('update_fields')
+        should_ping_sitemap = False
+        push_payload = None
         if update_fields:
             update_fields = set(update_fields)
             if 'updated_at' not in update_fields:
@@ -210,32 +212,20 @@ class Article(models.Model):
                         update_fields.add('published_at')
                         kwargs['update_fields'] = update_fields
 
-                    from newsapp.signals import ping_google_sitemap
-                    ping_google_sitemap()
-
-                    # ── Web Push Notification ──
-                    try:
-                        from newsapp.views import send_push_to_all
-                        send_push_to_all(
-                            title=self.title[:60],
-                            body=self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
-                            url=f"https://news4bharat.com/{self.slug}/",
-                        )
-                    except Exception as e:
-                        print(f"Push notification error: {e}")
+                    should_ping_sitemap = True
+                    push_payload = {
+                        "title": self.title[:60],
+                        "body": self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
+                        "url": f"https://news4bharat.com/{self.slug}/",
+                    }
 
             elif old_article.status == "published" and self.status == "published" and pushworthy_update:
-                try:
-                    from newsapp.views import send_push_to_all
-                    from newsapp.seo_direct import article_url
-
-                    send_push_to_all(
-                        title=f"Updated: {self.title[:51]}" if len(self.title) > 51 else f"Updated: {self.title}",
-                        body=self.meta_description[:100] if self.meta_description else "Article update ho gaya hai. Latest version padhein.",
-                        url=article_url(self, "https://news4bharat.com"),
-                    )
-                except Exception as e:
-                    print(f"Push notification error: {e}")
+                from newsapp.seo_direct import article_url
+                push_payload = {
+                    "title": f"Updated: {self.title[:51]}" if len(self.title) > 51 else f"Updated: {self.title}",
+                    "body": self.meta_description[:100] if self.meta_description else "Article update ho gaya hai. Latest version padhein.",
+                    "url": article_url(self, "https://news4bharat.com"),
+                }
      
             if self.assigned_to and self.status != 'draft':
                 if self.assigned_to.profile.status == "suspended":
@@ -249,22 +239,29 @@ class Article(models.Model):
                     update_fields.add('published_at')
                     kwargs['update_fields'] = update_fields
 
-                from newsapp.signals import ping_google_sitemap
-                ping_google_sitemap()
-
-                # ── Web Push Notification ──
-                try:
-                    from newsapp.views import send_push_to_all
-                    send_push_to_all(
-                        title=self.title[:60],
-                        body=self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
-                        url=f"https://news4bharat.com/{self.slug}/",
-                    )
-                except Exception as e:
-                    print(f"Push notification error: {e}")
+                should_ping_sitemap = True
+                push_payload = {
+                    "title": self.title[:60],
+                    "body": self.meta_description[:100] if self.meta_description else "News4Bharat pe padhein taaza khabar!",
+                    "url": f"https://news4bharat.com/{self.slug}/",
+                }
     
         self.full_clean()
         super().save(*args, **kwargs)
+
+        if should_ping_sitemap:
+            from newsapp.signals import ping_google_sitemap
+            transaction.on_commit(ping_google_sitemap)
+
+        if push_payload:
+            def _send_article_push(payload=push_payload):
+                try:
+                    from newsapp.views import send_push_to_all
+                    send_push_to_all(**payload)
+                except Exception as e:
+                    print(f"Push notification error: {e}")
+
+            transaction.on_commit(_send_article_push)
      
     def __str__(self):
         return self.title

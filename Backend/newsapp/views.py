@@ -100,11 +100,15 @@ def _invalidate_category_cache():
 
 
 def _normalize_meta_title(value):
-    value = str(value or '').strip()
+    value = ' '.join(str(value or '').strip().split())
     if not value:
         return ''
-    words = value.split()
-    return ' '.join(words[:70])
+    if len(value) <= 70:
+        return value
+    shortened = value[:70].rsplit(' ', 1)[0].strip()
+    if len(shortened) < 30:
+        shortened = value[:70].strip()
+    return shortened
 
 
 def _normalize_category_tree(value):

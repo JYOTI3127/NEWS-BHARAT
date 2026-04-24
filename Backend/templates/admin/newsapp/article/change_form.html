@@ -906,7 +906,7 @@ label.image-drop {
       <div class="seo-field">
         <div class="seo-field-label">Meta Title <span class="seo-meta-char-badge" id="meta_title_count_badge">0/70</span></div>
         <textarea class="seo-inp seo-meta-textarea" id="ui_meta_title" rows="2" placeholder="SEO title for search and social previews...">{{ original.meta_title|default:'' }}</textarea>
-        <div class="seo-hint" id="meta_title_hint">Aim for 1-70 words.</div>
+        <div class="seo-hint" id="meta_title_hint">Aim for 50-70 chars.</div>
       </div>
       <div class="seo-field">
         <div class="seo-field-label">Meta Description <span class="seo-meta-char-badge" id="meta_count_badge">0/160</span></div>
@@ -3072,20 +3072,20 @@ function generateSlug(){
   const titleTa=document.getElementById('ui_meta_title');
   function clampMetaTitle(){
     if(!titleTa)return;
-    const words=titleTa.value.trim()?titleTa.value.trim().split(/\s+/):[];
-    if(words.length>70){
-      titleTa.value=words.slice(0,70).join(' ');
+    titleTa.value=titleTa.value.replace(/\s+/g,' ').trimStart();
+    if(titleTa.value.length>70){
+      titleTa.value=titleTa.value.slice(0,70);
     }
   }
   function updateTitleMeta(){
     if(!titleTa)return;
     clampMetaTitle();
-    const words=titleTa.value.trim()?titleTa.value.trim().split(/\s+/).filter(Boolean):[];
+    const len=titleTa.value.length;
     const badge=document.getElementById('meta_title_count_badge'),
           hint=document.getElementById('meta_title_hint');
-    if(badge)badge.textContent=words.length+'/70';
+    if(badge)badge.textContent=len+'/70';
     if(hint){
-      hint.textContent=words.length===0?'Aim for 1-70 words.':words.length>60?'Almost at the limit.':'Looks good for SEO title.';
+      hint.textContent=len===0?'Aim for 50-70 chars.':len<30?'Too short - expand.':len<50?'Getting there...':len<=70?'Looks good for SEO title.':'Too long.';
     }
     updateSeoScore();
   }
@@ -3149,7 +3149,7 @@ function updateSeoScore(){
   const hasImg=hasFile||(urlVal&&!urlVal.startsWith('blob:')&&urlVal.length>0);
   const words=content.trim().split(/\s+/).filter(Boolean).length,
         first100=content.trim().split(/\s+/).slice(0,100).join(' ').toLowerCase(),
-        metaTitleWords=metaTitle.trim().split(/\s+/).filter(Boolean).length;
+        metaTitleLength=metaTitle.trim().length;
 
   const weights={
     chk_title:12,chk_meta_title:10,chk_focus:8,chk_kw_title:15,chk_meta:12,chk_kw_meta:10,
@@ -3157,7 +3157,7 @@ function updateSeoScore(){
   };
   const checks={
     chk_title:title.length>=30&&title.length<=70,
-    chk_meta_title:metaTitleWords>0&&metaTitleWords<=70,
+    chk_meta_title:metaTitleLength>=50&&metaTitleLength<=70,
     chk_focus:focusKw.length>0,
     chk_kw_title:focusKw.length>0&&title.toLowerCase().includes(focusKw),
     chk_meta:meta.length>=120&&meta.length<=160,

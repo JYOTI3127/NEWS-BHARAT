@@ -144,9 +144,9 @@ class Article(models.Model):
     deadline = models.DateTimeField(null=True, blank=True)
  
     def clean(self):
-        meta_title_words = len((self.meta_title or '').split())
-        if meta_title_words > 70:
-            raise ValidationError({'meta_title': 'Meta title can have at most 70 words.'})
+        meta_title_length = len((self.meta_title or '').strip())
+        if meta_title_length > 70:
+            raise ValidationError({'meta_title': 'Meta title can have at most 70 characters.'})
         if self.assigned_to and self.pk:
             profile = self.assigned_to.profile
             for cat in self.categories.all():

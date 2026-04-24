@@ -77,6 +77,49 @@ const getCleanPathSegments = (value) =>
 const getArticleSlugFromRoute = (route) =>
   getCleanPathSegments(route).pop() || ''
 
+const toArticleRouteFromUrl = (value) => {
+  const normalized = String(value || '').trim()
+  if (!normalized) return ''
+
+  try {
+    const parsed = new URL(normalized, 'https://news4bharat.com')
+    const cleanPath = `/${getCleanPathSegments(parsed.pathname).join('/')}/`
+    return isArticlePath(cleanPath) ? cleanPath : ''
+  } catch {
+    const cleanPath = `/${getCleanPathSegments(normalized).join('/')}/`
+    return isArticlePath(cleanPath) ? cleanPath : ''
+  }
+}
+
+const normalizeSlugToken = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '')
+
+const getArticleCategorySlug = (article) => {
+  const directCandidates = [
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.category?.slug,
+  ]
+    .map((value) => normalizeSlugToken(value))
+    .filter(Boolean)
+
+  if (directCandidates[0]) return directCandidates[0]
+
+  const categoryDetails = Array.isArray(article?.category_details)
+    ? article.category_details
+    : article?.category_details
+      ? [article.category_details]
+      : []
+
+  const fromDetails = categoryDetails
+    .map((item) => normalizeSlugToken(item?.slug || item?.category_slug || item?.name))
+    .find(Boolean)
+
+  return fromDetails || ''
+}
+
 const getRobotsContent = (article) => {
   const parts = [
     article?.noindex ? 'noindex' : 'index',
@@ -96,6 +139,26 @@ const getArticleRoutes = (article) => {
   if (primaryPath) {
     routes.add(primaryPath)
   }
+
+  const canonicalPath = toArticleRouteFromUrl(article?.canonical_url)
+  if (canonicalPath) {
+    routes.add(canonicalPath)
+  }
+
+  const publicPath = toArticleRouteFromUrl(article?.public_url)
+  if (publicPath) {
+    routes.add(publicPath)
+  }
+
+  const slug = normalizeSlugToken(article?.slug || article?.article_slug || article?.articleSlug)
+  const categorySlug = getArticleCategorySlug(article)
+  if (slug && categorySlug) {
+    const derivedPath = `/${categorySlug}/${slug}/`
+    if (isArticlePath(derivedPath)) {
+      routes.add(derivedPath)
+    }
+  }
+
   return [...routes]
 }
 
@@ -333,6 +396,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
 
       return {
         title,
+        articleHeadline: rawTitle || title.replace(/\s*\|\s*News4Bharat\s*$/i, '').trim(),
         description,
         canonical,
         ogImage: image,
@@ -354,6 +418,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
 
     return {
       title: `${SITE_NAME} - News As It Is`,
+      articleHeadline: '',
       description: `Read the latest news on ${SITE_NAME}.`,
       canonical: `${BASE_URL}${route}`,
       ogImage: DEFAULT_IMAGE,
@@ -466,6 +531,19 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       : ''
 
   cleaned = cleaned.replace('</head>', `${preloadTags}${injectedTags}\n</head>`)
+
+  if (isArticlePath(route) && !/<h1\b/i.test(cleaned)) {
+    const fallbackHeading = String(meta.articleHeadline || '')
+      .replace(/\s*\|\s*News4Bharat\s*$/i, '')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .trim()
+
+    if (fallbackHeading) {
+      const fallbackH1 = `<h1 data-prerender-fallback="article-title" style="position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden;">${fallbackHeading}</h1>`
+      cleaned = cleaned.replace(/<body([^>]*)>/i, `<body$1>\n  ${fallbackH1}`)
+    }
+  }
 
   console.log(`    Title: ${meta.title}`)
   console.log(`    Canonical: ${meta.canonical}`)

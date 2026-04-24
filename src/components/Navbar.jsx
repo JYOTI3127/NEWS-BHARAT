@@ -427,8 +427,8 @@ const uniqueNavLinksByPath = (links) => {
   });
 };
 
-const PUSH_VAPID_KEY_URL = "https://news4bharat.com/api/push/vapid-key/";
-const PUSH_SUBSCRIBE_URL = "https://news4bharat.com/api/push/subscribe/";
+const PUSH_VAPID_KEY_URL = apiUrl("/push/vapid-key/");
+const PUSH_SUBSCRIBE_URL = apiUrl("/push/subscribe/");
 const LIVE_VAPID_PUBLIC_KEY = "BJ-tbAcljktBC5rfkAWNi7pkhFn_s6pHHd9fo6GwZBi_olNVUxltcE0ErPM6qHTNhX2oCMVpwUOmmD6qhI7LNSE";
 const PUSH_STATE_STORAGE_KEY = "news4bharat_push_subscribed";
 

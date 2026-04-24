@@ -968,21 +968,40 @@ const Header = () => {
                 <div className={`drawer-sub-links${sectionOpen ? " open" : ""}`}>
                   {hasSubcats ? (
                     subcategories.map((sub) => {
-                      const subcatOpen = expandedSubcat === `${label}__${sub.label}`;
+                      const subcatKey = `${label}__${sub.label}`;
+                      const subcatOpen = expandedSubcat === subcatKey;
+                      const subcategoryPath = `/category/${finalSlug}?subcategory=${encodeURIComponent(sub.label)}`;
+                      const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
                           <div
                             className={`drawer-subcat-head flex items-center justify-between cursor-pointer border-b border-slate-200 px-4 py-2 pl-7 text-[13px] font-medium transition-colors duration-150 ${subcatOpen ? "text-red-600 bg-red-50" : "text-slate-800 bg-transparent"}`}
-                            onClick={(e) => toggleSubcat(e, `${label}__${sub.label}`)}
+                            onClick={(e) => {
+                              if (hasTopics) {
+                                toggleSubcat(e, subcatKey);
+                              } else {
+                                goTo(subcategoryPath);
+                              }
+                            }}
                           >
-                            <span>{sub.label}</span>
-                            <ChevronDown
-                              size={12}
-                              color={subcatOpen ? "#D80100" : "#bbb"}
-                              className={`transition-transform duration-200 ease-out ${subcatOpen ? "rotate-180" : "rotate-0"}`}
-                            />
+                            <span
+                              className="cursor-pointer hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goTo(subcategoryPath);
+                              }}
+                            >
+                              {sub.label}
+                            </span>
+                            {hasTopics && (
+                              <ChevronDown
+                                size={12}
+                                color={subcatOpen ? "#D80100" : "#bbb"}
+                                className={`transition-transform duration-200 ease-out ${subcatOpen ? "rotate-180" : "rotate-0"}`}
+                              />
+                            )}
                           </div>
-                          {subcatOpen && (
+                          {subcatOpen && hasTopics && (
                             <div className="drawer-topics-list">
                               {(sub.topics || []).map((topic) => (
                                 <span

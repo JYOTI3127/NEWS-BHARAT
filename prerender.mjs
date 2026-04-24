@@ -213,10 +213,23 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     const article = articleMap.get(route)
 
     if (article) {
+      const apiMetaTitle = [
+        article?.meta_title,
+        article?.metaTitle,
+        article?.seo_title,
+        article?.seoTitle,
+        article?.seo?.meta_title,
+        article?.seo?.metaTitle,
+        article?.seo?.seo_title,
+        article?.seo?.seoTitle,
+      ]
+        .map((value) => normalizeText(value))
+        .find(Boolean)
       const rawTitle = (article.title || '').trim()
-      const title = rawTitle
-        ? `${rawTitle} | ${SITE_NAME}`
+      const fallbackTitle = rawTitle
+        ? `${rawTitle.substring(0, 70)} | ${SITE_NAME}`
         : `${SITE_NAME} - News As It Is`
+      const title = apiMetaTitle || fallbackTitle
 
       const description = (
         article.meta_description ||

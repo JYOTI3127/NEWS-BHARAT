@@ -33,6 +33,10 @@ const formatViews = (v) => {
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const CATEGORY_ARTICLE_LIMIT = 50;
 const MORE_IN_ARTICLES_LIMIT = 30;
+const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
+
+const isStateCategorySlug = (value) =>
+  STATE_CATEGORY_SLUGS.has(String(value || "").trim().toLowerCase());
 
 const getSelectedSubcategoryValues = (selectedSubcategories) => {
   if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
@@ -47,6 +51,54 @@ const getSelectedSubcategoryValues = (selectedSubcategories) => {
   return Object.values(selectedSubcategories)
     .flat()
     .filter((value) => typeof value === "string" && value.trim().length > 0);
+};
+
+const getListFromArticlesResponse = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (data?.results && typeof data.results === "object") {
+    return Object.values(data.results).flatMap((value) =>
+      Array.isArray(value) ? value : []
+    );
+  }
+  return [];
+};
+
+const getPossibleStateValues = (article) => {
+  const values = [
+    article?.selected_state_name,
+    article?.state,
+    article?.state_name,
+    article?.selected_subcategory,
+    article?.selectedState,
+  ];
+
+  return values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+};
+
+const doesArticleMatchSubcategory = (article, subFilter) => {
+  const target = String(subFilter || "").trim().toLowerCase();
+  if (!target) return true;
+
+  const selectedValues = getSelectedSubcategoryValues(article.selected_subcategories);
+  if (
+    selectedValues.some((value) => String(value || "").trim().toLowerCase() === target)
+  ) {
+    return true;
+  }
+
+  if (
+    getPossibleStateValues(article).some(
+      (value) => String(value || "").trim().toLowerCase() === target
+    )
+  ) {
+    return true;
+  }
+
+  const text = `${article.title} ${article.subtitle || ""} ${stripHtml(article.content || "")}`.toLowerCase();
+  return text.includes(target);
 };
 
 export default function CategoryPage() {
@@ -67,12 +119,16 @@ export default function CategoryPage() {
     const fetchData = async () => {
       setLoading(true);
       setVisibleCount(6);
+      const isStateCategory = isStateCategorySlug(slug);
+      const stateSubFilter = String(subFilter || "").trim();
+      const shouldFetchByState = isStateCategory && stateSubFilter.length > 0;
+      const articlesUrl = shouldFetchByState
+        ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`
+        : `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`;
 
       const [categoryResult, articlesResult] = await Promise.allSettled([
         fetch(`${API_BASE}/categories/`).then((res) => res.json()),
-        fetch(
-          `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`
-        ).then((res) => res.json()),
+        fetch(articlesUrl).then((res) => res.json()),
       ]);
 
       if (categoryResult.status === "fulfilled") {
@@ -85,23 +141,14 @@ export default function CategoryPage() {
 
       if (articlesResult.status === "fulfilled") {
         const data = articlesResult.value;
-        const filtered = Array.isArray(data) ? data : (data.results || []);
+        const filtered = getListFromArticlesResponse(data);
 
         const sorted = [...filtered].sort(
           (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
         );
 
         const finalArticles = subFilter
-          ? sorted.filter((a) => {
-              const allSelected = getSelectedSubcategoryValues(a.selected_subcategories);
-              if (allSelected.length > 0) {
-                return allSelected.some(
-                  (s) => String(s || "").toLowerCase() === subFilter.toLowerCase()
-                );
-              }
-              const text = `${a.title} ${a.subtitle || ""} ${stripHtml(a.content || "")}`.toLowerCase();
-              return text.includes(subFilter.toLowerCase());
-            })
+          ? sorted.filter((a) => doesArticleMatchSubcategory(a, subFilter))
           : sorted;
 
         const normalized = finalArticles.map((a) => ({
@@ -183,7 +230,20 @@ export default function CategoryPage() {
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
         <div className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
           <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
-            {subFilter ? `${category?.name || slug} > ${subFilter}` : (category?.name || slug)}
+            {subFilter ? (
+              <>
+                <Link
+                  to={`/category/${slug}`}
+                  className="text-[#111] hover:text-[#D80100] no-underline hover:no-underline"
+                  style={{ textDecoration: "none" }}
+                >
+                  {category?.name || slug}
+                </Link>
+                <span>{` > ${subFilter}`}</span>
+              </>
+            ) : (
+              category?.name || slug
+            )}
           </h1>
           {category?.description && (
             <p className="text-[13px] text-[#666] mb-2 leading-[1.6]">{category.description}</p>

@@ -504,16 +504,33 @@ export default function MenuDrawer({ open, onClose }) {
                     subcategories.map((sub) => {
                       const key = `${label}__${sub.label}`;
                       const subcatOpen = expandedSubcat === key;
+                      const subcategoryPath = `/category/${finalSlug}?subcategory=${encodeURIComponent(sub.label)}`;
+                      const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
                       return (
                         <div key={sub.label}>
                           <button className={`md-subcat-head${subcatOpen ? " active" : ""}`}
-                            onClick={(e) => toggleSubcat(e, key)}>
-                            <span>{sub.label}</span>
-                            <ChevronDown size={12} color={subcatOpen ? "#D80100" : "#bbb"}
-                              style={{ transition: "transform 0.2s", transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                            />
+                            onClick={(e) => {
+                              if (hasTopics) {
+                                toggleSubcat(e, key);
+                              } else {
+                                handleNav(subcategoryPath);
+                              }
+                            }}>
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNav(subcategoryPath);
+                              }}
+                            >
+                              {sub.label}
+                            </span>
+                            {hasTopics && (
+                              <ChevronDown size={12} color={subcatOpen ? "#D80100" : "#bbb"}
+                                style={{ transition: "transform 0.2s", transform: subcatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                              />
+                            )}
                           </button>
-                          {subcatOpen && (sub.topics || []).map((topic) => {
+                          {subcatOpen && hasTopics && (sub.topics || []).map((topic) => {
                             const topicLabel = typeof topic === "string" ? topic : topic?.label;
                             const topicPath = typeof topic === "string"
                               ? `/category/${finalSlug}?subcategory=${encodeURIComponent(topic)}`

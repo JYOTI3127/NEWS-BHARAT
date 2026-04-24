@@ -1219,13 +1219,7 @@ class ArticleAdmin(admin.ModelAdmin):
         if selected_status == 'scheduled':
             articles_qs = articles_qs.order_by('scheduled_at', 'created_at')
         else:
-            articles_qs = articles_qs.order_by(
-                Case(
-                    When(status='scheduled', then=F('scheduled_at')),
-                    default=F('created_at'),
-                ).desc(nulls_last=True),
-                '-created_at',
-            )
+            articles_qs = articles_qs.order_by('-updated_at', '-published_at', '-created_at')
 
         article_paginator = Paginator(articles_qs, 10)
         article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))

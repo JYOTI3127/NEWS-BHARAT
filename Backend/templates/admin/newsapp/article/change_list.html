@@ -61,7 +61,7 @@
           <th style="width:120px;">Author</th>
           <th style="width:130px;">Assigned To</th>
           <th style="width:110px;">Status</th>
-          <th style="width:120px;">Date</th>
+          <th style="width:120px;">Last Updated</th>
           <th style="width:150px;">Scheduled For</th>
           <th style="width:80px;">Paid</th>
           <th style="width:100px;">Actions</th>
@@ -126,11 +126,11 @@
             <span class="art-status status--{{ article.status }}">{{ article.status|upper }}</span>
           </td>
 
-          <!-- Date -->
+          <!-- Last Updated -->
           <td>
-            {% if article.published_at %}
-              <div class="art-date">{{ article.published_at|date:"d M Y" }}</div>
-              <div class="art-timesince">{{ article.published_at|date:"h:i A" }}</div>
+            {% if article.updated_at %}
+              <div class="art-date">{{ article.updated_at|date:"d M Y" }}</div>
+              <div class="art-timesince">{{ article.updated_at|date:"h:i A" }}</div>
             {% else %}
               <div class="art-date">{{ article.created_at|date:"d M Y" }}</div>
               <div class="art-timesince">{{ article.created_at|date:"h:i A" }}</div>

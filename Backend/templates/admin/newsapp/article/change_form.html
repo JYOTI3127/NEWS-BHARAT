@@ -1987,12 +1987,29 @@ function escapeHtml(str){
    CANONICAL
 ══════════════════════════════════════════════ */
 var SITE_BASE_URL='https://news4bharat.com';
+function sanitizeArticleSlugValue(value){
+  var raw=String(value||'').trim();
+  if(!raw)return '';
+  raw=raw.replace(/^https?:\/\/[^/]+/i,'');
+  raw=raw.split('?')[0].split('#')[0];
+  raw=raw.replace(/^\/+|\/+$/g,'');
+  if(!raw)return '';
+  var segment=raw.split('/').filter(Boolean).pop()||'';
+  segment=segment.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .replace(/^-+|-+$/g,'');
+  return segment;
+}
 function updateCanonicalFromSlug(){
   var slugEl=document.getElementById('ui_slug'),
       canonEl=document.getElementById('ui_canonical');
   if(!canonEl||!slugEl)return;
+  var cleanedSlug=sanitizeArticleSlugValue(slugEl.value);
+  if(slugEl.value!==cleanedSlug)slugEl.value=cleanedSlug;
   var catSlug=_getPrimaryCategorySlug()||'category-slug';
-  var slugVal=slugEl.value.trim();
+  var slugVal=cleanedSlug;
   if(slugVal)canonEl.value=SITE_BASE_URL+'/'+catSlug+'/'+slugVal+'/';
   else{
     canonEl.value='';
@@ -2007,6 +2024,7 @@ function updateCanonicalFromSlug(){
 (function initCanonical(){
   var slugInp=document.getElementById('ui_slug'),
       canonEl=document.getElementById('ui_canonical');
+  if(slugInp)slugInp.value=sanitizeArticleSlugValue(slugInp.value);
   updateSlugPrefix();
   if(canonEl&&slugInp&&slugInp.value)updateCanonicalFromSlug();
 })();

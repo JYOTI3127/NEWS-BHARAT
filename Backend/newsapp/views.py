@@ -3791,17 +3791,22 @@ def newsletter_brevo_webhook(request):
 
 @api_view(['GET'])
 def article_detail_by_slug(request, slug):
-    cache_key = f"article:slug:{slug}"
+    normalized_slug = clean_url_segment(slug)
+    cache_key = f"article:slug:{normalized_slug}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
     try:
         article = Article.objects.select_related(
             'author', 'primary_category'
-        ).prefetch_related('categories').get(
-            slug=slug, status='published'
-        )
+        ).prefetch_related('categories').filter(
+            status='published'
+        ).filter(
+            Q(slug=normalized_slug) | Q(slug__endswith=f"/{normalized_slug}")
+        ).order_by('-published_at').first()
     except Article.DoesNotExist:
+        article = None
+    if article is None:
         return Response({"error": "Not found"}, status=404)
     serializer = ArticleSerializer(article, context={'request': request})
     cache.set(cache_key, serializer.data, 300)

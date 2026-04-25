@@ -7,7 +7,12 @@ import {
   ChevronRight, Newspaper, Tag, ArrowLeft,
   Instagram, Youtube, Linkedin,
 } from "lucide-react";
-import { apiUrl, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
+import {
+  apiUrl,
+  fetchPaginatedArticles,
+  formatArticleDateTimeIST,
+  getArticleDateValue,
+} from "../lib/api";
 import { buildAuthorSlug } from "../lib/authors";
 import {
   getCanonicalArticleUrl,
@@ -132,16 +137,8 @@ const getArticleImage = (article) => {
   ) || null;
 };
 
-const getArticleCategoryIds = (article) =>
-  Array.isArray(article?.categories)
-    ? article.categories
-      .map((value) =>
-        value && typeof value === "object"
-          ? String(value.id || "").trim()
-          : String(value || "").trim()
-      )
-      .filter(Boolean)
-    : [];
+const normalizeCategoryToken = (value) =>
+  String(value || "").trim().toLowerCase();
 
 const getArticleCategoryDetails = (article) => {
   const candidates = [
@@ -164,10 +161,37 @@ const getArticleCategoryDetails = (article) => {
   });
 };
 
-const getArticleCategorySlugs = (article) =>
-  getArticleCategoryDetails(article)
-    .map((category) => String(category?.slug || "").trim().toLowerCase())
-    .filter(Boolean);
+const getArticleCategoryTokens = (article) => {
+  const tokens = new Set();
+  const add = (value) => {
+    const normalized = normalizeCategoryToken(value);
+    if (normalized) tokens.add(normalized);
+  };
+
+  const includeCategoryValue = (value) => {
+    if (!value) return;
+    if (typeof value === "string" || typeof value === "number") {
+      add(value);
+      return;
+    }
+    if (typeof value === "object") {
+      add(value.id);
+      add(value.slug);
+      add(value.category_slug);
+      add(value.name);
+      add(value.title);
+    }
+  };
+
+  [
+    ...toCategoryArray(article?.category_details),
+    ...toCategoryArray(article?.category),
+    ...toCategoryArray(article?.primary_category),
+    ...(Array.isArray(article?.categories) ? article.categories : []),
+  ].forEach(includeCategoryValue);
+
+  return tokens;
+};
 
 const getArticleTags = (article) => {
   if (Array.isArray(article?.tags_list)) {
@@ -186,27 +210,14 @@ const sortArticlesByNewest = (list) =>
   [...list].sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
 
 const sharesCategoryWithArticle = (candidate, currentArticle) => {
-  const currentIds = getArticleCategoryIds(currentArticle);
-  const candidateIds = getArticleCategoryIds(candidate);
-  const currentSlugs = getArticleCategorySlugs(currentArticle);
-  const candidateSlugs = getArticleCategorySlugs(candidate);
+  const currentTokens = getArticleCategoryTokens(currentArticle);
+  const candidateTokens = getArticleCategoryTokens(candidate);
 
-  return (
-    currentIds.some((id) => candidateIds.includes(id)) ||
-    currentSlugs.some((slug) => candidateSlugs.includes(slug))
-  );
-};
+  for (const token of currentTokens) {
+    if (candidateTokens.has(token)) return true;
+  }
 
-const isInPrimaryCategory = (candidate, primaryCategory) => {
-  if (!primaryCategory) return false;
-  const primaryId = String(primaryCategory.id || "");
-  const primarySlug = String(primaryCategory.slug || "").trim().toLowerCase();
-  const candidateIds = getArticleCategoryIds(candidate);
-  const candidateSlugs = getArticleCategorySlugs(candidate);
-  return (
-    (primaryId && candidateIds.includes(primaryId)) ||
-    (primarySlug && candidateSlugs.includes(primarySlug))
-  );
+  return false;
 };
 
 const getRobotsContent = (article) => {
@@ -676,6 +687,7 @@ export default function ArticleDetails() {
   const [allArticles, setAllArticles] = useState([]);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [categoryMoreArticles, setCategoryMoreArticles] = useState([]);
   const [copied, setCopied] = useState(false);
   const [moreInListMaxHeight, setMoreInListMaxHeight] = useState(null);
   const mainArticleRef = useRef(null);
@@ -696,6 +708,7 @@ export default function ArticleDetails() {
 
     setArticle(null);
     setAllArticles([]);
+    setCategoryMoreArticles([]);
     setNotFound(false);
     setLoadError(false);
     window.scrollTo(0, 0);
@@ -832,6 +845,48 @@ export default function ArticleDetails() {
     return () => controller.abort();
   }, [articleLookupCandidates, articleSlug, categorySlug]);
 
+  useEffect(() => {
+    if (!article) {
+      setCategoryMoreArticles([]);
+      return;
+    }
+
+    const primary = getArticleCategoryDetails(article)[0];
+    const primarySlug = String(
+      primary?.slug || primary?.category_slug || categorySlug || ""
+    ).trim();
+
+    if (!primarySlug) {
+      setCategoryMoreArticles([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadCategoryArticles = async () => {
+      try {
+        const list = await fetchPaginatedArticles({
+          category: primarySlug,
+          limit: 100,
+          maxPages: 10,
+        });
+        const filtered = sortArticlesByNewest(list).filter(
+          (candidate) =>
+            String(candidate?.slug || candidate?.id || "") !==
+            String(article?.slug || article?.id || "")
+        );
+        setCategoryMoreArticles(filtered);
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        setCategoryMoreArticles([]);
+      }
+    };
+
+    loadCategoryArticles();
+
+    return () => controller.abort();
+  }, [article, categorySlug]);
+
 
   useEffect(() => {
     if (!articleSlug) return;
@@ -877,7 +932,7 @@ export default function ArticleDetails() {
       resizeObserver?.disconnect();
       window.removeEventListener("resize", updateMoreInHeight);
     };
-  }, [article, allArticles.length, articleSlug]);
+  }, [article, articleSlug, allArticles.length, categoryMoreArticles.length]);
 
   useEffect(() => {
     if (!article) return;
@@ -890,7 +945,7 @@ export default function ArticleDetails() {
     )
     : [];
 
-  const relatedArticles = article
+  const moreInArticles = article
     ? sidebarBaseArticles.filter((a) => sharesCategoryWithArticle(a, article))
     : [];
 
@@ -982,15 +1037,17 @@ export default function ArticleDetails() {
   const absoluteImageUrl = toAbsoluteSiteUrl(imageUrl) || DEFAULT_SHARE_IMAGE;
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
   const categoryName = primaryCategory?.name?.trim() || "";
+  const moreInCategorySlug = String(
+    primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || ""
+  ).trim();
+  const moreInCategoryLabel =
+    primaryCategory?.name?.trim() ||
+    String(categorySlug || "")
+      .replace(/-/g, " ")
+      .trim();
   const canonicalUrl = getCanonicalArticleUrl(article) || "";
-  const fallbackSidebarArticles = sidebarBaseArticles;
-  const displayRelatedArticles =
-    relatedArticles.length > 0 ? relatedArticles : fallbackSidebarArticles;
-  const moreCatArticles = primaryCategory
-    ? sidebarBaseArticles.filter((a) => isInPrimaryCategory(a, primaryCategory))
-    : [];
   const displayMoreArticles =
-    moreCatArticles.length > 0 ? moreCatArticles : fallbackSidebarArticles;
+    categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;
 
   const tags = getArticleTags(article);
   const authorDisplayName =
@@ -1118,7 +1175,7 @@ export default function ArticleDetails() {
           variant="sideRail"
           className="home-side-ad home-side-ad--left"
           dismissible
-          minWidth={1024}
+          minWidth={768}
         />
       </aside>
 
@@ -1183,7 +1240,7 @@ export default function ArticleDetails() {
       />
 
       <div
-        className="max-w-[1030px] mx-auto px-4 sm:px-6 pb-8 pt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start"
+        className="category-page-align mx-auto px-4 sm:px-6 pb-8 pt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start"
         style={shellStyle}
       >
 
@@ -1328,50 +1385,14 @@ export default function ArticleDetails() {
         {/* ── SIDEBAR ── */}
         <aside className="flex flex-col gap-6 lg:order-last">
 
-          {displayRelatedArticles.length > 0 && (
-            <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b-2 border-red-600 text-xs font-bold uppercase tracking-wider text-slate-900">
-                <Newspaper size={14} color="#D80100" />
-                <span>Related Articles</span>
-              </div>
-              <div className="scrollbar-invisible max-h-[540px] overflow-y-auto divide-y divide-slate-100">
-                {displayRelatedArticles.map((rel) => (
-                  <Link key={rel.id} to={getArticlePath(rel)}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                    <div className="flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
-                      <div className="flex-shrink-0 w-16 h-14 rounded-md overflow-hidden bg-slate-100">
-                        {getArticleImage(rel) ? (
-                          <img src={getArticleImage(rel)} alt={rel.title}
-                            className="w-full h-full object-cover" loading="lazy"
-                            decoding="async" width={64} height={56} />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-slate-100">
-                            <Newspaper size={16} color="#ccc" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-900 line-clamp-2 leading-snug">{rel.title}</p>
-                        <span className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
-                          <Clock size={10} />{formatArticleDateTimeIST(rel)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
           {displayMoreArticles.length > 0 && (() => {
             return (
               <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    {primaryCategory ? `More in ${primaryCategory.name}` : "Latest Articles"}
+                    {moreInCategoryLabel ? `More in ${moreInCategoryLabel}` : "More in"}
                   </span>
-                  <Link to={primaryCategory ? `/category/${primaryCategory.slug}` : "/"}
+                  <Link to={moreInCategorySlug ? `/category/${moreInCategorySlug}` : "/"}
                     target="_blank" rel="noopener noreferrer"
                     className="text-[11px] text-red-600 font-semibold hover:underline flex items-center gap-0.5">
                     View All <ChevronRight size={11} />
@@ -1425,7 +1446,7 @@ export default function ArticleDetails() {
           variant="sideRail"
           className="home-side-ad home-side-ad--right"
           dismissible
-          minWidth={1024}
+          minWidth={768}
         />
       </aside>
     </div>

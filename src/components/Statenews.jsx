@@ -246,8 +246,15 @@ export default function StateNews() {
   }, []);
 
   const featuredCard = stateArticles[0] || null;
-  const bottomLeftCard = stateArticles[1] || null;
-  const midCards = stateArticles.slice(2, 6);
+  const desiredMidCards = isMobile ? 4 : 5;
+  const availableAfterFeatured = Math.max(0, stateArticles.length - 1);
+  const leftStackCount = Math.min(2, availableAfterFeatured);
+  const leftStackCards = stateArticles.slice(1, 1 + leftStackCount);
+  const mobileSmallCard = leftStackCards[0] || null;
+  const midCards = stateArticles.slice(
+    1 + leftStackCards.length,
+    1 + leftStackCards.length + desiredMidCards
+  );
   const sidebarItems = startupArticles.slice(0, 6);
 
   const goToArticle = (article) => {
@@ -415,13 +422,14 @@ export default function StateNews() {
             )}
           </div>
 
-          {/* Middle 4 cards — lazy load */}
+          {/* Middle cards — lazy load */}
           <div
             className="sn-mid"
             style={{
               gridColumn: isMobile ? "1" : "2",
               gridRow: isMobile ? "auto" : "1 / 3",
               display: "flex", flexDirection: "column", gap: "10px",
+              height: "auto",
             }}
           >
             {loading
@@ -465,55 +473,62 @@ export default function StateNews() {
                 ))}
           </div>
 
-          {/* Small card — bottom left (tablet+) */}
+          {/* Small cards — bottom left (tablet+) */}
           {!isMobile && (
             <div
-              className="sn-small-card"
+              className="sn-left-stack"
               style={{
                 gridColumn: "1", gridRow: "2",
-                display: "flex", gap: "8px",
-                cursor: bottomLeftCard ? "pointer" : "default",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
               }}
-              onClick={() => bottomLeftCard && goToArticle(bottomLeftCard)}
             >
               {loading ? (
-                <>
-                  <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
-                  <div style={{ flex: 1 }}>
-                    <Sk h="10px" w="50px" mb="5px" />
-                    <Sk h="12px" w="95%" mb="4px" />
-                    <Sk h="10px" w="40px" mb="0" />
+                Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="sn-small-card" style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                    <div style={{ flex: 1 }}>
+                      <Sk h="10px" w="50px" mb="5px" />
+                      <Sk h="12px" w="95%" mb="4px" />
+                      <Sk h="10px" w="40px" mb="0" />
+                    </div>
                   </div>
-                </>
-              ) : bottomLeftCard ? (
-                <>
+                ))
+              ) : leftStackCards.map((card) => (
+                <div
+                  key={card.id || card.slug || card.title}
+                  className="sn-small-card"
+                  style={{ display: "flex", gap: "8px", cursor: "pointer" }}
+                  onClick={() => goToArticle(card)}
+                >
                   <div style={{ flexShrink: 0, width: "100px", height: "78px", borderRadius: "6px", overflow: "hidden" }}>
-                    <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
+                    <ArticleImg src={imgSrc(card)} alt={card.title} style={{ width: "100%", height: "100%" }} />
                   </div>
                   <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
-                    <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
-                    <p className="sn-sc-title">{bottomLeftCard.title}</p>
-                    <span className="sn-card-date">{formatArticleDateTimeIST(bottomLeftCard)}</span>
+                    <span className="sn-card-tag">{getStateTagLabel(card, activeState, "STATE")}</span>
+                    <p className="sn-sc-title">{card.title}</p>
+                    <span className="sn-card-date">{formatArticleDateTimeIST(card)}</span>
                   </div>
-                </>
-              ) : null}
+                </div>
+              ))}
             </div>
           )}
 
           {/* Mobile small card */}
-          {isMobile && bottomLeftCard && !loading && (
+          {isMobile && mobileSmallCard && !loading && (
             <div
               style={{ display: "flex", gap: "8px", cursor: "pointer" }}
-              onClick={() => goToArticle(bottomLeftCard)}
+              onClick={() => goToArticle(mobileSmallCard)}
             >
               <div style={{ flexShrink: 0, width: "90px", height: "70px", borderRadius: "6px", overflow: "hidden" }}>
-                <ArticleImg src={imgSrc(bottomLeftCard)} alt={bottomLeftCard.title} style={{ width: "100%", height: "100%" }} />
+                <ArticleImg src={imgSrc(mobileSmallCard)} alt={mobileSmallCard.title} style={{ width: "100%", height: "100%" }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span className="sn-card-tag">{getStateTagLabel(bottomLeftCard, activeState, "STATE")}</span>
-                <p className="sn-sc-title">{bottomLeftCard.title}</p>
+                <span className="sn-card-tag">{getStateTagLabel(mobileSmallCard, activeState, "STATE")}</span>
+                <p className="sn-sc-title">{mobileSmallCard.title}</p>
                 <span className="sn-card-date">
-                  {formatArticleDateTimeIST(bottomLeftCard)}
+                  {formatArticleDateTimeIST(mobileSmallCard)}
                 </span>
               </div>
             </div>

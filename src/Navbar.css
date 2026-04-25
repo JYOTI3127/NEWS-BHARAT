@@ -1631,6 +1631,10 @@
     border: 0.5px solid rgba(255, 255, 255, 0.8);
   }
 
+  .mobile-nav-actions .navbar-notification-btn {
+    margin-right: 6px;
+  }
+
   .ticker-right .btn-flag,
   .ticker-left .btn-flag,
   .topbar-hindi-btn {
@@ -1820,6 +1824,10 @@
   .mobile-nav-actions .btn-flag {
     padding: 5px 10px;
     font-size: 10px;
+  }
+
+  .mobile-nav-actions .navbar-notification-btn {
+    margin-right: 8px;
   }
 }
 

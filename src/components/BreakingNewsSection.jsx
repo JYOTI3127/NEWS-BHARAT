@@ -110,14 +110,14 @@ export default function BreakingNewsSection({ articles = [] }) {
     const normalized = normalizeArticles(articles);
     const breakingArticles = normalized.filter(isBreakingArticle);
 
-    return dedupeArticles([...breakingArticles, ...normalized]).slice(0, 9);
+    return dedupeArticles([...breakingArticles, ...normalized]).slice(0, 10);
   }, [articles]);
 
   if (sectionArticles.length === 0) return null;
 
   const featuredArticle = sectionArticles[0];
   const leftSecondaryArticle = sectionArticles[1];
-  const headlineArticles = sectionArticles.slice(2, 9);
+  const headlineArticles = sectionArticles.slice(2, 10);
 
   return (
     <section
@@ -162,16 +162,16 @@ export default function BreakingNewsSection({ articles = [] }) {
           max-[1024px]:grid-cols-1
         "
       >
-        <div className="grid grid-rows-[auto_auto] gap-4">
+        <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-4">
           {featuredArticle ? (
-            <StoryCard article={featuredArticle} className="group block text-inherit no-underline">
-              <div className="relative overflow-hidden rounded-[12px] bg-[#111]">
+            <StoryCard article={featuredArticle} className="group block h-full text-inherit no-underline">
+              <div className="relative h-full min-h-[340px] overflow-hidden rounded-[12px] bg-[#111] max-[1024px]:min-h-0">
                 <StoryImage
                   article={featuredArticle}
                   alt={getArticleTitle(featuredArticle)}
                   className="
-                    block w-full object-cover object-center transition duration-200 group-hover:brightness-105
-                    aspect-[16/8.8]
+                    block h-full w-full object-cover object-center transition duration-200 group-hover:brightness-105
+                    max-[1024px]:h-auto
                     max-[1024px]:aspect-[16/9.4]
                     max-[768px]:aspect-[16/10]
                     max-[425px]:aspect-[16/11]
@@ -243,8 +243,8 @@ export default function BreakingNewsSection({ articles = [] }) {
                 max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
                 max-[375px]:grid-cols-[minmax(0,1fr)_82px]
                 max-[320px]:grid-cols-[minmax(0,1fr)_72px]
-                ${index >= 4 ? 'max-[1440px]:hidden' : ''}
-                ${index >= 5 ? 'min-[1441px]:max-[2560px]:hidden' : ''}
+                ${index >= 7 ? 'max-[1440px]:hidden' : ''}
+                ${index >= 8 ? 'min-[1441px]:max-[2560px]:hidden' : ''}
               `}
             >
               <div className="min-w-0">

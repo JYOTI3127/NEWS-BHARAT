@@ -169,4 +169,104 @@ export const fetchHomepageLatestNewsCurrent = () =>
 export const getLatestNewsArticlesFromResponse = (data) =>
   Array.isArray(data?.articles) ? data.articles : getListFromResponse(data);
 
+export const fetchHomepageHeroCurrent = () =>
+  fetchJson("/homepage/hero/current/");
+
+export const getHomepageHeroArticlesFromResponse = (data) => {
+  const isArticleLike = (item) =>
+    item &&
+    typeof item === "object" &&
+    (
+      item.title ||
+      item.headline ||
+      item.article_title ||
+      item.name ||
+      item.slug ||
+      item.id ||
+      item.article_id ||
+      item.public_url ||
+      item.url ||
+      item.image_url ||
+      item.image ||
+      item?.image?.url ||
+      item.featured_image ||
+      item.featured_image_url ||
+      item.thumbnail ||
+      item.thumbnail_url
+    );
+
+  const toIdentityKey = (item, index = 0) =>
+    String(
+      item?.id ||
+      item?.slug ||
+      item?.public_url ||
+      item?.url ||
+      item?.headline ||
+      item?.title ||
+      index
+    ).trim().toLowerCase();
+
+  const dedupeArticles = (list) => {
+    const seen = new Set();
+    return list.filter((item, index) => {
+      if (!isArticleLike(item)) return false;
+      const key = toIdentityKey(item, index);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const preferredKeys = [
+    "main_article",
+    "overlay_article_1",
+    "overlay_article_2",
+    "overlay_article_3",
+    "overlay_articles",
+    "articles",
+    "hero_articles",
+    "featured_articles",
+    "selected_articles",
+    "results",
+    "items",
+    "data",
+    "hero",
+    "payload",
+  ];
+
+  const collectArticles = (value, depth = 0, seen = new Set()) => {
+    if (depth > 7 || value == null) return [];
+    if (typeof value !== "object") return [];
+    if (seen.has(value)) return [];
+    seen.add(value);
+
+    if (isArticleLike(value)) return [value];
+
+    if (Array.isArray(value)) {
+      return value.flatMap((item) => collectArticles(item, depth + 1, seen));
+    }
+
+    const preferredResults = [];
+    for (const key of preferredKeys) {
+      if (!(key in value)) continue;
+      const found = collectArticles(value[key], depth + 1, seen);
+      if (found.length > 0) preferredResults.push(...found);
+    }
+    if (preferredResults.length > 0) return preferredResults;
+
+    const fromValues = Object.values(value).flatMap((nestedValue) =>
+      collectArticles(nestedValue, depth + 1, seen)
+    );
+    return fromValues;
+  };
+
+  const directList = getListFromResponse(data);
+  const directArticles = dedupeArticles(
+    Array.isArray(directList) ? directList : collectArticles(directList)
+  );
+  if (directArticles.length > 0) return directArticles;
+
+  return dedupeArticles(collectArticles(data));
+};
+
 export const fetchCategories = () => fetchJson("/categories/");

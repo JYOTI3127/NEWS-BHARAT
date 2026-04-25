@@ -2585,6 +2585,37 @@ img {
   }
 }
 
+/* Trending feature cards: keep M-375 cards compact (not oversized) */
+@media (min-width: 321px) and (max-width: 375px) {
+  .tn-page.tn-page-m375 .tn-feature-cards {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    height: 440px !important;
+  }
+
+  .tn-page.tn-page-m375 .tn-feature-card {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .tn-page.tn-page-m375 .tn-feature-card-img-wrap {
+    height: 136px !important;
+  }
+
+  .tn-page.tn-page-m375 .tn-feature-card-body {
+    padding: 8px 8px 10px !important;
+  }
+
+  .tn-page.tn-page-m375 .tn-feature-card-title {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    -webkit-line-clamp: 2 !important;
+  }
+}
+
 @media (min-width: 1024px) {
   .home-page-shell {
     grid-template-columns: 100px minmax(0, 1fr) 100px;
@@ -9477,7 +9508,7 @@ img {
   }
 
   .tn-feature-cards {
-    height: 43rem !important;
+    height: 32rem !important;
     flex-direction: column;
     padding: 8px;
     gap: 10px;
@@ -10074,7 +10105,7 @@ img {
 
   .tn-feature-cards {
     flex-direction: column;
-    height: 40rem !important;
+    height: 30rem !important;
     padding: 6px;
     gap: 8px;
   }
@@ -14981,6 +15012,150 @@ img {
   .category-page-align {
     padding-left: 0 !important;
     padding-right: 0 !important;
+  }
+}
+
+/* News portal: avoid blank left block when right list is taller */
+.nps-ent-left-mid {
+  align-items: stretch;
+}
+
+.hs-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+}
+
+.hs-small-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hs-left-col .hs-featured-card {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.hs-left-col .hs-featured-img-wrap {
+  height: 100%;
+}
+
+.nps-ent-left-mid .hs-mid-col {
+  grid-row: auto !important;
+  height: 100% !important;
+}
+
+@media (min-width: 769px) {
+  .hs-left-col {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-content: stretch;
+    height: 100%;
+  }
+
+  .hs-left-col .hs-featured-card {
+    min-height: 0;
+  }
+
+  .hs-left-col .hs-featured-img-wrap {
+    height: 100%;
+    min-height: 220px;
+  }
+
+  .nps-ent-left-mid .hs-mid-card {
+    flex: 1 1 0;
+    min-height: 72px;
+  }
+}
+
+/* State news: prevent left blank gap when right rail is taller */
+.sn-left-mid {
+  align-items: start;
+}
+
+.sn-left-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sn-left-mid .sn-mid {
+  height: auto !important;
+}
+
+/* FreshPopular top rail: laptop (1024) par 3-line title clamp */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .fps-top-rail-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .fps-top-rail-time {
+    font-size: 9px !important;
+    line-height: 1.35 !important;
+  }
+}
+
+/* FreshPopular: title-only typography override */
+.fps-title-only {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: grey !important;
+  line-height: 1.55 !important;
+}
+
+.fps-title-only:hover,
+.fps-title-only:focus-visible {
+  color: #D80100 !important;
+}
+
+/* FreshPopular top rail: tablet (768-1023) par 3-line title clamp */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .fps-top-rail-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* FreshPopular top rail: L-425 (425-767) par 3-line title clamp */
+@media (min-width: 425px) and (max-width: 767px) {
+  .fps-top-rail-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .fps-top-rail-time {
+    font-size: 8px !important;
+    line-height: 1.35 !important;
+  }
+}
+
+/* FreshPopular top rail: L-1440 (1440-1799) par 3-line title clamp */
+@media (min-width: 1440px) and (max-width: 1799px) {
+  .fps-top-rail-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* FreshPopular top rail: desktop (1024+) par always 3-line title clamp */
+@media (min-width: 1024px) {
+  .fps-top-rail-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 

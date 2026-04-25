@@ -2,9 +2,10 @@ import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchArticlePage,
-  fetchArticles,
   fetchCategories,
+  fetchHomepageHeroCurrent,
   fetchHomepageLatestNewsCurrent,
+  getHomepageHeroArticlesFromResponse,
   getLatestNewsArticlesFromResponse,
   getListFromResponse,
 } from '../lib/api';
@@ -129,36 +130,62 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: heroData, isLoading: heroLoading } = useQuery({
+    queryKey: ['homepage-hero-current'],
+    queryFn: fetchHomepageHeroCurrent,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const allArticles = React.useMemo(() => {
+    return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
+  }, [articlesData]);
+
+  const heroArticles = React.useMemo(
+    () => {
+      const list = getHomepageHeroArticlesFromResponse(heroData);
+      const displayCount = Number(heroData?.display_count ?? heroData?.data?.display_count);
+      if (Number.isFinite(displayCount) && displayCount > 0) {
+        return list.slice(0, displayCount);
+      }
+      return list;
+    },
+    [heroData]
+  );
+
+  const shouldUseFallbackBanner = !heroLoading && heroArticles.length === 0;
+
   const { data: bannerArticlesData, isLoading: bannerArticlesLoading } = useQuery({
     queryKey: ['banner-articles'],
     queryFn: () => fetchArticlePage({ page: 1, limit: 5 }),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-  });
-  const { data: breakingNewsData } = useQuery({
-    queryKey: ['breaking-news-fast'],
-    queryFn: () => fetchArticlePage({ page: 1, limit: 9, category: 'breaking-news' }),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    enabled: shouldUseFallbackBanner,
   });
 
-  const breakingArticles = React.useMemo(
-    () => getListFromResponse(breakingNewsData),
-    [breakingNewsData]
-  );
-  const allArticles = React.useMemo(() => {
-    return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
-  }, [articlesData]);
-
-  const bannerArticles = React.useMemo(
+  const fallbackBannerArticles = React.useMemo(
     () => getListFromResponse(bannerArticlesData),
     [bannerArticlesData]
   );
 
+  const bannerArticles = React.useMemo(
+    () => (heroArticles.length > 0 ? heroArticles : fallbackBannerArticles),
+    [heroArticles, fallbackBannerArticles]
+  );
+
+  const bannerLoading = heroLoading || (shouldUseFallbackBanner && bannerArticlesLoading);
+
   const latestNewsArticles = React.useMemo(
-    () => getLatestNewsArticlesFromResponse(latestNewsData),
+    () => {
+      const list = getLatestNewsArticlesFromResponse(latestNewsData);
+      const displayCount = Number(latestNewsData?.display_count);
+      if (Number.isFinite(displayCount) && displayCount > 0) {
+        return list.slice(0, displayCount);
+      }
+      return list;
+    },
     [latestNewsData]
   );
 
@@ -189,7 +216,7 @@ const Home = () => {
 
         <div className="home-section-align">
           <Profiler id="NewsBanner" onRender={onRenderCallback}>
-            <NewsBanner articles={bannerArticles} loading={bannerArticlesLoading} />
+            <NewsBanner articles={bannerArticles} loading={bannerLoading} />
           </Profiler>
         </div>
 
@@ -218,7 +245,10 @@ const Home = () => {
 
         <div className="home-section-align">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
-            <FreshPopularShowcase articles={allArticles} />
+            <FreshPopularShowcase
+              articles={allArticles}
+              latestNewsArticles={latestNewsArticles}
+            />
           </Profiler>
         </div>
 

@@ -129,9 +129,15 @@ export function EntertainmentSection() {
   const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers");
   const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-in-numbers");
 
-  const featured     = explainers[0] || null;
-  const smallCard    = explainers[1] || null;
-  const midCards     = explainers.slice(2, 7);
+  const featured = explainers[0] || null;
+  const desiredRightCards = 5;
+  const availableAfterFeatured = Math.max(0, explainers.length - 1);
+  const leftStackCount = Math.min(2, availableAfterFeatured);
+  const leftStackCards = explainers.slice(1, 1 + leftStackCount);
+  const midCards = explainers.slice(
+    1 + leftStackCards.length,
+    1 + leftStackCards.length + desiredRightCards
+  );
   const sidebarItems = numbers.slice(0, 5);
 
   const rootStyle = is2K
@@ -145,12 +151,15 @@ export function EntertainmentSection() {
     ? {
         display: "grid",
         gridTemplateColumns: "720px minmax(0, 1fr)",
+        gridTemplateRows: "auto",
         gap: 18,
-        alignItems: "start",
+        alignItems: "stretch",
       }
-    : undefined;
+    : { gridTemplateRows: "auto", alignItems: "stretch" };
   const featuredStyle = is2K ? { height: 360, borderRadius: 10, width: "100%" } : undefined;
-  const midColStyle = is2K ? { height: 470, paddingLeft: 18 } : undefined;
+  const midColStyle = is2K
+    ? { height: 470, paddingLeft: 18, gridRow: "auto", gridColumn: "auto" }
+    : { gridRow: "auto", gridColumn: "auto" };
   const sidebarStyle = { display: "none" };
   const sidebarScrollStyle = undefined;
 
@@ -169,78 +178,83 @@ export function EntertainmentSection() {
 
         {/* ── LEFT + MIDDLE ── */}
         <div className="nps-ent-left-mid" style={leftMidStyle}>
-
-          {/* Featured big card — priority load */}
-          {explainersLoading ? (
-            <div className="hs-featured-card">
-              <div className="hs-featured-img-wrap" style={{ background: "#f0ece8" }}>
-                <Sk h="100%" w="100%" mb="0" radius="0" />
-              </div>
-            </div>
-          ) : featured ? (
-            <div
-              className="hs-featured-card"
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                const articlePath = getArticlePath(featured);
-                if (articlePath) navigate(articlePath);
-              }}
-            >
-              <div className="hs-featured-img-wrap" style={featuredStyle}>
-                <ArticleImg
-                  src={imgSrc(featured)}
-                  alt={featured.title}
-                  className="w-full h-full object-cover"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  priority={true}
-                />
-                <div className="hs-featured-overlay">
-                  <p className="hs-featured-title">{featured.title}</p>
-                  <DateLabel date={formatArticleDateTimeIST(featured)} />
+          <div className="hs-left-col">
+            {/* Featured big card — priority load */}
+            {explainersLoading ? (
+              <div className="hs-featured-card">
+                <div className="hs-featured-img-wrap" style={{ background: "#f0ece8" }}>
+                  <Sk h="100%" w="100%" mb="0" radius="0" />
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="hs-featured-card">
-              <div className="hs-featured-img-wrap" style={{ background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#bbb", fontSize: 13 }}>No articles yet</span>
+            ) : featured ? (
+              <div
+                className="hs-featured-card"
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  const articlePath = getArticlePath(featured);
+                  if (articlePath) navigate(articlePath);
+                }}
+              >
+                <div className="hs-featured-img-wrap" style={featuredStyle}>
+                  <ArticleImg
+                    src={imgSrc(featured)}
+                    alt={featured.title}
+                    className="w-full h-full object-cover"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    priority={true}
+                  />
+                  <div className="hs-featured-overlay">
+                    <p className="hs-featured-title">{featured.title}</p>
+                    <DateLabel date={formatArticleDateTimeIST(featured)} />
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="hs-featured-card">
+                <div className="hs-featured-img-wrap" style={{ background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "#bbb", fontSize: 13 }}>No articles yet</span>
+                </div>
+              </div>
+            )}
 
-          {/* Small card — lazy load */}
-          {explainersLoading ? (
-            <div className="hs-small-card">
-              <div className="hs-small-img" style={{ background: "#f0ece8" }} />
-              <div className="hs-small-text">
-                <Sk h="11px" w="60px" mb="6px" />
-                <Sk h="13px" w="90%" mb="4px" />
-                <Sk h="11px" w="50px" mb="0" />
-              </div>
+            <div className="hs-small-stack">
+              {explainersLoading
+                ? Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="hs-small-card">
+                      <div className="hs-small-img" style={{ background: "#f0ece8" }} />
+                      <div className="hs-small-text">
+                        <Sk h="11px" w="60px" mb="6px" />
+                        <Sk h="13px" w="90%" mb="4px" />
+                        <Sk h="11px" w="50px" mb="0" />
+                      </div>
+                    </div>
+                  ))
+                : leftStackCards.map((card) => (
+                    <div
+                      key={card.id || card.slug || card.title}
+                      className="hs-small-card"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        const articlePath = getArticlePath(card);
+                        if (articlePath) navigate(articlePath);
+                      }}
+                    >
+                      <div className="hs-small-img">
+                        <ArticleImg
+                          src={imgSrc(card)}
+                          alt={card.title}
+                          className="w-full h-full object-cover"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      </div>
+                      <div className="hs-small-text">
+                        <p className="hs-small-title">{card.title}</p>
+                        <DateLabel date={formatArticleDateTimeIST(card)} />
+                      </div>
+                    </div>
+                  ))}
             </div>
-          ) : smallCard ? (
-            <div
-              className="hs-small-card"
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                const articlePath = getArticlePath(smallCard);
-                if (articlePath) navigate(articlePath);
-              }}
-            >
-              <div className="hs-small-img">
-                <ArticleImg
-                  src={imgSrc(smallCard)}
-                  alt={smallCard.title}
-                  className="w-full h-full object-cover"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-              <div className="hs-small-text">
-                <p className="hs-small-title">{smallCard.title}</p>
-                <DateLabel date={formatArticleDateTimeIST(smallCard)} />
-              </div>
-            </div>
-          ) : null}
+          </div>
 
           {/* Middle: 4 horizontal cards — lazy load */}
           <div className="hs-mid-col" style={midColStyle}>

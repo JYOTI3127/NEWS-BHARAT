@@ -141,19 +141,40 @@ const getSearchResultHref = (item) => {
 };
 
 const getSearchPreview = (item) => {
-  const raw =
-    item?.subtitle ||
-    item?.summary ||
-    item?.excerpt ||
-    item?.description ||
-    item?.content ||
-    "";
+  const candidates = [
+    item?.subtitle,
+    item?.summary,
+    item?.excerpt,
+    item?.description,
+    item?.content,
+  ];
 
-  return String(raw)
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 95);
+  const isPreviewArtifact = (value) => {
+    const text = String(value || "").trim().toLowerCase();
+    if (!text) return true;
+    return (
+      /^(?:div|span|section|article|p|ul|ol|li|h[1-6])\s+class\s*=/.test(text) ||
+      text.includes("standard-markdown") ||
+      text.includes("[&_") ||
+      /\b(?:grid-cols-|min-w-|gap-|px-|py-|text-|font-|leading-)/.test(text)
+    );
+  };
+
+  for (const raw of candidates) {
+    const cleaned = String(raw || "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\b[a-z][a-z0-9-]*\s+class\s*=\s*["'][^"']*(?:["']|$)/gi, " ")
+      .replace(/\b(?:style|class|id|data-[a-z0-9-]+|dir|face|size)\s*=\s*["'][^"']*(?:["']|$)/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleaned || isPreviewArtifact(cleaned)) continue;
+    return cleaned.slice(0, 95);
+  }
+
+  return "";
 };
 
 export default function BottomNav() {

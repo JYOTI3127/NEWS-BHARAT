@@ -331,20 +331,44 @@ const stripHtml = (value) => {
     .trim();
   cleaned = cleaned
     .replace(/<\/?[^>]*$/g, "")
+    .replace(/\b[a-z][a-z0-9-]*\s+class\s*=\s*["'][^"']*(?:["']|$)/gi, " ")
     .replace(/^[a-z0-9-]+\s*=\s*["'][^"']*["']\s*/gi, "")
-    .replace(/\b(?:style|class|id|data-[a-z0-9-]+|dir|face|size)\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/\b(?:style|class|id|data-[a-z0-9-]+|dir|face|size)\s*=\s*["'][^"']*(?:["']|$)/gi, " ")
     .replace(/^[^\p{L}\p{N}]+/u, "")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned;
 };
 
+const isSearchPreviewArtifact = (value) => {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return true;
+  return (
+    /^(?:div|span|section|article|p|ul|ol|li|h[1-6])\s+class\s*=/.test(text) ||
+    text.includes("standard-markdown") ||
+    text.includes("[&_") ||
+    /\b(?:grid-cols-|min-w-|gap-|px-|py-|text-|font-|leading-)/.test(text)
+  );
+};
+
 const getSearchPreview = (item) => {
-  const raw = item?.description || item?.summary || item?.excerpt || "";
-  const cleaned = stripHtml(raw);
-  if (!cleaned) return "";
-  const trimmed = cleaned.slice(0, 110).trim();
-  return cleaned.length > 110 ? `${trimmed}...` : trimmed;
+  const candidates = [
+    item?.description,
+    item?.summary,
+    item?.excerpt,
+    item?.subtitle,
+    item?.content,
+  ];
+
+  for (const candidate of candidates) {
+    const cleaned = stripHtml(candidate);
+    if (!cleaned) continue;
+    if (isSearchPreviewArtifact(cleaned)) continue;
+    const trimmed = cleaned.slice(0, 110).trim();
+    return cleaned.length > 110 ? `${trimmed}...` : trimmed;
+  }
+
+  return "";
 };
 
 const getListFromSearchResponse = (data) => {
@@ -507,6 +531,20 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+const useIsCompactNav = () => {
+  const [isCompactNav, setIsCompactNav] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 1024
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsCompactNav(window.innerWidth <= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isCompactNav;
+};
+
 // ─────────────────────────────────────────────
 // Main Header Component
 // ─────────────────────────────────────────────
@@ -541,6 +579,7 @@ const Header = () => {
 
   // ✅ Hooks — clean
   const isMobile = useIsMobile();
+  const isCompactNav = useIsCompactNav();
   const is2K = useIs2K();
 
   const searchRef = useRef(null);
@@ -565,8 +604,9 @@ const Header = () => {
     { label: "60 Sec Read", path: "/category/60-second-read" },
   ];
   const visibleNavLinks = is2K ? uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]) : navLinks;
-  const primaryNavLinks = visibleNavLinks.slice(0, DESKTOP_VISIBLE_NAV_COUNT);
-  const overflowNavLinks = visibleNavLinks.slice(DESKTOP_VISIBLE_NAV_COUNT);
+  const maxVisibleNavCount = is2K ? visibleNavLinks.length : DESKTOP_VISIBLE_NAV_COUNT;
+  const primaryNavLinks = visibleNavLinks.slice(0, maxVisibleNavCount);
+  const overflowNavLinks = visibleNavLinks.slice(maxVisibleNavCount);
 
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
@@ -1443,7 +1483,7 @@ const Header = () => {
                 <Menu size={22} color="white" />
               </button>
               <div className="logo-area">
-                {isMobile ? <LogoScroll /> : (!isScrolled ? <LogoFull /> : <LogoScroll />)}
+                {isCompactNav ? <LogoScroll /> : (!isScrolled ? <LogoFull /> : <LogoScroll />)}
               </div>
             </div>
 

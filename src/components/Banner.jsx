@@ -25,6 +25,15 @@ const getCategoryLabel = (article) => {
   return "News";
 };
 
+const getBannerTitle = (article) =>
+  String(
+    article?.title ||
+    article?.headline ||
+    article?.article_title ||
+    article?.name ||
+    "Untitled"
+  ).trim();
+
 const timeAgo = (article) => {
   const dateStr = getArticleDateValue(article);
   if (!dateStr) return "";
@@ -75,6 +84,30 @@ const ShareCircleIcon = () => (
   </svg>
 );
 
+const getBannerImage = (article) => {
+  const candidates = [
+    article?.image_url,
+    article?.image,
+    article?.image?.url,
+    article?.featured_image,
+    article?.featured_image_url,
+    article?.thumbnail,
+    article?.thumbnail_url,
+  ];
+
+  for (const value of candidates) {
+    const normalized =
+      typeof value === "string"
+        ? value.trim()
+        : typeof value === "object" && value
+          ? String(value?.url || "").trim()
+          : "";
+    if (normalized) return normalized;
+  }
+
+  return "";
+};
+
 // ✅ API fetch function — alag rakha taaki sab components share kar sakein
 export default function NewsBanner({ articles = [], loading = false }) {
   const navigate = useNavigate();
@@ -95,7 +128,10 @@ export default function NewsBanner({ articles = [], loading = false }) {
   // Data process karo
   const all = Array.isArray(articles) ? articles : (articles?.results || []);
   const sorted = [...all]
-    .filter((a) => a.status === "published" || a.image_url)
+    .filter((a) => {
+      const status = String(a?.status || "").toLowerCase();
+      return status === "published" || Boolean(getBannerImage(a));
+    })
     .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
 
   const todayArticles = sorted.filter((a) => isTodayArticle(a));
@@ -112,7 +148,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const usedImages = new Set();
   const slides = [];
   for (const a of topSix) {
-    const img = a.image_url || a.image || "";
+    const img = getBannerImage(a);
     if (!img) continue;
     if (usedImages.has(img)) continue;
     usedImages.add(img);
@@ -120,7 +156,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
       id: a.id,
       slug: a.slug,
       author: getCategoryLabel(a),
-      title: a.title,
+      title: getBannerTitle(a),
       category: getCategoryLabel(a),
       image: img,
       image_alt: a.image_alt,
@@ -139,7 +175,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const bottomNews = topSix.map((a) => ({
     id: a.id,
     slug: a.slug,
-    title: a.title,
+    title: getBannerTitle(a),
     time: formatArticleDateTimeIST(a) || timeAgo(a) || "—",
     region: getCategoryLabel(a),
     public_url: a.public_url,

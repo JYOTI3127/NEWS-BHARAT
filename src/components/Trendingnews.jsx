@@ -9,9 +9,23 @@ const SIXTY_SECONDS_URL = apiUrl("/articles/?category=60-second-read&page=1&limi
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const getArticleImage         = (a) => a?.image_url || a?.image || "";
 const getArticleFallbackImage = (a) => a?.image || a?.image_url || "";
+const firstNonEmpty = (...values) =>
+  values
+    .map((value) => String(value ?? "").trim())
+    .find(Boolean) || "";
 
 const getArticleDateValue = (article) => {
-  const raw = article?.published_date || article?.published_at || article?.created_at || null;
+  const raw =
+    article?.published_date ||
+    article?.published_at ||
+    article?.publishedOn ||
+    article?.post_date ||
+    article?.publish_date ||
+    article?.updated_at ||
+    article?.created_at ||
+    article?.createdOn ||
+    article?.date ||
+    null;
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -37,15 +51,36 @@ const formatArticleDateTime = (article) => {
 };
 
 const getLatestNewsDateLabel = (article) => {
-  const updatedDisplay = String(article?.updated_display || "").trim();
+  const updatedDisplay = firstNonEmpty(
+    article?.updated_display,
+    article?.updatedDisplay,
+    article?.published_display,
+    article?.publishedDisplay,
+    article?.display_date,
+    article?.displayDate
+  );
   if (updatedDisplay) return updatedDisplay;
 
-  const publishedAt = String(
-    article?.published_at || article?.published_date || ""
-  ).trim();
-  if (!publishedAt) return "";
+  const bestRawDate = firstNonEmpty(
+    article?.published_at ||
+      article?.published_date ||
+      article?.publishedOn ||
+      article?.post_date ||
+      article?.publish_date ||
+      article?.updated_at ||
+      article?.created_at ||
+      article?.createdOn ||
+      article?.date,
+    article?.publishedAt,
+    article?.publishDate,
+    article?.updatedAt,
+    article?.createdAt,
+    article?.datetime,
+    article?.time
+  );
+  if (!bestRawDate) return "";
 
-  return formatArticleDateTime({ published_at: publishedAt }) || publishedAt;
+  return formatArticleDateTime({ published_at: bestRawDate }) || bestRawDate;
 };
 
 // ─────────────────────────────────────────────
@@ -53,12 +88,15 @@ const getLatestNewsDateLabel = (article) => {
 // ─────────────────────────────────────────────
 const useScreenSize = () => {
   const getSize = () => {
-    if (typeof window === "undefined") return { is4K: false, is2K: false, is320: false };
+    if (typeof window === "undefined") {
+      return { is4K: false, is2K: false, is320: false, isM375: false };
+    }
     const w = window.innerWidth;
     return {
       is4K:  w > 2560,
       is2K:  w >= 1441 && w <= 2560,
       is320: w <= 320,
+      isM375: w > 320 && w <= 375,
     };
   };
   const [size, setSize] = useState(getSize);
@@ -263,7 +301,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
 });
 
 // ── Feature Cards ─────────────────────────────────────────────
-const FeatureCards = memo(({ articles, loading, is2K }) => {
+const FeatureCards = memo(({ articles, loading, is2K, isM375 }) => {
   const CARDS_PER_PAGE = 2;
   const [page, setPage]       = useState(0);
   const [animDir, setAnimDir] = useState(null);
@@ -322,7 +360,12 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
         <div style={{ padding: 16, color: "#999", fontSize: 13 }}>No articles found.</div>
       )}
       <div className="tn-feature-cards" style={{ ...transitionStyle, ...(is2K ? { height: 430 } : {}) }}>
-        {cards.map((card, i) => (
+        {cards.map((card, i) => {
+          const featureDateLabel =
+            getLatestNewsDateLabel(card) ||
+            formatArticleDateTime(card) ||
+            "Updated recently";
+          return (
           <Link key={card.id} to={getArticlePath(card)} className="tn-feature-card" style={{ textDecoration: "none", color: "inherit", display: "block", cursor: "pointer" }}>
             <div className="tn-feature-card-img-wrap">
               <img
@@ -332,7 +375,12 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
                 fetchPriority={i === 0 ? "high" : "low"}
                 decoding="async"
                 width={360} height={220}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: isM375 ? "center top" : "center",
+                }}
                 onError={(e) => {
                   const fallback = getArticleFallbackImage(card);
                   if (fallback && e.currentTarget.src !== fallback) { e.currentTarget.src = fallback; return; }
@@ -342,14 +390,13 @@ const FeatureCards = memo(({ articles, loading, is2K }) => {
             </div>
             <div className="tn-feature-card-body">
               <div className="tn-feature-card-title">{card.title}</div>
-              {formatArticleDateTime(card) && (
-                <div style={{ marginTop: 6, color: "#6b7280", fontSize: 11, fontWeight: 600, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
-                  {formatArticleDateTime(card)}
-                </div>
-              )}
+              <div style={{ marginTop: 6, color: "#6b7280", fontSize: 11, fontWeight: 600, lineHeight: "1.4", fontFamily: "Poppins, sans-serif" }}>
+                {featureDateLabel}
+              </div>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -450,11 +497,10 @@ const LiveUpdates = memo(({ is2K }) => {
 export default function TrendingNews({
   articles: passedArticles = [],
   categories: passedCategories = [],
-  loading: passedLoading = false,
   latestNewsArticles: passedLatestNewsArticles = [],
   latestNewsLoading = false,
 }) {
-  const { is4K, is2K, is320 } = useScreenSize();
+  const { is4K, is2K, is320, isM375 } = useScreenSize();
 
   const articles = useMemo(() => {
     const list = Array.isArray(passedArticles) ? passedArticles : passedArticles?.results || [];
@@ -494,7 +540,7 @@ export default function TrendingNews({
   const twoKGridStyle  = is2K ? { gridTemplateColumns: "560px minmax(0, 1fr) 260px", gap: "18px", height: "360px", alignItems: "stretch" } : undefined;
 
   return (
-    <div className={`tn-page${is2K ? " tn-page-2k" : ""}${is4K ? " tn-page-4k" : ""}`}>
+    <div className={`tn-page${is2K ? " tn-page-2k" : ""}${is4K ? " tn-page-4k" : ""}${isM375 ? " tn-page-m375" : ""}`}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -514,7 +560,12 @@ export default function TrendingNews({
             />
           </div>
           <div className="col-cards">
-            <FeatureCards articles={articles} loading={passedLoading} is2K={is2K} />
+            <FeatureCards
+              articles={latestNewsArticles.length > 0 ? latestNewsArticles : articles}
+              loading={latestNewsLoading && latestNewsArticles.length === 0}
+              is2K={is2K}
+              isM375={isM375}
+            />
           </div>
           {!is320 && (
             <div className="col-live">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import {
-  Clock, User, TrendingUp, ChevronRight,
+  Clock, User,
   Newspaper, RefreshCw, BookOpen, Eye,
 } from "lucide-react";
 import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
@@ -31,8 +31,8 @@ const formatViews = (v) => {
 };
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
-const CATEGORY_ARTICLE_LIMIT = 50;
-const MORE_IN_ARTICLES_LIMIT = 30;
+const CATEGORY_ARTICLE_LIMIT = 100;
+const MORE_IN_ARTICLES_LIMIT = 17;
 const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
 
 const isStateCategorySlug = (value) =>
@@ -174,7 +174,6 @@ export default function CategoryPage() {
 
   const heroArticle   = articles[0] || null;
   const gridArticles  = articles.slice(1, visibleCount + 1);
-  const trendingTop5  = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
   const moreInArticles = articles.slice(0, MORE_IN_ARTICLES_LIMIT);
   const hasMore       = visibleCount + 1 < articles.length;
   const shellStyle = {
@@ -222,7 +221,7 @@ export default function CategoryPage() {
           variant="sideRail"
           className="home-side-ad home-side-ad--left"
           dismissible
-          minWidth={1024}
+          minWidth={768}
         />
       </aside>
 
@@ -364,7 +363,7 @@ export default function CategoryPage() {
                           <User size={11} />{article.author}
                         </span>
                         {/* AM/PM time */}
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-[11px]">
                           <Clock size={11} />{formatArticleDateTimeIST(article)}
                         </span>
                       </div>
@@ -397,84 +396,22 @@ export default function CategoryPage() {
         {/* RIGHT SIDEBAR */}
        <aside className="flex flex-col gap-5 lg:order-last">
 
-          {/* Trending */}
           <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b-2 border-red-600 text-xs font-bold uppercase tracking-wider text-slate-900">
-              <TrendingUp size={15} color="#D80100" className="mr-1" />
-              <span>Trending Now</span>
-            </div>
-            <div className="divide-y divide-slate-100 lg:block flex overflow-x-auto lg:overflow-visible scrollbar-hide">
-              {trendingTop5.map((article, idx) => (
-                <Link
-                  key={article.id}
-                  to={getArticlePath(article)}
-                  style={{ textDecoration: "none", color: "inherit", display: "block" }}
-                >
-                  <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 min-w-[260px] lg:min-w-0">
-                    <span className="text-[15px] text-[#D80100] font-semibold min-w-[24px]">
-                      {String(idx + 1).padStart(2, "0")}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900 line-clamp-2">{article.title}</p>
-                      <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                        <Clock size={10} />{formatArticleDateTimeIST(article)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Latest */}
-          <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b-2 border-red-600 text-xs font-bold uppercase tracking-wider text-slate-900">
-              <Clock size={15} color="#D80100" className="mr-1" />
-              <span>Latest</span>
+            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                {`More in ${category?.name || slug}`}
+              </span>
+              <span className="text-[11px] text-red-600 font-semibold">
+                {moreInArticles.length} Posts
+              </span>
             </div>
             <div className="divide-y divide-slate-100">
-              {articles.slice(0, 4).map((article) => (
-                <Link
-                  key={article.id}
-                  to={getArticlePath(article)}
-                  style={{ textDecoration: "none", color: "inherit", display: "block" }}
-                >
-                  <div className="flex gap-3 px-4 py-3 hover:bg-slate-50">
-                    <div className="flex-shrink-0 w-16 h-12 rounded-md overflow-hidden bg-slate-100">
-                      {article.image ? (
-                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" loading="lazy" decoding="async" width={128} height={96} />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-slate-100">
-                          <Newspaper size={16} color="#ccc" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900 line-clamp-2">{article.title}</p>
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock size={10} />{formatArticleDateTimeIST(article)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {moreInArticles.length > 0 && (
-            <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  {`More in ${category?.name || slug}`}
-                </span>
-                <span className="text-[11px] text-red-600 font-semibold">
-                  {moreInArticles.length} Posts
-                </span>
-              </div>
-              <div className="scrollbar-invisible max-h-[540px] overflow-y-auto divide-y divide-slate-100">
-                {moreInArticles.map((article) => (
+              {moreInArticles.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-slate-500">No posts found.</div>
+              ) : (
+                moreInArticles.map((article, index) => (
                   <Link
-                    key={article.id}
+                    key={article.id || article.slug || index}
                     to={getArticlePath(article)}
                     style={{ textDecoration: "none", color: "inherit", display: "block" }}
                   >
@@ -506,24 +443,9 @@ export default function CategoryPage() {
                       </div>
                     </div>
                   </Link>
-                ))}
-              </div>
+                ))
+              )}
             </div>
-          )}
-
-          {/* Newsletter CTA */}
-          <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-xl p-5 sm:p-6 text-center">
-            <div className="mx-auto mb-3 w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
-              <Newspaper size={22} color="#fff" />
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">Stay Updated</h4>
-            <p className="text-xs text-white/80 mb-4">
-              Get the latest {category?.name || "news"} delivered to your inbox daily.
-            </p>
-            <button className="inline-flex items-center justify-center gap-2 border border-white/70 text-white px-5 py-2 rounded-lg font-semibold text-xs transition-colors duration-200 hover:bg-white hover:text-red-600">
-              Subscribe Now
-              <ChevronRight size={14} className="ml-1" />
-            </button>
           </div>
 
         </aside>
@@ -536,7 +458,7 @@ export default function CategoryPage() {
           variant="sideRail"
           className="home-side-ad home-side-ad--right"
           dismissible
-          minWidth={1024}
+          minWidth={768}
         />
       </aside>
     </div>

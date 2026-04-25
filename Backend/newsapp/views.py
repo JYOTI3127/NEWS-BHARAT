@@ -1341,6 +1341,35 @@ def update_hero_slot(request):
     return JsonResponse({'status': 'saved', 'slot': 'hero'})
 
 
+@require_GET
+def homepage_hero_current(request):
+    slot = (
+        HomepageSlot.objects.filter(slot_name='hero')
+        .select_related('article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3')
+        .first()
+    )
+    if not slot:
+        slot = _get_or_create_slot('hero')
+
+    def serialize_article(article):
+        if not article:
+            return None
+        return ArticleHomepageSerializer(article, context={'request': request}).data
+
+    return JsonResponse({
+        'slot': 'hero',
+        'mode': getattr(slot, 'mode', 'manual') or 'manual',
+        'main_article_id': getattr(slot, 'article_id', None),
+        'overlay_article_1_id': getattr(slot, 'overlay_article_1_id', None),
+        'overlay_article_2_id': getattr(slot, 'overlay_article_2_id', None),
+        'overlay_article_3_id': getattr(slot, 'overlay_article_3_id', None),
+        'main_article': serialize_article(getattr(slot, 'article', None)),
+        'overlay_article_1': serialize_article(getattr(slot, 'overlay_article_1', None)),
+        'overlay_article_2': serialize_article(getattr(slot, 'overlay_article_2', None)),
+        'overlay_article_3': serialize_article(getattr(slot, 'overlay_article_3', None)),
+    })
+
+
 @staff_member_required
 @require_POST
 def update_latest_news_slot(request):

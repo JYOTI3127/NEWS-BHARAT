@@ -25,41 +25,6 @@ const SITE_URL = "https://news4bharat.com";
 const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
 const SITE_NAME = "News4Bharat";
 const TWITTER_HANDLE = "@news4_bharat";
-const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
-
-const isPrerenderUserAgent = () => {
-  if (typeof window === "undefined") return false;
-  const userAgent = window.navigator?.userAgent || "";
-  return /HeadlessChrome|prerender/i.test(userAgent);
-};
-
-const fetchWithRetry = async (url, options, attempts = 3) => {
-  let lastResponse = null;
-  let lastError = null;
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      const response = await fetch(url, options);
-      if (response.ok) return response;
-
-      if (
-        !RETRYABLE_STATUS_CODES.has(response.status) ||
-        attempt === attempts - 1
-      ) {
-        return response;
-      }
-
-      lastResponse = response;
-    } catch (error) {
-      if (error?.name === "AbortError") throw error;
-      lastError = error;
-      if (attempt === attempts - 1) throw error;
-    }
-  }
-
-  if (lastResponse) return lastResponse;
-  throw lastError || new Error("Request failed");
-};
 
 const toCategoryArray = (categoryDetails) => {
   if (Array.isArray(categoryDetails)) return categoryDetails;
@@ -704,7 +669,6 @@ export default function ArticleDetails() {
   const params = useParams();
   const routeParam = params.slug || params.id || "";
   const categorySlug = params.categorySlug || "";
-  const isPrerenderRequest = isPrerenderUserAgent();
   const articleLookupCandidates = useMemo(() => {
     const fromRoute = normalizeSlugValue(routeParam);
 
@@ -753,13 +717,12 @@ export default function ArticleDetails() {
       try {
         const fetchArticleDetail = async () => {
           for (const candidate of articleLookupCandidates) {
-            const response = await fetchWithRetry(
+            const response = await fetch(
               apiUrl(`/articles/slug/${encodeURIComponent(candidate)}/`),
               {
                 signal: controller.signal,
                 cache: "no-store",
-              },
-              3
+              }
             );
 
             if (response.ok) return response;
@@ -776,14 +739,10 @@ export default function ArticleDetails() {
         let listFetchFailed = false;
 
         try {
-          const listResponse = await fetchWithRetry(
-            apiUrl("/articles/?page=1&limit=500"),
-            {
-              signal: controller.signal,
-              cache: "no-store",
-            },
-            3
-          );
+          const listResponse = await fetch(apiUrl("/articles/?page=1&limit=500"), {
+            signal: controller.signal,
+            cache: "no-store",
+          });
 
           if (!listResponse.ok) {
             throw new Error(`Failed to fetch articles list: ${listResponse.status}`);
@@ -847,13 +806,12 @@ export default function ArticleDetails() {
 
             if (!hasSeoTitle && listMatch?.id) {
               try {
-                const idDetailResponse = await fetchWithRetry(
+                const idDetailResponse = await fetch(
                   apiUrl(`/articles/${encodeURIComponent(String(listMatch.id))}/`),
                   {
                     signal: controller.signal,
                     cache: "no-store",
-                  },
-                  3
+                  }
                 );
 
                 if (idDetailResponse.ok) {
@@ -946,13 +904,12 @@ export default function ArticleDetails() {
   useEffect(() => {
     if (!articleSlug) return;
     if (!article && !notFound && !loadError) return;
-    if (loadError && isPrerenderRequest) return;
 
     const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
     const rafId = window.requestAnimationFrame(emitReady);
 
     return () => window.cancelAnimationFrame(rafId);
-  }, [article, articleSlug, isPrerenderRequest, loadError, notFound]);
+  }, [article, articleSlug, loadError, notFound]);
 
   useEffect(() => {
     if (!article || !mainArticleRef.current || !moreInListRef.current) return;
@@ -1051,7 +1008,7 @@ export default function ArticleDetails() {
     );
   }
 
-  if (loadError && !isPrerenderRequest) {
+  if (loadError) {
     return (
       <>
         <Helmet>

@@ -1277,6 +1277,35 @@
   border-color: #1a1a1a;
 }
 
+.top-market {
+  text-decoration: none;
+  color: #1a2a5e;
+}
+.top-market:hover { color: var(--red); }
+.top-market svg { color: var(--red); }
+
+.top-metal {
+  text-decoration: none;
+  color: #1a2a5e;
+}
+.top-metal:hover { color: #d4a017; }
+.top-metal-icon {
+  font-size: 11px;
+  font-weight: 800;
+  color: #d4a017;
+  background: #fffbe6;
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: 1.4;
+}
+
+.top-cricket {
+  text-decoration: none;
+  color: #1a2a5e;
+}
+.top-cricket:hover { color: var(--red); }
+.top-cricket svg { color: var(--red); }
+
 /* =============================================
    RESPONSIVE - MOBILE <= 768px
    ============================================= */

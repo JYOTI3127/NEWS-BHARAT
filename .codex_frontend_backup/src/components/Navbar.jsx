@@ -1429,21 +1429,6 @@ const Header = () => {
                       ) : null}
                     </span>
                   </Link>
-
-                  <Link to="/market" className="top-meta-pill top-market" aria-label="Open market page">
-                    <BarChart2 size={14} aria-hidden="true" />
-                    <span>Market</span>
-                  </Link>
-
-                  <Link to="/metal" className="top-meta-pill top-metal" aria-label="Open gold and silver rates page">
-                    <span className="top-metal-icon">GS</span>
-                    <span>Gold/Silver</span>
-                  </Link>
-
-                  <Link to="/cricket" className="top-meta-pill top-cricket" aria-label="Open cricket page">
-                    <Radio size={14} aria-hidden="true" />
-                    <span>Cricket</span>
-                  </Link>
                 </div>
                 <Link
                   to="/category/bharat-opinions"

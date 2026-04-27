@@ -7,7 +7,7 @@ import { getArticlePath, isArticlePath } from "./lib/articleUrl";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
-import "./style.css" 
+import "./style.css"
 
 // ✅ Profiler Callback — 50ms se zyada = SLOW warning
 const onRenderCallback = (id, phase, actualDuration) => {
@@ -40,6 +40,9 @@ const TagPage = lazy(() => import("./pages/TagPage"));
 const AuthorPage = lazy(() => import("./pages/AuthorPage"));
 const WeatherPage = lazy(() => import("./pages/WeatherPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const MarketPage = lazy(() => import("./pages/MarketPage"));
+const MetalPage = lazy(() => import("./pages/MetalPage"));
+const CricketPage = lazy(() => import("./pages/CricketPage"));
 
 // Loading Spinner
 function PageLoader() {
@@ -204,6 +207,9 @@ function Layout() {
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
             <Route path="/weather" element={<WeatherPage />} />
+            <Route path="/market" element={<MarketPage />} />
+            <Route path="/metal" element={<MetalPage />} />
+            <Route path="/cricket" element={<CricketPage />} />
             <Route path="/news/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/news/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/article/:categorySlug/:slug" element={<LegacyArticleRedirect />} />

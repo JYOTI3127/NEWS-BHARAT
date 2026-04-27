@@ -74,18 +74,10 @@ export default function WeatherPage() {
   return (
     <div style={{
       fontFamily: "'Poppins', sans-serif",
+      background: "#f0f4ff",
       minHeight: "100vh",
-      padding: 0,
+      padding: "20px 16px",
     }}>
-      <div
-        style={{
-          width: "var(--site-content-width)",
-          maxWidth: "var(--site-content-width)",
-          margin: "0 auto",
-          minHeight: "100vh",
-          padding: "clamp(26px, 3vw, 38px) 0 20px",
-        }}
-      >
 
       {/* Page Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -238,7 +230,6 @@ export default function WeatherPage() {
         borderRadius: 8, border: "1px solid #ffe082", fontSize: 11, color: "#7a5c00",
       }}>
         <strong>Dev Note:</strong> Abhi static data hai. Live data ke liye OpenWeatherMap API ya IMD API connect karein — <code>WEATHER_DATA</code> ko replace karein.
-      </div>
       </div>
     </div>
   );

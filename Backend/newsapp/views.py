@@ -461,6 +461,7 @@ def _save_article_from_request(request, article=None):
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
     old_published_at = None if is_new else article.published_at
+    previous_status = None if is_new else article.status
 
     category_ids_raw = data.get('categories', '')
     category_list_raw = data.getlist('categories')
@@ -512,7 +513,13 @@ def _save_article_from_request(request, article=None):
     article.subtitle = subtitle
     article.content  = content
 
-    article.status   = data.get('status', article.status if not is_new else 'draft')
+    requested_status = data.get('status', article.status if not is_new else 'draft')
+    if previous_status == 'published' and requested_status != 'archived':
+        # Once an article is published, stale autosave/editor requests must not
+        # silently push it back into draft or any other pre-publish state.
+        requested_status = 'published'
+
+    article.status   = requested_status
     article.priority = int(data.get('priority', article.priority if not is_new else 5))
     article.is_paid  = data.get('is_paid', 'false').lower() in ('true', '1', 'on')
 

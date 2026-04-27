@@ -544,7 +544,8 @@
 </section>
 
 <script>
-var HPC_ARTICLES=[{% for a in published_articles_for_picker %}{id:{{a.pk}},title:"{{a.title|escapejs}}",cat:"{% if a.categories.first %}{{a.categories.first.name|escapejs}}{% endif %}",image:"{% if a.image %}{{a.image.url}}{% elif a.image_url %}{{a.image_url}}{% endif %}",date:"{{a.published_at|date:'M d, Y'|default:a.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% empty %}{% endfor %}];
+var HPC_ARTICLES=[{% for a in published_articles_for_picker %}{id:{{a.pk}},title:"{{a.title|escapejs}}",cat:"{% if a.categories.first %}{{a.categories.first.name|escapejs}}{% endif %}",image:"{% if a.image %}{{a.image.url}}{% elif a.image_url %}{{a.image_url}}{% endif %}",date:"{% if a.published_at %}{{a.published_at|date:'M d, Y'}}{% else %}{{a.created_at|date:'M d, Y'}}{% endif %}"}{% if not forloop.last %},{% endif %}{% empty %}{% endfor %}];
+HPC_ARTICLES.sort(function(a,b){return b.id-a.id;});
 var lnArticles=[{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_manual_articles %}{id:{{art.pk}},title:"{{art.title|escapejs}}",cat:"{% if art.categories.first %}{{art.categories.first.name|escapejs}}{% endif %}",image:"{% if art.image %}{{art.image.url}}{% elif art.image_url %}{{art.image_url}}{% endif %}",date:"{{art.published_at|date:'M d, Y'|default:art.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
 var _lnPickerSlotIndex=0;
 var LN_DRAFT_KEY='homepage_latest_news_manual_draft_v1';

@@ -1188,9 +1188,12 @@ def dashboard_view(request):
     except Exception:
         ad_banner_rows = []
 
-    published_articles_for_picker = Article.objects.filter(
-        status='published'
-    ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
+    published_articles_for_picker = (
+        Article.objects.filter(status='published')
+        .select_related('author')
+        .prefetch_related('categories')
+        .order_by('-updated_at', '-published_at', '-created_at')[:100]
+    )
 
     categories = Category.objects.filter(status='active').order_by('name')
 

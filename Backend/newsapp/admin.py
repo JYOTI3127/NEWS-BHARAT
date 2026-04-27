@@ -777,9 +777,12 @@ class NewsAdminSite(AdminSite):
         extra_context = extra_context or {}
 
         try:
-            extra_context['published_articles_for_picker'] = Article.objects.filter(
-                status='published'
-            ).select_related('author').prefetch_related('categories').order_by('-published_at')[:100]
+            extra_context['published_articles_for_picker'] = (
+                Article.objects.filter(status='published')
+                .select_related('author')
+                .prefetch_related('categories')
+                .order_by('-updated_at', '-published_at', '-created_at')[:100]
+            )
         except Exception:
             extra_context['published_articles_for_picker'] = []
 

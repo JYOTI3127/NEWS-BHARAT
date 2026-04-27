@@ -946,8 +946,8 @@ export default function ArticleDetails() {
   useEffect(() => {
     if (!articleSlug) return;
     if (!article && !notFound && !loadError) return;
-    if (loadError && isPrerenderRequest) return;
 
+    // Prerender must always receive a terminal ready signal; otherwise route times out.
     const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
     const rafId = window.requestAnimationFrame(emitReady);
 
@@ -1072,6 +1072,22 @@ export default function ArticleDetails() {
             ← Back to Home
           </Link>
         </div>
+      </>
+    );
+  }
+
+  if (loadError && isPrerenderRequest) {
+    return (
+      <>
+        <Helmet>
+          <title>Article Unavailable | News4Bharat</title>
+          <meta
+            name="description"
+            content="We could not load this article right now. Please try again shortly."
+          />
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <div className="min-h-[1px]" />
       </>
     );
   }

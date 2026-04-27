@@ -3967,9 +3967,8 @@ def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
             )
         except WebPushException as e:
             if "410" in str(e) or "404" in str(e):
-                # Subscription expire ho gayi - inactive karo
-                sub.is_active = False
-                sub.save()
+                # Expired/unsubscribed subscription ko DB se hata do.
+                sub.delete()
             failed.append(sub.id)
             failure_details.append({
                 "subscription_id": sub.id,

@@ -455,6 +455,13 @@ const PUSH_VAPID_KEY_URL = apiUrl("/push/vapid-key/");
 const PUSH_SUBSCRIBE_URL = apiUrl("/push/subscribe/");
 const LIVE_VAPID_PUBLIC_KEY = "BJ-tbAcljktBC5rfkAWNi7pkhFn_s6pHHd9fo6GwZBi_olNVUxltcE0ErPM6qHTNhX2oCMVpwUOmmD6qhI7LNSE";
 const PUSH_STATE_STORAGE_KEY = "news4bharat_push_subscribed";
+const PUSH_REQUEST_TIMEOUT_MS = 12000;
+const normalizeBasePath = (value) => {
+  const rawBase = String(value || "/").trim();
+  const trimmedBase = rawBase.replace(/^\/+/, "").replace(/\/+$/, "");
+  return trimmedBase ? `/${trimmedBase}/` : "/";
+};
+const PUSH_SERVICE_WORKER_PATH = `${normalizeBasePath(import.meta.env.BASE_URL)}sw.js`;
 
 const toVapidKeyUint8Array = (value) => {
   const normalizedValue = String(value || "").trim();
@@ -478,6 +485,56 @@ const getVapidPublicKeyFromResponse = (data) => {
   ];
 
   return candidates.find((candidate) => typeof candidate === "string" && candidate.trim()) || "";
+};
+
+const getPushErrorMessage = async (response, fallbackMessage) => {
+  try {
+    const data = await response.clone().json();
+    const messageCandidates = [
+      data?.detail,
+      data?.message,
+      data?.error,
+      data?.non_field_errors?.[0],
+      data?.errors?.[0]?.message,
+    ];
+    const message = messageCandidates.find(
+      (value) => typeof value === "string" && value.trim()
+    );
+    if (message) return message;
+  } catch (error) {
+    void error;
+  }
+
+  try {
+    const rawText = await response.text();
+    const cleanText = String(rawText || "").trim();
+    if (cleanText) return cleanText.slice(0, 180);
+  } catch (error) {
+    void error;
+  }
+
+  return fallbackMessage;
+};
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = PUSH_REQUEST_TIMEOUT_MS) => {
+  if (typeof AbortController === "undefined") {
+    return fetch(url, options);
+  }
+
+  const controller = new AbortController();
+  const timerHost = typeof window !== "undefined" ? window : globalThis;
+  const timeoutId = timerHost.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timed out after ${Math.ceil(timeoutMs / 1000)} seconds.`);
+    }
+    throw error;
+  } finally {
+    timerHost.clearTimeout(timeoutId);
+  }
 };
 
 // ─────────────────────────────────────────────
@@ -905,6 +962,7 @@ const Header = () => {
       if (typeof window === "undefined") return;
 
       const hasPushSupport =
+        window.isSecureContext &&
         "Notification" in window &&
         "serviceWorker" in navigator &&
         "PushManager" in window;
@@ -916,7 +974,7 @@ const Header = () => {
 
       try {
         const registration =
-          (await navigator.serviceWorker.getRegistration("/sw.js")) ||
+          (await navigator.serviceWorker.getRegistration(PUSH_SERVICE_WORKER_PATH)) ||
           (await navigator.serviceWorker.getRegistration());
 
         const existingSubscription =
@@ -1030,7 +1088,7 @@ const Header = () => {
 
   const fetchVapidPublicKey = useCallback(async () => {
     try {
-      const response = await fetch(PUSH_VAPID_KEY_URL);
+      const response = await fetchWithTimeout(PUSH_VAPID_KEY_URL);
       if (!response.ok) {
         throw new Error(`VAPID key API failed: ${response.status}`);
       }
@@ -1046,7 +1104,16 @@ const Header = () => {
   }, []);
 
   const handleNotificationClick = useCallback(async () => {
-    if (typeof window === "undefined" || isPushLoading) return;
+    if (typeof window === "undefined") return;
+    if (isPushLoading) {
+      window.alert("Notification request is already in progress. Please wait.");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      window.alert("Notifications need a secure connection (HTTPS or localhost).");
+      return;
+    }
 
     const hasPushSupport =
       "Notification" in window &&
@@ -1069,21 +1136,28 @@ const Header = () => {
       if (permission !== "granted") {
         setIsPushSubscribed(false);
         window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        if (Notification.permission === "denied") {
+          window.alert("Notifications are blocked. Please allow notifications in browser settings.");
+        }
         return;
       }
 
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      const existingSubscription = await registration.pushManager.getSubscription();
+      const registration = await navigator.serviceWorker.register(PUSH_SERVICE_WORKER_PATH);
+      const readyRegistration = registration.active
+        ? registration
+        : await navigator.serviceWorker.ready;
+      const existingSubscription = await readyRegistration.pushManager.getSubscription();
 
       if (existingSubscription) {
         await existingSubscription.unsubscribe();
         setIsPushSubscribed(false);
         window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        window.alert("Notifications disabled successfully.");
         return;
       }
 
       const vapidPublicKey = await fetchVapidPublicKey();
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await readyRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: toVapidKeyUint8Array(vapidPublicKey),
       });
@@ -1097,24 +1171,34 @@ const Header = () => {
         },
       };
 
-      const subscribeResponse = await fetch(PUSH_SUBSCRIBE_URL, {
+      const subscribeResponse = await fetchWithTimeout(PUSH_SUBSCRIBE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!subscribeResponse.ok) {
+        const reason = await getPushErrorMessage(
+          subscribeResponse,
+          `Push subscribe API failed: ${subscribeResponse.status}`
+        );
         await subscription.unsubscribe().catch(() => { });
-        throw new Error(`Push subscribe API failed: ${subscribeResponse.status}`);
+        throw new Error(reason);
       }
 
       setIsPushSubscribed(true);
       window.localStorage.setItem(PUSH_STATE_STORAGE_KEY, "1");
+      window.alert("Notifications enabled successfully.");
     } catch (error) {
       console.error("Push subscription flow failed:", error);
       setIsPushSubscribed(false);
       window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
-      window.alert("Notification setup failed. Please try again.");
+      const fallbackMessage = "Notification setup failed. Please try again.";
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? String(error.message || "").trim()
+          : "";
+      window.alert(errorMessage ? `Notification setup failed: ${errorMessage}` : fallbackMessage);
     } finally {
       setIsPushLoading(false);
     }

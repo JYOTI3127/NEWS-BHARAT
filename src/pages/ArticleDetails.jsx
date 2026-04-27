@@ -734,28 +734,41 @@ export default function ArticleDetails() {
           return null;
         };
 
-        const [detailResponse, listResponse] = await Promise.all([
-          fetchArticleDetail(),
-          fetch(apiUrl("/articles/?page=1&limit=500"), {
+        const detailResponse = await fetchArticleDetail();
+        let sortedList = [];
+        let listFetchFailed = false;
+
+        try {
+          const listResponse = await fetch(apiUrl("/articles/?page=1&limit=500"), {
             signal: controller.signal,
             cache: "no-store",
-          }),
-        ]);
+          });
 
-        if (!listResponse.ok) {
-          throw new Error("Failed to fetch articles");
+          if (!listResponse.ok) {
+            throw new Error(`Failed to fetch articles list: ${listResponse.status}`);
+          }
+
+          const listData = await listResponse.json();
+          const list = Array.isArray(listData)
+            ? listData
+            : Array.isArray(listData?.value)
+              ? listData.value
+              : listData?.results || [];
+          sortedList = sortArticlesByNewest(list);
+          setAllArticles(sortedList);
+        } catch (error) {
+          if (error?.name === "AbortError") throw error;
+          listFetchFailed = true;
+          setAllArticles([]);
+          console.error("Related articles list fetch failed:", error);
         }
 
-        const listData = await listResponse.json();
-        const list = Array.isArray(listData)
-          ? listData
-          : Array.isArray(listData?.value)
-            ? listData.value
-            : listData?.results || [];
-        const sortedList = sortArticlesByNewest(list);
-        setAllArticles(sortedList);
-
         if (!detailResponse) {
+          if (listFetchFailed) {
+            setLoadError(true);
+            return;
+          }
+
           const requestedPath =
             categorySlug && articleSlug ? `/${categorySlug}/${articleSlug}/` : "";
           const lookupSet = new Set(
@@ -1004,7 +1017,7 @@ export default function ArticleDetails() {
             name="description"
             content="We could not load this article right now. Please try again shortly."
           />
-          <meta name="robots" content="index,follow,max-image-preview:large" />
+          <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <Newspaper size={48} color="#ccc" />
@@ -1045,7 +1058,12 @@ export default function ArticleDetails() {
     String(categorySlug || "")
       .replace(/-/g, " ")
       .trim();
+  const normalizedCategorySlug = normalizeSlugValue(
+    primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || ""
+  );
   const canonicalUrl = getCanonicalArticleUrl(article) || "";
+  const articlePath = getArticlePath(article) || "";
+  const articleUrlForSchema = canonicalUrl || (articlePath ? `${SITE_URL}${articlePath}` : "");
   const displayMoreArticles =
     categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;
 
@@ -1165,6 +1183,37 @@ export default function ArticleDetails() {
     ...(categoryName ? { articleSection: categoryName } : {}),
     ...(metaKeywords ? { keywords: metaKeywords } : {}),
   };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/`,
+      },
+      ...(normalizedCategorySlug
+        ? [
+          {
+            "@type": "ListItem",
+            position: 2,
+            name:
+                categoryName ||
+                moreInCategoryLabel ||
+                normalizedCategorySlug.replace(/-/g, " "),
+            item: `${SITE_URL}/category/${normalizedCategorySlug}`,
+          },
+        ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: normalizedCategorySlug ? 3 : 2,
+        name: article.title,
+        ...(articleUrlForSchema ? { item: articleUrlForSchema } : {}),
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
@@ -1221,6 +1270,9 @@ export default function ArticleDetails() {
         )}
         <script type="application/ld+json">
           {JSON.stringify(articleSchema)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbSchema)}
         </script>
       </Helmet>
 

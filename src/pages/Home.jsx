@@ -252,13 +252,13 @@ const Home = () => {
           </Profiler>
         </div>
 
-        <div className="home-section-align">
+        {/* <div className="home-section-align">
           <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
             <BreakingNewsSection articles={allArticles} />
           </Profiler>
-        </div>
+        </div> */}
 
-        <div className="home-section-align">
+        {/* <div className="home-section-align">
           <Profiler id="TrendingNews" onRender={onRenderCallback}>
             <TrendingNews
               articles={allArticles}
@@ -268,7 +268,7 @@ const Home = () => {
               latestNewsLoading={latestNewsLoading}
             />
           </Profiler>
-        </div>
+        </div> */}
 
         <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
           <VisualStoriesWithScore articles={allArticles} />

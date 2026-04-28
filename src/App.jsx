@@ -231,6 +231,7 @@ function Layout() {
             <Route path="/world-news" element={<Navigate to="/category/world-news" replace />} />
             <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
             <Route path="/bharat-opinions" element={<Navigate to="/category/bharat-opinions" replace />} />
+            <Route path="/q4-results" element={<Navigate to="/category/q4-results" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Profiler>

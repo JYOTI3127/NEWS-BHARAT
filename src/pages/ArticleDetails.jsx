@@ -72,6 +72,11 @@ const getPlainText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const normalizeKeywordPhrase = (value) =>
+  String(value || "")
+    .replace(/^\s*hy(\b)/i, "why$1")
+    .trim();
+
 const truncateText = (value, maxLength) => {
   const text = getPlainText(value);
   if (!text || text.length <= maxLength) return text;
@@ -152,7 +157,7 @@ const getBrowserTitle = (article) => {
 
   const baseTitle = String(article?.title || "").trim();
   if (!baseTitle) return `Latest News | ${SITE_NAME}`;
-  return `${baseTitle.substring(0, 70)} | ${SITE_NAME}`;
+  return `${baseTitle} | ${SITE_NAME}`;
 };
 
 const toAbsoluteSiteUrl = (value) => {
@@ -1244,14 +1249,15 @@ export default function ArticleDetails() {
     getPlainText(plainArticleContent) ||
     article.title;
   const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
-    ? article.secondary_keywords_list.filter(Boolean)
+    ? article.secondary_keywords_list.map(normalizeKeywordPhrase).filter(Boolean)
     : String(article.secondary_keywords || "")
       .split(",")
-      .map((item) => item.trim())
+      .map((item) => normalizeKeywordPhrase(item))
       .filter(Boolean);
+  const focusKeyword = normalizeKeywordPhrase(article.focus_keyword);
   const metaKeywords = Array.from(
     new Set(
-      [article.focus_keyword, ...secondaryKeywords, ...tags]
+      [focusKeyword, ...secondaryKeywords, ...tags]
         .map((item) => String(item || "").trim())
         .filter(Boolean)
     )
@@ -1265,7 +1271,7 @@ export default function ArticleDetails() {
     headline: article.title,
     alternativeHeadline: visibleSummary || article.title,
     description: metaDescription,
-    articleBody: truncateText(plainArticleContent, 5000),
+    articleBody: plainArticleContent,
     inLanguage: "en-IN",
     datePublished: date || "",
     dateModified: modifiedDate || "",
@@ -1356,7 +1362,7 @@ export default function ArticleDetails() {
           <meta name="news_keywords" content={articleTags.join(", ")} />
         )}
         {article.focus_keyword && (
-          <meta name="focus_keyword" content={article.focus_keyword} />
+          <meta name="focus_keyword" content={focusKeyword} />
         )}
         {secondaryKeywords.length > 0 && (
           <meta name="secondary_keywords" content={secondaryKeywords.join(", ")} />

@@ -11,7 +11,6 @@ import {
 } from '../lib/api';
 
 import NewsBanner from '../components/Banner';
-import TrendingNews from '../components/Trendingnews';
 import BreakingNewsSection from '../components/BreakingNewsSection';
 import HomeCategorySections from '../components/HomeCategorySections';
 import AdvertisementSlot from '../components/AdvertisementSlot';
@@ -107,7 +106,7 @@ const Home = () => {
   // ✅ Agar URL mein #newsletter hai toh Newsletter force render karo
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
 
-  const { data: articlesData, isLoading: articlesLoading } = useQuery({
+  const { data: articlesData, isLoading: _articlesLoading } = useQuery({
     queryKey: ['articles'],
     queryFn: () => fetchArticlePage({ page: 1, limit: 50 }), // ← sirf ek call — fast!
     staleTime: 5 * 60 * 1000,
@@ -115,14 +114,14 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: categoriesData } = useQuery({
+  const { data: _categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: latestNewsData, isLoading: latestNewsLoading } = useQuery({
+  const { data: latestNewsData, isLoading: _latestNewsLoading } = useQuery({
     queryKey: ['homepage-latest-news-current'],
     queryFn: fetchHomepageLatestNewsCurrent,
     staleTime: 2 * 60 * 1000,
@@ -252,11 +251,19 @@ const Home = () => {
           </Profiler>
         </div>
 
-        {/* <div className="home-section-align">
-          <Profiler id="BreakingNewsSection" onRender={onRenderCallback}>
-            <BreakingNewsSection articles={allArticles} />
+        <div className="home-section-align">
+          <Profiler id="Q4ResultsSection" onRender={onRenderCallback}>
+            <BreakingNewsSection
+              articles={allArticles}
+              mode="q4"
+              modeCategorySlug="q4-results"
+              sectionEyebrow="Corporate Tracker"
+              sectionTitle="Q4 Results"
+              viewAllPath="/category/q4-results"
+              sectionId="q4-results-heading"
+            />
           </Profiler>
-        </div> */}
+        </div>
 
         {/* <div className="home-section-align">
           <Profiler id="TrendingNews" onRender={onRenderCallback}>

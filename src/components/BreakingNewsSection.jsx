@@ -64,6 +64,38 @@ const isBreakingArticle = (article) => {
   return String(article?.category || '').toLowerCase().includes('breaking');
 };
 
+const articleHasCategorySlug = (article, expectedSlug) => {
+  const target = String(expectedSlug || '').trim().toLowerCase();
+  if (!target) return false;
+
+  const values = new Set();
+  const push = (value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized) values.add(normalized);
+  };
+
+  push(article?.category_slug);
+  push(article?.primary_category_slug);
+  push(article?.category?.slug);
+  push(article?.primary_category?.slug);
+
+  if (Array.isArray(article?.category_details)) {
+    article.category_details.forEach((item) => push(item?.slug));
+  }
+
+  if (Array.isArray(article?.categories)) {
+    article.categories.forEach((item) => {
+      if (typeof item === 'string') {
+        push(item);
+      } else {
+        push(item?.slug);
+      }
+    });
+  }
+
+  return values.has(target);
+};
+
 const dedupeArticles = (articles) => {
   const seen = new Set();
 
@@ -105,13 +137,30 @@ const StoryImage = memo(function StoryImage({ article, className, alt }) {
   return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" />;
 });
 
-export default function BreakingNewsSection({ articles = [] }) {
+export default function BreakingNewsSection({
+  articles = [],
+  mode = 'breaking',
+  modeCategorySlug = '',
+  sectionTitle = 'Trending Today',
+  sectionEyebrow = 'Live Desk',
+  viewAllPath = BREAKING_NEWS_PATH,
+  sectionId = 'breaking-news-heading',
+}) {
   const sectionArticles = useMemo(() => {
     const normalized = normalizeArticles(articles);
-    const breakingArticles = normalized.filter(isBreakingArticle);
+    const filtered =
+      mode === 'q4'
+        ? normalized.filter((article) =>
+            articleHasCategorySlug(article, modeCategorySlug || 'q4-results')
+          )
+        : normalized.filter(isBreakingArticle);
 
-    return dedupeArticles([...breakingArticles, ...normalized]).slice(0, 10);
-  }, [articles]);
+    if (mode === 'q4') {
+      return dedupeArticles(filtered).slice(0, 10);
+    }
+
+    return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
+  }, [articles, mode, modeCategorySlug]);
 
   if (sectionArticles.length === 0) return null;
 
@@ -132,23 +181,23 @@ export default function BreakingNewsSection({ articles = [] }) {
         max-[320px]:w-[calc(100%-24px)]
         max-[640px]:mt-[22px] max-[640px]:mb-7
       "
-      aria-labelledby="breaking-news-heading"
+      aria-labelledby={sectionId}
     >
       <div className="mb-[18px] flex items-end justify-between gap-4 max-[640px]:mb-3.5 max-[640px]:flex-row max-[640px]:items-end max-[640px]:gap-3">
         <div>
           <span className="mb-2 inline-flex items-center gap-2 font-[Poppins,sans-serif] text-[0.76rem] font-bold uppercase tracking-[0.18em] text-[#b91c1c] before:h-[9px] before:w-[9px] before:rounded-full before:bg-[#d90429] before:shadow-[0_0_0_4px_rgba(217,4,41,0.12)] before:content-['']">
-            Live Desk
+            {sectionEyebrow}
           </span>
           <h2
-            id="breaking-news-heading"
+            id={sectionId}
             className="m-0 font-[Poppins,sans-serif] text-[18px] font-bold leading-none text-[#111] min-[1441px]:text-[20px] max-[425px]:text-[17px]"
           >
-            Trending Today
+            {sectionTitle}
           </h2>
         </div>
 
         <Link
-          to={BREAKING_NEWS_PATH}
+          to={viewAllPath}
           className="breaking-news-link shrink-0 whitespace-nowrap font-[Poppins,sans-serif] text-[0.92rem] font-bold text-[#b91c1c] no-underline transition-colors duration-200 hover:text-[#7f1d1d] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem]"
           style={{ textDecoration: 'none' }}
         >

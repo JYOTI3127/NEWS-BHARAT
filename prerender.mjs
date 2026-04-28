@@ -283,6 +283,11 @@ const stripHtml = (value) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const normalizeKeywordPhrase = (value) =>
+  String(value || '')
+    .replace(/^\s*hy(\b)/i, 'why$1')
+    .trim()
+
 const toAbsoluteUrl = (value) => {
   const normalized = String(value || '').trim()
   if (!normalized) return ''
@@ -406,7 +411,7 @@ const buildArticleSchemaJson = (article, route, meta) => {
   ).trim()
   const imageUrl = toAbsoluteUrl(article?.image_url || article?.image || meta?.ogImage || '')
   const imageAlt = String(article?.image_alt || title).trim()
-  const bodyText = stripHtml(article?.content_html || article?.content || '').slice(0, 5000)
+  const bodyText = stripHtml(article?.content_html || article?.content || '')
   const datePublished = String(meta?.publishedAt || article?.published_at || article?.created_at || '').trim()
   const dateModified = String(meta?.modifiedAt || article?.updated_at || article?.published_at || article?.created_at || '').trim()
   const { name: categoryName } = getArticleCategory(article)
@@ -555,7 +560,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         .find(Boolean)
       const rawTitle = (article.title || '').trim()
       const fallbackTitle = rawTitle
-        ? `${rawTitle.substring(0, 70)} | ${SITE_NAME}`
+        ? `${rawTitle} | ${SITE_NAME}`
         : `${SITE_NAME} - News As It Is`
       const title = apiMetaTitle || fallbackTitle
 
@@ -572,10 +577,10 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       const image = toAbsoluteUrl(article.image_url || article.image) || DEFAULT_IMAGE
       const canonical = getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
-        ? article.secondary_keywords_list
+        ? article.secondary_keywords_list.map((item) => normalizeKeywordPhrase(item))
         : String(article.secondary_keywords || '')
             .split(',')
-            .map((item) => item.trim())
+            .map((item) => normalizeKeywordPhrase(item))
             .filter(Boolean)
       const tagKeywords = Array.isArray(article.tags_list)
         ? article.tags_list
@@ -585,7 +590,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
             .filter(Boolean)
       const keywords = Array.from(
         new Set(
-          [article.focus_keyword, ...secondaryKeywords, ...tagKeywords]
+          [normalizeKeywordPhrase(article.focus_keyword), ...secondaryKeywords, ...tagKeywords]
             .map((item) => String(item || '').trim())
             .filter(Boolean)
         )
@@ -620,7 +625,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         articleTags,
         keywords: keywords.join(', '),
         newsKeywords: articleTags.join(', '),
-        focusKeyword: String(article.focus_keyword || '').trim(),
+        focusKeyword: normalizeKeywordPhrase(article.focus_keyword),
         secondaryKeywords: secondaryKeywords.join(', '),
         publishedAt,
         modifiedAt,
@@ -744,24 +749,13 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
 
   cleaned = cleaned.replace('</head>', `${preloadTags}${injectedTags}\n</head>`)
 
-  if (isArticlePath(route) && !/<h1\b/i.test(cleaned)) {
-    const fallbackHeading = String(meta.articleHeadline || '')
-      .replace(/\s*\|\s*News4Bharat\s*$/i, '')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .trim()
-
-    if (fallbackHeading) {
-      const fallbackH1 = `<h1 data-prerender-fallback="article-title" style="position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden;">${fallbackHeading}</h1>`
-      cleaned = cleaned.replace(/<body([^>]*)>/i, `<body$1>\n  ${fallbackH1}`)
-    }
-  }
-
   if (isArticlePath(route)) {
     const article = articleMap.get(route)
     const hasArticleBodyMarkup =
       /data-prerender-fallback=["']article-body["']/i.test(cleaned) ||
       /class=["'][^"']*article-content[^"']*["']/i.test(cleaned) ||
+      /class=["'][^"']*article-summary[^"']*["']/i.test(cleaned) ||
+      /class=["'][^"']*min-w-0[^"']*["']/i.test(cleaned) ||
       /data-prerender-article-body/i.test(cleaned)
     const hasNewsArticleSchema =
       /"@type"\s*:\s*"NewsArticle"/i.test(cleaned) ||

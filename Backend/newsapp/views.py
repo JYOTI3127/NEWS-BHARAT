@@ -38,6 +38,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.images import get_image_dimensions
+from django.core.files.storage import default_storage
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
@@ -69,6 +70,32 @@ def _unique_article_image_name(article, original_filename, extension):
     return f"{safe_slug}-{uuid.uuid4().hex[:10]}-{safe_base}{extension}"
 
 
+def _unique_inline_image_name(original_filename, extension):
+    base_name = os.path.splitext(os.path.basename(original_filename or 'inline-image'))[0]
+    safe_base = slugify(base_name)[:45] or 'inline-image'
+    return f"articles/inline/{safe_base}-{uuid.uuid4().hex[:10]}{extension}"
+
+
+def _compress_uploaded_image(uploaded_file, output_name, max_width=1600, quality=78):
+    from PIL import Image as PILImage
+    import io
+
+    uploaded_file.seek(0)
+    img = PILImage.open(uploaded_file)
+
+    if img.mode in ("RGBA", "P", "LA"):
+        img = img.convert("RGB")
+
+    if img.width > max_width:
+        ratio = max_width / float(img.width)
+        img = img.resize((max_width, max(1, int(img.height * ratio))), PILImage.LANCZOS)
+
+    output = io.BytesIO()
+    img.save(output, format='WEBP', quality=quality, optimize=True)
+    output.seek(0)
+    return ContentFile(output.read(), name=output_name)
+
+
 def _invalidate_article_caches(article, old_slug=None):
     try:
         if old_slug:
@@ -97,6 +124,36 @@ def _invalidate_category_cache():
             cache.delete_pattern('categories:all:*')
     except Exception:
         pass
+
+
+@api_view(['POST'])
+def inline_image_upload(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({"error": "Admin login required"}, status=401)
+
+    uploaded_file = request.FILES.get('image')
+    if not uploaded_file:
+        return Response({"error": "Image file is required."}, status=400)
+
+    content_type = (getattr(uploaded_file, 'content_type', '') or '').lower()
+    if content_type and not content_type.startswith('image/'):
+        return Response({"error": "Only image uploads are allowed."}, status=400)
+
+    try:
+        compressed_file = _compress_uploaded_image(
+            uploaded_file,
+            _unique_inline_image_name(uploaded_file.name, '.webp'),
+            max_width=1600,
+            quality=78,
+        )
+        stored_name = default_storage.save(compressed_file.name, compressed_file)
+    except Exception as exc:
+        return Response({"error": f"Inline image upload failed: {exc}"}, status=400)
+
+    return Response({
+        "url": default_storage.url(stored_name),
+        "name": stored_name,
+    }, status=201)
 
 
 def _normalize_meta_title(value):

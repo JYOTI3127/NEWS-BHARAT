@@ -2565,26 +2565,115 @@ function nbInsertLink(){
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
-function nbInsertInlineImage(){
+
+async function nbCompressInlineImageFile(file){
+  if(!file||!file.type||file.type.indexOf('image/')!==0)return file;
+  return new Promise(function(resolve){
+    var img=new Image();
+    var objectUrl=URL.createObjectURL(file);
+    img.onload=function(){
+      try{
+        var maxWidth=1600;
+        var width=img.width||1;
+        var height=img.height||1;
+        if(width>maxWidth){
+          height=Math.max(1,Math.round(height*(maxWidth/width)));
+          width=maxWidth;
+        }
+        var canvas=document.createElement('canvas');
+        canvas.width=width;
+        canvas.height=height;
+        var ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,width,height);
+        canvas.toBlob(function(blob){
+          URL.revokeObjectURL(objectUrl);
+          if(!blob){
+            resolve(file);
+            return;
+          }
+          var compressedName=(file.name||'inline-image').replace(/\.[^.]+$/,'')+'.webp';
+          resolve(new File([blob],compressedName,{type:'image/webp'}));
+        },'image/webp',0.82);
+      }catch(e){
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      }
+    };
+    img.onerror=function(){
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src=objectUrl;
+  });
+}
+
+function nbDataUrlToFile(dataUrl,filename){
+  var parts=(dataUrl||'').split(',');
+  if(parts.length<2)return null;
+  var mimeMatch=parts[0].match(/data:([^;]+);base64/i);
+  if(!mimeMatch)return null;
+  var mimeType=mimeMatch[1];
+  var binary=atob(parts[1]);
+  var len=binary.length;
+  var bytes=new Uint8Array(len);
+  for(var i=0;i<len;i++)bytes[i]=binary.charCodeAt(i);
+  return new File([bytes],filename||('inline-image.'+(mimeType.split('/')[1]||'png')),{type:mimeType});
+}
+
+async function nbUploadInlineImageFile(file){
+  var uploadFile=await nbCompressInlineImageFile(file);
+  var fd=new FormData();
+  fd.append('image',uploadFile,uploadFile.name||'inline-image.webp');
+  var res=await fetch('/api/media/inline-image/',{
+    method:'POST',
+    headers:{'X-CSRFToken':getCsrf()},
+    body:fd
+  });
+  var data=await res.json().catch(function(){return {};});
+  if(!res.ok||!data.url)throw new Error(data.error||'Inline image upload failed.');
+  return data.url;
+}
+
+async function nbUploadPendingInlineImages(){
+  if(!nbEditor)return;
+  var imgs=Array.from(nbEditor.querySelectorAll('img'));
+  for(var i=0;i<imgs.length;i++){
+    var img=imgs[i];
+    var src=img.getAttribute('src')||'';
+    if(!src||src.indexOf('data:image/')!==0)continue;
+    img.setAttribute('data-uploading','true');
+    _setAiStatus('<span class="ai-loading"></span> Uploading inline image '+(i+1)+' of '+imgs.length+'…');
+    var filename=(img.getAttribute('alt')||'inline-image').trim().replace(/\s+/g,'-').toLowerCase()||'inline-image';
+    var file=nbDataUrlToFile(src,filename+'.png');
+    if(!file)throw new Error('Inline image format is invalid.');
+    var uploadedUrl=await nbUploadInlineImageFile(file);
+    img.src=uploadedUrl;
+    img.removeAttribute('data-uploading');
+  }
+  _setAiStatus('');
+}
+
+async function nbInsertInlineImage(){
   if(!nbEditor)return;
   var inp=document.createElement('input');
   inp.type='file';
   inp.accept='image/*';
   inp.style.display='none';
   document.body.appendChild(inp);
-  inp.addEventListener('change',function(){
+  inp.addEventListener('change',async function(){
     var file=inp.files[0];
     if(!file){
       document.body.removeChild(inp);
       return;
     }
-    var reader=new FileReader();
-    reader.onload=function(ev){
+    try{
+      _setAiStatus('<span class="ai-loading"></span> Uploading inline image…');
+      var uploadedUrl=await nbUploadInlineImageFile(file);
       nbFocusEditor();
       var sel=window.getSelection();
       var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;
       var img=document.createElement('img');
-      img.src=ev.target.result;
+      img.src=uploadedUrl;
       img.className='nb-inline-img';
       img.style.maxWidth='100%';
       img.alt=file.name.replace(/\.[^.]+$/,'');
@@ -2600,9 +2689,13 @@ function nbInsertInlineImage(){
       }
       nbSaveSelection();
       nbSaveHistory();
+      _setAiStatus('');
+    }catch(err){
+      _setAiStatus('');
+      alert(err&&err.message?err.message:'Inline image upload failed.');
+    }finally{
       document.body.removeChild(inp);
-    };
-    reader.readAsDataURL(file);
+    }
   });
   inp.click();
 }
@@ -3364,11 +3457,24 @@ function choosePublishDateMode(){
 ══════════════════════════════════════════════ */
 async function submitArticle(forceStatus){
   if(!nbEditor){alert('Editor not found.');return;}
+  try{
+    await nbUploadPendingInlineImages();
+  }catch(err){
+    _setAiStatus('');
+    alert(err&&err.message?err.message:'Inline image upload failed. Please try again.');
+    return;
+  }
+
   const title=document.getElementById('ui_title')?document.getElementById('ui_title').value.trim():'',
         rawContent=nbEditor.innerHTML.trim(),
         content=cleanContentBeforeSubmit(rawContent),
         categoryEl=document.getElementById('ui_category'),
         categoryVal=categoryEl?categoryEl.value:'';
+
+  if(/src\s*=\s*["'](?:data:image\/|blob:)/i.test(content)){
+    alert('One or more inline images are still not uploaded. Please try inserting the image again.');
+    return;
+  }
 
   if(!title){alert('Please enter a headline.');return;}
   if(!content){alert('Content cannot be empty.');return;}

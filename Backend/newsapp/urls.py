@@ -38,6 +38,7 @@ urlpatterns = [
     path('categories/<int:cat_id>/posts/',     category_posts,   name='api_category_posts'),
     path('media/photos/', media_photos_api, name='media_photos_api'),
     path('media/videos/', media_videos_api, name='media_videos_api'),
+    path('media/inline-image/', views.inline_image_upload, name='inline_image_upload'),
     path('notifications/<int:id>/read/',      views.mark_notification_read, name='api_notification_read'),
     path('notifications/<int:id>/archive/',   views.archive_notification,   name='api_notification_archive'),
     path('notifications/<int:id>/unarchive/', views.unarchive_notification, name='api_notification_unarchive'),

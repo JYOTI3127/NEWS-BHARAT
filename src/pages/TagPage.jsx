@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Clock, Newspaper, Tag, ArrowLeft } from "lucide-react";
-import { apiUrl } from "../lib/api";
-import { getArticlePath } from "../lib/articleUrl";
+import { fetchPaginatedArticles } from "../lib/api";
+import { getArticlePath, isArticlePath } from "../lib/articleUrl";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleString("en-IN", {
@@ -16,102 +16,155 @@ const getArticleImage = (article) => {
 };
 
 const getArticleTags = (article) => {
+  const combined = [];
+  const pushTokens = (value) => {
+    if (!value) return;
+    String(value)
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean)
+      .forEach((token) => combined.push(token));
+  };
+
   if (Array.isArray(article?.tags_list)) {
-    return article.tags_list
+    article.tags_list
       .map((tag) =>
         typeof tag === "string"
           ? tag.trim()
           : String(tag?.name || tag?.tag || tag?.title || "").trim()
       )
-      .filter(Boolean);
+      .filter(Boolean)
+      .forEach((token) => combined.push(token));
   }
 
-  return String(article?.tags || "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  pushTokens(article?.tags);
+  pushTokens(article?.focus_keyword);
+  pushTokens(article?.secondary_keywords);
+
+  return Array.from(new Set(combined));
+};
+
+const safeDecode = (value) => {
+  const raw = String(value || "");
+  if (!raw) return "";
+
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 };
 
 const normalizeTag = (value) =>
-  String(value || "")
+  safeDecode(value)
     .replace(/\+/g, " ")
+    .replace(/^#+/, "")
+    .replace(/&/g, " and ")
+    .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 
-const getArticleList = (data) =>
-  Array.isArray(data)
-    ? data
-    : Array.isArray(data?.value)
-      ? data.value
-      : Array.isArray(data?.results)
-        ? data.results
-        : [];
+const normalizeTagKey = (value) =>
+  normalizeTag(value).replace(/[^a-z0-9]+/g, "");
 
-const fetchAllArticles = async (signal) => {
-  const allArticles = [];
-  const seen = new Set();
-  let nextUrl = apiUrl("/articles/?page=1&limit=200");
-  let pages = 0;
+const getCleanSegments = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
 
-  while (nextUrl && pages < 10) {
-    const response = await fetch(nextUrl, { signal });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch articles: ${response.status}`);
-    }
+const getArticleRouteFromUrlLikeValue = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
 
-    const data = await response.json();
-    const list = getArticleList(data);
+  try {
+    const parsed = new URL(raw, "https://news4bharat.com");
+    const cleanPath = `/${getCleanSegments(parsed.pathname).join("/")}/`;
+    return isArticlePath(cleanPath) ? cleanPath : "";
+  } catch {
+    const cleanPath = `/${getCleanSegments(raw).join("/")}/`;
+    return isArticlePath(cleanPath) ? cleanPath : "";
+  }
+};
 
-    list.forEach((article) => {
-      const key = String(article?.id || article?.slug || "").trim();
-      if (key && seen.has(key)) return;
-      if (key) seen.add(key);
-      allArticles.push(article);
-    });
+const getArticleHref = (article) => {
+  const fromPublicUrl = getArticlePath(article);
+  if (fromPublicUrl) return fromPublicUrl;
 
-    nextUrl = typeof data?.next === "string" && data.next.trim() ? data.next.trim() : "";
-    pages += 1;
+  const fromCanonical = getArticleRouteFromUrlLikeValue(article?.canonical_url);
+  if (fromCanonical) return fromCanonical;
+
+  const fromDirectUrl = getArticleRouteFromUrlLikeValue(article?.url || article?.link);
+  if (fromDirectUrl) return fromDirectUrl;
+
+  const slug = String(article?.slug || article?.article_slug || "").trim();
+  const categorySlug = String(
+    article?.category_slug ||
+      article?.primary_category_slug ||
+      article?.category_details?.[0]?.slug ||
+      article?.category?.slug ||
+      ""
+  ).trim();
+
+  if (slug && categorySlug) {
+    const derivedPath = `/${categorySlug}/${slug}/`;
+    if (isArticlePath(derivedPath)) return derivedPath;
   }
 
-  return allArticles;
+  return "";
 };
 
 export default function TagPage() {
   const { tagName } = useParams();
-  const decoded = decodeURIComponent(tagName || "");
+  const decoded = safeDecode(tagName || "");
+  const displayTag = decoded.replace(/^#+/, "").trim();
   const normalizedTag = normalizeTag(decoded);
+  const normalizedTagFingerprint = normalizeTagKey(decoded);
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let cancelled = false;
 
     window.scrollTo(0, 0);
-    setLoading(true);
-    fetchAllArticles(controller.signal)
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
+    fetchPaginatedArticles({ limit: 200, maxPages: 10, full: true })
       .then((list) => {
+        if (cancelled) return;
         const filtered = list.filter((a) => {
           const tags = getArticleTags(a);
-          return tags.some((tag) => normalizeTag(tag) === normalizedTag);
+          return tags.some((tag) => {
+            const normalized = normalizeTag(tag);
+            if (normalized === normalizedTag) return true;
+            return normalizeTagKey(tag) === normalizedTagFingerprint;
+          });
         });
         setArticles(filtered);
       })
       .catch((error) => {
-        if (error.name !== "AbortError") {
+        if (!cancelled) {
           console.error("Tag page articles fetch failed:", error);
           setArticles([]);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    return () => controller.abort();
-  }, [normalizedTag]);
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedTag, normalizedTagFingerprint]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8">
+    <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
+      <div className="category-page-align mx-auto min-h-[calc(100vh-62px)] bg-[#f7f4f0] px-4 sm:px-6 py-8">
 
         <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 mb-6 transition-colors">
           <ArrowLeft size={13} /> Back to Home
@@ -119,7 +172,7 @@ export default function TagPage() {
 
         <div className="flex items-center gap-2 mb-6">
           <Tag size={18} className="text-red-600" />
-          <h1 className="text-2xl font-extrabold text-gray-900">#{decoded}</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900">#{displayTag}</h1>
           {!loading && (
             <span className="text-sm text-gray-400 ml-2">
               ({articles.length} article{articles.length !== 1 ? "s" : ""})
@@ -141,33 +194,53 @@ export default function TagPage() {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {articles.map((a) => (
-            <Link
-              key={a.id}
-              to={getArticlePath(a)}
-              className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="w-full h-44 bg-slate-100 overflow-hidden">
-                {getArticleImage(a) ? (
-                  <img src={getArticleImage(a)} alt={a.title}
-                    className="w-full h-full object-cover" loading="lazy" decoding="async" width={640} height={352} />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Newspaper size={32} color="#ccc" />
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <p className="text-[14px] font-bold text-gray-900 line-clamp-2 leading-snug mb-2">
-                  {a.title}
-                </p>
-                <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                  <Clock size={10} />
-                  {formatDate(a.published_at || a.created_at)}
-                </span>
-              </div>
-            </Link>
-          ))}
+          {articles.map((a) => {
+            const href = getArticleHref(a);
+            const card = (
+              <>
+                <div className="w-full h-44 bg-slate-100 overflow-hidden">
+                  {getArticleImage(a) ? (
+                    <img src={getArticleImage(a)} alt={a.title}
+                      className="w-full h-full object-cover" loading="lazy" decoding="async" width={640} height={352} />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <Newspaper size={32} color="#ccc" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-[14px] font-bold text-gray-900 line-clamp-2 leading-snug mb-2">
+                    {a.title}
+                  </p>
+                  <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <Clock size={10} />
+                    {formatDate(a.published_at || a.created_at)}
+                  </span>
+                </div>
+              </>
+            );
+
+            if (!href) {
+              return (
+                <article
+                  key={a.id || a.slug}
+                  className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden"
+                >
+                  {card}
+                </article>
+              );
+            }
+
+            return (
+              <Link
+                key={a.id || a.slug}
+                to={href}
+                className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {card}
+              </Link>
+            );
+          })}
         </div>
 
       </div>

@@ -88,13 +88,14 @@ export const formatArticleDateIST = (articleOrDate) => {
     : getDate(articleOrDate);
 };
 
-const buildArticlesPath = ({ page = 1, limit = 10, category } = {}) => {
+const buildArticlesPath = ({ page = 1, limit = 10, category, full = false } = {}) => {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
   });
 
   if (category) params.set("category", category);
+  if (full) params.set("full", "1");
   return `/articles/?${params.toString()}`;
 };
 
@@ -116,10 +117,15 @@ const normalizeNextUrl = (value) => {
   return next;
 };
 
-export const fetchArticlePage = ({ page = 1, limit = 10, category } = {}) =>
-  fetchJson(buildArticlesPath({ page, limit, category }));
+export const fetchArticlePage = ({ page = 1, limit = 10, category, full = false } = {}) =>
+  fetchJson(buildArticlesPath({ page, limit, category, full }));
 
-export const fetchPaginatedArticles = async ({ category, limit = 10, maxPages = 100 } = {}) => {
+export const fetchPaginatedArticles = async ({
+  category,
+  limit = 10,
+  maxPages = 100,
+  full = false,
+} = {}) => {
   const allArticles = [];
   const seen = new Set();
   let page = 1;
@@ -127,7 +133,9 @@ export const fetchPaginatedArticles = async ({ category, limit = 10, maxPages = 
   let pages = 0;
 
   while (pages < maxPages) {
-    const response = await fetch(nextUrl || apiUrl(buildArticlesPath({ page, limit, category })));
+    const response = await fetch(
+      nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full }))
+    );
 
     if (!response.ok) {
       throw new Error(`Request failed for articles page ${page}: ${response.status}`);

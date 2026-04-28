@@ -1043,6 +1043,14 @@ export default function ArticleDetails() {
   }, [article, articleSlug, allArticles.length, categoryMoreArticles.length]);
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    document
+      .querySelectorAll('[data-prerender-fallback="article-main"]')
+      .forEach((node) => node.remove());
+  }, []);
+
+  useEffect(() => {
     if (!article) return;
     document.title = getBrowserTitle(article);
   }, [article]);

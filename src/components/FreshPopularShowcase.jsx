@@ -50,7 +50,32 @@ const getArticleSummary = (article) =>
 
 const getArticleImage = (article) => article?.image_url || article?.image || "";
 
+const isQ4Article = (article) => {
+  const q4Tokens = ["q4", "q-4", "q 4", "quarterly results", "q4 results"];
+
+  const fields = [
+    article?.title,
+    article?.headline,
+    article?.slug,
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.category?.slug,
+    article?.primary_category?.slug,
+  ]
+    .map((value) => String(value || "").toLowerCase())
+    .filter(Boolean);
+
+  if (fields.some((value) => value.includes("q4-results"))) return true;
+  return fields.some((value) => q4Tokens.some((token) => value.includes(token)));
+};
+
+const getArticleImageFocus = (article) =>
+  isQ4Article(article) ? "left center" : "center center";
+
 const GENERIC_CATEGORY_KEYS = new Set([
+  "all",
+  "all news",
+  "all-news",
   "new",
   "news",
   "news category",
@@ -297,6 +322,9 @@ const isBreakingArticle = (article) => {
   return hasBreakingText || hasBreakingToken;
 };
 
+const isBreakingByCategoryLabel = (article) =>
+  String(getArticleCategory(article) || "").trim().toUpperCase() === "BREAKING NEWS";
+
 const formatDateTime = (article) => {
   const updatedDisplay = String(article?.updated_display || "").trim();
   if (updatedDisplay) return updatedDisplay;
@@ -352,67 +380,35 @@ const getRailVisibleCount = (width) => {
   return 1;
 };
 
-const excludeHeroArticle = (list, hero) => {
-  if (!hero) return list;
+// ─── Middle section: backend order, no sort, no filter ───────────────────────
+const buildBuckets = (articles) => {
+  const list = Array.isArray(articles) ? articles : articles?.results || [];
+  const filtered = list.filter((item) => item && (item.title || item.headline));
 
-  const heroKey = getArticleIdentityKey(hero);
-  const heroPath = String(getArticlePath(hero) || "").trim().toLowerCase();
-  const heroTitle = String(getArticleTitle(hero) || "").trim().toLowerCase();
-
-  return list.filter((article, index) => {
-    const key = getArticleIdentityKey(article, index);
-    if (heroKey && key === heroKey) return false;
-
-    const path = String(getArticlePath(article) || "").trim().toLowerCase();
-    if (heroPath && path && path === heroPath) return false;
-
-    const title = String(getArticleTitle(article) || "").trim().toLowerCase();
-    if (heroTitle && title && title === heroTitle) return false;
-
-    return true;
-  });
-};
-
-const buildBuckets = (articles, { preserveOrder = false } = {}) => {
-  const normalized = normalizeArticles(articles, { preserveOrder });
+  // Only deduplicate — no sort, no exclude
   const seen = new Set();
-  const list = normalized.filter((article, index) => {
+  const unique = filtered.filter((article, index) => {
     const key = getArticleIdentityKey(article, index);
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  const hero = list[0] || null;
-  const withoutHero = excludeHeroArticle(list, hero);
+  const hero = unique[0] || null;
+  const centerCards = unique.slice(1); // backend order preserved
+  const topRail = unique;
 
-  const topRail = withoutHero.slice(0, 12);
-  // Backend controls how many middle cards should appear.
-  // Hero is first item, remaining all go to center cards.
-  const centerCards = withoutHero;
-
-  return {
-    topRail,
-    hero,
-    centerCards,
-  };
+  return { topRail, hero, centerCards };
 };
+// ─────────────────────────────────────────────────────────────────────────────
 
-const buildSideBuckets = (articles, heroToExclude) => {
-  const normalized = normalizeArticles(articles, { preserveOrder: true });
-  const seen = new Set();
-  const unique = normalized.filter((article, index) => {
-    const key = getArticleIdentityKey(article, index);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+const buildSideBuckets = (articles) => {
+  const list = normalizeArticles(articles, { preserveOrder: true });
+  // Side rails follow backend list exactly as-is (no dedupe / no hero exclusion / no filters).
+  const fresh = list;
+  const popular = list;
 
-  const withoutHero = excludeHeroArticle(unique, heroToExclude);
-  return {
-    fresh: withoutHero.filter(isBreakingArticle),
-    popular: withoutHero.filter((article) => !isBreakingArticle(article)),
-  };
+  return { fresh, popular };
 };
 
 function StoryLink({ article, className, children }) {
@@ -427,39 +423,34 @@ function StoryLink({ article, className, children }) {
 
 export default function FreshPopularShowcase({
   articles = [],
-  latestNewsArticles = [],
 }) {
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth);
   const [railStart, setRailStart] = useState(0);
   const middleColumnRef = useRef(null);
   const [middleColumnHeight, setMiddleColumnHeight] = useState(0);
+
   const backendArticles = useMemo(
     () => normalizeArticles(articles, { preserveOrder: true }),
     [articles]
   );
-  const latestArticles = useMemo(
-    () => normalizeArticles(latestNewsArticles, { preserveOrder: true }),
-    [latestNewsArticles]
-  );
-  const hasLatestArticles = latestArticles.length > 0;
+
   const sourceArticles = useMemo(() => {
-    if (hasLatestArticles) return latestArticles;
     if (backendArticles.length > 0) return backendArticles;
     return [];
-  }, [hasLatestArticles, latestArticles, backendArticles]);
+  }, [backendArticles]);
 
+  // Middle section: backend order, no frontend filter
   const { topRail, hero, centerCards } = useMemo(
-    () => buildBuckets(sourceArticles, { preserveOrder: true }),
+    () => buildBuckets(sourceArticles),
     [sourceArticles]
   );
-  const sideSourceArticles = useMemo(
-    () => (backendArticles.length > 0 ? backendArticles : sourceArticles),
-    [backendArticles, sourceArticles]
-  );
+
+  // Side panels: breaking/popular logic unchanged
   const { fresh, popular } = useMemo(
-    () => buildSideBuckets(sideSourceArticles, hero),
-    [sideSourceArticles, hero]
+    () => buildSideBuckets(backendArticles),
+    [backendArticles]
   );
+
   const shouldMatchMiddleHeight = viewportWidth >= 1024 && middleColumnHeight > 0;
   const sideColumnStyle = shouldMatchMiddleHeight
     ? { height: `${middleColumnHeight}px` }
@@ -582,13 +573,10 @@ export default function FreshPopularShowcase({
             <h2 className="m-0 whitespace-nowrap text-[18px] font-extrabold leading-none text-[#121212] min-[320px]:text-[18px] min-[375px]:text-[20px] min-[425px]:text-[21px] min-[768px]:text-[20px] min-[1024px]:text-[22px] min-[1440px]:text-[24px] min-[1920px]:text-[28px]">
               Trending
             </h2>
-            {/* <p className="mb-2 mt-1.5 text-[8px] font-extrabold leading-[1.3] text-[#313131] min-[375px]:text-[8.5px] min-[425px]:text-[9px] min-[768px]:mb-2.5 min-[1024px]:text-[9.5px] min-[1440px]:mb-3 min-[1440px]:text-[10px]">
-              TODAY: BROWSE OUR EDITOR&apos;S HAND PICKED ARTICLES!
-            </p> */}
 
             <div
               className={`mt-2 flex flex-1 flex-col bg-white px-2 py-1 min-[1440px]:mt-2.5 ${
-                shouldMatchMiddleHeight ? "overflow-y-auto scrollbar-invisible" : ""
+                shouldMatchMiddleHeight ? "overflow-hidden" : ""
               }`}
             >
               {fresh.map((article, idx) => (
@@ -623,6 +611,9 @@ export default function FreshPopularShowcase({
                     src={getArticleImage(hero)}
                     alt={getArticleTitle(hero)}
                     className="absolute inset-0 h-full w-full object-cover object-center max-[375px]:object-cover max-[375px]:object-top max-[320px]:object-cover max-[320px]:object-top"
+                    style={{
+                      objectPosition: getArticleImageFocus(hero),
+                    }}
                     loading="lazy"
                     decoding="async"
                   />
@@ -662,6 +653,9 @@ export default function FreshPopularShowcase({
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
                       className="block h-[96px] w-full object-cover object-center max-[375px]:h-[180px] max-[375px]:object-cover max-[320px]:h-[138px] max-[320px]:object-cover min-[425px]:h-[108px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]"
+                      style={{
+                        objectPosition: getArticleImageFocus(article),
+                      }}
                       loading="lazy"
                       decoding="async"
                     />
@@ -689,15 +683,17 @@ export default function FreshPopularShowcase({
           </div>
 
           <aside
-            className="flex flex-col border border-[#dfdfdf] bg-[#fafafa] p-2.5 min-[375px]:p-3 min-[768px]:col-span-2 min-[1024px]:col-span-1 min-[1440px]:p-3.5"
+            className={`flex flex-col border border-[#dfdfdf] bg-[#fafafa] p-2.5 min-[375px]:p-3 min-[768px]:col-span-2 min-[1024px]:col-span-1 min-[1440px]:p-3.5 ${
+              shouldMatchMiddleHeight ? "overflow-hidden" : ""
+            }`}
             style={sideColumnStyle}
           >
             <h2 className="m-0 whitespace-nowrap text-[18px] font-extrabold leading-none text-[#121212] min-[320px]:text-[18px] min-[375px]:text-[20px] min-[425px]:text-[21px] min-[768px]:text-[20px] min-[1024px]:text-[22px] min-[1440px]:text-[24px] min-[1920px]:text-[28px]">
               Popular
             </h2>
             <div
-              className={`mt-2 flex flex-1 flex-col bg-white px-2 py-1 min-[1440px]:mt-2.5 ${
-                shouldMatchMiddleHeight ? "overflow-y-auto scrollbar-invisible" : ""
+              className={`mt-2 flex min-h-0 flex-1 flex-col bg-white px-2 py-1 min-[1440px]:mt-2.5 ${
+                shouldMatchMiddleHeight ? "overflow-hidden pr-1" : ""
               }`}
             >
               {popular.map((article, idx) => (

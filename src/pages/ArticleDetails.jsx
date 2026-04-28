@@ -948,10 +948,62 @@ export default function ArticleDetails() {
     if (!article && !notFound && !loadError) return;
 
     // Prerender must always receive a terminal ready signal; otherwise route times out.
-    const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
-    const rafId = window.requestAnimationFrame(emitReady);
+    // For article routes, wait until body + JSON-LD are mounted, then emit.
+    let intervalId = 0;
+    let timeoutId = 0;
+    let rafId = 0;
 
-    return () => window.cancelAnimationFrame(rafId);
+    const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
+
+    const isArticleRenderReady = () => {
+      if (!article || !isPrerenderRequest) return true;
+
+      const bodyText = articleContentRef.current?.textContent?.trim() || "";
+      const hasBodyContent = bodyText.length >= 120;
+
+      const jsonLdScripts = Array.from(
+        document.querySelectorAll('script[type="application/ld+json"]')
+      );
+      const hasNewsArticleSchema = jsonLdScripts.some((node) =>
+        /"@type"\s*:\s*"NewsArticle"|"@type"\s*:\s*\[\s*"NewsArticle"/i.test(
+          node.textContent || ""
+        )
+      );
+      const hasBreadcrumbSchema = jsonLdScripts.some((node) =>
+        /"@type"\s*:\s*"BreadcrumbList"/i.test(node.textContent || "")
+      );
+
+      return hasBodyContent && hasNewsArticleSchema && hasBreadcrumbSchema;
+    };
+
+    if (!isPrerenderRequest || !article) {
+      rafId = window.requestAnimationFrame(emitReady);
+      return () => window.cancelAnimationFrame(rafId);
+    }
+
+    const checkAndEmit = () => {
+      if (isArticleRenderReady()) {
+        window.clearInterval(intervalId);
+        window.clearTimeout(timeoutId);
+        emitReady();
+      }
+    };
+
+    // Fast path
+    rafId = window.requestAnimationFrame(checkAndEmit);
+
+    // Keep checking briefly; force emit after 12s so prerender doesn't hang.
+    intervalId = window.setInterval(checkAndEmit, 120);
+    timeoutId = window.setTimeout(() => {
+      window.clearInterval(intervalId);
+      emitReady();
+    }, 12000);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
   }, [article, articleSlug, isPrerenderRequest, loadError, notFound]);
 
   useEffect(() => {

@@ -1419,7 +1419,7 @@ const Header = () => {
                     <span className="top-datetime-sep">|</span>
                     <span><LiveClock /> IST</span>
                   </span>
-                  <Link to="/weather" className="top-meta-pill top-weather" aria-label="Open weather page">
+                  {/* <Link to="/weather" className="top-meta-pill top-weather" aria-label="Open weather page">
                     <CloudSun size={15} aria-hidden="true" />
                     <span>
                       {weatherCity}
@@ -1443,7 +1443,7 @@ const Header = () => {
                   <Link to="/cricket" className="top-meta-pill top-cricket" aria-label="Open cricket page">
                     <Radio size={14} aria-hidden="true" />
                     <span>Cricket</span>
-                  </Link>
+                  </Link> */}
                 </div>
                 <Link
                   to="/category/bharat-opinions"

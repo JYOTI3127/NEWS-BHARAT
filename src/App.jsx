@@ -38,11 +38,11 @@ const CategoryPage = lazy(() => import("./pages/Categorypage"));
 const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
 const TagPage = lazy(() => import("./pages/TagPage"));
 const AuthorPage = lazy(() => import("./pages/AuthorPage"));
-const WeatherPage = lazy(() => import("./pages/WeatherPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const MarketPage = lazy(() => import("./pages/MarketPage"));
-const MetalPage = lazy(() => import("./pages/MetalPage"));
-const CricketPage = lazy(() => import("./pages/CricketPage"));
+// const WeatherPage = lazy(() => import("./pages/WeatherPage"));
+// const MarketPage = lazy(() => import("./pages/MarketPage"));
+// const MetalPage = lazy(() => import("./pages/MetalPage"));
+// const CricketPage = lazy(() => import("./pages/CricketPage"));
 
 // Loading Spinner
 function PageLoader() {
@@ -206,10 +206,10 @@ function Layout() {
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
-            <Route path="/weather" element={<WeatherPage />} />
+            {/* <Route path="/weather" element={<WeatherPage />} />
             <Route path="/market" element={<MarketPage />} />
             <Route path="/metal" element={<MetalPage />} />
-            <Route path="/cricket" element={<CricketPage />} />
+            <Route path="/cricket" element={<CricketPage />} /> */}
             <Route path="/news/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/news/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/article/:categorySlug/:slug" element={<LegacyArticleRedirect />} />

@@ -267,11 +267,234 @@ const stripLazyChunkPreloads = (html) =>
     ''
   )
 
+const BASE_URL = 'https://news4bharat.com'
+const SITE_NAME = 'News4Bharat'
+
+const escapeHtml = (value) =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+const stripHtml = (value) =>
+  String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const toAbsoluteUrl = (value) => {
+  const normalized = String(value || '').trim()
+  if (!normalized) return ''
+  try {
+    return new URL(normalized, BASE_URL).toString()
+  } catch {
+    return ''
+  }
+}
+
+const getArticleCategory = (article) => {
+  if (!article) return { slug: '', name: '' }
+
+  const primaryCategory = Array.isArray(article?.category_details)
+    ? article.category_details[0]
+    : article?.category_details || article?.category || null
+
+  const slug = String(
+    primaryCategory?.slug || primaryCategory?.category_slug || article?.category_slug || ''
+  ).trim()
+  const name = String(primaryCategory?.name || article?.category_name || '').trim()
+  return { slug, name }
+}
+
+const getArticleTags = (article) => {
+  const fromArray = Array.isArray(article?.tags_list)
+    ? article.tags_list
+    : String(article?.tags || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+
+  return Array.from(
+    new Set(fromArray.map((value) => String(value || '').trim()).filter(Boolean))
+  )
+}
+
+const sanitizeArticleBodyHtml = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+
+  return raw
+    .replace(/<\s*\/?\s*(html|head|body)\b[^>]*>/gi, '')
+    .replace(/<\s*(script|style|noscript|meta|link|base)\b[^>]*>[\s\S]*?<\s*\/\s*\1>/gi, '')
+    .replace(/<\s*(script|style|noscript|meta|link|base)\b[^>]*\/?>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '')
+    .replace(/\sstyle="[^"]*"/gi, '')
+    .replace(/\sstyle='[^']*'/gi, '')
+    .replace(/\s(href|src)=["']\s*javascript:[^"']*["']/gi, '')
+    .trim()
+}
+
+const buildArticleFallbackHtml = (article, route, meta) => {
+  if (!article) return ''
+
+  const title = String(
+    article?.title ||
+      meta?.articleHeadline ||
+      meta?.title ||
+      'News4Bharat'
+  ).trim()
+  const summary = String(
+    article?.meta_description ||
+      article?.subtitle ||
+      article?.summary ||
+      article?.excerpt ||
+      meta?.description ||
+      ''
+  ).trim()
+  const authorName = String(
+    article?.display_author_name ||
+      article?.author_display_name ||
+      article?.author_name ||
+      article?.posted_by_fullname ||
+      SITE_NAME
+  ).trim()
+  const publishedAt = String(
+    article?.published_at || article?.created_at || meta?.publishedAt || ''
+  ).trim()
+  const imageUrl = toAbsoluteUrl(article?.image_url || article?.image || meta?.ogImage || '')
+  const imageAlt = String(article?.image_alt || title).trim()
+  const bodyHtml = sanitizeArticleBodyHtml(article?.content_html || article?.content || '')
+  const bodyTextFallback = stripHtml(article?.content || summary || title)
+
+  const bodyMarkup = bodyHtml || `<p>${escapeHtml(bodyTextFallback)}</p>`
+  const articleUrl = meta?.canonical || `${BASE_URL}${route}`
+
+  return `
+  <main data-prerender-fallback="article-main" style="max-width:820px;margin:24px auto;padding:0 16px;font-family:Arial,sans-serif;color:#1f2937;line-height:1.7;">
+    <article data-prerender-fallback="article-body">
+      <h1 style="font-size:2rem;line-height:1.25;font-weight:700;margin:0 0 12px;">${escapeHtml(title)}</h1>
+      ${summary ? `<p style="font-size:1.06rem;color:#4b5563;margin:0 0 16px;">${escapeHtml(summary)}</p>` : ''}
+      <p style="font-size:0.88rem;color:#6b7280;margin:0 0 18px;">By ${escapeHtml(authorName)}${publishedAt ? ` | ${escapeHtml(publishedAt)}` : ''}</p>
+      ${imageUrl ? `<figure style="margin:0 0 18px;"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(imageAlt)}" style="width:100%;height:auto;border-radius:10px;"><figcaption style="font-size:0.75rem;color:#6b7280;margin-top:6px;">${escapeHtml(imageAlt)}</figcaption></figure>` : ''}
+      <section data-prerender-fallback="article-content">${bodyMarkup}</section>
+      <p style="font-size:0.82rem;color:#6b7280;margin-top:22px;">Source URL: <a href="${escapeHtml(articleUrl)}">${escapeHtml(articleUrl)}</a></p>
+    </article>
+  </main>`
+}
+
+const buildArticleSchemaJson = (article, route, meta) => {
+  if (!article) return null
+
+  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`).trim()
+  const title = String(article?.title || meta?.articleHeadline || meta?.title || SITE_NAME).trim()
+  const description = String(
+    article?.meta_description ||
+      article?.subtitle ||
+      article?.summary ||
+      article?.excerpt ||
+      meta?.description ||
+      title
+  ).trim()
+  const authorName = String(
+    article?.display_author_name ||
+      article?.author_display_name ||
+      article?.author_name ||
+      article?.posted_by_fullname ||
+      SITE_NAME
+  ).trim()
+  const imageUrl = toAbsoluteUrl(article?.image_url || article?.image || meta?.ogImage || '')
+  const imageAlt = String(article?.image_alt || title).trim()
+  const bodyText = stripHtml(article?.content_html || article?.content || '').slice(0, 5000)
+  const datePublished = String(meta?.publishedAt || article?.published_at || article?.created_at || '').trim()
+  const dateModified = String(meta?.modifiedAt || article?.updated_at || article?.published_at || article?.created_at || '').trim()
+  const { name: categoryName } = getArticleCategory(article)
+  const tags = getArticleTags(article)
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['NewsArticle', 'Article'],
+    ...(canonical ? { '@id': `${canonical}#article` } : {}),
+    headline: title,
+    alternativeHeadline: description,
+    description,
+    ...(bodyText ? { articleBody: bodyText } : {}),
+    inLanguage: 'en-IN',
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
+    ...(canonical ? { url: canonical } : {}),
+    ...(canonical ? { mainEntityOfPage: { '@type': 'WebPage', '@id': canonical } } : {}),
+    author: {
+      '@type': authorName === SITE_NAME ? 'Organization' : 'Person',
+      name: authorName,
+      url: authorName === SITE_NAME ? BASE_URL : `${BASE_URL}/author/${encodeURIComponent(authorName.toLowerCase().replace(/\s+/g, '-'))}`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      '@id': `${BASE_URL}/#organization`,
+      name: SITE_NAME,
+      url: BASE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${BASE_URL}/Fevicon (1).png`,
+      },
+    },
+    ...(imageUrl
+      ? {
+          image: {
+            '@type': 'ImageObject',
+            url: imageUrl,
+            ...(imageAlt ? { caption: imageAlt } : {}),
+          },
+          thumbnailUrl: imageUrl,
+        }
+      : {}),
+    ...(categoryName ? { articleSection: categoryName } : {}),
+    ...(tags.length > 0 ? { keywords: tags.join(', ') } : {}),
+  }
+}
+
+const buildBreadcrumbSchemaJson = (article, route, meta) => {
+  if (!article) return null
+
+  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`).trim()
+  const title = String(article?.title || meta?.articleHeadline || meta?.title || SITE_NAME).trim()
+  const { slug: categorySlug, name: categoryName } = getArticleCategory(article)
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${BASE_URL}/`,
+      },
+      ...(categorySlug
+        ? [
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: categoryName || categorySlug.replace(/-/g, ' '),
+              item: `${BASE_URL}/category/${categorySlug}`,
+            },
+          ]
+        : []),
+      {
+        '@type': 'ListItem',
+        position: categorySlug ? 3 : 2,
+        name: title,
+        ...(canonical ? { item: canonical } : {}),
+      },
+    ],
+  }
+}
+
 // Main fix: build titles and meta directly from API data.
 function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
-  const SITE_NAME = 'News4Bharat'
   const DEFAULT_IMAGE = 'https://news4bharat.com/news4bharat-share.png'
-  const BASE_URL = 'https://news4bharat.com'
   const TWITTER_HANDLE = '@news4_bharat'
   const normalizeText = (value) =>
     String(value || '')
@@ -283,17 +506,6 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     if (!text || text.length <= maxLength) return text
     return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`
   }
-  const toAbsoluteUrl = (value) => {
-    const normalized = String(value || '').trim()
-    if (!normalized) return ''
-
-    try {
-      return new URL(normalized, BASE_URL).toString()
-    } catch {
-      return ''
-    }
-  }
-
   // Homepage
   if (route === '/') {
     return {
@@ -545,6 +757,53 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     }
   }
 
+  if (isArticlePath(route)) {
+    const article = articleMap.get(route)
+    const hasArticleBodyMarkup =
+      /data-prerender-fallback=["']article-body["']/i.test(cleaned) ||
+      /class=["'][^"']*article-content[^"']*["']/i.test(cleaned) ||
+      /data-prerender-article-body/i.test(cleaned)
+    const hasNewsArticleSchema =
+      /"@type"\s*:\s*"NewsArticle"/i.test(cleaned) ||
+      /"@type"\s*:\s*\[\s*"NewsArticle"/i.test(cleaned)
+    const hasBreadcrumbSchema = /"@type"\s*:\s*"BreadcrumbList"/i.test(cleaned)
+
+    if (article && !hasArticleBodyMarkup) {
+      const fallbackArticleHtml = buildArticleFallbackHtml(article, route, meta)
+      if (fallbackArticleHtml) {
+        cleaned = cleaned.replace(/<body([^>]*)>/i, `<body$1>\n${fallbackArticleHtml}`)
+        console.log(`    Injected article body fallback for ${route}`)
+      }
+    }
+
+    if (article && (!hasNewsArticleSchema || !hasBreadcrumbSchema)) {
+      const schemaChunks = []
+
+      if (!hasNewsArticleSchema) {
+        const articleSchema = buildArticleSchemaJson(article, route, meta)
+        if (articleSchema) {
+          schemaChunks.push(
+            `<script type="application/ld+json">${JSON.stringify(articleSchema)}</script>`
+          )
+        }
+      }
+
+      if (!hasBreadcrumbSchema) {
+        const breadcrumbSchema = buildBreadcrumbSchemaJson(article, route, meta)
+        if (breadcrumbSchema) {
+          schemaChunks.push(
+            `<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>`
+          )
+        }
+      }
+
+      if (schemaChunks.length > 0) {
+        cleaned = cleaned.replace('</head>', `\n${schemaChunks.join('\n')}\n</head>`)
+        console.log(`    Injected missing JSON-LD fallback for ${route}`)
+      }
+    }
+  }
+
   console.log(`    Title: ${meta.title}`)
   console.log(`    Canonical: ${meta.canonical}`)
 
@@ -655,7 +914,7 @@ async function getRoutesAndData() {
   return { routes: [...routeSet], articleMap, categoryMap, siteData }
 }
 
-async function renderInBatches(prerenderer, routes, articleMap, categoryMap, siteData, batchSize = 5) {
+async function renderInBatches(prerenderer, routes, articleMap, categoryMap, siteData, batchSize = 3) {
   let success = 0
   let failed = 0
   const failedRoutes = []
@@ -748,7 +1007,7 @@ await prerenderer.initialize()
 console.log('Prerenderer initialized\n')
 
 const { success, failed, failedRoutes } = await renderInBatches(
-  prerenderer, routes, articleMap, categoryMap, siteData, 5
+  prerenderer, routes, articleMap, categoryMap, siteData, 3
 )
 
 await prerenderer.destroy()

@@ -177,6 +177,31 @@ export const fetchHomepageLatestNewsCurrent = () =>
 export const getLatestNewsArticlesFromResponse = (data) =>
   Array.isArray(data?.articles) ? data.articles : getListFromResponse(data);
 
+// ─── FreshPopularShowcase ─────────────────────────────────────────────────────
+// Endpoint: GET /homepage/latest_news/current/
+// Response: { slot, display_count: 12, articles: [...] }
+// Backend display_count change kare — frontend automatically wahi dikhayega
+export const fetchFreshPopularShowcase = () =>
+  fetchJson("/homepage/latest_news/current/");
+
+export const getFreshPopularArticlesFromResponse = (data) => {
+  if (!data) return [];
+
+  // articles key se data lo
+  const articles = Array.isArray(data?.articles)
+    ? data.articles
+    : getListFromResponse(data);
+
+  // display_count backend set karta hai — frontend sirf respect karta hai
+  const displayCount = Number(data?.display_count);
+  if (Number.isFinite(displayCount) && displayCount > 0) {
+    return articles.slice(0, displayCount);
+  }
+
+  return articles;
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const fetchHomepageHeroCurrent = () =>
   fetchJson("/homepage/hero/current/");
 

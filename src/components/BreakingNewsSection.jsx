@@ -47,6 +47,15 @@ const normalizeArticles = (articles) => {
 
 const getArticleImage = (article) => article?.image_url || article?.image || '';
 const getArticleTitle = (article) => article?.title || article?.headline || 'Untitled';
+const getImageStyle = (mode, variant = 'card') => {
+  if (mode !== 'q4') return undefined;
+
+  if (variant === 'featured') {
+    return { objectPosition: 'left top' };
+  }
+
+  return { objectPosition: 'top center' };
+};
 
 const isBreakingArticle = (article) => {
   const categoryDetails = Array.isArray(article?.category_details) ? article.category_details : [];
@@ -65,8 +74,10 @@ const isBreakingArticle = (article) => {
 };
 
 const articleHasCategorySlug = (article, expectedSlug) => {
-  const target = String(expectedSlug || '').trim().toLowerCase();
-  if (!target) return false;
+  const targets = (Array.isArray(expectedSlug) ? expectedSlug : String(expectedSlug || '').split(','))
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  if (targets.length === 0) return false;
 
   const values = new Set();
   const push = (value) => {
@@ -93,7 +104,7 @@ const articleHasCategorySlug = (article, expectedSlug) => {
     });
   }
 
-  return values.has(target);
+  return targets.some((target) => values.has(target));
 };
 
 const dedupeArticles = (articles) => {
@@ -121,7 +132,7 @@ const StoryCard = memo(function StoryCard({ article, className, children }) {
   );
 });
 
-const StoryImage = memo(function StoryImage({ article, className, alt }) {
+const StoryImage = memo(function StoryImage({ article, className, alt, style }) {
   const src = getArticleImage(article);
 
   if (!src) {
@@ -134,7 +145,7 @@ const StoryImage = memo(function StoryImage({ article, className, alt }) {
     );
   }
 
-  return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" />;
+  return <img src={src} alt={alt} className={className} style={style} loading="lazy" decoding="async" />;
 });
 
 export default function BreakingNewsSection({
@@ -156,7 +167,10 @@ export default function BreakingNewsSection({
         : normalized.filter(isBreakingArticle);
 
     if (mode === 'q4') {
-      return dedupeArticles(filtered).slice(0, 10);
+      // Category API kabhi-kabhi slug field without full category metadata bhejti hai.
+      // Agar strict slug filter empty ho jaye, to fetched list ko directly show kar do.
+      const q4List = filtered.length > 0 ? filtered : normalized;
+      return dedupeArticles(q4List).slice(0, 10);
     }
 
     return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
@@ -167,6 +181,7 @@ export default function BreakingNewsSection({
   const featuredArticle = sectionArticles[0];
   const leftSecondaryArticle = sectionArticles[1];
   const headlineArticles = sectionArticles.slice(2, 10);
+  const featuredImagePosition = mode === 'q4' ? 'left center' : 'center center';
 
   return (
     <section
@@ -227,6 +242,7 @@ export default function BreakingNewsSection({
                     max-[375px]:aspect-[16/12]
                     max-[320px]:aspect-[16/13]
                   "
+                  style={getImageStyle(mode, 'featured') || { objectPosition: featuredImagePosition }}
                 />
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.72)_100%)]" />
                 <div className="absolute inset-x-0 bottom-0 z-[1] p-[18px_16px_16px] max-[640px]:p-[16px_12px_14px] max-[425px]:p-3">
@@ -262,6 +278,7 @@ export default function BreakingNewsSection({
                   min-[1441px]:h-[76px] min-[1441px]:min-h-[76px]
                   max-[640px]:h-auto max-[640px]:aspect-[16/10]
                 "
+                style={getImageStyle(mode, 'card')}
               />
               <div className="flex min-h-[68px] min-w-0 flex-col justify-start gap-0.5 min-[1441px]:min-h-[76px] max-[640px]:min-h-0 max-[640px]:gap-2">
                 <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.86rem,0.9vw,1.02rem)] font-semibold leading-[1.2] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.82rem]">
@@ -310,6 +327,7 @@ export default function BreakingNewsSection({
                 article={article}
                 alt={getArticleTitle(article)}
                 className="block w-full rounded-[10px] aspect-[16/9] object-cover bg-[#f4f4f4]"
+                style={getImageStyle(mode, 'card')}
               />
             </StoryCard>
           ))}

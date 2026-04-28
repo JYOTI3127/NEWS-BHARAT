@@ -2,12 +2,13 @@ import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchArticlePage,
+  fetchPaginatedArticles,
   fetchCategories,
   fetchHomepageHeroCurrent,
-  fetchHomepageLatestNewsCurrent,
   getHomepageHeroArticlesFromResponse,
-  getLatestNewsArticlesFromResponse,
   getListFromResponse,
+  fetchFreshPopularShowcase,
+  getFreshPopularArticlesFromResponse,
 } from '../lib/api';
 
 import NewsBanner from '../components/Banner';
@@ -25,6 +26,7 @@ const Newsletter = lazy(() => import('../components/Newsletter'));
 
 const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
 const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
+const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
 
 const WhatsAppFloatingIcon = () => (
   <svg
@@ -103,12 +105,11 @@ function DeferredSection({
 }
 
 const Home = () => {
-  // ✅ Agar URL mein #newsletter hai toh Newsletter force render karo
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
 
   const { data: articlesData, isLoading: _articlesLoading } = useQuery({
     queryKey: ['articles'],
-    queryFn: () => fetchArticlePage({ page: 1, limit: 50 }), // ← sirf ek call — fast!
+    queryFn: () => fetchPaginatedArticles({ limit: 100, maxPages: 5, full: true }),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -121,14 +122,6 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: latestNewsData, isLoading: _latestNewsLoading } = useQuery({
-    queryKey: ['homepage-latest-news-current'],
-    queryFn: fetchHomepageLatestNewsCurrent,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   const { data: heroData, isLoading: heroLoading } = useQuery({
     queryKey: ['homepage-hero-current'],
     queryFn: fetchHomepageHeroCurrent,
@@ -137,9 +130,48 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  // ─── FreshPopularShowcase: /homepage/latest_news/current/ ─────────────────
+  // Backend display_count + articles control karta hai — frontend kuch nahi
+  const { data: freshPopularData } = useQuery({
+    queryKey: ['fresh-popular-showcase'],
+    queryFn: fetchFreshPopularShowcase,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const freshPopularArticles = React.useMemo(
+    () => getFreshPopularArticlesFromResponse(freshPopularData),
+    [freshPopularData]
+  );
+  // ──────────────────────────────────────────────────────────────────────────
+
   const allArticles = React.useMemo(() => {
     return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
   }, [articlesData]);
+
+  const { data: q4ArticlesData } = useQuery({
+    queryKey: ['q4-results-home'],
+    queryFn: async () => {
+      for (const slug of Q4_CATEGORY_SLUGS) {
+        try {
+          const list = await fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 });
+          if (Array.isArray(list) && list.length > 0) return list;
+        } catch {
+          // Try the next Q4 slug
+        }
+      }
+      return [];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const q4Articles = React.useMemo(
+    () => (Array.isArray(q4ArticlesData) ? q4ArticlesData : []),
+    [q4ArticlesData]
+  );
 
   const heroArticles = React.useMemo(
     () => {
@@ -175,18 +207,6 @@ const Home = () => {
   );
 
   const bannerLoading = heroLoading || (shouldUseFallbackBanner && bannerArticlesLoading);
-
-  const latestNewsArticles = React.useMemo(
-    () => {
-      const list = getLatestNewsArticlesFromResponse(latestNewsData);
-      const displayCount = Number(latestNewsData?.display_count);
-      if (Number.isFinite(displayCount) && displayCount > 0) {
-        return list.slice(0, displayCount);
-      }
-      return list;
-    },
-    [latestNewsData]
-  );
 
   return (
     <div className="home-page-shell">
@@ -234,29 +254,19 @@ const Home = () => {
           maxWidth={768}
         />
 
-        {/* <section className="w-full px-4 sm:px-6 pt-5">
-        <div className="mx-auto max-w-[1240px] rounded-2xl border border-[#ece5dd] bg-white/80 px-4 py-4 text-sm leading-7 text-[#5f5a53] shadow-[0_1px_4px_rgba(0,0,0,0.03)] sm:px-6">
-          News4Bharat brings breaking India news, economy coverage, politics updates, startup stories, state reporting, and Bharat explainers with verified reporting and clear context for everyday readers.
-        </div>
-      </section> */}
-
-
-
         <div className="home-section-align">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
-            <FreshPopularShowcase
-              articles={allArticles}
-              latestNewsArticles={latestNewsArticles}
-            />
+            {/* Backend /homepage/latest_news/current/ controls articles + count */}
+            <FreshPopularShowcase articles={freshPopularArticles} />
           </Profiler>
         </div>
 
         <div className="home-section-align">
           <Profiler id="Q4ResultsSection" onRender={onRenderCallback}>
             <BreakingNewsSection
-              articles={allArticles}
+              articles={q4Articles}
               mode="q4"
-              modeCategorySlug="q4-results"
+              modeCategorySlug={Q4_CATEGORY_SLUGS}
               sectionEyebrow="Corporate Tracker"
               sectionTitle="Q4 Results"
               viewAllPath="/category/q4-results"
@@ -264,18 +274,6 @@ const Home = () => {
             />
           </Profiler>
         </div>
-
-        {/* <div className="home-section-align">
-          <Profiler id="TrendingNews" onRender={onRenderCallback}>
-            <TrendingNews
-              articles={allArticles}
-              categories={categoriesData}
-              loading={articlesLoading}
-              latestNewsArticles={latestNewsArticles}
-              latestNewsLoading={latestNewsLoading}
-            />
-          </Profiler>
-        </div> */}
 
         <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
           <VisualStoriesWithScore articles={allArticles} />
@@ -315,7 +313,6 @@ const Home = () => {
           <MoreStoriesSection articles={allArticles} />
         </DeferredSection>
 
-        {/* ✅ #newsletter hash hone par forceRender=true — Newsletter turant DOM mein aayega */}
         <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
           <Newsletter />
         </DeferredSection>

@@ -23,6 +23,7 @@ urlpatterns = [
     path("sitemap_index.xml",      seo_views.view_sitemap_index,      name="seo_sitemap_index"),
     path("sitemap-news.xml",       seo_views.view_sitemap_news,       name="seo_sitemap_news"),
     path("sitemap-articles.xml",   seo_views.view_sitemap_articles,   name="seo_sitemap_articles"),
+    path("sitemap-images.xml",     seo_views.view_sitemap_images,     name="seo_sitemap_images"),
     path("sitemap-categories.xml", seo_views.view_sitemap_categories, name="seo_sitemap_categories"),
     path("sitemap-static.xml",     seo_views.view_sitemap_static,     name="seo_sitemap_static"),
     re_path(r"^sitemap-articles-(?P<page>\d+)\.xml$",

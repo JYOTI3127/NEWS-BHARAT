@@ -74,6 +74,60 @@ def _strip(text: str, max_len: int = 0) -> str:
     return clean[:max_len] if max_len else clean
 
 
+def _normalize_image_url(url: str, base: str = None) -> str:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    raw = str(url or "").strip()
+    if not raw or raw.startswith("data:") or raw.startswith("blob:"):
+        return ""
+    if raw.startswith("//"):
+        return f"https:{raw}"
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    if raw.startswith("/"):
+        return f"{base}{raw}"
+    return f"{base}/{raw.lstrip('/')}"
+
+
+def _extract_article_image_entries(article, base: str = None) -> list[dict]:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    images = []
+    seen = set()
+
+    def add_image(url: str, *, title: str = "", caption: str = ""):
+        normalized = _normalize_image_url(url, base)
+        if not normalized or normalized in seen:
+            return
+        seen.add(normalized)
+        entry = {"loc": normalized}
+        clean_title = _strip(title, 200)
+        clean_caption = _strip(caption, 500)
+        if clean_title:
+            entry["title"] = clean_title
+        if clean_caption:
+            entry["caption"] = clean_caption
+        images.append(entry)
+
+    add_image(
+        getattr(article, "get_image", lambda: "")(),
+        title=getattr(article, "title", ""),
+        caption=getattr(article, "image_alt", ""),
+    )
+
+    content = getattr(article, "content", "") or ""
+    for match in re.finditer(r'<img\b[^>]*\bsrc=["\']([^"\']+)["\'][^>]*>', content, re.IGNORECASE):
+        tag = match.group(0)
+        src = match.group(1)
+        alt_match = re.search(r'\balt=["\']([^"\']*)["\']', tag, re.IGNORECASE)
+        title_match = re.search(r'\btitle=["\']([^"\']*)["\']', tag, re.IGNORECASE)
+        add_image(
+            src,
+            title=(title_match.group(1) if title_match else getattr(article, "title", "")),
+            caption=(alt_match.group(1) if alt_match else ""),
+        )
+
+    return images
+
+
 def _iso(dt) -> str:
     if dt is None:
         return datetime.utcnow().isoformat() + "Z"
@@ -190,6 +244,7 @@ Disallow: /
 Sitemap: {base}/sitemap_index.xml
 Sitemap: {base}/sitemap-news.xml
 Sitemap: {base}/sitemap-articles.xml
+Sitemap: {base}/sitemap-images.xml
 Sitemap: {base}/sitemap-categories.xml
 Sitemap: {base}/sitemap-static.xml
 # IndexNow: {base}/{key}.txt
@@ -223,6 +278,7 @@ class SitemapEngine:
         for path in [
             f"{base}/sitemap-articles.xml",
             f"{base}/sitemap-news.xml",
+            f"{base}/sitemap-images.xml",
             f"{base}/sitemap-categories.xml",
             f"{base}/sitemap-static.xml",
         ]:
@@ -357,6 +413,49 @@ class SitemapEngine:
                 ET.SubElement(url_el, "xhtml:link", {
                     "rel": "alternate", "hreflang": hreflang, "href": href
                 })
+
+        return _prettify(root)
+
+    @classmethod
+    def images(cls) -> str:
+        return _cached("seo:sitemap:images", cls._build_images, CACHE_SITEMAP)
+
+    @staticmethod
+    def _build_images() -> str:
+        from newsapp.models import Article
+
+        base = SEO["SITE_URL"]
+        articles = (
+            Article.objects
+            .filter(status="published", in_sitemap=True)
+            .prefetch_related("categories")
+            .order_by("-published_at")[:5000]
+        )
+
+        ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")
+        ET.register_namespace("image", "http://www.google.com/schemas/sitemap-image/1.1")
+
+        root = ET.Element("urlset", {
+            "xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9",
+            "xmlns:image": "http://www.google.com/schemas/sitemap-image/1.1",
+        })
+
+        for article in articles:
+            image_entries = _extract_article_image_entries(article, base)
+            if not image_entries:
+                continue
+
+            url_el = ET.SubElement(root, "url")
+            ET.SubElement(url_el, "loc").text = article_url(article, base)
+            ET.SubElement(url_el, "lastmod").text = _iso(article.published_at or timezone.now())
+
+            for image_entry in image_entries:
+                img_el = ET.SubElement(url_el, "image:image")
+                ET.SubElement(img_el, "image:loc").text = image_entry["loc"]
+                if image_entry.get("title"):
+                    ET.SubElement(img_el, "image:title").text = image_entry["title"]
+                if image_entry.get("caption"):
+                    ET.SubElement(img_el, "image:caption").text = image_entry["caption"]
 
         return _prettify(root)
 
@@ -903,7 +1002,7 @@ def submit_article_everywhere(article) -> dict:
 
     # Sitemap cache invalidate
     for key in ["seo:sitemap:news", "seo:sitemap:index",
-                 "seo:sitemap:articles:1", f"seo:rss:all"]:
+                 "seo:sitemap:images", "seo:sitemap:articles:1", f"seo:rss:all"]:
         cache.delete(key)
 
     logger.info(f"[SEO] Submitted '{slug}' | google={google} | indexnow={indexnow}")

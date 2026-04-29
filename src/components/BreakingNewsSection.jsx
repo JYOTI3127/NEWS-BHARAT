@@ -73,40 +73,6 @@ const isBreakingArticle = (article) => {
   return String(article?.category || '').toLowerCase().includes('breaking');
 };
 
-const articleHasCategorySlug = (article, expectedSlug) => {
-  const targets = (Array.isArray(expectedSlug) ? expectedSlug : String(expectedSlug || '').split(','))
-    .map((value) => String(value || '').trim().toLowerCase())
-    .filter(Boolean);
-  if (targets.length === 0) return false;
-
-  const values = new Set();
-  const push = (value) => {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized) values.add(normalized);
-  };
-
-  push(article?.category_slug);
-  push(article?.primary_category_slug);
-  push(article?.category?.slug);
-  push(article?.primary_category?.slug);
-
-  if (Array.isArray(article?.category_details)) {
-    article.category_details.forEach((item) => push(item?.slug));
-  }
-
-  if (Array.isArray(article?.categories)) {
-    article.categories.forEach((item) => {
-      if (typeof item === 'string') {
-        push(item);
-      } else {
-        push(item?.slug);
-      }
-    });
-  }
-
-  return targets.some((target) => values.has(target));
-};
-
 const dedupeArticles = (articles) => {
   const seen = new Set();
 
@@ -151,7 +117,6 @@ const StoryImage = memo(function StoryImage({ article, className, alt, style }) 
 export default function BreakingNewsSection({
   articles = [],
   mode = 'breaking',
-  modeCategorySlug = '',
   sectionTitle = 'Trending Today',
   sectionEyebrow = 'Live Desk',
   viewAllPath = BREAKING_NEWS_PATH,
@@ -161,20 +126,16 @@ export default function BreakingNewsSection({
     const normalized = normalizeArticles(articles);
     const filtered =
       mode === 'q4'
-        ? normalized.filter((article) =>
-            articleHasCategorySlug(article, modeCategorySlug || 'q4-results')
-          )
+        ? normalized
         : normalized.filter(isBreakingArticle);
 
     if (mode === 'q4') {
-      // Category API kabhi-kabhi slug field without full category metadata bhejti hai.
-      // Agar strict slug filter empty ho jaye, to fetched list ko directly show kar do.
-      const q4List = filtered.length > 0 ? filtered : normalized;
-      return dedupeArticles(q4List).slice(0, 10);
+      // Q4 list already category-specific endpoint se aati hai, isliye yahan re-filter nahi karte.
+      return dedupeArticles(filtered).slice(0, 10);
     }
 
     return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
-  }, [articles, mode, modeCategorySlug]);
+  }, [articles, mode]);
 
   if (sectionArticles.length === 0) return null;
 

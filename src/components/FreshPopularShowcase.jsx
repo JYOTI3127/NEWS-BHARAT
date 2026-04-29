@@ -404,9 +404,12 @@ const buildBuckets = (articles) => {
 
 const buildSideBuckets = (articles) => {
   const list = normalizeArticles(articles, { preserveOrder: true });
-  // Side rails follow backend list exactly as-is (no dedupe / no hero exclusion / no filters).
-  const fresh = list;
-  const popular = list;
+  const fresh = list.filter(
+    (article) => isBreakingArticle(article) || isBreakingByCategoryLabel(article)
+  );
+  const popular = list.filter(
+    (article) => !isBreakingArticle(article) && !isBreakingByCategoryLabel(article)
+  );
 
   return { fresh, popular };
 };
@@ -423,6 +426,8 @@ function StoryLink({ article, className, children }) {
 
 export default function FreshPopularShowcase({
   articles = [],
+  sideArticles = [],
+  sidePanelsLoading = false,
 }) {
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth);
   const [railStart, setRailStart] = useState(0);
@@ -433,6 +438,17 @@ export default function FreshPopularShowcase({
     () => normalizeArticles(articles, { preserveOrder: true }),
     [articles]
   );
+
+  const isResponsiveViewport = viewportWidth < 1024;
+
+  const sidePanelArticles = useMemo(() => {
+    if (isResponsiveViewport) return backendArticles;
+    if (sidePanelsLoading) return [];
+
+    const fullFeed = normalizeArticles(sideArticles, { preserveOrder: true });
+    if (fullFeed.length > 0) return fullFeed;
+    return [];
+  }, [isResponsiveViewport, sidePanelsLoading, sideArticles, backendArticles]);
 
   const sourceArticles = useMemo(() => {
     if (backendArticles.length > 0) return backendArticles;
@@ -447,9 +463,22 @@ export default function FreshPopularShowcase({
 
   // Side panels: breaking/popular logic unchanged
   const { fresh, popular } = useMemo(
-    () => buildSideBuckets(backendArticles),
-    [backendArticles]
+    () => buildSideBuckets(sidePanelArticles),
+    [sidePanelArticles]
   );
+
+  const visibleFresh = useMemo(
+    () => (isResponsiveViewport ? fresh.slice(0, 5) : fresh),
+    [isResponsiveViewport, fresh]
+  );
+
+  const visiblePopular = useMemo(
+    () => (isResponsiveViewport ? popular.slice(0, 5) : popular),
+    [isResponsiveViewport, popular]
+  );
+
+  const showSideLoading = !isResponsiveViewport && sidePanelsLoading;
+  const sideLoadingRows = useMemo(() => Array.from({ length: 5 }), []);
 
   const shouldMatchMiddleHeight = viewportWidth >= 1024 && middleColumnHeight > 0;
   const sideColumnStyle = shouldMatchMiddleHeight
@@ -508,6 +537,8 @@ export default function FreshPopularShowcase({
   const visibleRail = topRail.slice(railStart, railStart + railVisibleCount);
   const canPrev = railStart > 0;
   const canNext = railStart < maxRailStart;
+  const middleImageOnlyCards = centerCards.slice(0, 2);
+  const middleStoryCards = centerCards.slice(2);
 
   return (
     <section className="mx-auto mb-5 w-full font-['Poppins',sans-serif] min-[320px]:mb-5 min-[768px]:mb-6 min-[1024px]:mb-7 min-[1440px]:mb-8 min-[1920px]:mb-10">
@@ -567,36 +598,51 @@ export default function FreshPopularShowcase({
 
         <div className="grid items-start gap-2.5 min-[425px]:gap-3 min-[768px]:grid-cols-[200px_minmax(0,1fr)] min-[1024px]:grid-cols-[180px_minmax(0,1fr)_180px] min-[1440px]:grid-cols-[220px_minmax(0,1fr)_220px] min-[1920px]:grid-cols-[270px_minmax(0,1fr)_270px]">
           <aside
-            className="flex flex-col border border-[#dfdfdf] bg-[#fafafa] p-2.5 min-[375px]:p-3 min-[1440px]:p-3.5"
+            className="flex flex-col border border-[#dfdfdf] bg-[#fafafa] px-1.5 py-2 min-[375px]:px-2 min-[375px]:py-2.5 min-[1440px]:px-2.5 min-[1440px]:py-3"
             style={sideColumnStyle}
           >
-            <h2 className="m-0 whitespace-nowrap text-[18px] font-extrabold leading-none text-[#121212] min-[320px]:text-[18px] min-[375px]:text-[20px] min-[425px]:text-[21px] min-[768px]:text-[20px] min-[1024px]:text-[22px] min-[1440px]:text-[24px] min-[1920px]:text-[28px]">
-              Trending
+            <h2 className="m-0 whitespace-nowrap text-[14px] font-extrabold leading-none text-[#121212] min-[320px]:text-[14px] min-[375px]:text-[15px] min-[425px]:text-[16px] min-[768px]:text-[16px] min-[1024px]:text-[17px] min-[1440px]:text-[18px] min-[1920px]:text-[20px]">
+              Breaking News
             </h2>
 
             <div
-              className={`mt-2 flex flex-1 flex-col bg-white px-2 py-1 min-[1440px]:mt-2.5 ${
-                shouldMatchMiddleHeight ? "overflow-hidden" : ""
+              className={`mt-2 flex flex-1 flex-col bg-white min-[1440px]:mt-2.5 ${
+                shouldMatchMiddleHeight
+                  ? "scrollbar-invisible min-h-0 overflow-y-auto pr-1"
+                  : ""
               }`}
             >
-              {fresh.map((article, idx) => (
-                <StoryLink
-                  key={`${article?.id || article?.slug || idx}-fresh`}
-                  article={article}
-                  className={`block py-1.5 no-underline ${
-                    idx === 0 ? "border-t-0 pt-0" : "border-t border-[#ebebeb]"
-                  }`}
-                >
-                  <h3 className="fps-title-only m-0 mb-1 line-clamp-3 text-[13px] font-normal leading-[1.3] text-[#1c1c1c] transition-colors hover:text-[#D80100] min-[425px]:text-[13.5px] min-[1440px]:text-[14px] min-[1920px]:text-[15px]">
-                    {truncate(getArticleTitle(article), 90)}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className="text-[10px] font-normal text-[#666] min-[1440px]:text-[11px]">
-                      {formatDateTime(article)}
-                    </span>
-                  </div>
-                </StoryLink>
-              ))}
+              {showSideLoading
+                ? sideLoadingRows.map((_, idx) => (
+                    <div
+                      key={`fresh-loading-${idx}`}
+                      className={`block py-1.5 ${
+                        idx === 0 ? "border-t-0 pt-0" : "border-t border-[#ebebeb]"
+                      }`}
+                    >
+                      <div className="h-3 w-[92%] animate-pulse rounded bg-[#ececec]" />
+                      <div className="mt-1 h-3 w-[76%] animate-pulse rounded bg-[#f1f1f1]" />
+                      <div className="mt-1 h-2 w-[52%] animate-pulse rounded bg-[#f4f4f4]" />
+                    </div>
+                  ))
+                : visibleFresh.map((article, idx) => (
+                    <StoryLink
+                      key={`${article?.id || article?.slug || idx}-fresh`}
+                      article={article}
+                      className={`block py-1.5 no-underline ${
+                        idx === 0 ? "border-t-0 pt-0" : "border-t border-[#ebebeb]"
+                      }`}
+                    >
+                      <h3 className="fps-title-only m-0 mb-1 line-clamp-3 text-[8px] font-normal leading-[1.3] text-[#1c1c1c] transition-colors hover:text-[#D80100] min-[425px]:text-[8.5px] min-[1440px]:text-[9px] min-[1920px]:text-[10px]">
+                        {truncate(getArticleTitle(article), 90)}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] font-normal text-[#666] min-[1440px]:text-[11px]">
+                          {formatDateTime(article)}
+                        </span>
+                      </div>
+                    </StoryLink>
+                  ))}
             </div>
           </aside>
 
@@ -641,8 +687,48 @@ export default function FreshPopularShowcase({
               </StoryLink>
             )}
 
-            <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 min-[1024px]:grid-cols-3 min-[1440px]:grid-cols-4">
-              {centerCards.map((article, idx) => (
+            <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2">
+              {middleImageOnlyCards.map((article, idx) => (
+                <StoryLink
+                  key={`${article?.id || article?.slug || idx}-image-only`}
+                  article={article}
+                  className="block overflow-hidden border border-[#dfdfdf] bg-white no-underline"
+                >
+                  {getArticleImage(article) ? (
+                    <img
+                      src={getArticleImage(article)}
+                      alt={getArticleTitle(article)}
+                      className="block h-[180px] w-full object-cover object-center max-[320px]:h-[150px] min-[425px]:h-[190px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]"
+                      style={{
+                        objectPosition: getArticleImageFocus(article),
+                      }}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div className="flex h-[180px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[320px]:h-[150px] min-[425px]:h-[190px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]">
+                      No image
+                    </div>
+                  )}
+                  <div className="p-1.5 min-[425px]:p-2">
+                    {getArticleCategory(article) ? (
+                      <span className="mb-0.5 block text-[8px] font-semibold text-[#d80100] min-[768px]:text-[9px] min-[1440px]:text-[10px]">
+                        {getArticleCategory(article)}
+                      </span>
+                    ) : null}
+                    <h3 className="fps-title-only m-0 line-clamp-2 text-[11px] font-semibold leading-[1.3] text-[#1d1d1d] transition-colors hover:text-[#D80100] min-[425px]:text-[11.5px] min-[768px]:text-[12px] min-[1440px]:text-[13px] min-[1920px]:text-[14px]">
+                      {truncate(getArticleTitle(article), 90)}
+                    </h3>
+                    <span className="mt-1 block text-[8px] font-semibold text-[#666] min-[768px]:text-[9px] min-[1440px]:text-[10px]">
+                      {formatDateTime(article)}
+                    </span>
+                  </div>
+                </StoryLink>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 min-[1024px]:grid-cols-3">
+              {middleStoryCards.map((article, idx) => (
                 <StoryLink
                   key={`${article?.id || article?.slug || idx}-card`}
                   article={article}
@@ -683,40 +769,54 @@ export default function FreshPopularShowcase({
           </div>
 
           <aside
-            className={`flex flex-col border border-[#dfdfdf] bg-[#fafafa] p-2.5 min-[375px]:p-3 min-[768px]:col-span-2 min-[1024px]:col-span-1 min-[1440px]:p-3.5 ${
-              shouldMatchMiddleHeight ? "overflow-hidden" : ""
-            }`}
+            className="flex flex-col border border-[#dfdfdf] bg-[#fafafa] px-1.5 py-2 min-[375px]:px-2 min-[375px]:py-2.5 min-[768px]:col-span-2 min-[1024px]:col-span-1 min-[1440px]:px-2.5 min-[1440px]:py-3"
             style={sideColumnStyle}
           >
-            <h2 className="m-0 whitespace-nowrap text-[18px] font-extrabold leading-none text-[#121212] min-[320px]:text-[18px] min-[375px]:text-[20px] min-[425px]:text-[21px] min-[768px]:text-[20px] min-[1024px]:text-[22px] min-[1440px]:text-[24px] min-[1920px]:text-[28px]">
+            <h2 className="m-0 whitespace-nowrap text-[14px] font-extrabold leading-none text-[#121212] min-[320px]:text-[14px] min-[375px]:text-[15px] min-[425px]:text-[16px] min-[768px]:text-[16px] min-[1024px]:text-[17px] min-[1440px]:text-[18px] min-[1920px]:text-[20px]">
               Popular
             </h2>
             <div
-              className={`mt-2 flex min-h-0 flex-1 flex-col bg-white px-2 py-1 min-[1440px]:mt-2.5 ${
-                shouldMatchMiddleHeight ? "overflow-hidden pr-1" : ""
+              className={`mt-2 flex min-h-0 flex-1 flex-col bg-white min-[1440px]:mt-2.5 ${
+                shouldMatchMiddleHeight
+                  ? "scrollbar-invisible overflow-y-auto pr-1"
+                  : ""
               }`}
             >
-              {popular.map((article, idx) => (
-                <StoryLink
-                  key={`${article?.id || article?.slug || idx}-popular`}
-                  article={article}
-                  className={`block py-1.5 no-underline ${
-                    idx === popular.length - 1 ? "border-b-0" : "border-b border-[#efefef]"
-                  }`}
-                >
-                  {getArticleCategory(article) ? (
-                    <span className="mb-0.5 block text-[9px] font-semibold text-[#d80100] min-[1440px]:text-[10px]">
-                      {getArticleCategory(article)}
-                    </span>
-                  ) : null}
-                  <h3 className="fps-title-only m-0 line-clamp-3 text-[10px] font-normal leading-[1.3] text-[#171717] transition-colors hover:text-[#D80100] min-[425px]:text-[10.5px] min-[768px]:text-[11px] min-[1440px]:text-[12px] min-[1920px]:text-[13px]">
-                    {truncate(getArticleTitle(article), 86)}
-                  </h3>
-                  <span className="mt-1 block text-[8px] font-semibold text-[#666] min-[768px]:text-[9px] min-[1440px]:text-[10px]">
-                    {formatDateTime(article)}
-                  </span>
-                </StoryLink>
-              ))}
+              {showSideLoading
+                ? sideLoadingRows.map((_, idx) => (
+                    <div
+                      key={`popular-loading-${idx}`}
+                      className={`block py-1.5 ${
+                        idx === sideLoadingRows.length - 1 ? "border-b-0" : "border-b border-[#efefef]"
+                      }`}
+                    >
+                      <div className="h-2 w-[38%] animate-pulse rounded bg-[#f0e1e1]" />
+                      <div className="mt-1 h-3 w-[90%] animate-pulse rounded bg-[#ececec]" />
+                      <div className="mt-1 h-3 w-[72%] animate-pulse rounded bg-[#f1f1f1]" />
+                      <div className="mt-1 h-2 w-[52%] animate-pulse rounded bg-[#f4f4f4]" />
+                    </div>
+                  ))
+                : visiblePopular.map((article, idx) => (
+                    <StoryLink
+                      key={`${article?.id || article?.slug || idx}-popular`}
+                      article={article}
+                      className={`block py-1.5 no-underline ${
+                        idx === visiblePopular.length - 1 ? "border-b-0" : "border-b border-[#efefef]"
+                      }`}
+                    >
+                      {getArticleCategory(article) ? (
+                        <span className="mb-0.5 block text-[9px] font-semibold text-[#d80100] min-[1440px]:text-[10px]">
+                          {getArticleCategory(article)}
+                        </span>
+                      ) : null}
+                      <h3 className="fps-title-only m-0 line-clamp-3 text-[10px] font-normal leading-[1.3] text-[#171717] transition-colors hover:text-[#D80100] min-[425px]:text-[10.5px] min-[768px]:text-[11px] min-[1440px]:text-[12px] min-[1920px]:text-[13px]">
+                        {truncate(getArticleTitle(article), 86)}
+                      </h3>
+                      <span className="mt-1 block text-[8px] font-semibold text-[#666] min-[768px]:text-[9px] min-[1440px]:text-[10px]">
+                        {formatDateTime(article)}
+                      </span>
+                    </StoryLink>
+                  ))}
             </div>
           </aside>
         </div>

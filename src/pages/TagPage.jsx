@@ -163,8 +163,8 @@ export default function TagPage() {
   }, [normalizedTag, normalizedTagFingerprint]);
 
   return (
-    <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
-      <div className="category-page-align mx-auto min-h-[calc(100vh-62px)] bg-[#f7f4f0] px-4 sm:px-6 py-8">
+    <div className="min-h-screen pt-[62px] font-[Poppins,_sans-serif]">
+      <div className="category-page-align mx-auto min-h-[calc(100vh-62px)] px-4 sm:px-6 py-8">
 
         <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 mb-6 transition-colors">
           <ArrowLeft size={13} /> Back to Home

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { apiUrl } from "../lib/api";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80";
 
+/* ─── helpers ─── */
 const getNewsletterItems = (payload) => {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.results)) return payload.results;
@@ -19,21 +20,13 @@ const getImageUrl = (newsletter) => {
     newsletter?.cover_image ||
     newsletter?.featured_image ||
     newsletter?.image_url;
-
   if (!image) return FALLBACK_IMAGE;
   if (typeof image === "string") return image;
   return image?.url || FALLBACK_IMAGE;
 };
 
-const getReadMoreUrl = (newsletter) => {
-  return (
-    newsletter?.url ||
-    newsletter?.link ||
-    newsletter?.read_more_url ||
-    newsletter?.article_url ||
-    "#"
-  );
-};
+const getReadMoreUrl = (newsletter) =>
+  newsletter?.url || newsletter?.link || newsletter?.read_more_url || newsletter?.article_url || "#";
 
 const getNewsletterHtml = (newsletter) =>
   String(newsletter?.html || newsletter?.html_content || "").trim();
@@ -46,66 +39,256 @@ const stripHtml = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
-function NewsletterCard({ newsletter, isActive, onSelect, onDelete, deleting }) {
+/* ─── date/time helpers ─── */
+function formatTime(date) {
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function formatPublishDate(dateInput) {
+  if (!dateInput) return null;
+  const date = new Date(dateInput);
+  if (isNaN(date)) return null;
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return "Today, " + formatTime(date);
+  }
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday, " + formatTime(date);
+  }
+  return (
+    date.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+    ", " +
+    formatTime(date)
+  );
+}
+
+function formatShortDate(dateInput) {
+  if (!dateInput) return null;
+  const date = new Date(dateInput);
+  if (isNaN(date)) return null;
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function isNew(dateInput) {
+  if (!dateInput) return false;
+  const date = new Date(dateInput);
+  return !isNaN(date) && new Date() - date < 6 * 60 * 60 * 1000;
+}
+
+/* ─── components ─── */
+function CalendarIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      style={{ width: 11, height: 11, flexShrink: 0 }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      style={{ width: 11, height: 11, flexShrink: 0 }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      style={{ width: 11, height: 11, flexShrink: 0 }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      style={{ width: 22, height: 22 }}
+      fill="none"
+      stroke="#94a3b8"
+      strokeWidth="1.5"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 9h18M9 13h6" />
+    </svg>
+  );
+}
+
+function NewsletterCard({ newsletter, isActive, onSelect, onViewDetails }) {
   const title = newsletter?.title || newsletter?.subject || "News4Bharat Newsletter";
   const description =
     newsletter?.description ||
     newsletter?.summary ||
     newsletter?.excerpt ||
     newsletter?.short_description ||
-    "Stay informed with curated headlines, sharp context, and the stories shaping Bharat.";
-  const imageUrl = getImageUrl(newsletter);
-  const hasHtml = Boolean(getNewsletterHtml(newsletter));
+    stripHtml(getNewsletterHtml(newsletter)).slice(0, 150);
+
+  const publishedAt =
+    newsletter?.published_at ||
+    newsletter?.created_at ||
+    newsletter?.date ||
+    newsletter?.publishedAt ||
+    null;
+
+  const shortDate = formatShortDate(publishedAt);
+  const publishTime = formatPublishDate(publishedAt);
+  const fresh = isNew(publishedAt);
+  const editionNum = newsletter?.edition || newsletter?.edition_number || null;
 
   return (
-    <article className={`group flex h-full flex-col overflow-hidden rounded-lg border bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_55px_rgba(216,1,0,0.18)] ${isActive ? "border-[#D80100]" : "border-slate-100"}`}>
-      <button
-        type="button"
-        onClick={onSelect}
-        className="block overflow-hidden bg-slate-100 text-left"
-        aria-label={`Open newsletter ${title}`}
-      >
-        <img
-          src={imageUrl}
-          alt={title}
-          loading="lazy"
-          className="h-52 w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 min-[1440px]:h-60 min-[1800px]:h-72"
-        />
-      </button>
+    <article
+      onClick={onSelect}
+      style={{
+        borderRadius: 12,
+        border: isActive ? "1.5px solid #D80100" : "1px solid #e2e8f0",
+        background: "#ffffff",
+        overflow: "hidden",
+        cursor: "pointer",
+        transition: "border-color .22s, transform .22s, box-shadow .22s",
+        boxShadow: isActive
+          ? "0 0 0 3px rgba(216,1,0,0.06)"
+          : "none",
+        fontFamily: "'Poppins', sans-serif",
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.borderColor = "#cbd5e1";
+          e.currentTarget.style.transform = "translateY(-3px)";
+          e.currentTarget.style.boxShadow = "0 12px 32px rgba(15,23,42,0.07)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.borderColor = "#e2e8f0";
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "none";
+        }
+      }}
+    >
+      {/* Image */}
+      <img
+        src={getImageUrl(newsletter)}
+        alt={title}
+        loading="lazy"
+        style={{
+          width: "100%",
+          height: 160,
+          objectFit: "cover",
+          display: "block",
+          background: "#e2e8f0",
+        }}
+        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+      />
 
-      <div className="flex flex-1 flex-col p-5 min-[425px]:p-6 min-[1440px]:p-7">
-        <button
-          type="button"
-          onClick={onSelect}
-          className="text-left"
-        >
-          <h3 className="line-clamp-2 text-lg font-semibold leading-snug text-slate-950 transition-colors duration-300 group-hover:text-[#D80100] min-[1440px]:text-xl min-[1800px]:text-2xl">
+      {/* Body */}
+      <div style={{ padding: "18px 20px 20px" }}>
+        {/* Dateline row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          {editionNum && (
+            <span style={{
+              fontSize: 9, fontWeight: 600, letterSpacing: ".14em", textTransform: "uppercase",
+              color: "#D80100", background: "#fff0f0", border: "1px solid #ffd0d0",
+              padding: "2px 9px", borderRadius: 999,
+            }}>
+              Edition {editionNum}
+            </span>
+          )}
+          {shortDate && (
+            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#94a3b8" }}>
+              <CalendarIcon />
+              {shortDate}
+            </span>
+          )}
+          {fresh && (
+            <span style={{
+              fontSize: 9, fontWeight: 500, letterSpacing: ".1em", textTransform: "uppercase",
+              color: "#15803d", background: "#f0fdf4", border: "1px solid #bbf7d0",
+              padding: "2px 7px", borderRadius: 999,
+            }}>
+              New
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3 style={{
+          fontSize: 15, fontWeight: 600, color: "#0f172a",
+          lineHeight: 1.45, marginBottom: 7,
+        }}>
           {title}
-          </h3>
-        </button>
+        </h3>
 
-        <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600 min-[1440px]:text-[15px] min-[1800px]:text-base min-[1800px]:leading-7">
-          {description || stripHtml(getNewsletterHtml(newsletter)).slice(0, 150)}
+        {/* Description */}
+        <p style={{
+          fontSize: 12, fontWeight: 300, color: "#475569",
+          lineHeight: 1.7, marginBottom: 16,
+          display: "-webkit-box", WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {description}
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2">
+        {/* Footer */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <button
-            type="button"
-            onClick={onSelect}
-            className="inline-flex w-fit items-center justify-center rounded-md bg-[#D80100] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(216,1,0,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#b80000] hover:shadow-[0_14px_32px_rgba(216,1,0,0.32)] focus:outline-none focus:ring-2 focus:ring-[#D80100] focus:ring-offset-2 active:translate-y-0 min-[1800px]:px-6 min-[1800px]:py-3 min-[1800px]:text-base"
+            onClick={(e) => { e.stopPropagation(); onSelect(); onViewDetails(); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              fontSize: 11.5, fontWeight: 500, fontFamily: "'Poppins', sans-serif",
+              color: "#ffffff", background: "#D80100", border: "none",
+              padding: "7px 16px", borderRadius: 999, cursor: "pointer",
+              transition: "background .18s", whiteSpace: "nowrap", flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#b80000"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#D80100"; }}
           >
-            {hasHtml ? "View Design" : "View Details"}
+            <EyeIcon />
+            View Details
           </button>
-          {newsletter?.id ? (
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={deleting}
-              className="inline-flex w-fit items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-[#D80100] hover:text-[#D80100] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-          ) : null}
+
+          {publishTime && (
+            <span style={{
+              fontSize: 11, color: "#94a3b8",
+              display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+            }}>
+              <ClockIcon />
+              {publishTime}
+            </span>
+          )}
         </div>
       </div>
     </article>
@@ -114,27 +297,36 @@ function NewsletterCard({ newsletter, isActive, onSelect, onDelete, deleting }) 
 
 function NewsletterSkeleton() {
   return (
-    <article className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-      <div className="h-52 animate-pulse bg-slate-200 min-[1440px]:h-60 min-[1800px]:h-72" />
-      <div className="space-y-4 p-5 min-[425px]:p-6 min-[1440px]:p-7">
-        <div className="h-5 w-4/5 animate-pulse rounded bg-slate-200" />
-        <div className="space-y-2">
-          <div className="h-3.5 animate-pulse rounded bg-slate-200" />
-          <div className="h-3.5 w-11/12 animate-pulse rounded bg-slate-200" />
-          <div className="h-3.5 w-8/12 animate-pulse rounded bg-slate-200" />
+    <article style={{
+      borderRadius: 12, border: "1px solid #e2e8f0",
+      background: "#ffffff", overflow: "hidden",
+    }}>
+      <div style={{ height: 160, background: "#e2e8f0", animation: "pulse 1.4s ease-in-out infinite" }} />
+      <div style={{ padding: "18px 20px 20px" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ height: 18, width: 70, borderRadius: 999, background: "#e2e8f0", animation: "pulse 1.4s ease-in-out infinite" }} />
+          <div style={{ height: 18, width: 90, borderRadius: 999, background: "#e2e8f0", animation: "pulse 1.4s ease-in-out infinite" }} />
         </div>
-        <div className="h-10 w-28 animate-pulse rounded-md bg-slate-200" />
+        <div style={{ height: 16, width: "80%", borderRadius: 4, background: "#e2e8f0", marginBottom: 8, animation: "pulse 1.4s ease-in-out infinite" }} />
+        <div style={{ height: 12, borderRadius: 4, background: "#e2e8f0", marginBottom: 6, animation: "pulse 1.4s ease-in-out infinite" }} />
+        <div style={{ height: 12, width: "70%", borderRadius: 4, background: "#e2e8f0", marginBottom: 16, animation: "pulse 1.4s ease-in-out infinite" }} />
+        <div style={{ height: 32, width: 110, borderRadius: 999, background: "#e2e8f0", animation: "pulse 1.4s ease-in-out infinite" }} />
       </div>
     </article>
   );
 }
 
+/* ─── main page ─── */
 export default function NewsletterPage() {
   const [newsletters, setNewsletters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedNewsletterId, setSelectedNewsletterId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const previewRef = useRef(null);
+
+  const scrollToPreview = useCallback(() => {
+    previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -143,163 +335,209 @@ export default function NewsletterPage() {
       try {
         setLoading(true);
         setError("");
-
-        const response = await fetch(apiUrl("/newsletters"), {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Newsletter request failed with status ${response.status}`);
-        }
-
+        const response = await fetch(apiUrl("/newsletters"), { signal: controller.signal });
+        if (!response.ok) throw new Error(`Status ${response.status}`);
         const data = await response.json();
         const items = getNewsletterItems(data);
         setNewsletters(items);
-        setSelectedNewsletterId((currentId) => currentId || items[0]?.id || null);
-      } catch (fetchError) {
-        if (fetchError?.name !== "AbortError") {
-          setError("Unable to load newsletters right now.");
-        }
+        setSelectedNewsletterId((cur) => cur || items[0]?.id || null);
+      } catch (err) {
+        if (err?.name !== "AbortError") setError("Unable to load newsletters right now.");
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchNewsletters();
-
     return () => controller.abort();
   }, []);
 
   const visibleNewsletters = useMemo(() => newsletters.slice(0, 9), [newsletters]);
+
   const selectedNewsletter = useMemo(() => {
     if (!visibleNewsletters.length) return null;
     return (
-      visibleNewsletters.find((newsletter) => newsletter?.id === selectedNewsletterId) ||
+      visibleNewsletters.find((n) => n?.id === selectedNewsletterId) ||
       visibleNewsletters[0]
     );
   }, [selectedNewsletterId, visibleNewsletters]);
+
   const selectedHtml = getNewsletterHtml(selectedNewsletter);
+  const selectedTitle = selectedNewsletter?.title || selectedNewsletter?.subject || "Newsletter";
 
-  const deleteNewsletter = async (newsletter) => {
-    if (!newsletter?.id || deletingId) return;
-
-    setDeletingId(newsletter.id);
-    setError("");
-
-    try {
-      const response = await fetch(apiUrl(`/newsletters/${newsletter.id}/`), {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete failed with status ${response.status}`);
-      }
-
-      setNewsletters((current) => current.filter((item) => item?.id !== newsletter.id));
-      setSelectedNewsletterId((currentId) =>
-        currentId === newsletter.id ? null : currentId
-      );
-    } catch {
-      setError("Unable to delete this newsletter right now.");
-    } finally {
-      setDeletingId(null);
-    }
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      fontFamily: "'Poppins', sans-serif",
+    },
+    inner: {
+      width: "var(--site-content-width)",
+      maxWidth: "var(--site-content-width)",
+      margin: "0 auto",
+      padding: "40px 0 60px",
+    },
+    hero: { textAlign: "center", marginBottom: 48 },
+    heroTag: {
+      display: "inline-block", fontSize: 10, fontWeight: 500,
+      letterSpacing: ".18em", textTransform: "uppercase",
+      color: "#D80100", border: "1px solid #ffd0d0", background: "#fff0f0",
+      padding: "5px 14px", borderRadius: 999, marginBottom: 18,
+    },
+    heroH1: {
+      fontSize: 36, fontWeight: 600, color: "#0f172a",
+      lineHeight: 1.2, marginBottom: 12,
+    },
+    heroP: {
+      fontSize: 13.5, fontWeight: 300, color: "#475569",
+      lineHeight: 1.8, maxWidth: 480, margin: "0 auto",
+    },
+    previewWrap: {
+      marginBottom: 48, borderRadius: 12,
+      border: "1px solid #e2e8f0", background: "#ffffff", overflow: "hidden",
+    },
+    previewHeader: {
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "14px 20px", borderBottom: "1px solid #e2e8f0",
+    },
+    previewDots: { display: "flex", gap: 6 },
+    previewTitle: { fontSize: 12, color: "#94a3b8" },
+    previewPlaceholder: {
+      display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", gap: 10, padding: "72px 24px", background: "#f1f5f9",
+    },
+    previewIconWrap: {
+      width: 48, height: 48, borderRadius: "50%", background: "#e2e8f0",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    },
+    sectionLabel: {
+      fontSize: 10, fontWeight: 500, letterSpacing: ".16em",
+      textTransform: "uppercase", color: "#94a3b8", marginBottom: 20,
+      display: "block",
+    },
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+      gap: 16,
+    },
+    errorBar: {
+      background: "#fff5f5", border: "1px solid #ffd0d0",
+      color: "#991b1b", borderRadius: 8, padding: "12px 16px",
+      fontSize: 13, marginBottom: 24,
+    },
+    emptyWrap: {
+      textAlign: "center", padding: "60px 24px",
+      borderRadius: 12, border: "1px solid #e2e8f0", background: "#ffffff",
+    },
   };
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] font-[Poppins,sans-serif]">
-      <section
-        className="w-full px-4 py-12 min-[375px]:px-5 min-[768px]:px-8 min-[1024px]:py-16 min-[1440px]:px-10 min-[1800px]:px-14 min-[1800px]:py-20"
-        aria-labelledby="latest-newsletters-title"
-      >
-        <div className="mx-auto w-full max-w-[1180px] min-[1440px]:max-w-[1320px] min-[1800px]:max-w-[1640px] min-[2560px]:max-w-[1880px]">
-          <div className="mx-auto mb-8 max-w-2xl text-center min-[1024px]:mb-10 min-[1800px]:mb-12">
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[#D80100] min-[1800px]:text-sm">
-              News4Bharat Dispatch
-            </p>
-            <h1
-              id="latest-newsletters-title"
-              className="group relative inline-flex pb-3 text-2xl font-bold leading-tight text-slate-950 min-[375px]:text-3xl min-[768px]:text-4xl min-[1800px]:text-5xl"
-            >
-              Latest Newsletters
-              <span className="absolute bottom-0 left-1/2 h-1 w-20 -translate-x-1/2 overflow-hidden rounded-full bg-slate-200">
-                <span className="block h-full w-full origin-left scale-x-50 rounded-full bg-[#D80100] transition-transform duration-500 group-hover:scale-x-100" />
-              </span>
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600 min-[768px]:text-base min-[1800px]:max-w-2xl min-[1800px]:text-lg min-[1800px]:leading-8">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+      `}</style>
+
+      <main style={styles.page}>
+        <div style={styles.inner}>
+
+          {/* Hero */}
+          <div style={styles.hero}>
+            <div style={styles.heroTag}>News4Bharat Dispatch</div>
+            <h1 style={styles.heroH1}>Latest Newsletters</h1>
+            <p style={styles.heroP}>
               Curated editions with the biggest headlines, sharper context, and essential updates from across Bharat.
             </p>
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 gap-5 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3 min-[1440px]:gap-7 min-[1800px]:gap-8">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <NewsletterSkeleton key={index} />
-              ))}
+          {/* Preview window */}
+          <div ref={previewRef} style={styles.previewWrap}>
+            <div style={styles.previewHeader}>
+              <div style={styles.previewDots}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#fc625d", display: "block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#fdbc40", display: "block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#35cd4b", display: "block" }} />
+              </div>
+              <span style={styles.previewTitle}>{selectedNewsletter ? selectedTitle : "Newsletter preview"}</span>
+              <span style={{ width: 60 }} />
             </div>
-          ) : error ? (
-            <div className="rounded-lg border border-red-100 bg-white px-5 py-6 text-center text-sm font-medium text-red-600 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              {error}
-            </div>
-          ) : visibleNewsletters.length ? (
-            <>
-              <div className="mb-8 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_14px_42px_rgba(15,23,42,0.08)]">
-                {selectedHtml ? (
-                  <iframe
-                    title={selectedNewsletter?.title || selectedNewsletter?.subject || "Newsletter preview"}
-                    srcDoc={selectedHtml}
-                    className="block h-[720px] w-full border-0 bg-white min-[1800px]:h-[900px]"
-                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-                  />
-                ) : (
-                  <div className="p-6 text-sm leading-6 text-slate-700">
-                    <h2 className="text-xl font-semibold text-slate-950">
-                      {selectedNewsletter?.title || selectedNewsletter?.subject || "Newsletter"}
-                    </h2>
-                    <p className="mt-3">
-                      {selectedNewsletter?.description ||
-                        selectedNewsletter?.summary ||
-                        "No HTML design is available for this newsletter yet."}
-                    </p>
-                    {getReadMoreUrl(selectedNewsletter) !== "#" ? (
-                      <a
-                        href={getReadMoreUrl(selectedNewsletter)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-5 inline-flex rounded-md bg-[#D80100] px-4 py-2 text-sm font-semibold text-white"
-                      >
-                        Open Link
-                      </a>
-                    ) : null}
-                  </div>
+
+            {selectedHtml ? (
+              <iframe
+                title={selectedTitle}
+                srcDoc={selectedHtml}
+                style={{ display: "block", height: 720, width: "100%", border: 0, background: "#fff" }}
+                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              />
+            ) : selectedNewsletter ? (
+              <div style={{ padding: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", marginBottom: 8 }}>{selectedTitle}</h2>
+                <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>
+                  {selectedNewsletter?.description || selectedNewsletter?.summary || "No preview available for this newsletter."}
+                </p>
+                {getReadMoreUrl(selectedNewsletter) !== "#" && (
+                  <a
+                    href={getReadMoreUrl(selectedNewsletter)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: "inline-flex", marginTop: 16,
+                      background: "#D80100", color: "#fff",
+                      padding: "7px 18px", borderRadius: 999,
+                      fontSize: 12, fontWeight: 500, textDecoration: "none",
+                    }}
+                  >
+                    Open Link
+                  </a>
                 )}
               </div>
-
-              <div className="grid grid-cols-1 gap-5 min-[768px]:grid-cols-2 min-[1024px]:grid-cols-3 min-[1440px]:gap-7 min-[1800px]:gap-8">
-                {visibleNewsletters.map((newsletter, index) => (
-                  <NewsletterCard
-                    key={newsletter?.id || newsletter?.slug || newsletter?.url || index}
-                    newsletter={newsletter}
-                    isActive={selectedNewsletter === newsletter}
-                    deleting={deletingId === newsletter?.id}
-                    onSelect={() => setSelectedNewsletterId(newsletter?.id || null)}
-                    onDelete={() => deleteNewsletter(newsletter)}
-                  />
-                ))}
+            ) : (
+              <div style={styles.previewPlaceholder}>
+                <div style={styles.previewIconWrap}><MailIcon /></div>
+                <div>
+                  <strong style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569" }}>
+                    Select a newsletter below
+                  </strong>
+                  <span style={{ fontSize: 12, color: "#94a3b8" }}>Click any card to preview it here</span>
+                </div>
               </div>
-            </>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && <div style={styles.errorBar}>{error}</div>}
+
+          {/* Cards */}
+          <span style={styles.sectionLabel}>All editions</span>
+
+          {loading ? (
+            <div style={styles.grid}>
+              {Array.from({ length: 6 }).map((_, i) => <NewsletterSkeleton key={i} />)}
+            </div>
+          ) : visibleNewsletters.length ? (
+            <div style={styles.grid}>
+              {visibleNewsletters.map((newsletter, index) => (
+                <NewsletterCard
+                  key={newsletter?.id || newsletter?.slug || index}
+                  newsletter={newsletter}
+                  isActive={selectedNewsletter === newsletter}
+                  onSelect={() => setSelectedNewsletterId(newsletter?.id || null)}
+                  onViewDetails={scrollToPreview}
+                />
+              ))}
+            </div>
           ) : (
-            <div className="rounded-lg border border-slate-100 bg-white px-5 py-8 text-center shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              <h2 className="text-lg font-semibold text-slate-950">No newsletters published yet.</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+            <div style={styles.emptyWrap}>
+              <h2 style={{ fontSize: 16, fontWeight: 500, color: "#0f172a", marginBottom: 6 }}>
+                No newsletters published yet.
+              </h2>
+              <p style={{ fontSize: 13, color: "#94a3b8" }}>
                 Fresh editions will appear here as soon as they are available.
               </p>
             </div>
           )}
+
         </div>
-      </section>
-    </main>
+      </main>
+    </>
   );
 }

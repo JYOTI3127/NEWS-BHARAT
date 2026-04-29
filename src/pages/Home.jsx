@@ -106,8 +106,18 @@ function DeferredSection({
 
 const Home = () => {
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
+  const [cachedSideArticles, setCachedSideArticles] = React.useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.sessionStorage.getItem('fps-side-articles-cache');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const { data: articlesData, isLoading: _articlesLoading } = useQuery({
+  const { data: articlesData, isLoading: articlesLoading } = useQuery({
     queryKey: ['articles'],
     queryFn: () => fetchPaginatedArticles({ limit: 100, maxPages: 5, full: true }),
     staleTime: 5 * 60 * 1000,
@@ -150,18 +160,56 @@ const Home = () => {
     return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
   }, [articlesData]);
 
+  useEffect(() => {
+    if (!Array.isArray(allArticles) || allArticles.length === 0) return;
+    setCachedSideArticles(allArticles);
+
+    if (typeof window === 'undefined') return;
+    try {
+      window.sessionStorage.setItem('fps-side-articles-cache', JSON.stringify(allArticles));
+    } catch {
+      // ignore cache write failures
+    }
+  }, [allArticles]);
+
+  const sideArticlesForShowcase = React.useMemo(() => {
+    if (Array.isArray(allArticles) && allArticles.length > 0) return allArticles;
+    return Array.isArray(cachedSideArticles) ? cachedSideArticles : [];
+  }, [allArticles, cachedSideArticles]);
+
+  const sidePanelsLoading = articlesLoading && sideArticlesForShowcase.length === 0;
+
   const { data: q4ArticlesData } = useQuery({
     queryKey: ['q4-results-home'],
     queryFn: async () => {
-      for (const slug of Q4_CATEGORY_SLUGS) {
-        try {
-          const list = await fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 });
-          if (Array.isArray(list) && list.length > 0) return list;
-        } catch {
-          // Try the next Q4 slug
-        }
-      }
-      return [];
+      const settled = await Promise.allSettled(
+        Q4_CATEGORY_SLUGS.map((slug) =>
+          fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 })
+        )
+      );
+
+      const combined = settled.flatMap((result) =>
+        result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
+      );
+
+      const seen = new Set();
+      const deduped = combined.filter((article, index) => {
+        const key = String(
+          article?.id ||
+          article?.slug ||
+          article?.public_url ||
+          article?.url ||
+          article?.title ||
+          article?.headline ||
+          index
+        ).trim().toLowerCase();
+
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      return deduped;
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -257,7 +305,11 @@ const Home = () => {
         <div className="home-section-align">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
             {/* Backend /homepage/latest_news/current/ controls articles + count */}
-            <FreshPopularShowcase articles={freshPopularArticles} />
+            <FreshPopularShowcase
+              articles={freshPopularArticles}
+              sideArticles={sideArticlesForShowcase}
+              sidePanelsLoading={sidePanelsLoading}
+            />
           </Profiler>
         </div>
 
@@ -266,7 +318,6 @@ const Home = () => {
             <BreakingNewsSection
               articles={q4Articles}
               mode="q4"
-              modeCategorySlug={Q4_CATEGORY_SLUGS}
               sectionEyebrow="Corporate Tracker"
               sectionTitle="Q4 Results"
               viewAllPath="/category/q4-results"

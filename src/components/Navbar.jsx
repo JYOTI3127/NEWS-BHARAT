@@ -537,12 +537,17 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = PUSH_REQUEST_TIME
   }
 };
 
+const jumpToTop = () => {
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+};
+
 // ─────────────────────────────────────────────
 // ✅ FIX 2: LogoFull & LogoScroll — bahar + memo
 // ─────────────────────────────────────────────
 const LogoFull = memo(() => (
   <div className="logo-full">
-    <Link to="/" className="logo-full-link">
+    <Link to="/" className="logo-full-link" onClick={jumpToTop}>
       <img src={logoBig} alt="News4Bharat Logo" width="160" height="160" loading="eager" fetchPriority="high" decoding="async" />
     </Link>
   </div>
@@ -550,7 +555,7 @@ const LogoFull = memo(() => (
 
 const LogoScroll = memo(() => (
   <div className="logo-scroll">
-    <Link to="/"><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
+    <Link to="/" onClick={jumpToTop}><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
 ));
 
@@ -1396,8 +1401,19 @@ const Header = () => {
         <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
-            {["Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
-              <span key={t} className="drawer-foot-pill">{t}</span>
+            {[
+              { label: "Newsletter", path: "/newsletter" },
+              { label: "60 Second", path: "/60-second-read" },
+              { label: "Bharat Opinion", path: "/bharat-opinions" },
+            ].map((item) => (
+              <button
+                type="button"
+                key={item.label}
+                className="drawer-foot-pill"
+                onClick={() => goTo(item.path)}
+              >
+                {item.label}
+              </button>
             ))}
           </div>
         </div>

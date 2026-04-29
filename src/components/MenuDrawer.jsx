@@ -171,9 +171,7 @@ const NAV_SECTIONS = [
 // ── Footer pills ──
 const footerPills = [
   { label: "E-Paper",        path: "/e-paper" },
-  { label: "Live TV",        path: "/live-tv" },
   { label: "Newsletter",     path: "/newsletter" },
-  { label: "Podcast",        path: "/podcast" },
   { label: "60 Second",      path: "/60-second-read" },
   { label: "Bharat Opinion", path: "/bharat-opinions" },
 ];

@@ -1263,9 +1263,11 @@
 .drawer-foot-pill {
   font-size: 11px;
   font-weight: 600;
+  font-family: inherit;
   padding: 4px 10px;
   border: 1px solid #d4c9b8;
   border-radius: 20px;
+  background: transparent;
   color: #5c3d22;
   cursor: pointer;
   transition: all 0.15s;

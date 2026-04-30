@@ -371,48 +371,28 @@ class SitemapEngine:
             .order_by("-published_at")[offset: offset + limit]
         )
 
-        ET.register_namespace("",       "http://www.sitemaps.org/schemas/sitemap/0.9")
-        ET.register_namespace("image",  "http://www.google.com/schemas/sitemap-image/1.1")
-        ET.register_namespace("xhtml",  "http://www.w3.org/1999/xhtml")
+        ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")
+        ET.register_namespace("image", "http://www.google.com/schemas/sitemap-image/1.1")
 
         root = ET.Element("urlset", {
-            "xmlns":        "http://www.sitemaps.org/schemas/sitemap/0.9",
-            "xmlns:image":  "http://www.google.com/schemas/sitemap-image/1.1",
-            "xmlns:xhtml":  "http://www.w3.org/1999/xhtml",
+            "xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9",
+            "xmlns:image": "http://www.google.com/schemas/sitemap-image/1.1",
         })
 
         for a in articles:
-            # Priority based on how recent the article is
-            if a.published_at:
-                age_days = (timezone.now() - a.published_at).days
-                priority = max(0.4, 0.9 - (age_days / 365) * 0.5)
-            else:
-                priority = 0.5
-
             url_el = ET.SubElement(root, "url")
-            ET.SubElement(url_el, "loc").text        = article_url(a, base)
-            ET.SubElement(url_el, "lastmod").text    = _iso(a.published_at)
-            ET.SubElement(url_el, "changefreq").text = "weekly"
-            ET.SubElement(url_el, "priority").text   = f"{priority:.1f}"
+            ET.SubElement(url_el, "loc").text = article_url(a, base)
+            ET.SubElement(url_el, "lastmod").text = _iso(
+                getattr(a, "updated_at", None) or a.published_at or timezone.now()
+            )
 
-            img_url = a.get_image()
-            if img_url:
-                if not img_url.startswith("http"):
-                    img_url = f"{base}{img_url}"
+            for image_entry in _extract_article_image_entries(a, base):
                 img_el = ET.SubElement(url_el, "image:image")
-                ET.SubElement(img_el, "image:loc").text   = img_url
-                ET.SubElement(img_el, "image:title").text = a.title
-                if a.image_alt:
-                    ET.SubElement(img_el, "image:caption").text = a.image_alt
-
-            # Hreflang
-            for hreflang, href in [
-                ("en-in",     article_url(a, base)),
-                ("x-default", article_url(a, base)),
-            ]:
-                ET.SubElement(url_el, "xhtml:link", {
-                    "rel": "alternate", "hreflang": hreflang, "href": href
-                })
+                ET.SubElement(img_el, "image:loc").text = image_entry["loc"]
+                if image_entry.get("title"):
+                    ET.SubElement(img_el, "image:title").text = image_entry["title"]
+                if image_entry.get("caption"):
+                    ET.SubElement(img_el, "image:caption").text = image_entry["caption"]
 
         return _prettify(root)
 

@@ -3430,6 +3430,8 @@ function choosePublishDateMode(mode){
   var nowDesc=document.getElementById('publish_mode_now_desc');
   var scheduleBtn=document.getElementById('publish_mode_schedule');
   var originalBtn=document.getElementById('publish_mode_original');
+  var originalTitle=originalBtn?originalBtn.querySelector('.publish-date-choice__title'):null;
+  var originalDesc=originalBtn?originalBtn.querySelector('.publish-date-choice__desc'):null;
   var cancelBtn=document.getElementById('publish_date_cancel_btn');
 
   if(mode==='republish'){
@@ -3440,6 +3442,19 @@ function choosePublishDateMode(mode){
     if(nowDesc)nowDesc.textContent='The article will move up and display an updated timestamp.';
     if(scheduleBtn)scheduleBtn.style.display='none';
     if(originalBtn)originalBtn.style.display='';
+    if(originalTitle)originalTitle.textContent='Keep the original publish date';
+    if(originalDesc)originalDesc.textContent='Only the content changes; the old publish date stays the same.';
+    if(cancelBtn)cancelBtn.textContent='Cancel update';
+  }else if(mode==='restore'){
+    if(titleEl)titleEl.textContent='Choose publish timing';
+    if(textEl)textEl.textContent='This article was published earlier. You can publish it now, restore the previous publish date, or schedule it for later.';
+    if(nowBadge)nowBadge.textContent='Now';
+    if(nowTitle)nowTitle.textContent='Publish now';
+    if(nowDesc)nowDesc.textContent='The article will go live with a fresh publish timestamp.';
+    if(scheduleBtn)scheduleBtn.style.display='';
+    if(originalBtn)originalBtn.style.display='';
+    if(originalTitle)originalTitle.textContent='Keep the previous publish date';
+    if(originalDesc)originalDesc.textContent='Restore the earlier publish time that this article had before it was moved to draft.';
     if(cancelBtn)cancelBtn.textContent='Cancel update';
   }else{
     if(titleEl)titleEl.textContent='Choose publish action';
@@ -3449,6 +3464,8 @@ function choosePublishDateMode(mode){
     if(nowDesc)nowDesc.textContent='The article will go live immediately.';
     if(scheduleBtn)scheduleBtn.style.display='';
     if(originalBtn)originalBtn.style.display='none';
+    if(originalTitle)originalTitle.textContent='Keep the original publish date';
+    if(originalDesc)originalDesc.textContent='Only the content changes; the old publish date stays the same.';
     if(cancelBtn)cancelBtn.textContent='Cancel';
   }
 
@@ -3543,7 +3560,10 @@ async function submitArticle(forceStatus){
   }
 
   if(effectiveStatus==='published'){
-    var chooserMode=(articleId&&originalStatus==='published'&&hasOriginalPublishedAt)?'republish':'publish';
+    var chooserMode='publish';
+    if(articleId&&hasOriginalPublishedAt){
+      chooserMode=(originalStatus==='published')?'republish':'restore';
+    }
     publishDateMode=await choosePublishDateMode(chooserMode);
     if(publishDateMode==='cancel')return;
     if(publishDateMode==='schedule'){

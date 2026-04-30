@@ -5,5 +5,5 @@ ALLOWED_TRANSITIONS = {
     'legal': ['approved', 'rejected'],
     'approved': ['scheduled'],
     'scheduled': ['published'],
-    'published': ['archived'],
+    'published': ['review', 'archived'],
 }

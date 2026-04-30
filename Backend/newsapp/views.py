@@ -44,6 +44,7 @@ from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
 from django.utils.text import slugify
+from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
@@ -590,9 +591,10 @@ def _save_article_from_request(request, article=None):
     article.content  = content
 
     requested_status = data.get('status', article.status if not is_new else 'draft')
-    if previous_status == 'published' and requested_status != 'archived':
-        # Once an article is published, stale autosave/editor requests must not
-        # silently push it back into draft or any other pre-publish state.
+    if previous_status == 'published' and requested_status not in {'archived', 'review'}:
+        # Published articles may be sent back to review for editorial changes,
+        # but stale editor requests must not silently downgrade them to draft
+        # or any unrelated pre-publish state.
         requested_status = 'published'
 
     status_error = _validate_article_status_change(
@@ -2412,6 +2414,7 @@ def secure_login_view(request):
 
 @login_required
 def secure_logout_view(request):
+    pause_attendance(request.user)
     logout(request)
     messages.success(request, "You have been logged out successfully.")
     return redirect('login')
@@ -2879,6 +2882,7 @@ def mark_all_notifications_read(request):
 
 @staff_member_required
 def notification_status_api(request):
+    attendance_snapshot = get_attendance_snapshot(request.user)
     unread_notifications_qs = Notification.objects.filter(
         user=request.user,
         is_archived=False,
@@ -2894,6 +2898,12 @@ def notification_status_api(request):
         "unread_notifications": unread_notifications_qs.count(),
         "unread_messages": unread_messages_qs.count(),
         "latest_unread_notification_id": latest_unread.id if latest_unread else None,
+        "attendance": {
+            "is_active": attendance_snapshot["is_active"],
+            "display_seconds": attendance_snapshot["display_seconds"],
+            "started_at": attendance_snapshot["started_at"].isoformat() if attendance_snapshot["started_at"] else None,
+            "last_activity_at": attendance_snapshot["last_activity_at"].isoformat() if attendance_snapshot["last_activity_at"] else None,
+        },
     })
 
 
@@ -2920,11 +2930,50 @@ def online_status_view(request):
     data  = []
     for u in users:
         try:
-            online = u.profile.is_online()
+            online = get_attendance_snapshot(u)["is_active"] or u.profile.is_online()
         except Exception:
             online = False
         data.append({'id': u.id, 'online': online})
     return JsonResponse(data, safe=False)
+
+
+@staff_member_required
+def attendance_status_api(request):
+    snapshot = get_attendance_snapshot(request.user)
+    return JsonResponse({
+        "is_active": snapshot["is_active"],
+        "display_seconds": snapshot["display_seconds"],
+        "started_at": snapshot["started_at"].isoformat() if snapshot["started_at"] else None,
+        "last_activity_at": snapshot["last_activity_at"].isoformat() if snapshot["last_activity_at"] else None,
+    })
+
+
+@staff_member_required
+def attendance_heartbeat_api(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    touch_attendance(request.user)
+    snapshot = get_attendance_snapshot(request.user)
+    return JsonResponse({
+        "status": "ok",
+        "is_active": snapshot["is_active"],
+        "display_seconds": snapshot["display_seconds"],
+    })
+
+
+@staff_member_required
+def attendance_disconnect_api(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    pause_attendance(request.user)
+    snapshot = get_attendance_snapshot(request.user)
+    return JsonResponse({
+        "status": "paused",
+        "is_active": snapshot["is_active"],
+        "display_seconds": snapshot["display_seconds"],
+    })
 
 
 # ═══════════════════════════════════════════════════════

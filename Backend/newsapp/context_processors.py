@@ -1,3 +1,4 @@
+from .attendance import get_attendance_snapshot
 from .models import Notification, Message
 
 def admin_badges(request):
@@ -15,8 +16,9 @@ def admin_badges(request):
         ).count()
 
         current_user_online = False
+        attendance_snapshot = get_attendance_snapshot(request.user)
         try:
-            current_user_online = request.user.profile.is_online()
+            current_user_online = attendance_snapshot["is_active"] or request.user.profile.is_online()
         except Exception:
             current_user_online = False
 
@@ -24,6 +26,7 @@ def admin_badges(request):
             "unread_notifications": unread_notifications,
             "unread_messages": unread_messages,
             "current_user_online": current_user_online,
+            "attendance_snapshot": attendance_snapshot,
         }
 
     return {}

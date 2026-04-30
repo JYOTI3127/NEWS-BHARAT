@@ -794,6 +794,29 @@ class UserProfile(models.Model):
         return f"{self.user.username} | {self.staff_id or 'No Staff ID'}"
 
 
+class AttendanceRecord(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='attendance_records',
+    )
+    date = models.DateField()
+    total_active_seconds = models.PositiveIntegerField(default=0)
+    current_session_started_at = models.DateTimeField(null=True, blank=True)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', 'user__username']
+        unique_together = ('user', 'date')
+        verbose_name = "Attendance"
+        verbose_name_plural = "Attendance"
+
+    def __str__(self):
+        return f"{self.user.username} | {self.date}"
+
+
 class LoginAttemptLog(models.Model):
     STATUS_CHOICES = [
         ('success',     'Success'),

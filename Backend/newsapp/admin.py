@@ -20,12 +20,26 @@ from django.utils.html import format_html
 from django.urls import path
 from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
+from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
+
+
+def _format_duration(total_seconds):
+    total_seconds = max(int(total_seconds or 0), 0)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 
 try:
     admin.site.unregister(User)
     admin.site.unregister(Group)
 except:
     pass
+
+
+def _ensure_superuser(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
 
 admin.site.site_header = "News Bharat Admin Panel"
 admin.site.site_title  = "News Bharat Admin"
@@ -542,6 +556,16 @@ class NewsAdminSite(AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path(
+                'attendance/',
+                self.admin_view(self.attendance_view),
+                name='attendance',
+            ),
+            path(
+                'attendance/records/',
+                self.admin_view(self.attendance_records_view),
+                name='attendance_records',
+            ),
+            path(
                 'newsletter/',
                 self.admin_view(self.newsletter_view),
                 name='newsletter',
@@ -578,6 +602,134 @@ class NewsAdminSite(AdminSite):
             ),
         ]
         return custom_urls + urls
+
+    def attendance_view(self, request):
+        _ensure_superuser(request)
+        touch_attendance(request.user)
+        today = timezone.localdate()
+        search = (request.GET.get('q') or '').strip()
+        selected_month = (request.GET.get('month') or str(today.month)).strip()
+        selected_status = (request.GET.get('status') or 'all').strip()
+        selected_scope = (request.GET.get('scope') or 'today').strip()
+        selected_columns = (request.GET.get('columns') or 'full').strip()
+        user_rows = []
+        active_now = 0
+        total_seconds_today = 0
+
+        users = User.objects.filter(is_staff=True).select_related('profile').order_by('first_name', 'username')
+        if search:
+            users = users.filter(
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+
+        for member in users:
+            snapshot = get_attendance_snapshot(member)
+            is_active = snapshot['is_active']
+            started_at = snapshot['started_at']
+            last_activity_at = snapshot['last_activity_at']
+            seconds_today = snapshot['display_seconds']
+
+            if selected_month.isdigit():
+                selected_month_int = int(selected_month)
+                month_matches = False
+                if last_activity_at and last_activity_at.month == selected_month_int:
+                    month_matches = True
+                elif started_at and started_at.month == selected_month_int:
+                    month_matches = True
+                elif seconds_today == 0 and today.month == selected_month_int:
+                    month_matches = True
+                if not month_matches:
+                    continue
+
+            if selected_status == 'present' and not is_active:
+                continue
+            if selected_status == 'inactive' and is_active:
+                continue
+            if selected_scope == 'worked' and seconds_today <= 0:
+                continue
+            if selected_scope == 'active' and not is_active:
+                continue
+
+            if is_active:
+                active_now += 1
+            total_seconds_today += seconds_today
+            user_rows.append({
+                'user': member,
+                'is_active': is_active,
+                'seconds_today': seconds_today,
+                'duration_today': _format_duration(seconds_today),
+                'started_at': started_at,
+                'last_activity_at': last_activity_at,
+            })
+
+        return TemplateResponse(request, 'admin/attendance.html', {
+            **self.each_context(request),
+            'title': 'Attendance',
+            'attendance_rows': user_rows,
+            'search': search,
+            'today': today,
+            'staff_count': users.count(),
+            'active_now_count': active_now,
+            'total_hours_today': round(total_seconds_today / 3600, 1),
+            'total_duration_today': _format_duration(total_seconds_today),
+            'selected_month': selected_month,
+            'selected_status': selected_status,
+            'selected_scope': selected_scope,
+            'selected_columns': selected_columns,
+            'month_options': [
+                ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
+                ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'),
+                ('9', 'September'), ('10', 'October'), ('11', 'November'), ('12', 'December'),
+            ],
+        })
+
+    def attendance_records_view(self, request):
+        _ensure_superuser(request)
+        touch_attendance(request.user)
+        records = AttendanceRecord.objects.select_related('user').order_by('-date', 'user__username')
+        search = (request.GET.get('q') or '').strip()
+        selected_date = (request.GET.get('date') or '').strip()
+
+        if search:
+            records = records.filter(
+                Q(user__username__icontains=search) |
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__email__icontains=search)
+            )
+        if selected_date:
+            records = records.filter(date=selected_date)
+
+        paginator = Paginator(records, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        record_rows = []
+        today = timezone.localdate()
+        for record in page_obj.object_list:
+            seconds = record.total_active_seconds
+            is_active = False
+            if record.date == today:
+                snapshot = get_attendance_snapshot(record.user)
+                seconds = snapshot['display_seconds']
+                is_active = snapshot['is_active']
+            record_rows.append({
+                'record': record,
+                'duration': _format_duration(seconds),
+                'seconds': seconds,
+                'is_active': is_active,
+            })
+
+        return TemplateResponse(request, 'admin/attendance_records.html', {
+            **self.each_context(request),
+            'title': 'Attendance Records',
+            'records': record_rows,
+            'page_obj': page_obj,
+            'search': search,
+            'selected_date': selected_date,
+            'total_records': records.count(),
+        })
 
     def contact_queries_view(self, request):
         queries = ContactQuery.objects.all().order_by('-created_at')
@@ -771,6 +923,7 @@ class NewsAdminSite(AdminSite):
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout
         from django.shortcuts import redirect
+        pause_attendance(request.user)
         auth_logout(request)
         return redirect('/admin/login/')
 
@@ -1331,7 +1484,16 @@ class ArticleAdmin(admin.ModelAdmin):
 
 
 class RoleAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
     filter_horizontal = ('permissions',)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['permission_count'] = Permission.objects.count()
+        extra_context['user_count'] = UserProfile.objects.filter(roles__isnull=False).distinct().count()
+        extra_context['active_count'] = Role.objects.count()
+        extra_context['current_query'] = (request.GET.get('q') or '').strip()
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 class PermissionAdmin(admin.ModelAdmin):

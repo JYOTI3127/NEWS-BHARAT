@@ -1,0 +1,105 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Attendance Records | News Admin{% endblock %}
+{% block content_title %}Attendance Records{% endblock %}
+
+{% block content %}
+<div class="attendance-page">
+  <div class="perm-page-header">
+    <div>
+      <div class="perm-breadcrumb">Dashboard / Team / Attendance / <span>Records</span></div>
+      <div class="perm-title">Attendance Records</div>
+      <div class="perm-subtitle">Review daily activity totals for every staff member from a dedicated records screen</div>
+    </div>
+    <a href="/admin/attendance/" class="btn-perm-add">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+      Back to Attendance
+    </a>
+  </div>
+
+  <div class="perm-table-card">
+    <div class="perm-table-toolbar attendance-toolbar-stack">
+      <div class="perm-toolbar-title">
+        Attendance Records
+        <span>({{ total_records }} entries)</span>
+      </div>
+
+      <form method="get" class="attendance-record-filters">
+        <div class="attendance-search-box">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" name="q" value="{{ search }}" placeholder="Search users...">
+        </div>
+        <input type="date" name="date" value="{{ selected_date }}" class="attendance-date-input">
+        <button type="submit" class="btn-perm-add attendance-search-btn">Apply</button>
+      </form>
+    </div>
+
+    <div class="perm-table-wrap">
+      <table class="perm-table attendance-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>User</th>
+            <th>Total Active Time</th>
+            <th>Last Activity</th>
+            <th>Live Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in records %}
+          <tr>
+            <td><strong>{{ row.record.date|date:"d M Y" }}</strong></td>
+            <td>
+              <div class="attendance-user-cell">
+                <div class="attendance-user-avatar">{{ row.record.user.get_full_name|default:row.record.user.username|slice:":1"|upper }}</div>
+                <div>
+                  <div class="attendance-user-name">{{ row.record.user.get_full_name|default:row.record.user.username }}</div>
+                  <div class="attendance-user-meta">{{ row.record.user.email|default:row.record.user.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ row.duration }}</td>
+            <td>{% if row.record.last_activity_at %}{{ row.record.last_activity_at|date:"d M Y, h:i A" }}{% else %}—{% endif %}</td>
+            <td>
+              <span class="attendance-status-pill {% if row.is_active %}is-online{% else %}is-offline{% endif %}">
+                {% if row.is_active %}Online{% else %}Closed{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="attendance-empty">No attendance records match the current filters.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="perm-pagination">
+      <div class="perm-page-info">
+        Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+      </div>
+      <div class="perm-page-btns">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if selected_date %}&date={{ selected_date }}{% endif %}" class="perm-page-btn">‹</a>
+        {% else %}
+          <button class="perm-page-btn" disabled>‹</button>
+        {% endif %}
+        <button class="perm-page-btn active">{{ page_obj.number }}</button>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if selected_date %}&date={{ selected_date }}{% endif %}" class="perm-page-btn">›</a>
+        {% else %}
+          <button class="perm-page-btn" disabled>›</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

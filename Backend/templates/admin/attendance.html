@@ -1,0 +1,161 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Attendance | News Admin{% endblock %}
+{% block content_title %}Attendance{% endblock %}
+
+{% block content %}
+<div class="attendance-page">
+  <div class="attendance-shell">
+    <div class="attendance-hero">
+      <div>
+        <div class="perm-breadcrumb">Dashboard / Team / <span>Attendance</span></div>
+        <h2 class="attendance-hero-title">Attendance Overview</h2>
+        <p class="attendance-hero-copy">Track who is active in the admin panel, when the session started, and how long each team member has worked today.</p>
+      </div>
+      <div class="attendance-hero-actions">
+        <div class="attendance-live-pill">
+          <span class="attendance-live-dot"></span>
+          Live newsroom tracker
+        </div>
+        <a href="/admin/attendance/records/" class="btn-perm-add">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15">
+            <path d="M9 17v-6"/><path d="M13 17V7"/><path d="M17 17v-3"/><path d="M5 21h14"/><path d="M5 3h14"/>
+          </svg>
+          Records
+        </a>
+      </div>
+    </div>
+
+    <div class="attendance-kpi-grid">
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Staff Members</span>
+        <strong class="attendance-kpi-value">{{ staff_count }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Active Right Now</span>
+        <strong class="attendance-kpi-value">{{ active_now_count }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Combined Active Time</span>
+        <strong class="attendance-kpi-value">{{ total_duration_today }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Attendance Date</span>
+        <strong class="attendance-kpi-value">{{ today|date:"d M Y" }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="attendance-board">
+    <div class="attendance-board-toolbar">
+      <form method="get" class="attendance-search-form">
+        <div class="attendance-board-left">
+          <div class="attendance-filter-group">
+            <label class="attendance-filter-label" for="attendanceMonth">Month</label>
+            <select id="attendanceMonth" name="month" class="attendance-filter-select">
+              {% for value, label in month_options %}
+                <option value="{{ value }}" {% if selected_month == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="attendance-filter-group">
+            <label class="attendance-filter-label" for="attendanceColumns">Columns</label>
+            <select id="attendanceColumns" name="columns" class="attendance-filter-select">
+              <option value="full" {% if selected_columns == "full" %}selected{% endif %}>Full View</option>
+              <option value="basic" {% if selected_columns == "basic" %}selected{% endif %}>Basic View</option>
+              <option value="timing" {% if selected_columns == "timing" %}selected{% endif %}>Timing View</option>
+            </select>
+          </div>
+
+          <div class="attendance-filter-group">
+            <label class="attendance-filter-label" for="attendanceStatus">Live</label>
+            <select id="attendanceStatus" name="status" class="attendance-filter-select">
+              <option value="all" {% if selected_status == "all" %}selected{% endif %}>All Status</option>
+              <option value="present" {% if selected_status == "present" %}selected{% endif %}>Present</option>
+              <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactive</option>
+            </select>
+          </div>
+
+          <div class="attendance-filter-group">
+            <label class="attendance-filter-label" for="attendanceScope">Today</label>
+            <select id="attendanceScope" name="scope" class="attendance-filter-select">
+              <option value="today" {% if selected_scope == "today" %}selected{% endif %}>All Staff</option>
+              <option value="worked" {% if selected_scope == "worked" %}selected{% endif %}>Worked Today</option>
+              <option value="active" {% if selected_scope == "active" %}selected{% endif %}>Active Now</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="attendance-search-box">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" name="q" value="{{ search }}" placeholder="Search team members...">
+        </div>
+        <button type="submit" class="attendance-search-submit">Search</button>
+      </form>
+    </div>
+
+    <div class="attendance-table-wrap">
+      <table class="attendance-table attendance-grid-table">
+        <thead>
+          <tr>
+            <th class="attendance-col-check"></th>
+            <th>Member</th>
+            {% if selected_columns != "basic" %}<th>Date</th>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<th>Clock-In</th>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<th>Clock-Out / Last Seen</th>{% endif %}
+            <th>Total Hours</th>
+            <th>Status</th>
+            {% if selected_columns == "full" or selected_columns == "basic" %}<th>Notes</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in attendance_rows %}
+          <tr>
+            <td class="attendance-col-check">
+              <span class="attendance-row-indicator {% if row.is_active %}is-online{% else %}is-offline{% endif %}"></span>
+            </td>
+            <td>
+              <div class="attendance-user-cell">
+                <div class="attendance-user-avatar">{{ row.user.get_full_name|default:row.user.username|slice:":1"|upper }}</div>
+                <div>
+                  <div class="attendance-user-name">{{ row.user.get_full_name|default:row.user.username }}</div>
+                  <div class="attendance-user-meta">{{ row.user.email|default:row.user.username }}</div>
+                </div>
+              </div>
+            </td>
+            {% if selected_columns != "basic" %}<td>{{ today|date:"d M Y" }}</td>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.started_at %}{{ row.started_at|date:"h:i A" }}{% else %}-{% endif %}</td>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.last_activity_at %}{{ row.last_activity_at|date:"h:i A" }}{% else %}-{% endif %}</td>{% endif %}
+            <td><strong class="attendance-hours">{{ row.duration_today }}</strong></td>
+            <td>
+              <span class="attendance-status-pill {% if row.is_active %}is-online{% else %}is-offline{% endif %}">
+                {% if row.is_active %}Present{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            {% if selected_columns == "full" or selected_columns == "basic" %}<td>
+              <span class="attendance-note">
+                {% if row.is_active %}
+                  Working in admin panel
+                {% elif row.last_activity_at %}
+                  Last activity recorded
+                {% else %}
+                  No activity yet
+                {% endif %}
+              </span>
+            </td>{% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{% if selected_columns == 'full' %}8{% elif selected_columns == 'timing' %}7{% else %}6{% endif %}" class="attendance-empty">No attendance data found for the selected filter.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

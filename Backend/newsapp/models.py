@@ -1103,6 +1103,22 @@ class JobOpening(models.Model):
     def __str__(self):
         return f"{self.title} ({self.team})" if self.team else self.title
 
+
+class FrontendBuildBatch(models.Model):
+    batch_key = models.CharField(max_length=50, unique=True, default='default')
+    pending_publish_count = models.PositiveIntegerField(default=0)
+    pending_article_ids = models.JSONField(default=list, blank=True)
+    first_pending_at = models.DateTimeField(null=True, blank=True)
+    last_queued_at = models.DateTimeField(null=True, blank=True)
+    last_triggered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Frontend Build Batch'
+        verbose_name_plural = 'Frontend Build Batches'
+
+    def __str__(self):
+        return f"{self.batch_key} ({self.pending_publish_count} pending)"
+
 class PushSubscription(models.Model):
     """Website visitors ke browser push notification subscriptions"""
     endpoint = models.TextField(unique=True)

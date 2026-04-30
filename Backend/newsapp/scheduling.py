@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 
+from .frontend_build import process_pending_frontend_build_batch
 from .models import Article
 
 
@@ -46,4 +47,6 @@ def maybe_publish_due_articles(*, now=None):
 
 
 def publish_due_articles_cron():
-    return publish_due_articles()
+    published_count = publish_due_articles()
+    process_pending_frontend_build_batch()
+    return published_count

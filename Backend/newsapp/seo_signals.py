@@ -13,6 +13,7 @@ import logging
 from django.db.models.signals import post_save
 from django.db.models.signals import pre_save
 from django.db.models.signals import m2m_changed
+from django.db import transaction
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,10 @@ logger = logging.getLogger(__name__)
 def register():
     from newsapp.models import Article
     from newsapp.seo_direct import submit_article_everywhere
-    from newsapp.frontend_build import trigger_frontend_build_on_commit
+    from newsapp.frontend_build import (
+        queue_published_article_build,
+        trigger_frontend_build_on_commit,
+    )
 
     @receiver(pre_save, sender=Article)
     def capture_previous_article_status(sender, instance, **kwargs):
@@ -80,11 +84,18 @@ def register():
             force_build,
         )
 
-        trigger_frontend_build_on_commit(
-            reason=build_reason,
-            article=instance,
-            force=force_build,
-        )
+        if build_reason == "article_published":
+            transaction.on_commit(
+                lambda article_id=instance.pk: queue_published_article_build(
+                    article=Article.objects.filter(pk=article_id).only("id", "slug", "status").first()
+                )
+            )
+        else:
+            trigger_frontend_build_on_commit(
+                reason=build_reason,
+                article=instance,
+                force=force_build,
+            )
 
     @receiver(m2m_changed, sender=Article.categories.through)
     def on_published_article_categories_changed(sender, instance, action, **kwargs):

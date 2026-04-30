@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
     "build": "node -e \"const fs=require('fs'); ['dist','build','node_modules/.vite'].forEach((p)=>{try{fs.rmSync(p,{recursive:true,force:true});}catch{}})\" && vite build && node prerender.mjs",
     "build:static": "vite build",
+    "check:states": "node scripts/check-state-coverage.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "prerender": "node prerender.mjs"

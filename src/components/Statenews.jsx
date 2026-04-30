@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import { canonicalizeRegionName, normalizeRegionKey } from "../lib/stateRegion";
 
 // ── State List ────────────────────────────────────────────────
 const stateList = [
@@ -12,6 +13,22 @@ const stateList = [
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
 ];
 
+const toUniqueRegionList = (values = []) => {
+  const seen = new Set();
+  const result = [];
+
+  values.forEach((value) => {
+    const canonical = canonicalizeRegionName(value);
+    if (!canonical) return;
+    const key = normalizeRegionKey(canonical);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(canonical);
+  });
+
+  return result;
+};
+
 // ── Helpers ───────────────────────────────────────────────────
 const imgSrc = (a) => a?.image_url || a?.image || null;
 const categoryLabel = (article, fallback = "STATE NEWS") =>
@@ -21,7 +38,7 @@ const categoryLabel = (article, fallback = "STATE NEWS") =>
 
 const getSelectedStateName = (article) => {
   if (typeof article?.selected_state_name === "string" && article.selected_state_name.trim()) {
-    return article.selected_state_name.trim();
+    return canonicalizeRegionName(article.selected_state_name);
   }
 
   const subs = article?.selected_subcategories?.subs;
@@ -30,7 +47,7 @@ const getSelectedStateName = (article) => {
   for (const values of Object.values(subs)) {
     if (Array.isArray(values) && values.length > 0) {
       const first = values.find((value) => typeof value === "string" && value.trim());
-      if (first) return first.trim();
+      if (first) return canonicalizeRegionName(first);
     }
   }
 
@@ -51,9 +68,11 @@ const getSortTimestamp = (article) => {
 
 /* NAYA */
 const normalizeAllStatesResponse = (data) => {
-  const states = Array.isArray(data?.states) && data.states.length > 0
-    ? data.states
-    : stateList;
+  const states = toUniqueRegionList(
+    Array.isArray(data?.states) && data.states.length > 0
+      ? data.states
+      : stateList
+  );
 
   let articles = [];
 
@@ -71,7 +90,7 @@ const normalizeAllStatesResponse = (data) => {
       const stateArticles = Array.isArray(groupedArticles[state]) ? groupedArticles[state] : [];
       return stateArticles.map((article) => ({
         ...article,
-        selected_state_name: state,
+        selected_state_name: canonicalizeRegionName(state),
       }));
     });
   }
@@ -90,7 +109,7 @@ const normalizeAllStatesResponse = (data) => {
 
 /* PURANA */
 const normalizeSingleStateResponse = (data, fallbackState) => {
-  const stateName = data?.state || fallbackState;
+  const stateName = canonicalizeRegionName(data?.state || fallbackState);
   const articles = Array.isArray(data?.results)
     ? data.results
     : Array.isArray(data)
@@ -195,7 +214,7 @@ export default function StateNews() {
     setStateLoading(true);
 
     const url = activeState
-      ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(activeState)}&page=${statePage}&limit=10`
+      ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(canonicalizeRegionName(activeState))}&page=${statePage}&limit=10`
       : `${API_BASE}/articles/by-state/`;
 
     fetch(url)

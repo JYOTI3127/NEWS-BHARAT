@@ -10,6 +10,7 @@ import {
   getArticleDateValue,
 } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import { canonicalizeRegionName, normalizeRegionKey } from "../lib/stateRegion";
 import AdvertisementSlot from "../components/AdvertisementSlot";
 
 const useViewportWidth = () => {
@@ -36,11 +37,15 @@ const formatViews = (v) => {
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const CATEGORY_ARTICLE_LIMIT = 100;
+const STATE_ARTICLE_LIMIT = 10;
 const MORE_IN_ARTICLES_LIMIT = 17;
 const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
+const NON_NAVIGABLE_STATE_PARENT_LABELS = new Set(["states of india", "union territories"]);
 
 const isStateCategorySlug = (value) =>
   STATE_CATEGORY_SLUGS.has(String(value || "").trim().toLowerCase());
+const isStateParentGroupLabel = (value) =>
+  NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(value || "").trim().toLowerCase());
 
 const getSelectedSubcategoryValues = (selectedSubcategories) => {
   if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
@@ -84,18 +89,25 @@ const getPossibleStateValues = (article) => {
 
 const doesArticleMatchSubcategory = (article, subFilter) => {
   const target = String(subFilter || "").trim().toLowerCase();
+  const normalizedTarget = normalizeRegionKey(subFilter);
   if (!target) return true;
 
   const selectedValues = getSelectedSubcategoryValues(article.selected_subcategories);
   if (
-    selectedValues.some((value) => String(value || "").trim().toLowerCase() === target)
+    selectedValues.some((value) => {
+      const text = String(value || "").trim();
+      return text.toLowerCase() === target || normalizeRegionKey(text) === normalizedTarget;
+    })
   ) {
     return true;
   }
 
   if (
     getPossibleStateValues(article).some(
-      (value) => String(value || "").trim().toLowerCase() === target
+      (value) => {
+        const text = String(value || "").trim();
+        return text.toLowerCase() === target || normalizeRegionKey(text) === normalizedTarget;
+      }
     )
   ) {
     return true;
@@ -111,7 +123,10 @@ export default function CategoryPage() {
   const viewportWidth = useViewportWidth();
 
   const searchParams  = new URLSearchParams(location.search);
-  const subFilter     = searchParams.get("subcategory") || "";
+  const rawSubFilter  = searchParams.get("subcategory") || "";
+  const subFilter = isStateCategorySlug(slug) && isStateParentGroupLabel(rawSubFilter)
+    ? ""
+    : rawSubFilter;
 
   const [category, setCategory]     = useState(null);
   const [articles, setArticles]     = useState([]);
@@ -124,11 +139,14 @@ export default function CategoryPage() {
       setLoading(true);
       setVisibleCount(6);
       const isStateCategory = isStateCategorySlug(slug);
-      const stateSubFilter = String(subFilter || "").trim();
+      const stateSubFilter = isStateCategory
+        ? canonicalizeRegionName(subFilter)
+        : String(subFilter || "").trim();
       const shouldFetchByState = isStateCategory && stateSubFilter.length > 0;
+      const requestLimit = shouldFetchByState ? STATE_ARTICLE_LIMIT : CATEGORY_ARTICLE_LIMIT;
       const articlesUrl = shouldFetchByState
-        ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`
-        : `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${CATEGORY_ARTICLE_LIMIT}`;
+        ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`
+        : `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${requestLimit}`;
 
       const [categoryResult, articlesResult] = await Promise.allSettled([
         fetch(`${API_BASE}/categories/`).then((res) => res.json()),
@@ -151,9 +169,12 @@ export default function CategoryPage() {
           (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
         );
 
-        const finalArticles = subFilter
-          ? sorted.filter((a) => doesArticleMatchSubcategory(a, subFilter))
-          : sorted;
+        // When data is already fetched from by-state endpoint, avoid filtering it again on client.
+        const finalArticles = shouldFetchByState
+          ? sorted
+          : subFilter
+            ? sorted.filter((a) => doesArticleMatchSubcategory(a, subFilter))
+            : sorted;
 
         const normalized = finalArticles.map((a) => ({
           ...a,

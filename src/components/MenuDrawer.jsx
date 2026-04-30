@@ -80,11 +80,17 @@ const SLUG_OVERRIDES = {
   "bharats-startups": "bharat-startups",
   "breaking-news": "breaking-news",
 };
+const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
+const NON_NAVIGABLE_STATE_PARENT_LABELS = new Set(["states of india", "union territories"]);
 
 const getFinalSlug = (slug, label) => {
   const normalized = makeSlug(slug, label);
   return SLUG_OVERRIDES[normalized] || normalized;
 };
+
+const isStateParentGroupLabel = (categorySlug, subcategoryLabel) =>
+  STATE_CATEGORY_SLUGS.has(String(categorySlug || "").trim().toLowerCase()) &&
+  NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(subcategoryLabel || "").trim().toLowerCase());
 
 // ── All nav links ──
 const navLinks = [
@@ -504,18 +510,20 @@ export default function MenuDrawer({ open, onClose }) {
                       const subcatOpen = expandedSubcat === key;
                       const subcategoryPath = `/category/${finalSlug}?subcategory=${encodeURIComponent(sub.label)}`;
                       const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
+                      const isParentOnlyGroup = isStateParentGroupLabel(finalSlug, sub.label);
                       return (
                         <div key={sub.label}>
                           <button className={`md-subcat-head${subcatOpen ? " active" : ""}`}
                             onClick={(e) => {
                               if (hasTopics) {
                                 toggleSubcat(e, key);
-                              } else {
+                              } else if (!isParentOnlyGroup) {
                                 handleNav(subcategoryPath);
                               }
                             }}>
                             <span
                               onClick={(e) => {
+                                if (isParentOnlyGroup) return;
                                 e.stopPropagation();
                                 handleNav(subcategoryPath);
                               }}

@@ -14,6 +14,7 @@ import {
 import "../Navbar.css";
 import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
+import { canonicalizeRegionName, normalizeRegionKey } from "../lib/stateRegion";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
 // ─────────────────────────────────────────────
@@ -144,6 +145,11 @@ const SLUG_OVERRIDES = {
 };
 
 const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
+const NON_NAVIGABLE_STATE_PARENT_LABELS = new Set(["states of india", "union territories"]);
+
+const isStateParentGroupLabel = (categorySlug, subcategoryLabel) =>
+  STATE_CATEGORY_SLUGS.has(String(categorySlug || "").trim().toLowerCase()) &&
+  NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(subcategoryLabel || "").trim().toLowerCase());
 
 const FALLBACK_STATES_OF_INDIA = [
   "Andhra Pradesh",
@@ -174,7 +180,6 @@ const FALLBACK_STATES_OF_INDIA = [
   "Uttar Pradesh",
   "Uttarakhand",
   "West Bengal",
-  "Jammu and Kashmir",
 ];
 
 const FALLBACK_UNION_TERRITORIES = [
@@ -189,7 +194,7 @@ const FALLBACK_UNION_TERRITORIES = [
 ];
 
 const UNION_TERRITORIES_LOOKUP = new Set(
-  FALLBACK_UNION_TERRITORIES.map((value) => value.toLowerCase())
+  FALLBACK_UNION_TERRITORIES.map((value) => normalizeRegionKey(value))
 );
 
 const toUniqueList = (values = []) => {
@@ -197,12 +202,12 @@ const toUniqueList = (values = []) => {
   const result = [];
 
   values.forEach((value) => {
-    const normalized = String(value || "").trim();
-    if (!normalized) return;
-    const key = normalized.toLowerCase();
+    const canonical = canonicalizeRegionName(value);
+    if (!canonical) return;
+    const key = normalizeRegionKey(canonical);
     if (seen.has(key)) return;
     seen.add(key);
-    result.push(normalized);
+    result.push(canonical);
   });
 
   return result;
@@ -213,14 +218,14 @@ const splitStatesAndUnionTerritories = (stateNames = []) => {
   const unionTerritories = [];
 
   stateNames.forEach((name) => {
-    const normalized = String(name || "").trim();
-    if (!normalized) return;
+    const canonical = canonicalizeRegionName(name);
+    if (!canonical) return;
 
-    const key = normalized.toLowerCase();
+    const key = normalizeRegionKey(canonical);
     if (UNION_TERRITORIES_LOOKUP.has(key)) {
-      unionTerritories.push(normalized);
+      unionTerritories.push(canonical);
     } else {
-      states.push(normalized);
+      states.push(canonical);
     }
   });
 
@@ -1336,6 +1341,7 @@ const Header = () => {
                       const subcatOpen = expandedSubcat === subcatKey;
                       const subcategoryPath = `/category/${finalSlug}?subcategory=${encodeURIComponent(sub.label)}`;
                       const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
+                      const isParentOnlyGroup = isStateParentGroupLabel(finalSlug, sub.label);
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
                           <div
@@ -1343,14 +1349,15 @@ const Header = () => {
                             onClick={(e) => {
                               if (hasTopics) {
                                 toggleSubcat(e, subcatKey);
-                              } else {
+                              } else if (!isParentOnlyGroup) {
                                 goTo(subcategoryPath);
                               }
                             }}
                           >
                             <span
-                              className="cursor-pointer hover:text-red-600"
+                              className={isParentOnlyGroup ? "" : "cursor-pointer hover:text-red-600"}
                               onClick={(e) => {
+                                if (isParentOnlyGroup) return;
                                 e.stopPropagation();
                                 goTo(subcategoryPath);
                               }}

@@ -859,6 +859,10 @@ export default function ArticleDetails() {
   /* ── reading time ── */
 
   const shellStyle = is2K ? { width: "var(--site-content-width)", maxWidth: "var(--site-content-width)", paddingLeft: 0, paddingRight: 0 } : undefined;
+  const articleTextMaxWidth = is2K ? "1120px" : "720px";
+  const contentGridStyle = is2K
+    ? { ...shellStyle, gridTemplateColumns: "minmax(0, 1120px) 340px", columnGap: "24px", justifyContent: "space-between" }
+    : shellStyle;
   const heroImageWrapStyle = is2K ? { display: "flex", justifyContent: "flex-start", alignItems: "center" } : undefined;
   const heroImageCardClassName = is2K ? "w-fit max-w-full mr-auto rounded-xl overflow-hidden mb-7 shadow-sm" : "w-full rounded-xl overflow-hidden mb-7 shadow-sm";
   const heroImageStyle = is2K ? { width: "min(100%, 1480px)", height: "auto", maxWidth: "100%", maxHeight: "min(72vh, 820px)", objectFit: "contain", objectPosition: "left center", margin: "0" } : undefined;
@@ -911,7 +915,7 @@ export default function ArticleDetails() {
       <ReadingProgressBar />
 
       {/* ── 2. FLOATING SHARE BAR ── */}
-      <FloatingShareBar article={article} onShare={handleShare} copied={copied} />
+      
 
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
         <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
@@ -956,7 +960,7 @@ export default function ArticleDetails() {
 
       <div
         className="category-page-align mx-auto px-4 sm:px-6 pb-8 pt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start"
-        style={shellStyle}
+        style={contentGridStyle}
       >
 
         {/* ── MAIN ARTICLE ── */}
@@ -966,12 +970,12 @@ export default function ArticleDetails() {
             <ArrowLeft size={13} /> Back to Home
           </Link>
 
-          <h1 className="text-[clamp(20px,4vw,36px)] font-extrabold leading-[1.3] text-gray-900 mb-3 tracking-tight" style={{ maxWidth: "720px" }}>
+          <h1 className="text-[clamp(20px,4vw,36px)] font-extrabold leading-[1.3] text-gray-900 mb-3 tracking-tight" style={{ maxWidth: articleTextMaxWidth }}>
             {article.title}
           </h1>
 
           {visibleSummary && (
-            <p className="article-summary text-[15px] text-gray-500 mb-4 leading-[1.7]" style={{ maxWidth: "720px" }}>
+            <p className="article-summary text-[15px] text-gray-500 mb-4 leading-[1.7]" style={{ maxWidth: articleTextMaxWidth }}>
               {visibleSummary}
             </p>
           )}
@@ -1060,12 +1064,12 @@ export default function ArticleDetails() {
               [&_p:first-of-type::first-letter]:mr-2
               [&_p:first-of-type::first-letter]:mt-1
               [&_p:first-of-type::first-letter]:text-red-600"
-            style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: "720px" }}
+            style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
 
           {/* ── 7. TAGS — "Related Topics" ── */}
           {tags.length > 0 && (
-            <div className="mt-8 pt-5 border-t border-gray-200" style={{ maxWidth: "720px" }}>
+            <div className="mt-8 pt-5 border-t border-gray-200" style={{ maxWidth: articleTextMaxWidth }}>
               <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
                 Related Topics
               </p>
@@ -1086,7 +1090,7 @@ export default function ArticleDetails() {
           )}
 
           {/* ── 8. SHARE SECTION (inline, kept for convenience) ── */}
-          <div className="mt-10 pt-6 border-t border-gray-200" style={{ maxWidth: "720px" }}>
+          <div className="mt-10 pt-6 border-t border-gray-200" style={{ maxWidth: articleTextMaxWidth }}>
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
               Share this article
             </p>

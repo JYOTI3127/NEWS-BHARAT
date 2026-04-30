@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django import forms
 from newsapp.forms import CustomUserCreationForm
 from .models import *
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -92,6 +93,101 @@ class CareerApplicationAdmin(admin.ModelAdmin):
     )
     list_editable = ('status',)
     ordering = ('-created_at',)
+
+
+class JobOpeningAdmin(admin.ModelAdmin):
+    list_display = ('title', 'team', 'employment_type', 'location', 'display_order', 'is_active', 'updated_at')
+    list_filter = ('is_active', 'employment_type')
+    search_fields = ('title', 'team', 'location', 'short_description', 'skills')
+    list_editable = ('display_order', 'is_active')
+    ordering = ('display_order', 'title')
+    change_list_template = 'admin/newsapp/jobopening/change_list.html'
+
+    class JobOpeningModalForm(forms.ModelForm):
+        class Meta:
+            model = JobOpening
+            fields = [
+                'title',
+                'team',
+                'employment_type',
+                'location',
+                'short_description',
+                'skills',
+                'icon_key',
+                'apply_url',
+                'display_order',
+                'is_active',
+            ]
+            widgets = {
+                'short_description': forms.Textarea(attrs={'rows': 4}),
+            }
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        search = (request.GET.get('q') or '').strip()
+        employment_type = (request.GET.get('employment_type') or '').strip()
+        active_filter = (request.GET.get('is_active') or '').strip()
+        open_modal = False
+
+        if request.method == 'POST' and '_create_job_opening' in request.POST:
+            form = self.JobOpeningModalForm(request.POST)
+            open_modal = True
+            if form.is_valid():
+                form.save()
+                self.message_user(request, "Vacancy added successfully.", level=messages.SUCCESS)
+                return redirect('/admin/newsapp/jobopening/')
+        else:
+            form = self.JobOpeningModalForm(initial={
+                'employment_type': 'full_time',
+                'icon_key': 'briefcase',
+                'display_order': JobOpening.objects.count(),
+                'is_active': True,
+            })
+
+        jobs = JobOpening.objects.all().order_by('display_order', 'title')
+        if search:
+            jobs = jobs.filter(
+                Q(title__icontains=search) |
+                Q(team__icontains=search) |
+                Q(location__icontains=search) |
+                Q(short_description__icontains=search) |
+                Q(skills__icontains=search)
+            )
+        if employment_type:
+            jobs = jobs.filter(employment_type=employment_type)
+        if active_filter in {'true', 'false'}:
+            jobs = jobs.filter(is_active=(active_filter == 'true'))
+
+        jobs = list(jobs)
+        theme_classes = [
+            'jobs-card-theme-1',
+            'jobs-card-theme-2',
+            'jobs-card-theme-3',
+            'jobs-card-theme-4',
+            'jobs-card-theme-5',
+            'jobs-card-theme-6',
+        ]
+        for index, job in enumerate(jobs):
+            job.skills_list = [item.strip() for item in (job.skills or '').split(',') if item.strip()]
+            job.theme_class = theme_classes[index % len(theme_classes)]
+
+        total_jobs = JobOpening.objects.count()
+        active_jobs = JobOpening.objects.filter(is_active=True).count()
+        remote_friendly = JobOpening.objects.filter(location__icontains='remote').count()
+
+        extra_context.update({
+            'jobs': jobs,
+            'job_modal_form': form,
+            'job_openings_total': total_jobs,
+            'job_openings_active': active_jobs,
+            'job_openings_remote': remote_friendly,
+            'job_openings_search': search,
+            'job_openings_employment_type': employment_type,
+            'job_openings_is_active': active_filter,
+            'job_openings_open_modal': open_modal,
+            'employment_type_choices': JobOpening.EMPLOYMENT_TYPE_CHOICES,
+        })
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 class ArticleVersionInline(admin.TabularInline):
@@ -836,6 +932,7 @@ class NewsAdminSite(AdminSite):
             'total_count': applications.count(),
             'new_count': CareerApplication.objects.filter(status='new').count(),
             'current_path': request.get_full_path(),
+            'jobs_count': JobOpening.objects.filter(is_active=True).count(),
         })
 
     def career_application_detail_view(self, request, application_id):
@@ -1530,6 +1627,7 @@ admin_site.register(HomepageAdBanner,           HomepageAdBannerAdmin)
 admin_site.register(MetalRate)
 admin_site.register(ContactQuery,                ContactQueryAdmin)
 admin_site.register(CareerApplication,           CareerApplicationAdmin)
+admin_site.register(JobOpening,                  JobOpeningAdmin)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)

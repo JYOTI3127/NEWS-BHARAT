@@ -201,6 +201,32 @@ class CareerApplicationSerializer(serializers.ModelSerializer):
         return value
 
 
+class JobOpeningSerializer(serializers.ModelSerializer):
+    employment_type_display = serializers.CharField(source='get_employment_type_display', read_only=True)
+    skills_list = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobOpening
+        fields = [
+            'id',
+            'title',
+            'team',
+            'employment_type',
+            'employment_type_display',
+            'location',
+            'short_description',
+            'skills',
+            'skills_list',
+            'icon_key',
+            'apply_url',
+            'display_order',
+            'is_active',
+        ]
+
+    def get_skills_list(self, obj):
+        return [item.strip() for item in (obj.skills or '').split(',') if item.strip()]
+
+
 class ArticleSerializer(serializers.ModelSerializer):
 
     # Categories (ManyToMany)

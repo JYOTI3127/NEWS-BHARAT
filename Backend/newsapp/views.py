@@ -445,6 +445,16 @@ def career_application_create(request):
         )
     return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['GET'])
+def job_openings_list(request):
+    jobs = JobOpening.objects.filter(is_active=True).order_by('display_order', 'title')
+    serializer = JobOpeningSerializer(jobs, many=True)
+    return Response({
+        "count": jobs.count(),
+        "results": serializer.data,
+    })
+
 @api_view(['POST'])
 def category_create(request):
     serializer = CategorySerializer(data=request.data)

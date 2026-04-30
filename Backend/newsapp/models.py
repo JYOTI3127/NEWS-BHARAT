@@ -1072,6 +1072,37 @@ class Newsletter(models.Model):
     def __str__(self):
         return self.email
 
+
+class JobOpening(models.Model):
+    EMPLOYMENT_TYPE_CHOICES = [
+        ('full_time', 'Full-Time'),
+        ('part_time', 'Part-Time'),
+        ('contract', 'Contract'),
+        ('internship', 'Internship'),
+        ('freelance', 'Freelance'),
+    ]
+
+    title = models.CharField(max_length=180)
+    team = models.CharField(max_length=180, blank=True, default='')
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
+    location = models.CharField(max_length=180, blank=True, default='')
+    short_description = models.TextField()
+    skills = models.CharField(max_length=500, blank=True, default='')
+    icon_key = models.CharField(max_length=50, blank=True, default='briefcase')
+    apply_url = models.URLField(blank=True, default='')
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['display_order', 'title']
+        verbose_name = 'Job Opening'
+        verbose_name_plural = 'Job Openings'
+
+    def __str__(self):
+        return f"{self.title} ({self.team})" if self.team else self.title
+
 class PushSubscription(models.Model):
     """Website visitors ke browser push notification subscriptions"""
     endpoint = models.TextField(unique=True)

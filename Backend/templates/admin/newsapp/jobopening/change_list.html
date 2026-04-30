@@ -1,0 +1,215 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block title %}Jobs Management{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+{% block search %}{% endblock %}
+
+{% block content %}
+<div class="jobs-admin-page">
+  <div class="jobs-admin-hero">
+    <div>
+      <div class="perm-breadcrumb">Dashboard / Hiring / <span>Jobs</span></div>
+      <h1 class="jobs-admin-title">Vacancy Manager</h1>
+      <p class="jobs-admin-subtitle">Create and manage open positions that will appear on the frontend careers page.</p>
+    </div>
+    <button type="button" class="jobs-admin-add-btn" onclick="openJobModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Add Vacancy
+    </button>
+  </div>
+
+  <div class="jobs-admin-stats">
+    <div class="jobs-admin-stat-card">
+      <span class="jobs-admin-stat-label">Total Vacancies</span>
+      <strong class="jobs-admin-stat-value">{{ job_openings_total }}</strong>
+    </div>
+    <div class="jobs-admin-stat-card">
+      <span class="jobs-admin-stat-label">Active Openings</span>
+      <strong class="jobs-admin-stat-value">{{ job_openings_active }}</strong>
+    </div>
+    <div class="jobs-admin-stat-card">
+      <span class="jobs-admin-stat-label">Remote Friendly</span>
+      <strong class="jobs-admin-stat-value">{{ job_openings_remote }}</strong>
+    </div>
+  </div>
+
+  <form method="get" class="jobs-admin-toolbar">
+    <div class="jobs-admin-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" name="q" value="{{ job_openings_search }}" placeholder="Search title, team, skills...">
+    </div>
+    <select name="employment_type" class="jobs-admin-select">
+      <option value="">All Types</option>
+      {% for value, label in employment_type_choices %}
+        <option value="{{ value }}" {% if job_openings_employment_type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="is_active" class="jobs-admin-select">
+      <option value="">All Status</option>
+      <option value="true" {% if job_openings_is_active == 'true' %}selected{% endif %}>Active</option>
+      <option value="false" {% if job_openings_is_active == 'false' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="jobs-admin-filter-btn">Filter</button>
+    <a href="/admin/newsapp/jobopening/" class="jobs-admin-reset-btn">Reset</a>
+  </form>
+
+  <div class="jobs-admin-grid">
+    {% for job in jobs %}
+      <article class="jobs-admin-card">
+        <div class="jobs-admin-card-head {{ job.theme_class }}">
+          <div class="jobs-admin-card-icon">
+            {% if job.icon_key == 'mic' %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            {% elif job.icon_key == 'edit' %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            {% elif job.icon_key == 'shield' %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            {% elif job.icon_key == 'video' %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
+            {% elif job.icon_key == 'seo' %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6 4 4 6-6"/><path d="M14 5h6v6"/></svg>
+            {% else %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg>
+            {% endif %}
+          </div>
+          <div class="jobs-admin-card-actions">
+            <span class="jobs-admin-status {% if job.is_active %}is-active{% else %}is-inactive{% endif %}">
+              {% if job.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+            <a href="/admin/newsapp/jobopening/{{ job.pk }}/change/" class="jobs-admin-card-link">Edit</a>
+          </div>
+        </div>
+        <div class="jobs-admin-card-body">
+          <h3 class="jobs-admin-card-title">{{ job.title }}{% if job.team %} — {{ job.team }}{% endif %}</h3>
+          <div class="jobs-admin-card-meta">
+            <span>{{ job.get_employment_type_display }}</span>
+            {% if job.location %}<span>{{ job.location }}</span>{% endif %}
+          </div>
+          <p class="jobs-admin-card-copy">{{ job.short_description|truncatechars:155 }}</p>
+          <div class="jobs-admin-card-tags">
+            {% for skill in job.skills_list|default:'' %}
+              <span class="jobs-admin-tag">{{ skill }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="jobs-admin-card-foot">
+          <span class="jobs-admin-order">Order {{ job.display_order }}</span>
+          {% if job.apply_url %}
+            <a href="{{ job.apply_url }}" target="_blank" rel="noopener" class="jobs-admin-preview-btn">Preview Apply Link</a>
+          {% else %}
+            <span class="jobs-admin-no-link">No apply URL</span>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <div class="jobs-admin-empty">
+        <div class="jobs-admin-empty-title">No vacancies added yet</div>
+        <div class="jobs-admin-empty-copy">Click <strong>Add Vacancy</strong> to create the first job card for the careers page.</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="jobs-modal-backdrop{% if job_openings_open_modal %} is-open{% endif %}" id="jobModal">
+  <div class="jobs-modal-panel">
+    <div class="jobs-modal-header">
+      <div>
+        <h3 class="jobs-modal-title">Add Vacancy</h3>
+        <p class="jobs-modal-copy">Fill in the vacancy details. Once saved, the job will appear as a card below and in the frontend jobs API.</p>
+      </div>
+      <button type="button" class="jobs-modal-close" onclick="closeJobModal()">×</button>
+    </div>
+
+    <form method="post" class="jobs-modal-form">
+      {% csrf_token %}
+      <input type="hidden" name="_create_job_opening" value="1">
+
+      {% if job_modal_form.non_field_errors %}
+        <div class="jobs-modal-errors">{{ job_modal_form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="jobs-modal-grid">
+        <div class="jobs-field">
+          <label>Job Title</label>
+          {{ job_modal_form.title }}
+          {{ job_modal_form.title.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Team / Desk</label>
+          {{ job_modal_form.team }}
+          {{ job_modal_form.team.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Employment Type</label>
+          {{ job_modal_form.employment_type }}
+          {{ job_modal_form.employment_type.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Location</label>
+          {{ job_modal_form.location }}
+          {{ job_modal_form.location.errors }}
+        </div>
+        <div class="jobs-field jobs-field-wide">
+          <label>Short Description</label>
+          {{ job_modal_form.short_description }}
+          {{ job_modal_form.short_description.errors }}
+        </div>
+        <div class="jobs-field jobs-field-wide">
+          <label>Skills</label>
+          {{ job_modal_form.skills }}
+          <small>Comma-separated, like `SEO, Analytics, Content Strategy`</small>
+          {{ job_modal_form.skills.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Icon Key</label>
+          {{ job_modal_form.icon_key }}
+          <small>Example: `briefcase`, `mic`, `edit`, `shield`, `video`, `seo`</small>
+          {{ job_modal_form.icon_key.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Apply URL</label>
+          {{ job_modal_form.apply_url }}
+          {{ job_modal_form.apply_url.errors }}
+        </div>
+        <div class="jobs-field">
+          <label>Display Order</label>
+          {{ job_modal_form.display_order }}
+          {{ job_modal_form.display_order.errors }}
+        </div>
+        <div class="jobs-field jobs-field-toggle">
+          <label>Active Vacancy</label>
+          <div class="jobs-toggle-wrap">{{ job_modal_form.is_active }}</div>
+          {{ job_modal_form.is_active.errors }}
+        </div>
+      </div>
+
+      <div class="jobs-modal-actions">
+        <button type="button" class="jobs-admin-reset-btn" onclick="closeJobModal()">Cancel</button>
+        <button type="submit" class="jobs-admin-add-btn">Save Vacancy</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openJobModal(){ document.getElementById('jobModal').classList.add('is-open'); }
+function closeJobModal(){ document.getElementById('jobModal').classList.remove('is-open'); }
+document.addEventListener('keydown', function(event){
+  if(event.key === 'Escape'){ closeJobModal(); }
+});
+document.getElementById('jobModal').addEventListener('click', function(event){
+  if(event.target === this){ closeJobModal(); }
+});
+</script>
+{% endblock %}

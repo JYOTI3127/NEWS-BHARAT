@@ -14,6 +14,7 @@ urlpatterns = [
     path('dashboard/stats/', views.dashboard_stats_api, name='api_dashboard_stats'),
     path('contact-queries/', views.contact_query_create, name='api_contact_query_create'),
     path('career-applications/', views.career_application_create, name='api_career_application_create'),
+    path('jobs/', views.job_openings_list, name='api_job_openings'),
     path('weather/', weather_api),
     path('metal-ticker/', metal_ticker),
     path('update-metal/', update_metal_rates),

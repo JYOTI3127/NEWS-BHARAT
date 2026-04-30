@@ -1124,19 +1124,26 @@ label.image-drop {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h3"/><path d="M8 18h5"/></svg>
       </div>
       <div>
-        <h3 class="publish-date-modal__title" id="publish_date_modal_title">Choose publish date</h3>
-        <p class="publish-date-modal__text">This article is already published. Select which date should be shown after this update.</p>
+        <h3 class="publish-date-modal__title" id="publish_date_modal_title">Choose publish action</h3>
+        <p class="publish-date-modal__text" id="publish_date_modal_text">Decide whether this article should be published immediately or scheduled for later.</p>
       </div>
     </div>
     <div class="publish-date-modal__body">
-      <button type="button" class="publish-date-choice" data-publish-mode="now">
-        <span class="publish-date-choice__badge">Today</span>
+      <button type="button" class="publish-date-choice" data-publish-mode="now" id="publish_mode_now">
+        <span class="publish-date-choice__badge" id="publish_mode_now_badge">Now</span>
         <span>
-          <span class="publish-date-choice__title">Show as updated now</span>
-          <span class="publish-date-choice__desc">The article will move up and display an updated timestamp.</span>
+          <span class="publish-date-choice__title" id="publish_mode_now_title">Publish now</span>
+          <span class="publish-date-choice__desc" id="publish_mode_now_desc">The article will go live immediately.</span>
         </span>
       </button>
-      <button type="button" class="publish-date-choice" data-publish-mode="original">
+      <button type="button" class="publish-date-choice" data-publish-mode="schedule" id="publish_mode_schedule">
+        <span class="publish-date-choice__badge">Later</span>
+        <span>
+          <span class="publish-date-choice__title">Schedule for a specific date &amp; time</span>
+          <span class="publish-date-choice__desc">Choose an exact future publishing date and time in IST.</span>
+        </span>
+      </button>
+      <button type="button" class="publish-date-choice" data-publish-mode="original" id="publish_mode_original" style="display:none;">
         <span class="publish-date-choice__badge">Keep</span>
         <span>
           <span class="publish-date-choice__title">Keep the original publish date</span>
@@ -1145,7 +1152,7 @@ label.image-drop {
       </button>
     </div>
     <div class="publish-date-modal__footer">
-      <button type="button" class="publish-date-cancel" data-publish-mode="cancel">Cancel update</button>
+      <button type="button" class="publish-date-cancel" data-publish-mode="cancel" id="publish_date_cancel_btn">Cancel</button>
     </div>
   </div>
 </div>
@@ -3410,9 +3417,40 @@ function getCsrf(){
   return el?el.value:'';
 }
 
-function choosePublishDateMode(){
+function choosePublishDateMode(mode){
   var modal=document.getElementById('publish_date_modal');
   if(!modal)return Promise.resolve('now');
+  mode=mode||'publish';
+
+  var titleEl=document.getElementById('publish_date_modal_title');
+  var textEl=document.getElementById('publish_date_modal_text');
+  var nowBtn=document.getElementById('publish_mode_now');
+  var nowBadge=document.getElementById('publish_mode_now_badge');
+  var nowTitle=document.getElementById('publish_mode_now_title');
+  var nowDesc=document.getElementById('publish_mode_now_desc');
+  var scheduleBtn=document.getElementById('publish_mode_schedule');
+  var originalBtn=document.getElementById('publish_mode_original');
+  var cancelBtn=document.getElementById('publish_date_cancel_btn');
+
+  if(mode==='republish'){
+    if(titleEl)titleEl.textContent='Choose publish date';
+    if(textEl)textEl.textContent='This article is already published. Select which date should be shown after this update.';
+    if(nowBadge)nowBadge.textContent='Today';
+    if(nowTitle)nowTitle.textContent='Show as updated now';
+    if(nowDesc)nowDesc.textContent='The article will move up and display an updated timestamp.';
+    if(scheduleBtn)scheduleBtn.style.display='none';
+    if(originalBtn)originalBtn.style.display='';
+    if(cancelBtn)cancelBtn.textContent='Cancel update';
+  }else{
+    if(titleEl)titleEl.textContent='Choose publish action';
+    if(textEl)textEl.textContent='Decide whether this article should be published immediately or scheduled for later.';
+    if(nowBadge)nowBadge.textContent='Now';
+    if(nowTitle)nowTitle.textContent='Publish now';
+    if(nowDesc)nowDesc.textContent='The article will go live immediately.';
+    if(scheduleBtn)scheduleBtn.style.display='';
+    if(originalBtn)originalBtn.style.display='none';
+    if(cancelBtn)cancelBtn.textContent='Cancel';
+  }
 
   return new Promise(function(resolve){
     var resolved=false;
@@ -3504,9 +3542,27 @@ async function submitArticle(forceStatus){
     }
   }
 
-  if(articleId&&effectiveStatus==='published'&&originalStatus==='published'&&hasOriginalPublishedAt){
-    publishDateMode=await choosePublishDateMode();
+  if(effectiveStatus==='published'){
+    var chooserMode=(articleId&&originalStatus==='published'&&hasOriginalPublishedAt)?'republish':'publish';
+    publishDateMode=await choosePublishDateMode(chooserMode);
     if(publishDateMode==='cancel')return;
+    if(publishDateMode==='schedule'){
+      if(statusEl)statusEl.value='scheduled';
+      onStatusChange('scheduled');
+      setTimeout(function(){
+        var scheduleInput=document.getElementById('ui_scheduled_at');
+        if(scheduleInput){
+          if(!scheduleInput.value){
+            var base=new Date();
+            base.setMinutes(base.getMinutes()+30);
+            scheduleInput.value=formatIstInputValue(base);
+          }
+          scheduleInput.focus();
+          try{ scheduleInput.showPicker(); }catch(e){}
+        }
+      }, 50);
+      return;
+    }
   }
 
   const rawImageUrl=document.getElementById('ui_image')?document.getElementById('ui_image').value:'',

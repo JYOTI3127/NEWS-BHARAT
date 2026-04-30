@@ -4,7 +4,35 @@ from django.dispatch import receiver
 from .models import UserProfile, generate_password, generate_user_id
 from newsapp.models import *
 from django.db import transaction
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.conf import settings
+from django.utils.html import escape
 import re
+
+
+def _admin_base_url():
+    configured = getattr(settings, "NEWSROOM_ADMIN_URL", "").strip()
+    if configured:
+        return configured.rstrip("/")
+    return "https://news4bharat.cloud/admin"
+
+
+def _article_admin_url(article_id):
+    return f"{_admin_base_url()}/newsapp/article/{article_id}/change/"
+
+
+def _send_rich_email(*, subject, text_body, html_body, recipient_list):
+    if not recipient_list:
+        return
+
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "") or None,
+        to=recipient_list,
+    )
+    email.attach_alternative(html_body, "text/html")
+    email.send(fail_silently=True)
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -71,11 +99,15 @@ def generate_staff_id_after_roles(sender, instance, action, **kwargs):
 def store_old_assigned(sender, instance, **kwargs):
     if instance.pk:
         try:
-            instance._old_assigned_to = Article.objects.get(pk=instance.pk).assigned_to
+            old_article = Article.objects.get(pk=instance.pk)
+            instance._old_assigned_to = old_article.assigned_to
+            instance._old_status = old_article.status
         except Article.DoesNotExist:
             instance._old_assigned_to = None
+            instance._old_status = None
     else:
         instance._old_assigned_to = None
+        instance._old_status = None
 
 
 @receiver(post_save, sender=Article)
@@ -96,13 +128,113 @@ def article_assigned(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Article)
 def article_status_notification(sender, instance, **kwargs):
+    old_status = getattr(instance, '_old_status', None)
+
+    if old_status == instance.status:
+        return
+
+    article_admin_url = _article_admin_url(instance.id)
+    author_name = instance.author.get_full_name() or instance.author.username
+    safe_title = escape(instance.title)
+    safe_author_name = escape(author_name)
+    safe_article_admin_url = escape(article_admin_url)
+
+    if instance.status == "review":
+        super_admins = User.objects.filter(
+            is_active=True,
+            is_superuser=True,
+        ).exclude(email__exact="")
+
+        for admin_user in super_admins:
+            Notification.objects.create(
+                user=admin_user,
+                notif_type="article",
+                title="Article Sent For Review",
+                message=f"'{instance.title}' has been submitted for review by {instance.author.get_full_name() or instance.author.username}.",
+                icon="",
+                action_url=article_admin_url,
+            )
+
+        recipient_list = list(super_admins.values_list("email", flat=True))
+        if recipient_list:
+            try:
+                _send_rich_email(
+                    subject=f"Article Submitted For Review: {instance.title}",
+                    text_body=(
+                        f"Hello Team,\n\n"
+                        f"A new article has been submitted for editorial review on News4Bharat.\n\n"
+                        f"Article Title: {instance.title}\n"
+                        f"Submitted By: {author_name}\n"
+                        f"Review Link: {article_admin_url}\n\n"
+                        f"Please review the article in the admin panel. The publishing workflow will move forward only after an admin approves it.\n\n"
+                        f"If anything looks unclear, or if you need context before approving, please coordinate with the editorial admin team.\n\n"
+                        f"Regards,\nNews4Bharat CMS"
+                    ),
+                    recipient_list=recipient_list,
+                    html_body=(
+                        f"<div style='font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;'>"
+                        f"<p style='margin:0 0 12px;'>Hello Team,</p>"
+                        f"<p style='margin:0 0 14px;'>A new article has been submitted for editorial review on <strong>News4Bharat</strong>.</p>"
+                        f"<div style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin:0 0 16px;'>"
+                        f"<p style='margin:0 0 8px;'><strong>Article Title:</strong> {safe_title}</p>"
+                        f"<p style='margin:0;'><strong>Submitted By:</strong> {safe_author_name}</p>"
+                        f"</div>"
+                        f"<p style='margin:0 0 14px;'>Please review the article in the admin panel. The workflow will move forward <strong>only after admin approval</strong>.</p>"
+                        f"<p style='margin:0 0 18px;'><a href='{safe_article_admin_url}' style='display:inline-block;background:#d80100;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;'>Open Article In Admin</a></p>"
+                        f"<p style='margin:0 0 10px;'>If anything looks unclear or you need more context before approving, please contact the admin team.</p>"
+                        f"<p style='margin:0;color:#6b7280;font-size:13px;'>Direct link: <a href='{safe_article_admin_url}'>{safe_article_admin_url}</a></p>"
+                        f"</div>"
+                    ),
+                )
+            except Exception:
+                pass
+
+    if instance.status == "approved":
+        Notification.objects.create(
+            user=instance.author,
+            notif_type="article",
+            title="Article Approved",
+            message=f"Your article '{instance.title}' has been approved by admin.",
+            icon="",
+            action_url=article_admin_url,
+        )
+        if instance.author.email:
+            try:
+                _send_rich_email(
+                    subject=f"Article Approved: {instance.title}",
+                    text_body=(
+                        f"Hello {author_name},\n\n"
+                        f"Good news. Your article has been approved by admin and the workflow has moved to the next stage.\n\n"
+                        f"Article Title: {instance.title}\n"
+                        f"Open Article: {article_admin_url}\n\n"
+                        f"You may now review the latest status in the admin panel. If you have any questions, please contact the admin team.\n\n"
+                        f"Regards,\nNews4Bharat CMS"
+                    ),
+                    recipient_list=[instance.author.email],
+                    html_body=(
+                        f"<div style='font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;'>"
+                        f"<p style='margin:0 0 12px;'>Hello {safe_author_name},</p>"
+                        f"<p style='margin:0 0 14px;'>Good news. Your article has been <strong>approved by admin</strong> and the workflow has moved forward.</p>"
+                        f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;margin:0 0 16px;'>"
+                        f"<p style='margin:0;'><strong>Article Title:</strong> {safe_title}</p>"
+                        f"</div>"
+                        f"<p style='margin:0 0 18px;'><a href='{safe_article_admin_url}' style='display:inline-block;background:#15803d;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;'>View Article Status</a></p>"
+                        f"<p style='margin:0 0 10px;'>You can review the latest status in the admin panel. If anything is unclear, please contact the admin team.</p>"
+                        f"<p style='margin:0;color:#6b7280;font-size:13px;'>Direct link: <a href='{safe_article_admin_url}'>{safe_article_admin_url}</a></p>"
+                        f"</div>"
+                    ),
+                )
+            except Exception:
+                pass
+
     if instance.status == "published":
         Notification.objects.create(
             user=instance.author,
             notif_type="article",
             title="Article Published",
             message=f"Your article '{instance.title}' is now published!",
-            icon=""
+            icon="",
+            action_url=article_admin_url,
         )
 
 

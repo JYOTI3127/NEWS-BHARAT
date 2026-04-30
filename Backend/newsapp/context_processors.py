@@ -14,9 +14,16 @@ def admin_badges(request):
             is_read=False
         ).count()
 
+        current_user_online = False
+        try:
+            current_user_online = request.user.profile.is_online()
+        except Exception:
+            current_user_online = False
+
         return {
             "unread_notifications": unread_notifications,
-            "unread_messages": unread_messages
+            "unread_messages": unread_messages,
+            "current_user_online": current_user_online,
         }
 
     return {}

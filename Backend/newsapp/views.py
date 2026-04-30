@@ -26,6 +26,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
+from .workflow import ALLOWED_TRANSITIONS
 import os
 import uuid
 import re
@@ -199,6 +200,24 @@ def _normalize_category_tree(value):
 
     text = str(value).strip()
     return text if text else ''
+
+
+def _validate_article_status_change(*, user, previous_status, requested_status):
+    if getattr(user, 'is_superuser', False):
+        return None
+
+    requested_status = (requested_status or '').strip()
+    previous_status = (previous_status or '').strip()
+
+    if requested_status == 'published':
+        return 'Only admin can publish articles.'
+
+    if previous_status and requested_status and previous_status != requested_status:
+        allowed = ALLOWED_TRANSITIONS.get(previous_status, [])
+        if requested_status not in allowed:
+            return f"You can't directly move from {previous_status} to {requested_status}."
+
+    return None
 
 
 def _category_tree_matches(value, query):
@@ -575,6 +594,14 @@ def _save_article_from_request(request, article=None):
         # Once an article is published, stale autosave/editor requests must not
         # silently push it back into draft or any other pre-publish state.
         requested_status = 'published'
+
+    status_error = _validate_article_status_change(
+        user=request.user,
+        previous_status=previous_status,
+        requested_status=requested_status,
+    )
+    if status_error:
+        return None, {'error': status_error}
 
     article.status   = requested_status
     article.priority = int(data.get('priority', article.priority if not is_new else 5))
@@ -1009,8 +1036,8 @@ def dashboard_stats_api(request):
 
 
 def update_article_status(request, article):
-    if not has_permission(request.user, "publish_article"):
-        raise PermissionDenied("You don't have permission to publish.")
+    if not request.user.is_superuser:
+        raise PermissionDenied("Only admin can publish articles.")
     article.status = "published"
     article.published_at = timezone.now()
     article.save()
@@ -2840,6 +2867,51 @@ def unarchive_notification(request, id):
             return JsonResponse({"status": "restored"})
         except Notification.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
+
+
+@login_required
+def mark_all_notifications_read(request):
+    if request.method == "POST":
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return JsonResponse({"status": "all_read"})
+    return JsonResponse({"error": "method not allowed"}, status=405)
+
+
+@staff_member_required
+def notification_status_api(request):
+    unread_notifications_qs = Notification.objects.filter(
+        user=request.user,
+        is_archived=False,
+        is_read=False,
+    )
+    unread_messages_qs = Message.objects.filter(
+        conversation__conversationmember__user=request.user
+    ).exclude(sender=request.user).filter(is_read=False)
+
+    latest_unread = unread_notifications_qs.order_by('-created_at', '-id').first()
+
+    return JsonResponse({
+        "unread_notifications": unread_notifications_qs.count(),
+        "unread_messages": unread_messages_qs.count(),
+        "latest_unread_notification_id": latest_unread.id if latest_unread else None,
+    })
+
+
+def custom_permission_denied_view(request, exception=None):
+    if request.path.startswith('/api/'):
+        return JsonResponse({
+            "error": "You do not have access to this page. Please contact admin regarding this access."
+        }, status=403)
+
+    return render(
+        request,
+        'admin/access_denied.html',
+        {
+            'title': 'Access Denied',
+            'requested_path': request.path,
+        },
+        status=403,
+    )
 
 
 @staff_member_required

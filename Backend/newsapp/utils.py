@@ -1,14 +1,18 @@
 def has_permission(user, perm_code):
-    if not hasattr(user, 'userprofile'):
+    if not getattr(user, "is_authenticated", False):
         return False
 
-    roles = user.profile.roles.all()
+    if getattr(user, "is_superuser", False):
+        return True
 
-    for role in roles:
-        if role.permissions.filter(code=perm_code).exists():
-            return True
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        return False
 
-    return False
+    if profile.extra_permissions.filter(code=perm_code).exists():
+        return True
+
+    return profile.roles.filter(permissions__code=perm_code).exists()
 
 import requests
 from django.conf import settings

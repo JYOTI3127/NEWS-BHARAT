@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from newsapp.forms import CustomUserCreationForm
 from .models import *
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.template.response import TemplateResponse
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.urls import path
 from .serializers import ArticleHomepageSerializer
+from .utils import has_permission
 
 try:
     admin.site.unregister(User)
@@ -1187,12 +1188,81 @@ class ArticleAdmin(admin.ModelAdmin):
 
     readonly_fields = ['author', 'published_at', 'created_at', 'updated_at']
 
+    ARTICLE_VIEW_PERMISSIONS = (
+        'create_article',
+        'edit_own_article',
+        'edit_any_article',
+        'publish_article',
+    )
+
+    def _can_view_articles(self, user):
+        if user.is_superuser:
+            return True
+        return any(has_permission(user, code) for code in self.ARTICLE_VIEW_PERMISSIONS)
+
+    def _can_edit_any_article(self, user):
+        return user.is_superuser or has_permission(user, 'edit_any_article')
+
+    def _can_edit_limited_articles(self, user):
+        return (
+            user.is_superuser
+            or has_permission(user, 'edit_own_article')
+        )
+
+    def _can_access_object(self, user, obj):
+        if user.is_superuser:
+            return True
+        if self._can_edit_any_article(user):
+            return True
+        return obj.author_id == user.id or obj.assigned_to_id == user.id
+
+    def has_module_permission(self, request):
+        return self._can_view_articles(request.user)
+
+    def has_view_permission(self, request, obj=None):
+        if not self._can_view_articles(request.user):
+            return False
+        if obj is None:
+            return True
+        return self._can_access_object(request.user, obj)
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser or has_permission(request.user, 'create_article')
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if not self._can_edit_limited_articles(request.user):
+            return False
+        if obj is None:
+            return True
+        return self._can_access_object(request.user, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).prefetch_related('categories').select_related('author', 'assigned_to')
+        if request.user.is_superuser or self._can_edit_any_article(request.user):
+            return qs
+        if self._can_edit_limited_articles(request.user) or has_permission(request.user, 'create_article'):
+            return qs.filter(Q(author=request.user) | Q(assigned_to=request.user)).distinct()
+        return qs.none()
+
     def save_model(self, request, obj, form, change):
+        if not change and not self.has_add_permission(request):
+            raise PermissionDenied("You don't have permission to create articles.")
+
         if not change:
             obj.author = request.user
+        elif not self.has_change_permission(request, obj):
+            raise PermissionDenied("You don't have permission to edit this article.")
+
         if change:
             old_status = form.initial.get('status')
             if old_status and obj.status != old_status:
+                if obj.status == 'published' and not request.user.is_superuser:
+                    raise PermissionDenied("Only admin can publish articles.")
                 if not request.user.is_superuser:
                     allowed = ALLOWED_TRANSITIONS.get(old_status, [])
                     if obj.status not in allowed:
@@ -1212,10 +1282,7 @@ class ArticleAdmin(admin.ModelAdmin):
         original_get = request.GET.copy()
         selected_status = (original_get.get('status__exact') or '').strip()
 
-        articles_qs = (
-            Article.objects.prefetch_related('categories')
-            .select_related('author', 'assigned_to')
-        )
+        articles_qs = self.get_queryset(request)
         if selected_status:
             articles_qs = articles_qs.filter(status=selected_status)
 
@@ -1233,12 +1300,14 @@ class ArticleAdmin(admin.ModelAdmin):
         page_query = page_query_dict.urlencode()
 
         articles_with_images = (
-            Article.objects.filter(Q(image__isnull=False) & ~Q(image='') | Q(image_url__isnull=False) & ~Q(image_url=''))
-            .select_related('author').prefetch_related('categories')
+            self.get_queryset(request)
+            .filter(Q(image__isnull=False) & ~Q(image='') | Q(image_url__isnull=False) & ~Q(image_url=''))
             .order_by('-created_at')[:12]
         )
         recent_activity = ArticleWorkflowLog.objects.select_related(
             'article', 'changed_by'
+        ).filter(
+            article__in=self.get_queryset(request).values('pk')
         ).order_by('-changed_at')[:15]
 
         extra_context.update({

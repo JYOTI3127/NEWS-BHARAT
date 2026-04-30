@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Denied | News4Bharat Admin</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#14213d;
+      --muted:#6b7280;
+      --accent:#d80100;
+      --border:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(216,1,0,.08), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(20,33,61,.08), transparent 30%),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .access-card{
+      width:min(100%, 640px);
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 20px 60px rgba(15,23,42,.10);
+      overflow:hidden;
+    }
+    .access-top{
+      padding:28px 28px 18px;
+      background:linear-gradient(135deg, #fff5f5, #ffffff);
+      border-bottom:1px solid var(--border);
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--accent);
+      background:rgba(216,1,0,.08);
+      border:1px solid rgba(216,1,0,.12);
+      border-radius:999px;
+      padding:8px 12px;
+    }
+    h1{
+      margin:16px 0 10px;
+      font-size:34px;
+      line-height:1.1;
+    }
+    p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:15px;
+    }
+    .access-body{
+      padding:24px 28px 28px;
+    }
+    .info-box{
+      background:#f9fafb;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px 18px;
+      margin:0 0 20px;
+    }
+    .info-label{
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:#9ca3af;
+      margin-bottom:8px;
+      font-weight:700;
+    }
+    .path{
+      word-break:break-all;
+      font-size:14px;
+      color:var(--text);
+      font-weight:700;
+    }
+    .actions{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:22px;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      border-radius:12px;
+      padding:12px 18px;
+      font-size:14px;
+      font-weight:700;
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+    }
+    .btn-primary{
+      background:var(--accent);
+      color:#fff;
+      box-shadow:0 10px 24px rgba(216,1,0,.18);
+    }
+    .btn-secondary{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="access-card">
+    <div class="access-top">
+      <div class="badge">Restricted Page</div>
+      <h1>Access Not Available</h1>
+      <p>
+        You do not currently have the required permission to access this page.
+        If this page is needed for your workflow, please contact the admin team.
+      </p>
+    </div>
+
+    <div class="access-body">
+      <div class="info-box">
+        <div class="info-label">Requested Page</div>
+        <div class="path">{{ requested_path }}</div>
+      </div>
+
+      <p>
+        The admin team can review your role and assigned permissions, then enable access if appropriate.
+        Until that access is granted, this page will remain unavailable to your account.
+      </p>
+
+      <div class="actions">
+        <a class="btn btn-primary" href="/admin/">Back to Dashboard</a>
+        <a class="btn btn-secondary" href="javascript:history.back()">Go Back</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

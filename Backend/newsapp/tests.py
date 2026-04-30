@@ -1,11 +1,14 @@
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from django.test.utils import override_settings
+from django.test.client import RequestFactory
 from rest_framework.test import APIClient
 from unittest.mock import patch
 
-from .models import Article, PushSubscription
-from .views import send_push_to_all
+from .models import Article, Notification, Permission, PushSubscription, Role
+from .views import custom_permission_denied_view, send_push_to_all
 
 
 User = get_user_model()
@@ -63,6 +66,152 @@ class ArticleStatusFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Article.objects.get(slug='working-draft').status, 'draft')
+
+
+class ArticleAdminPermissionTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.section_editor = User.objects.create_user(
+            username='section-editor',
+            password='testpass123',
+            email='section@example.com',
+        )
+        self.author = User.objects.create_user(
+            username='reporter',
+            password='testpass123',
+            email='reporter@example.com',
+        )
+        self.article = Article.objects.create(
+            author=self.author,
+            title='Admin access story',
+            content='Body copy',
+            status='review',
+        )
+
+        create_article = Permission.objects.create(
+            code='create_article',
+            description='Can create article',
+        )
+        edit_any_article = Permission.objects.create(
+            code='edit_any_article',
+            description='Can edit any article',
+        )
+        publish_article = Permission.objects.create(
+            code='publish_article',
+            description='Can publish article',
+        )
+        role = Role.objects.create(name='Section Editor')
+        role.permissions.set([create_article, edit_any_article, publish_article])
+        self.section_editor.profile.roles.add(role)
+
+    def test_section_editor_can_open_article_admin_pages(self):
+        self.client.force_login(self.section_editor)
+
+        changelist = self.client.get('/admin/newsapp/article/')
+        change_form = self.client.get(f'/admin/newsapp/article/{self.article.pk}/change/')
+
+        self.assertEqual(changelist.status_code, 200, changelist.content)
+        self.assertEqual(change_form.status_code, 200, change_form.content)
+
+    def test_non_admin_cannot_publish_even_with_publish_permission(self):
+        self.section_editor.profile.roles.clear()
+        publish_article = Permission.objects.get(code='publish_article')
+        self.section_editor.profile.extra_permissions.add(publish_article)
+        self.client.force_authenticate(self.section_editor)
+
+        response = self.client.post(f'/api/articles/{self.article.pk}/')
+
+        self.assertEqual(response.status_code, 403, response.content)
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.status, 'review')
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    DEFAULT_FROM_EMAIL='noreply@example.com',
+)
+class ArticleWorkflowNotificationTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='writer',
+            password='testpass123',
+            email='writer@example.com',
+            first_name='Writer',
+        )
+        self.super_admin = User.objects.create_user(
+            username='superadmin',
+            password='testpass123',
+            email='admin@example.com',
+            is_superuser=True,
+            is_staff=True,
+        )
+
+    def test_review_submission_notifies_and_emails_super_admins(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Review me',
+            content='Body',
+            status='draft',
+        )
+        mail.outbox = []
+
+        article.status = 'review'
+        article.save()
+
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.super_admin,
+                title='Article Sent For Review',
+            ).exists()
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Article Submitted For Review', mail.outbox[0].subject)
+        self.assertIn('Review me', mail.outbox[0].body)
+
+    def test_admin_approval_notifies_and_emails_author(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Approve me',
+            content='Body',
+            status='legal',
+        )
+        mail.outbox = []
+
+        article.status = 'approved'
+        article.save()
+
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.author,
+                title='Article Approved',
+            ).exists()
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Article Approved', mail.outbox[0].subject)
+        self.assertIn('Approve me', mail.outbox[0].body)
+
+
+class AccessDeniedViewTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_admin_permission_denied_uses_custom_template(self):
+        request = self.factory.get('/admin/newsapp/article/')
+        response = custom_permission_denied_view(request, PermissionDenied())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(b'Access Not Available', response.content)
+        self.assertIn(b'contact', response.content.lower())
+
+    def test_api_permission_denied_returns_json(self):
+        request = self.factory.get('/api/articles/')
+        response = custom_permission_denied_view(request, PermissionDenied())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertJSONEqual(
+            response.content,
+            {"error": "You do not have access to this page. Please contact admin regarding this access."}
+        )
 
 
 @override_settings(

@@ -5,11 +5,13 @@ import {
 } from "lucide-react";
 import PageSeo from "../components/PageSeo";
 import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
+import { apiUrl } from "../lib/api";
 import careerBg from "../assets/career-img.png";
 
 import "../style.css";
 
 const CAREER_API_URL = "https://news4bharat.cloud/api/career-applications/";
+const JOBS_API_URL = apiUrl("/jobs/");
 const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 const RESUME_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const JOB_TYPE_VALUES = {
@@ -59,7 +61,7 @@ const FadeIn = ({ children, delay = 0, direction = "up", className = "" }) => {
 };
 
 /* ── DATA ── */
-const openRoles = [
+const fallbackOpenRoles = [
   { id: 1, icon: <Mic size={19} />, title: "Reporter — National Desk", type: "Full-Time", location: "Delhi / Remote", desc: "Cover national politics, policy, and governance with in-depth field reporting.", skills: ["Investigative Reporting", "Source Cultivation", "Breaking News"] },
   { id: 2, icon: <Globe size={19} />, title: "Reporter — State Desk", type: "Full-Time", location: "Multiple States", desc: "Ground-level reporting from across Bharat's states. Regional language fluency preferred.", skills: ["Regional Journalism", "Field Reporting", "Hindi / Regional Language"] },
   { id: 3, icon: <Edit3 size={19} />, title: "Copy Editor", type: "Full-Time", location: "Delhi / Remote", desc: "Ensure editorial accuracy, tone consistency, and language quality across all content.", skills: ["Editorial Eye", "Fact Verification", "Style Guides"] },
@@ -67,6 +69,42 @@ const openRoles = [
   { id: 5, icon: <Video size={19} />, title: "Multimedia Journalist", type: "Full-Time", location: "Delhi", desc: "Produce video reports, reels, and visual storytelling content for digital platforms.", skills: ["Video Production", "Editing (Premiere / FCP)", "Social Storytelling"] },
   { id: 6, icon: <TrendingUp size={19} />, title: "SEO & Audience Strategist", type: "Full-Time", location: "Remote", desc: "Drive organic discovery and grow audiences through data-led content decisions.", skills: ["SEO / SEM", "Google Analytics", "Content Strategy"] },
 ];
+
+const JOB_ICON_MAP = {
+  briefcase: Briefcase,
+  mic: Mic,
+  globe: Globe,
+  edit: Edit3,
+  shield: Shield,
+  video: Video,
+  trending: TrendingUp,
+};
+
+const normalizeSkills = (skillsList, skillsText) => {
+  if (Array.isArray(skillsList) && skillsList.length > 0) {
+    return skillsList.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  return String(skillsText || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const toRoleFromApi = (job) => {
+  const IconComponent = JOB_ICON_MAP[String(job?.icon_key || "").trim().toLowerCase()] || Briefcase;
+  const title = String(job?.title || "").trim();
+  const team = String(job?.team || "").trim();
+  return {
+    id: job?.id || `${title}-${team}`,
+    icon: <IconComponent size={19} />,
+    title: team ? `${title} - ${team}` : title,
+    type: String(job?.employment_type_display || "").trim() || "Full-Time",
+    location: String(job?.location || "").trim() || "Remote",
+    desc: String(job?.short_description || "").trim() || "No description available.",
+    skills: normalizeSkills(job?.skills_list, job?.skills),
+    applyUrl: String(job?.apply_url || "").trim(),
+  };
+};
 
 /* ── APPLY MODAL ── */
 function ApplyModal({ role, onClose }) {
@@ -253,6 +291,14 @@ function ApplyModal({ role, onClose }) {
 
 /* ── ROLE CARD ── */
 function RoleCard({ role, onApply }) {
+  const handleApply = () => {
+    if (role?.applyUrl) {
+      window.open(role.applyUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onApply(role);
+  };
+
   return (
     <div className="cp-role-card cp-role-card--open">
       <div className="cp-role-top">
@@ -270,7 +316,7 @@ function RoleCard({ role, onApply }) {
         <div className="cp-skills-row">
           {role.skills.map((s, i) => <span key={i} className="cp-skill-pill">{s}</span>)}
         </div>
-        <button className="cp-apply-btn" onClick={() => onApply(role)}>
+        <button className="cp-apply-btn" onClick={handleApply}>
           Apply Now <ArrowRight size={14} />
         </button>
       </div>
@@ -283,6 +329,38 @@ function RoleCard({ role, onApply }) {
 ══════════════════════════════════════ */
 export default function CareersPage() {
   const [activeModal, setActiveModal] = useState(null);
+  const [openRoles, setOpenRoles] = useState(fallbackOpenRoles);
+  const [jobsLoading, setJobsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchJobs = async () => {
+      setJobsLoading(true);
+      try {
+        const response = await fetch(JOBS_API_URL);
+        const data = await response.json();
+        const jobs = Array.isArray(data?.results) ? data.results : [];
+        const normalized = jobs
+          .filter((job) => job?.is_active !== false)
+          .map(toRoleFromApi)
+          .filter((role) => role.title);
+
+        if (mounted && normalized.length > 0) {
+          setOpenRoles(normalized);
+        }
+      } catch {
+        // Keep fallback roles when API fails.
+      } finally {
+        if (mounted) setJobsLoading(false);
+      }
+    };
+
+    fetchJobs();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <>
@@ -322,11 +400,15 @@ export default function CareersPage() {
               </div>
             </FadeIn>
             <div className="cp-roles-grid">
-              {openRoles.map((role, i) => (
-                <FadeIn key={role.id} delay={i * 0.06}>
-                  <RoleCard role={role} onApply={setActiveModal} />
-                </FadeIn>
-              ))}
+              {jobsLoading ? (
+                <p className="text-center text-sm text-gray-500 col-span-full">Loading roles...</p>
+              ) : (
+                openRoles.map((role, i) => (
+                  <FadeIn key={role.id} delay={i * 0.06}>
+                    <RoleCard role={role} onApply={setActiveModal} />
+                  </FadeIn>
+                ))
+              )}
             </div>
           </div>
         </section>

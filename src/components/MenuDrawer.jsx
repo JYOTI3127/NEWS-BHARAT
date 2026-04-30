@@ -16,9 +16,9 @@ const CATEGORY_ICON_MAP = {
   "Technology": Cpu,
   "Sports": Trophy,
   "Entertainment": Film,
-  "Health": PenLine, // or Heart, but PenLine is available
-  "Education": FileText, // or GraduationCap, but FileText
-  "Automobile": BarChart2, // or Video
+  "Health": PenLine, 
+  "Education": FileText, 
+  "Automobile": BarChart2, 
   "National": Globe,
   "Political": PenLine,
   "States of Bharat": Globe,

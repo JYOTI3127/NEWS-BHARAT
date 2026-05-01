@@ -548,7 +548,11 @@ def _save_article_from_request(request, article=None):
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
     old_published_at = None if is_new else article.published_at
+    old_updated_at = None if is_new else article.updated_at
     previous_status = None if is_new else article.status
+    publish_date_mode = str(data.get('publish_date_mode', 'now') or 'now').strip().lower()
+    keep_original_publish_date = publish_date_mode == 'original' and old_published_at is not None
+    restore_previous_timestamps = keep_original_publish_date and previous_status != 'published'
 
     category_ids_raw = data.get('categories', '')
     category_list_raw = data.getlist('categories')
@@ -650,7 +654,9 @@ def _save_article_from_request(request, article=None):
 
     if article.status == 'published':
         article.scheduled_at = None
-        if old_published_at is not None:
+        if keep_original_publish_date:
+            article.published_at = old_published_at
+        elif old_published_at is not None:
             article.published_at = old_published_at
         else:
             article.published_at = timezone.now()
@@ -748,6 +754,14 @@ def _save_article_from_request(request, article=None):
         article.save()
     except Exception as e:
         return None, {'error': str(e)}
+
+    if restore_previous_timestamps and old_updated_at is not None:
+        Article.objects.filter(pk=article.pk).update(
+            published_at=old_published_at,
+            updated_at=old_updated_at,
+        )
+        article.published_at = old_published_at
+        article.updated_at = old_updated_at
 
     if cat_ids:
         article.categories.set(cat_ids)

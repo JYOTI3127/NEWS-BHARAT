@@ -68,7 +68,7 @@
       <div class="meta">
         {% if article.published_at %}Published {{ article.published_at|date:"M d, Y" }}{% endif %}
         {% if article.author_display_name %} by {{ article.author_display_name }}{% endif %}
-        {% if article.versions.exists %}<br>Updated on {{ article.updated_at|date:"M d, Y" }} at {{ article.updated_at|date:"h:i A" }}{% endif %}
+        {% if article.updated_at and article.published_at and article.updated_at|date:"U" > article.published_at|date:"U" %}<br>Updated on {{ article.updated_at|date:"M d, Y" }} at {{ article.updated_at|date:"h:i A" }}{% endif %}
       </div>
       {% if article.get_image %}
         <img class="hero-image" src="{{ article.get_image }}" alt="{{ article.image_alt|default:article.title }}">

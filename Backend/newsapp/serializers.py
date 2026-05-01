@@ -330,12 +330,6 @@ class ArticleSerializer(serializers.ModelSerializer):
         return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
 
     def get_is_updated(self, obj):
-        try:
-            if obj.versions.exists():
-                return True
-        except Exception:
-            pass
-
         updated_at = self.get_effective_updated_at(obj)
         published_at = getattr(obj, 'published_at', None)
         if updated_at and published_at:
@@ -587,12 +581,6 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
 
     def get_is_updated(self, obj):
-        try:
-            if obj.versions.exists():
-                return True
-        except Exception:
-            pass
-
         updated_at = self.get_effective_updated_at(obj)
         published_at = self.get_effective_published_at(obj)
         if updated_at and published_at:

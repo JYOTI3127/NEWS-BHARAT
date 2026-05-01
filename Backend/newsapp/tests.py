@@ -67,6 +67,70 @@ class ArticleStatusFlowTests(TestCase):
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Article.objects.get(slug='working-draft').status, 'draft')
 
+    def test_republish_from_draft_with_original_date_restores_old_timestamps(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Republish story',
+            content='Original body',
+            status='published',
+        )
+        original_published_at = article.published_at
+        original_updated_at = article.updated_at
+
+        article.status = 'draft'
+        article.save()
+        article.refresh_from_db()
+        self.assertGreater(article.updated_at, original_updated_at)
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Republish story',
+                'subtitle': '',
+                'content': 'Updated after draft',
+                'status': 'published',
+                'slug': article.slug,
+                'publish_date_mode': 'original',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        article.refresh_from_db()
+
+        self.assertEqual(article.status, 'published')
+        self.assertEqual(article.published_at, original_published_at)
+        self.assertEqual(article.updated_at, original_updated_at)
+
+    def test_published_article_keep_original_date_still_tracks_real_update_time(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Live update story',
+            content='Original body',
+            status='published',
+        )
+        original_published_at = article.published_at
+        original_updated_at = article.updated_at
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Live update story',
+                'subtitle': '',
+                'content': 'Edited while staying published',
+                'status': 'published',
+                'slug': article.slug,
+                'publish_date_mode': 'original',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        article.refresh_from_db()
+
+        self.assertEqual(article.published_at, original_published_at)
+        self.assertGreaterEqual(article.updated_at, original_updated_at)
+
 
 class ArticleAdminPermissionTests(TestCase):
     def setUp(self):

@@ -386,14 +386,6 @@ class SitemapEngine:
                 getattr(a, "updated_at", None) or a.published_at or timezone.now()
             )
 
-            for image_entry in _extract_article_image_entries(a, base):
-                img_el = ET.SubElement(url_el, "image:image")
-                ET.SubElement(img_el, "image:loc").text = image_entry["loc"]
-                if image_entry.get("title"):
-                    ET.SubElement(img_el, "image:title").text = image_entry["title"]
-                if image_entry.get("caption"):
-                    ET.SubElement(img_el, "image:caption").text = image_entry["caption"]
-
         return _prettify(root)
 
     @classmethod

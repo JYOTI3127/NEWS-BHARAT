@@ -135,6 +135,55 @@ function LegacyArticleRedirect() {
   return <PageLoader />;
 }
 
+const TOP_LEVEL_CATEGORY_ALIASES = {
+  "market": "bharat-economy",
+  "markets": "bharat-economy",
+  "bharat-bfsi": "bfsi",
+  "artificial-intelligence": "ai",
+  "bharat-numbers": "bharat-in-numbers",
+  "bharats-startups": "bharat-startups",
+  "states-of-bharat": "state-of-bharat",
+  "political": "politics",
+  "bharat-by-2047": "bharat-2047",
+};
+
+const NON_CATEGORY_TOP_LEVEL_PATHS = new Set([
+  "",
+  "about",
+  "about-us",
+  "privacy-policy",
+  "terms-and-conditions",
+  "terms-conditions",
+  "terms-of-service",
+  "founders-note",
+  "editorial-policy",
+  "careers",
+  "career",
+  "contact-us",
+  "contact",
+  "newsletter",
+  "commingsoon",
+  "disclaimer",
+  "news",
+  "article",
+  "category",
+  "tag",
+  "author",
+  "60-seconds",
+]);
+
+function TopLevelCategoryRedirect() {
+  const { topLevelSlug } = useParams();
+  const rawSlug = String(topLevelSlug || "").trim().toLowerCase();
+
+  if (!rawSlug || NON_CATEGORY_TOP_LEVEL_PATHS.has(rawSlug)) {
+    return <NotFound />;
+  }
+
+  const canonicalSlug = TOP_LEVEL_CATEGORY_ALIASES[rawSlug] || rawSlug;
+  return <Navigate to={`/category/${canonicalSlug}`} replace />;
+}
+
 function Layout() {
   const location = useLocation();
   const hideLayout = location.pathname === "/CommingSoon";
@@ -203,6 +252,7 @@ function Layout() {
             <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
             <Route path="/newsletter" element={<NewsletterPage />} />
             <Route path="/CommingSoon" element={<CommingSoon />} />
+            <Route path="/category/bharats-startups" element={<Navigate to="/category/bharat-startups" replace />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
@@ -225,13 +275,21 @@ function Layout() {
             <Route path="/state-of-bharat" element={<Navigate to="/category/state-of-bharat" replace />} />
             <Route path="/bharat-explainers" element={<Navigate to="/category/bharat-explainers" replace />} />
             <Route path="/bharat-numbers" element={<Navigate to="/category/bharat-in-numbers" replace />} />
-            <Route path="/bharat-startups" element={<Navigate to="/category/bharats-startups" replace />} />
+            <Route path="/bharat-startups" element={<Navigate to="/category/bharat-startups" replace />} />
+            <Route path="/bharats-startups" element={<Navigate to="/category/bharat-startups" replace />} />
             <Route path="/60-second-read" element={<Navigate to="/category/60-second-read" replace />} />
             <Route path="/sports" element={<Navigate to="/category/sports" replace />} />
             <Route path="/world-news" element={<Navigate to="/category/world-news" replace />} />
             <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
+            <Route path="/market" element={<Navigate to="/category/bharat-economy" replace />} />
+            <Route path="/markets" element={<Navigate to="/category/bharat-economy" replace />} />
+            <Route path="/bfsi" element={<Navigate to="/category/bfsi" replace />} />
+            <Route path="/bharat-bfsi" element={<Navigate to="/category/bfsi" replace />} />
+            <Route path="/ai" element={<Navigate to="/category/ai" replace />} />
+            <Route path="/artificial-intelligence" element={<Navigate to="/category/ai" replace />} />
             <Route path="/bharat-opinions" element={<Navigate to="/category/bharat-opinions" replace />} />
             <Route path="/q4-results" element={<Navigate to="/category/q4-results" replace />} />
+            <Route path="/:topLevelSlug" element={<TopLevelCategoryRedirect />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Profiler>

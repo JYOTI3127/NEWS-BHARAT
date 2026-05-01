@@ -5,10 +5,11 @@ import { Link, useNavigate } from "react-router-dom";
 
 import {
   BarChart2, Search, Mic, Menu, X, Radio, FileText,
-  TrendingUp, ChevronDown, Flame, Globe,
+  TrendingUp, ChevronDown, ChevronRight, Flame, Globe,
   Trophy, Cpu, Film, Heart, PenLine, Zap, GraduationCap,
   Leaf, Video, Camera, MoreHorizontal, Newspaper, CloudSun,
   Bell, CalendarDays, Clock3, Languages, Linkedin, Instagram, Youtube,
+  Car, Shield, MapPin, Hash, Target, Brain, Flag, BookOpen, Clock, AlertCircle,
 } from "lucide-react";
 
 import "../Navbar.css";
@@ -86,6 +87,7 @@ const getWeatherCondition = (weather) =>
   weather?.description ||
   "";
 
+// ✅ NAYA (yeh paste karo)
 const CATEGORY_ICON_MAP = {
   "Breaking News": Flame,
   "World News": Globe,
@@ -95,20 +97,26 @@ const CATEGORY_ICON_MAP = {
   "Entertainment": Film,
   "Health": Heart,
   "Education": GraduationCap,
-  "Automobile": Video,
-  "National": Globe,
+  "Automobile": Car,
+  "National": Shield,
   "Politics": PenLine,
   "Political": PenLine,
-  "States of Bharat": Globe,
+  "States of Bharat": MapPin,
   "Bharat's BFSI": BarChart2,
-  "Bharat in Numbers": BarChart2,
-  "Bharat Opinions": PenLine,
+  "Bharat in Numbers": Hash,
+  "Bharat Opinions": BookOpen,
   "Bharat's Startups": Zap,
-  "Bharat 2047": Flame,
-  "Bharat By 2047": Flame,
-  "Artificial Intelligence": Cpu,
+  "Bharat 2047": Target,
+  "Bharat By 2047": Target,
+  "Bharat Explainers": FileText,
+  "Artificial Intelligence": Brain,
   "Trending": TrendingUp,
-  "60-Second Read": Zap,
+  "60-Second Read": Clock,
+  "Markets": BarChart2,
+  "India": Flag,
+  "Viral & Fact Check": AlertCircle,
+  "Press Release": Newspaper,
+  "World News": Globe,
 };
 
 const normalizeCategoryLabel = (value) => {
@@ -450,8 +458,6 @@ const navLinks = [
      { label: "Health", path: "/category/health" },
 ];
 
-const DESKTOP_VISIBLE_NAV_COUNT = 8;
-
 const uniqueNavLinksByPath = (links) => {
   const seen = new Set();
   return links.filter((link) => {
@@ -646,7 +652,7 @@ const Header = () => {
   const [isCategorySearching, setIsCategorySearching] = useState(false);
   const [showCategoryResults, setShowCategoryResults] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [showMoreNav, setShowMoreNav] = useState(false);
+  const [canScrollNavRight, setCanScrollNavRight] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [isPushLoading, setIsPushLoading] = useState(false);
 
@@ -662,7 +668,7 @@ const Header = () => {
   const categorySearchRequestRef = useRef(0);
   const headerRef = useRef(null);
   const measuredHeaderHeightRef = useRef(0);
-  const navMoreRef = useRef(null);
+  const navLinksRef = useRef(null);
   const navigate = useNavigate();
 
   const extra2KNavLinks = [
@@ -676,10 +682,23 @@ const Header = () => {
     { label: "States", path: "/category/state-of-bharat" },
     { label: "60 Sec Read", path: "/category/60-second-read" },
   ];
-  const visibleNavLinks = is2K ? uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]) : navLinks;
-  const maxVisibleNavCount = is2K ? visibleNavLinks.length : DESKTOP_VISIBLE_NAV_COUNT;
-  const primaryNavLinks = visibleNavLinks.slice(0, maxVisibleNavCount);
-  const overflowNavLinks = visibleNavLinks.slice(maxVisibleNavCount);
+  const visibleNavLinks = uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]);
+  const updateNavScrollState = useCallback(() => {
+    const navEl = navLinksRef.current;
+    if (!navEl) {
+      setCanScrollNavRight(false);
+      return;
+    }
+
+    const maxScrollLeft = Math.max(0, navEl.scrollWidth - navEl.clientWidth);
+    setCanScrollNavRight(maxScrollLeft - navEl.scrollLeft > 2);
+  }, []);
+
+  const handleNavScrollRight = useCallback(() => {
+    const navEl = navLinksRef.current;
+    if (!navEl) return;
+    navEl.scrollBy({ left: 220, behavior: "smooth" });
+  }, []);
 
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
@@ -936,13 +955,38 @@ const Header = () => {
       if (drawerSearchRef.current && !drawerSearchRef.current.contains(e.target)) {
         setShowCategoryResults(false);
       }
-      if (navMoreRef.current && !navMoreRef.current.contains(e.target)) {
-        setShowMoreNav(false);
-      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (isMobile || isCompactNav) {
+      setCanScrollNavRight(false);
+      return;
+    }
+
+    const navEl = navLinksRef.current;
+    if (!navEl) return;
+
+    updateNavScrollState();
+
+    const onScroll = () => updateNavScrollState();
+    navEl.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", updateNavScrollState);
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => updateNavScrollState());
+      resizeObserver.observe(navEl);
+    }
+
+    return () => {
+      navEl.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateNavScrollState);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [isCompactNav, isMobile, updateNavScrollState, visibleNavLinks]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1620,41 +1664,23 @@ const Header = () => {
               </div>
             </div>
 
-            <ul className="nav-links">
-              {primaryNavLinks.map((link, idx) => (
+            <ul className="nav-links" ref={navLinksRef}>
+              {visibleNavLinks.map((link, idx) => (
                 <Link key={`${link.path}-${idx}`} to={link.path} className="nav-link">
                   {link.label}
                 </Link>
               ))}
-              {overflowNavLinks.length > 0 && (
-                <li
-                  className={`nav-more${showMoreNav ? " open" : ""}`}
-                  ref={navMoreRef}
-                >
-                  <button
-                    type="button"
-                    className="nav-more-button"
-                    aria-expanded={showMoreNav}
-                    aria-label="Show more categories"
-                    onClick={() => setShowMoreNav((current) => !current)}
-                  >
-                    <MoreHorizontal size={18} aria-hidden="true" />
-                  </button>
-                  <div className="nav-more-menu">
-                    {overflowNavLinks.map((link) => (
-                      <Link
-                        key={link.path}
-                        to={link.path}
-                        className="nav-more-link"
-                        onClick={() => setShowMoreNav(false)}
-                      >
-                        {link.label}
-                      </Link>
-                    ))}
-                  </div>
-                </li>
-              )}
             </ul>
+            {!isMobile && !isCompactNav && canScrollNavRight && (
+              <button
+                type="button"
+                className="nav-scroll-button"
+                aria-label="Scroll categories right"
+                onClick={handleNavScrollRight}
+              >
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+            )}
 
             <div className="mobile-nav-actions">
               <button

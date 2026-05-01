@@ -82,6 +82,10 @@ const buildCandidateUrls = ({ page, placement, size }) => {
     return [
       apiUrl(buildCurrentAdPath("ad_banner", { page, placement, size })),
       apiUrl(buildCurrentAdPath("ad_banners", { page, placement, size })),
+      apiUrl(buildCurrentAdPath("ad_banner", { placement, size })),
+      apiUrl(buildCurrentAdPath("ad_banners", { placement, size })),
+      apiUrl(`/homepage/ad_banner/${encodeURIComponent(placement)}/current/`),
+      apiUrl("/homepage/ad_banner/current/"),
     ];
   }
 

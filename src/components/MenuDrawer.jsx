@@ -20,6 +20,7 @@ const CATEGORY_ICON_MAP = {
   "Education": FileText, 
   "Automobile": BarChart2, 
   "National": Globe,
+  "Politics": PenLine,
   "Political": PenLine,
   "States of Bharat": Globe,
   "Bharat's BFSI": BarChart2,
@@ -31,6 +32,11 @@ const CATEGORY_ICON_MAP = {
   "Artificial Intelligence": Cpu,
   "Trending": TrendingUp,
   "60-Second Read": Zap,
+};
+
+const normalizeCategoryLabel = (value) => {
+  const label = String(value || "").trim();
+  return label.toLowerCase() === "political" ? "Politics" : label;
 };
 
 const FALLBACK_ICONS = [
@@ -92,26 +98,7 @@ const isStateParentGroupLabel = (categorySlug, subcategoryLabel) =>
   STATE_CATEGORY_SLUGS.has(String(categorySlug || "").trim().toLowerCase()) &&
   NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(subcategoryLabel || "").trim().toLowerCase());
 
-// ── All nav links ──
-const navLinks = [
-  { label: "Breaking News",     path: "/category/breaking-news",    isBreaking: true },
-  { label: "World News",        path: "/category/world-news" },
-  { label: "Business",          path: "/category/bharat-economy" },
-  { label: "Technology",        path: "/category/technology" },
-  { label: "Sports",            path: "/category/sports" },
-  { label: "Entertainment",     path: "/category/entertainment" },
-  { label: "Health",            path: "/category/health" },
-  { label: "Education",         path: "/category/education" },
-  { label: "Automobile",        path: "/category/automobile" },
-  { label: "National",          path: "/category/national" },
-  { label: "Political",         path: "/category/politics" },
-  { label: "Trending",          path: "/category/trending" },
-  { label: "Founder's Note",    path: "/founders-note" },
-  { label: "Editorial Policy",  path: "/editorial-policy" },
-  { label: "Careers",           path: "/careers" },
-  { label: "Contact Us",        path: "/contact-us" },
-  // { label: "Coming Soon",       path: "/CommingSoon" },
-];
+
 
 // ── NAV_SECTIONS ──
 const NAV_SECTIONS = [
@@ -174,9 +161,32 @@ const NAV_SECTIONS = [
   },
 ];
 
+// ── All nav links ──
+const navLinks = [
+  { label: "Breaking News",     path: "/category/breaking-news",    isBreaking: true },
+  { label: "World News",        path: "/category/world-news" },
+  { label: "Business",          path: "/category/bharat-economy" },
+  { label: "Technology",        path: "/category/technology" },
+  { label: "Sports",            path: "/category/sports" },
+  { label: "Entertainment",     path: "/category/entertainment" },
+  { label: "Health",            path: "/category/health" },
+  { label: "Education",         path: "/category/education" },
+  { label: "Automobile",        path: "/category/automobile" },
+  { label: "National",          path: "/category/national" },
+  { label: "Politics",          path: "/category/politics" },
+  { label: "Trending",          path: "/category/trending" },
+  { label: "About Us",          path: "/about-us" },
+  { label: "Founder's Note",    path: "/founders-note" },
+  { label: "Editorial Policy",  path: "/editorial-policy" },
+  { label: "Careers",           path: "/careers" },
+  { label: "Contact Us",        path: "/contact-us" },
+  { label: "Privacy Policy",    path: "/privacy-policy" },
+  { label: "Terms & Conditions", path: "/terms-and-conditions" },
+  { label: "Disclaimer",        path: "/disclaimer" },
+];
+
 // ── Footer pills ──
 const footerPills = [
-  { label: "E-Paper",        path: "/e-paper" },
   { label: "Newsletter",     path: "/newsletter" },
   { label: "60 Second",      path: "/60-second-read" },
   { label: "Bharat Opinion", path: "/bharat-opinions" },
@@ -285,7 +295,7 @@ export default function MenuDrawer({ open, onClose }) {
           }
 
           return {
-            label: cat?.name,
+            label: normalizeCategoryLabel(cat?.name),
             slug: cat?.slug,
             Icon: getIconForCategory(cat?.name, cat?.slug),
             ...(subcategories ? { subcategories } : {}),
@@ -414,64 +424,6 @@ export default function MenuDrawer({ open, onClose }) {
         {/* Body */}
         <div className="md-body">
 
-          <div className="md-section-title">Quick Links</div>
-
-          {navLinks.map(({ label, path, isBreaking }) => (
-            <button
-              key={label}
-              className={`md-link${isBreaking && showBreaking ? " active" : ""}`}
-              onClick={() => isBreaking ? setShowBreaking(v => !v) : handleNav(path)}
-            >
-              <span className="md-link-dot" />
-              <span className="md-link-label">{label}</span>
-              {isBreaking && showBreaking
-                ? <span style={{ fontSize: 9, color: "#D80100", fontWeight: 700, letterSpacing: 1 }}>● LIVE</span>
-                : <span className="md-link-arrow"><ChevronRight size={14} /></span>
-              }
-            </button>
-          ))}
-
-          {/* ── Breaking News Panel ── */}
-          {showBreaking && (
-            <div className="md-bn-panel">
-              <div className="md-bn-top">
-                <span className="md-bn-badge">🔴 Breaking News</span>
-                <button className="md-bn-x" onClick={() => setShowBreaking(false)}>✕ Close</button>
-              </div>
-
-              {breakingLoading ? (
-                <div style={{ padding: "20px", textAlign: "center" }}>
-                  <Loader2 size={20} color="#D80100" className="md-spin" />
-                  <p style={{ fontSize: 12, color: "#aaa", marginTop: 8, fontFamily: "Poppins,sans-serif" }}>Loading...</p>
-                </div>
-              ) : breakingArticles.length === 0 ? (
-                <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "#bbb", fontFamily: "Poppins,sans-serif" }}>
-                  No breaking news right now
-                </div>
-              ) : (
-                <>
-                  {breakingArticles.map((article) => (
-                    <div key={article.id} className="md-bn-item" onClick={() => goToArticle(article)}>
-                      <ArticleImg src={imgSrc(article)} alt={article.title} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="md-bn-title">{article.title}</p>
-                        <span className="md-bn-date">
-                          {article.date
-                            ? new Date(article.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-                            : ""}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  <button className="md-bn-viewall" onClick={() => handleNav("/category/breaking-news")}>
-                    View All Breaking News →
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="md-divider" />
           <div className="md-section-title">Categories</div>
 
           {navSections.map(({ label, slug, Icon: SectionIcon, links, subcategories }) => {
@@ -571,6 +523,64 @@ export default function MenuDrawer({ open, onClose }) {
               </div>
             );
           })}
+
+          <div className="md-divider" />
+          <div className="md-section-title">Quick Links</div>
+
+          {navLinks.map(({ label, path, isBreaking }) => (
+            <button
+              key={label}
+              className={`md-link${isBreaking && showBreaking ? " active" : ""}`}
+              onClick={() => isBreaking ? setShowBreaking(v => !v) : handleNav(path)}
+            >
+              <span className="md-link-dot" />
+              <span className="md-link-label">{label}</span>
+              {isBreaking && showBreaking
+                ? <span style={{ fontSize: 9, color: "#D80100", fontWeight: 700, letterSpacing: 1 }}>● LIVE</span>
+                : <span className="md-link-arrow"><ChevronRight size={14} /></span>
+              }
+            </button>
+          ))}
+
+          {/* ── Breaking News Panel ── */}
+          {showBreaking && (
+            <div className="md-bn-panel">
+              <div className="md-bn-top">
+                <span className="md-bn-badge">🔴 Breaking News</span>
+                <button className="md-bn-x" onClick={() => setShowBreaking(false)}>✕ Close</button>
+              </div>
+
+              {breakingLoading ? (
+                <div style={{ padding: "20px", textAlign: "center" }}>
+                  <Loader2 size={20} color="#D80100" className="md-spin" />
+                  <p style={{ fontSize: 12, color: "#aaa", marginTop: 8, fontFamily: "Poppins,sans-serif" }}>Loading...</p>
+                </div>
+              ) : breakingArticles.length === 0 ? (
+                <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "#bbb", fontFamily: "Poppins,sans-serif" }}>
+                  No breaking news right now
+                </div>
+              ) : (
+                <>
+                  {breakingArticles.map((article) => (
+                    <div key={article.id} className="md-bn-item" onClick={() => goToArticle(article)}>
+                      <ArticleImg src={imgSrc(article)} alt={article.title} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="md-bn-title">{article.title}</p>
+                        <span className="md-bn-date">
+                          {article.date
+                            ? new Date(article.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="md-bn-viewall" onClick={() => handleNav("/category/breaking-news")}>
+                    View All Breaking News →
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           <div style={{ height: 16 }} />
         </div>

@@ -270,9 +270,9 @@ const EditorialSection = memo(({ section, articles }) => {
                 {shouldShowCategoryLabel(section) ? (
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
                 ) : null}
-                <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+                <h4 className={`hcs-side-title${section.key === "world-news" ? " hcs-world-news-side-title" : ""}${section.key === "ai" ? " hcs-ai-side-title" : ""}`}>{getArticleTitle(article)}</h4>
                 {(section.key === "world-news" || section.key === "ai") && getArticleSummary(article) ? (
-                  <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                  <p className={`hcs-side-summary${section.key === "world-news" ? " hcs-world-news-side-summary" : ""}${section.key === "ai" ? " hcs-ai-side-summary" : ""}`}>{getArticleSummary(article)}</p>
                 ) : null}
                 <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
               </div>
@@ -406,9 +406,9 @@ const SpotlightSection = memo(({ section, articles }) => {
                 {shouldShowCategoryLabel(section) ? (
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
                 ) : null}
-                <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+                <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getArticleTitle(article)}</h4>
                 {section.key === "automobile" && getArticleSummary(article) ? (
-                  <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                  <p className="hcs-side-summary hcs-automobile-side-summary">{getArticleSummary(article)}</p>
                 ) : null}
                 <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
               </div>
@@ -421,9 +421,9 @@ const SpotlightSection = memo(({ section, articles }) => {
           <StoryLink key={article.id || article.slug} article={article} className="hcs-bottom-rail-card">
             <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-bottom-rail-thumb" />
             <div className="hcs-bottom-rail-copy">
-              <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+              <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getArticleTitle(article)}</h4>
               {section.key === "automobile" && getArticleSummary(article) ? (
-                <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                <p className="hcs-side-summary hcs-automobile-side-summary">{getArticleSummary(article)}</p>
               ) : null}
               <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
             </div>

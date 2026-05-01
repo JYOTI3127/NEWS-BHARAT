@@ -23,7 +23,7 @@ const footerLinks = {
     { name: "Education", slug: "education" },
     { name: "Automobile", slug: "automobile" },
     { name: "National", slug: "national" },
-    { name: "Political", slug: "political" },
+    { name: "Politics", slug: "politics" },
     { name: "Trending", slug: "trending" }
   ],
 

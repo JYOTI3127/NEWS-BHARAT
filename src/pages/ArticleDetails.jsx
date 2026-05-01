@@ -579,6 +579,10 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     const result = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
+    const firstParagraph = Array.from(doc.body.querySelectorAll("p")).find(
+      (node) => String(node?.textContent || "").trim().length > 0
+    );
+    if (firstParagraph) firstParagraph.classList.add("article-dropcap-first");
     const children = Array.from(doc.body.childNodes);
     let buffer = "";
     children.forEach((node, i) => {
@@ -864,7 +868,9 @@ export default function ArticleDetails() {
     ? { ...shellStyle, gridTemplateColumns: "minmax(0, 1120px) 340px", columnGap: "24px", justifyContent: "space-between" }
     : shellStyle;
   const heroImageWrapStyle = is2K ? { display: "flex", justifyContent: "flex-start", alignItems: "center" } : undefined;
-  const heroImageCardClassName = is2K ? "w-fit max-w-full mr-auto rounded-xl overflow-hidden mb-7 shadow-sm" : "w-full rounded-xl overflow-hidden mb-7 shadow-sm";
+  const heroImageCardClassName = is2K
+    ? "article-hero-image-card w-fit max-w-full mr-auto rounded-xl overflow-hidden mb-7 shadow-sm"
+    : "article-hero-image-card w-full rounded-xl overflow-hidden mb-7 shadow-sm";
   const heroImageStyle = is2K ? { width: "min(100%, 1480px)", height: "auto", maxWidth: "100%", maxHeight: "min(72vh, 820px)", objectFit: "contain", objectPosition: "left center", margin: "0" } : undefined;
 
   const articleSummaryText = getPlainText(article.subtitle) || getPlainText(article.description) || getPlainText(article.summary) || getPlainText(article.excerpt);
@@ -1057,13 +1063,13 @@ export default function ArticleDetails() {
               [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
               [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
               [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1
-              [&_p:first-of-type::first-letter]:float-left
-              [&_p:first-of-type::first-letter]:text-[3.8rem]
-              [&_p:first-of-type::first-letter]:font-extrabold
-              [&_p:first-of-type::first-letter]:leading-[0.85]
-              [&_p:first-of-type::first-letter]:mr-2
-              [&_p:first-of-type::first-letter]:mt-1
-              [&_p:first-of-type::first-letter]:text-red-600"
+              [&_.article-dropcap-first::first-letter]:float-left
+              [&_.article-dropcap-first::first-letter]:text-[3.8rem]
+              [&_.article-dropcap-first::first-letter]:font-extrabold
+              [&_.article-dropcap-first::first-letter]:leading-[0.85]
+              [&_.article-dropcap-first::first-letter]:mr-2
+              [&_.article-dropcap-first::first-letter]:mt-1
+              [&_.article-dropcap-first::first-letter]:text-red-600"
             style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
 

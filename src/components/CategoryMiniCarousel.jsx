@@ -96,22 +96,22 @@ export default function CategoryMiniCarousel({
 
   return (
     <section className="cmc-root" aria-label={title}>
-      <div className="cmc-header">
-        <div className="cmc-title-wrap">
-          <div className="cmc-title-bar" />
-          <h2 className="cmc-title">{title}</h2>
-        </div>
-        <button
-          className="cmc-read-more"
-          type="button"
-          onClick={() => navigate(categoryPath || `/category/${slugList[0] || ""}`)}
-        >
-          Read More
-        </button>
-      </div>
-
       <div className="cmc-shell">
         <div className="cmc-content">
+          <div className="cmc-header">
+            <div className="cmc-title-wrap">
+              <div className="cmc-title-bar" />
+              <h2 className="cmc-title">{title}</h2>
+            </div>
+            <button
+              className="cmc-read-more"
+              type="button"
+              onClick={() => navigate(categoryPath || `/category/${slugList[0] || ""}`)}
+            >
+              Read More
+            </button>
+          </div>
+
           <div className="cmc-card-row">
             {loading
               ? Array.from({ length: cardsPerPage }).map((_, index) => (

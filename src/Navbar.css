@@ -306,6 +306,33 @@
   color: var(--red);
 }
 
+.top-page-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.top-page-link {
+  font-family: var(--font-en);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  color: var(--navy);
+  text-decoration: none;
+  line-height: 1;
+  text-transform: none;
+}
+
+.top-page-link:hover {
+  color: var(--red);
+}
+
+.top-page-link + .top-page-link {
+  border-left: 1px solid #d1d5db;
+  padding-left: 6px;
+}
+
 .top-social-links {
   display: flex;
   align-items: center;
@@ -1979,7 +2006,7 @@
   }
 
   .header-wrapper.is-2k .logo-full-link {
-    top: -38px;
+    top: -50px;
     width: 98px;
     height: 98px;
     padding: 4px;

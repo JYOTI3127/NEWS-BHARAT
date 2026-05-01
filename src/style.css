@@ -14787,6 +14787,12 @@ img {
   }
 }
 
+@media (min-width: 1441px) and (max-width: 2560px) {
+  .cmc-ad-column {
+    margin-top: 34px;
+  }
+}
+
 @media (min-width: 1200px) and (max-width: 1439px) {
   .cmc-shell {
     gap: 18px;
@@ -15225,5 +15231,22 @@ img {
     margin-right: auto !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
+  }
+
+  /* Keep breathing space only for the About responsibility strip */
+  .about-page .responsibility-section .container {
+    padding-left: clamp(16px, 3vw, 40px) !important;
+    padding-right: clamp(16px, 3vw, 40px) !important;
+  }
+
+  .contact-page .ct-advertise .ct-container {
+    padding-left: clamp(16px, 3vw, 40px) !important;
+    padding-right: clamp(16px, 3vw, 40px) !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .article-hero-image-card {
+    margin-bottom: 10px !important;
   }
 }

@@ -97,6 +97,7 @@ const CATEGORY_ICON_MAP = {
   "Education": GraduationCap,
   "Automobile": Video,
   "National": Globe,
+  "Politics": PenLine,
   "Political": PenLine,
   "States of Bharat": Globe,
   "Bharat's BFSI": BarChart2,
@@ -108,6 +109,11 @@ const CATEGORY_ICON_MAP = {
   "Artificial Intelligence": Cpu,
   "Trending": TrendingUp,
   "60-Second Read": Zap,
+};
+
+const normalizeCategoryLabel = (value) => {
+  const label = String(value || "").trim();
+  return label.toLowerCase() === "political" ? "Politics" : label;
 };
 
 const FALLBACK_ICONS = [
@@ -433,15 +439,15 @@ const navLinks = [
   { label: "World News", path: "/category/world-news" },
   { label: "Business", path: "/category/bharat-economy" },
   { label: "Technology", path: "/category/technology" },
-  { label: "Sports", path: "/category/sports" },
-  { label: "Health", path: "/category/health" },
   { label: "Entertainment", path: "/category/entertainment" },
   { label: "Education", path: "/category/education" },
   { label: "Automobile", path: "/category/automobile" },
   { label: "National", path: "/category/national" },
-  { label: "Political", path: "/category/politics" },
+  { label: "Politics", path: "/category/politics" },
   { label: "Trending", path: "/category/trending" },
-  { label: "Artificial Intelligence", path: "/category/ai" },
+ 
+   { label: "Sports", path: "/category/sports" },
+     { label: "Health", path: "/category/health" },
 ];
 
 const DESKTOP_VISIBLE_NAV_COUNT = 8;
@@ -755,7 +761,7 @@ const Header = () => {
           }
 
           return {
-            label: cat.name,
+            label: normalizeCategoryLabel(cat.name),
             slug: cat.slug,
             Icon: getIconForCategory(cat.name, cat.slug),
             ...(subcategories && { subcategories }),
@@ -1476,6 +1482,11 @@ const Header = () => {
                   <FileText size={14} aria-hidden="true" />
                   <span>Exclusive Articles & Interviews</span>
                 </Link>
+                <div className="top-page-links" aria-label="Quick pages">
+                  <Link to="/about-us" className="top-page-link">About Us</Link>
+                  <Link to="/contact-us" className="top-page-link">Contact Us</Link>
+                  <Link to="/careers" className="top-page-link">Careers</Link>
+                </div>
               </div>
 
               <div className="top-social-links" aria-label="Follow us on social media">

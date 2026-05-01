@@ -123,6 +123,38 @@
   overflow: hidden;
 }
 
+.hcs-world-news-side-title {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.hcs-world-news-side-summary {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.hcs-automobile-side-title {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.hcs-automobile-side-summary {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+@media (min-width: 1025px) {
+  .hcs-ai-side-title {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .hcs-ai-side-summary {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+}
+
 .hcs-empty {
   border: 1px dashed #ded6ce;
   border-radius: 14px;
@@ -654,6 +686,18 @@
 
   .hcs-featured-title {
     font-size: 22px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1440px) {
+  .hcs-world-news-side-title {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .hcs-world-news-side-summary {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
 }
 

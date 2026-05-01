@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import PageSeo from "../components/PageSeo";
 import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
+import AdvertisementSlot from "../components/AdvertisementSlot";
 import "../style.css";
 import contactBg from "../assets/contact Us.jpg.jpeg";
 
@@ -285,6 +286,14 @@ export default function ContactPage() {
       <PageSeo
         {...STATIC_PAGE_SEO["/contact-us"]}
       />
+      <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
+        <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+      </aside>
+      <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
+        <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+      </aside>
+      <AdvertisementSlot page="contact" placement="home_top" variant="leaderboard" className="home-top-ad home-top-ad--desktop" minWidth={769} />
+      <AdvertisementSlot page="contact" placement="home_top_mobile" variant="mobileStrip" className="home-top-ad home-top-ad--mobile" maxWidth={768} />
       <div className="contact-page">
 
         {/* ══════════ HERO ══════════ */}

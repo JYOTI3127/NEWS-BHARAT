@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FiCheck, FiShield, FiEye, FiUsers, FiAlertCircle, FiHeart, FiRefreshCw, FiSearch, FiFileText, FiMail } from "react-icons/fi";
 import PageSeo from "../components/PageSeo";
+import AdvertisementSlot from "../components/AdvertisementSlot";
 import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
 import editorialBg from "../assets/editorial-policy.png";
@@ -118,6 +119,26 @@ export default function EditorialPolicy() {
             /> */}
             <PageSeo
                 {...STATIC_PAGE_SEO["/editorial-policy"]}
+            />
+            <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
+                <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+            </aside>
+            <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
+                <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+            </aside>
+            <AdvertisementSlot
+                page="editorial_policy"
+                placement="home_top"
+                variant="leaderboard"
+                className="home-top-ad home-top-ad--desktop"
+                minWidth={769}
+            />
+            <AdvertisementSlot
+                page="editorial_policy"
+                placement="home_top_mobile"
+                variant="mobileStrip"
+                className="home-top-ad home-top-ad--mobile"
+                maxWidth={768}
             />
             <div className="ep-page">
 

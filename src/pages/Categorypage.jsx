@@ -47,6 +47,11 @@ const isStateCategorySlug = (value) =>
 const isStateParentGroupLabel = (value) =>
   NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(value || "").trim().toLowerCase());
 
+const normalizeCategoryDisplayName = (value, fallback = "") => {
+  const label = String(value || fallback || "").trim();
+  return label.toLowerCase() === "political" ? "Politics" : label;
+};
+
 const getSelectedSubcategoryValues = (selectedSubcategories) => {
   if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
 
@@ -201,6 +206,10 @@ export default function CategoryPage() {
   const gridArticles  = articles.slice(1, visibleCount + 1);
   const moreInArticles = articles.slice(0, MORE_IN_ARTICLES_LIMIT);
   const hasMore       = visibleCount + 1 < articles.length;
+  const isWorldNewsCategory = ["world-news", "worldnews"].includes(String(slug || "").trim().toLowerCase());
+  const shouldClampWorldNewsHeader = isWorldNewsCategory && viewportWidth <= 1440;
+  const shouldClampWorldNewsParagraph = isWorldNewsCategory && viewportWidth >= 768 && viewportWidth <= 1440;
+  const categoryDisplayName = normalizeCategoryDisplayName(category?.name, slug);
   const shellStyle = {
     width: "var(--site-content-width)",
     maxWidth: "var(--site-content-width)",
@@ -253,7 +262,10 @@ export default function CategoryPage() {
       {/* Category Header */}
       <div className="bg-white border-b-4 border-[#D80100] py-5 sm:py-[28px]">
         <div className="category-page-align max-w-[1240px] mx-auto px-4 sm:px-6" style={shellStyle}>
-          <h1 className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]">
+          <h1
+            className="text-[clamp(18px,3.5vw,34px)] font-extrabold text-[#111] mb-1 tracking-[-0.4px]"
+            style={shouldClampWorldNewsHeader ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } : undefined}
+          >
             {subFilter ? (
               <>
                 <Link
@@ -261,16 +273,21 @@ export default function CategoryPage() {
                   className="text-[#111] hover:text-[#D80100] no-underline hover:no-underline"
                   style={{ textDecoration: "none" }}
                 >
-                  {category?.name || slug}
+                  {categoryDisplayName}
                 </Link>
                 <span>{` > ${subFilter}`}</span>
               </>
             ) : (
-              category?.name || slug
+              categoryDisplayName
             )}
           </h1>
           {category?.description && (
-            <p className="text-[13px] text-[#666] mb-2 leading-[1.6]">{category.description}</p>
+            <p
+              className="text-[13px] text-[#666] mb-2 leading-[1.6]"
+              style={shouldClampWorldNewsHeader ? { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } : undefined}
+            >
+              {category.description}
+            </p>
           )}
           <span className="inline-flex items-center text-[12px] text-[#D80100] font-semibold">
             <BookOpen size={13} className="mr-1.5 align-middle" />
@@ -378,8 +395,8 @@ export default function CategoryPage() {
                     <div className="p-4 flex flex-col gap-2">
                       <h3 className="text-[15px] sm:text-lg font-semibold leading-snug line-clamp-2">{article.title}</h3>
                       {article.description && (
-                        <p className="text-sm text-slate-600 line-clamp-3">
-                          {article.description.slice(0, 90)}...
+                        <p className={`text-sm text-slate-600 ${shouldClampWorldNewsParagraph ? "line-clamp-1" : "line-clamp-3"}`}>
+                          {shouldClampWorldNewsParagraph ? article.description : `${article.description.slice(0, 90)}...`}
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -424,7 +441,7 @@ export default function CategoryPage() {
           <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                {`More in ${category?.name || slug}`}
+                {`More in ${categoryDisplayName}`}
               </span>
               <span className="text-[11px] text-red-600 font-semibold">
                 {moreInArticles.length} Posts

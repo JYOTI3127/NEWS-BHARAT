@@ -288,7 +288,21 @@ img {
 
 .article-content {
   width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.article-content table,
+.article-content .article-table-wrapper table {
+  width: 100%;
+  max-width: 100%;
+}
+
+.article-content table th,
+.article-content table td {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .article-content i a {
@@ -2416,6 +2430,14 @@ img {
   min-width: 0;
   justify-self: center;
   overflow-x: clip;
+}
+
+/* Allow 3D banner side cards to render full rounded edges. */
+@supports selector(:has(*)) {
+  .home-page-shell:has(.cb-root),
+  .home-main-column:has(.cb-root) {
+    overflow-x: visible;
+  }
 }
 
 .home-layout-ad {

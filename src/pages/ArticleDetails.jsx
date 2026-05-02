@@ -498,38 +498,95 @@ const normalizeArticleContent = (html) => {
     replacement.innerHTML = heading.innerHTML;
     heading.replaceWith(replacement);
   });
+
+  const isChatExportLike = Boolean(
+    doc.body.querySelector(
+      '[data-message-model-slug], [data-testid^="conversation-turn"], .text-token-text-primary, .TyagGW_tableContainer, .markdown-new-styling'
+    )
+  );
+
+  if (isChatExportLike) {
+    const extracted = [];
+    const seen = new Set();
+    const candidates = doc.body.querySelectorAll("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote");
+
+    const getTextSignature = (node) =>
+      getPlainText(node?.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    candidates.forEach((node) => {
+      if (!node || node.closest("td, th")) return;
+
+      const tag = node.tagName.toLowerCase();
+      const textSig = getTextSignature(node);
+
+      if (tag !== "table" && textSig.length < 2) return;
+
+      let signature = `${tag}|${textSig.slice(0, 320)}`;
+      if (tag === "table") {
+        const rows = node.querySelectorAll("tr").length;
+        const cols = node.querySelectorAll("tr:first-child th, tr:first-child td").length;
+        signature = `table|${rows}|${cols}|${textSig.slice(0, 320)}`;
+      }
+
+      if (seen.has(signature)) return;
+      seen.add(signature);
+      extracted.push(node.cloneNode(true));
+    });
+
+    if (extracted.length > 0) {
+      doc.body.innerHTML = "";
+      extracted.forEach((node) => doc.body.appendChild(node));
+    }
+  }
+
   const elements = doc.body.querySelectorAll("*");
   elements.forEach((element) => {
+    const insideTable = Boolean(element.closest("table, google-sheets-html-origin"));
+    if (insideTable) return;
+
     element.removeAttribute("width");
     element.removeAttribute("height");
+    element.removeAttribute("align");
+
     const style = element.getAttribute("style");
     if (!style) return;
-    const cleanedStyle = style.split(";").map((rule) => rule.trim()).filter(Boolean)
+    const blockedProps = new Set([
+      "float", "clear", "position", "left", "right", "top", "bottom",
+      "width", "min-width", "max-width", "height", "min-height", "max-height",
+      "display", "columns", "column-count", "column-width", "transform",
+    ]);
+    const cleanedStyle = style
+      .split(";")
+      .map((rule) => rule.trim())
+      .filter(Boolean)
       .filter((rule) => {
         const prop = rule.split(":")[0]?.trim().toLowerCase();
-        // ✅ width:0 aur table-layout:fixed bhi hatao
-        if (["font-size", "line-height", "font-family", "font-weight", "font-style"].includes(prop)) return false;
-        // ✅ table ke width:0px ya width:0 hata do
-        if (prop === "width") {
-          const val = rule.split(":")[1]?.trim().toLowerCase() || "";
-          if (val === "0" || val === "0px" || val === "0%") return false;
-        }
-        // ✅ table-layout:fixed hatao — auto better hai
-        if (prop === "table-layout") return false;
-        return true;
+        return prop && !blockedProps.has(prop);
       })
       .join("; ");
-    if (cleanedStyle) element.setAttribute("style", cleanedStyle); else element.removeAttribute("style");
+
+    if (cleanedStyle) element.setAttribute("style", cleanedStyle);
+    else element.removeAttribute("style");
   });
 
   // ✅ Table fix — width:0 wali tables ko proper banao
   Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
+    const firstRow = table.querySelector("tr");
+    const colCount = firstRow ? firstRow.querySelectorAll("th, td").length : 0;
     table.removeAttribute("width");
     table.removeAttribute("cellspacing");
     table.removeAttribute("cellpadding");
     table.style.width = "100%";
+    table.style.minWidth = colCount >= 4 ? "680px" : "100%";
+    table.style.maxWidth = "100%";
     table.style.tableLayout = "auto";
     table.style.borderCollapse = "collapse";
+    table.style.float = "none";
+    table.style.clear = "both";
+    table.style.margin = "0";
 
     // colgroup col width override
     Array.from(table.querySelectorAll("col")).forEach((col) => {
@@ -564,37 +621,67 @@ const normalizeArticleContent = (html) => {
     if (!hasContent) thead.remove();
   });
 
-  // ✅ Outer wrapper table hatao — sirf inner Google Sheets table rakho
+  // ✅ Saari tables ko proper wrapper mein daalo
   Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
-    const innerTable = table.querySelector("google-sheets-html-origin table");
-    if (innerTable) {
-      // Outer table ki jagah sirf inner table rakho
+    const nestedTable = Array.from(table.querySelectorAll("table")).find((inner) => inner !== table);
+    if (nestedTable) {
       const wrapper = doc.createElement("div");
+      wrapper.className = "article-table-wrapper";
       wrapper.style.overflowX = "auto";
       wrapper.style.width = "100%";
+      wrapper.style.maxWidth = "100%";
       wrapper.style.margin = "24px 0";
-      wrapper.appendChild(innerTable.cloneNode(true));
+
+      const cleanTable = nestedTable.cloneNode(true);
+      cleanTable.style.width = "100%";
+      cleanTable.style.minWidth = "100%";
+      cleanTable.style.maxWidth = "100%";
+      cleanTable.style.tableLayout = "auto";
+      cleanTable.style.borderCollapse = "collapse";
+      cleanTable.style.float = "none";
+      cleanTable.style.clear = "both";
+      cleanTable.style.margin = "0";
+
+      wrapper.appendChild(cleanTable);
       table.replaceWith(wrapper);
+      return;
+    }
+
+    const parentTag = table.parentElement?.tagName || "";
+    const isNestedInsideCell = parentTag === "TD" || parentTag === "TH";
+    if (!table.closest(".article-table-wrapper") && !isNestedInsideCell) {
+      const wrapper = doc.createElement("div");
+      wrapper.className = "article-table-wrapper";
+      wrapper.style.overflowX = "auto";
+      wrapper.style.width = "100%";
+      wrapper.style.maxWidth = "100%";
+      wrapper.style.margin = "24px 0";
+      table.parentNode?.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
     }
   });
   // Inner table cells fix
-// ✅ Saari tables ke cells fix karo — vertical align top + proper padding
-Array.from(doc.body.querySelectorAll("table td, table th")).forEach((cell) => {
-  cell.style.verticalAlign = "top";
-  cell.style.whiteSpace = "normal";
-  cell.style.overflow = "visible";
-  cell.style.padding = "8px 12px";
-  cell.style.textAlign = "left";
-  cell.style.border = "1px solid #e2e8f0";
-  cell.style.fontSize = "14px";
-  cell.style.lineHeight = "1.6";
-});
+  // ✅ Saari tables ke cells fix karo — vertical align top + proper padding
+  Array.from(doc.body.querySelectorAll("table td, table th")).forEach((cell) => {
+    cell.style.verticalAlign = "top";
+    cell.style.whiteSpace = "normal";
+    cell.style.overflow = "visible";
+    cell.style.wordBreak = "normal";
+    cell.style.overflowWrap = "normal";
+    cell.style.hyphens = "none";
+    cell.style.padding = "8px 12px";
+    cell.style.textAlign = "left";
+    cell.style.border = "1px solid #e2e8f0";
+    cell.style.fontSize = "14px";
+    cell.style.lineHeight = "1.6";
+  });
 
-// ✅ th ko bold + background
-Array.from(doc.body.querySelectorAll("table th")).forEach((th) => {
-  th.style.fontWeight = "700";
-  th.style.background = "#f8fafc";
-});
+  // ✅ th ko bold + background
+  Array.from(doc.body.querySelectorAll("table th")).forEach((th) => {
+    th.style.fontWeight = "700";
+    th.style.background = "#f8fafc";
+  });
+
   Array.from(doc.body.querySelectorAll("iframe")).forEach((iframe) => {
     if (iframe.closest(".article-media-frame")) return;
     iframe.setAttribute("loading", "lazy");
@@ -1160,7 +1247,9 @@ export default function ArticleDetails() {
     [&_.article-dropcap-first::first-letter]:leading-[0.85]
     [&_.article-dropcap-first::first-letter]:mr-2
     [&_.article-dropcap-first::first-letter]:mt-1
-    [&_.article-dropcap-first::first-letter]:text-red-600"
+    [&_.article-dropcap-first::first-letter]:text-red-600
+  [&_.article-table-wrapper]:overflow-x-auto [&_.article-table-wrapper]:w-full
+  [&_.article-table-wrapper]:my-6"
             style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
 

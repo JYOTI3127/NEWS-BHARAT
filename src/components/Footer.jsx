@@ -33,6 +33,7 @@ const footerLinks = {
     { name: "Bharat in Numbers", slug: "bharat-in-numbers" },
     { name: "Bharat's Startups", slug: "bharat-startups" },
     { name: "Bharat BFSI", slug: "bfsi" },
+    { name: "AI", slug: "ai" },
     { name: "Bharat 2047", slug: "bharat-2047" }
   ],
 
@@ -46,19 +47,27 @@ const footerLinks = {
   ],
 
   MORE: [
-    { name: "Entertainment", slug: "entertainment" },
-    { name: "60 Second Read", slug: "60-second-read" },
-    { name: "Health", slug: "health" }
-  ]
-};
+    { name: "India", slug: "india" },
+    { name: "Daily Weather", slug: "daily-weather" },
+    { name: "LPG and CNG", slug: "lpg-and-cng" },
+    { name: "Fuel Prices", slug: "fuel-prices" },
+    { name: "Latest Updates", slug: "latest-updates" },
+    { name: "Prime Time", slug: "prime-time" },
+    { name: "Cultural", slug: "cultural" }
+  ],
 
-const getFinalSlug = (text) => {
-  return text
-    .toLowerCase()
-    .replace(/'/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
+  Bharat_Opinion: [
+    { name: "Editorials", slug: "bharat-opinions", subcategory: "Editorials" },
+    { name: "Expert Opinions", slug: "bharat-opinions", subcategory: "Expert Opinions" },
+    { name: "Industry Voices", slug: "bharat-opinions", subcategory: "Industry Voices" },
+    { name: "Articles", slug: "bharat-opinions", subcategory: "Articles" },
+    { name: "Interviews", slug: "bharat-opinions", subcategory: "Interviews" },
+    { name: "Debates & Counterpoints", slug: "bharat-opinions", subcategory: "Debates & Counterpoints" },
+    { name: "Policy Perspective", slug: "bharat-opinions", subcategory: "Policy Perspective" }
+  ]
+
+
+};
 
 // ── Har pill ka apna path ──
 const policyLinks = [
@@ -71,6 +80,12 @@ const policyLinks = [
   { label: "Terms & Conditions", path: "/terms-and-conditions" },
   { label: "Disclaimer", path: "/disclaimer" },
 ];
+
+const TIGHT_FOOTER_HEADINGS = new Set([
+  "All_About_Bharat",
+  "State_of_Bharat",
+  "Bharat_Opinion",
+]);
 
 const AppleIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
@@ -188,10 +203,14 @@ export default function Footer() {
 
           {/* 4 link columns */}
           <div className="ft-links-grid">
-            {Object.entries(footerLinks).map(([heading, links]) => (
+            {Object.entries(footerLinks)
+              .filter(([heading]) => heading !== "MORE")
+              .map(([heading, links]) => (
               <div className="ft-col" key={heading}>
                 <div className="ft-col-head">
-                  <span className="ft-col-title">{heading.replaceAll("_", " ")}</span>
+                  <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>
+                    {heading === "Bharat_Opinion" ? "Bharat Opinion" : heading.replaceAll("_", " ")}
+                  </span>
                   <div className="ft-col-underline">
                     <span className="u-r" />
                     <span className="u-b" />
@@ -200,13 +219,6 @@ export default function Footer() {
                 </div>
                 <ul className="ft-col-list">
                   {links.map((item, index) => {
-                    const name = typeof item === "string" ? item : item.name;
-
-                    const slug =
-                      typeof item === "string"
-                        ? getFinalSlug(item)
-                        : item.slug;
-
                     return (
                       <li key={index}>
                         <Link
@@ -223,6 +235,29 @@ export default function Footer() {
                     );
                   })}
                 </ul>
+
+                {heading === "State_of_Bharat" && Array.isArray(footerLinks.MORE) && (
+                  <div className="ft-sub-col">
+                    <div className="ft-col-head">
+                      <span className="ft-col-title">MORE</span>
+                      <div className="ft-col-underline">
+                        <span className="u-r" />
+                        <span className="u-b" />
+                        <span className="u-y" />
+                      </div>
+                    </div>
+                    <ul className="ft-col-list">
+                      {footerLinks.MORE.map((item, index) => (
+                        <li key={`more-${index}`}>
+                          <Link to={`/category/${item.slug}`} className="ft-col-link">
+                            {item.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
               </div>
             ))}
           </div>

@@ -332,7 +332,7 @@ const getArticleCategoryTokens = (article) => {
     if (typeof value === "object") { add(value.id); add(value.slug); add(value.category_slug); add(value.name); add(value.title); }
   };
   [...toCategoryArray(article?.category_details), ...toCategoryArray(article?.category),
-    ...toCategoryArray(article?.primary_category), ...(Array.isArray(article?.categories) ? article.categories : []),
+  ...toCategoryArray(article?.primary_category), ...(Array.isArray(article?.categories) ? article.categories : []),
   ].forEach(includeCategoryValue);
   return tokens;
 };
@@ -505,10 +505,96 @@ const normalizeArticleContent = (html) => {
     const style = element.getAttribute("style");
     if (!style) return;
     const cleanedStyle = style.split(";").map((rule) => rule.trim()).filter(Boolean)
-      .filter((rule) => { const prop = rule.split(":")[0]?.trim().toLowerCase(); return !["font-size","line-height","font-family","font-weight","font-style"].includes(prop); })
+      .filter((rule) => {
+        const prop = rule.split(":")[0]?.trim().toLowerCase();
+        // ✅ width:0 aur table-layout:fixed bhi hatao
+        if (["font-size", "line-height", "font-family", "font-weight", "font-style"].includes(prop)) return false;
+        // ✅ table ke width:0px ya width:0 hata do
+        if (prop === "width") {
+          const val = rule.split(":")[1]?.trim().toLowerCase() || "";
+          if (val === "0" || val === "0px" || val === "0%") return false;
+        }
+        // ✅ table-layout:fixed hatao — auto better hai
+        if (prop === "table-layout") return false;
+        return true;
+      })
       .join("; ");
     if (cleanedStyle) element.setAttribute("style", cleanedStyle); else element.removeAttribute("style");
   });
+
+  // ✅ Table fix — width:0 wali tables ko proper banao
+  Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
+    table.removeAttribute("width");
+    table.removeAttribute("cellspacing");
+    table.removeAttribute("cellpadding");
+    table.style.width = "100%";
+    table.style.tableLayout = "auto";
+    table.style.borderCollapse = "collapse";
+
+    // colgroup col width override
+    Array.from(table.querySelectorAll("col")).forEach((col) => {
+      col.removeAttribute("width");
+      col.style.width = "auto";
+    });
+
+    // google-sheets-html-origin wrapper ko block banao
+    const gsOrigin = table.closest("google-sheets-html-origin");
+    if (gsOrigin) {
+      gsOrigin.style.display = "block";
+      gsOrigin.style.width = "100%";
+      gsOrigin.style.overflowX = "auto";
+    }
+  });
+
+  // ✅ Empty rows hatao — Google Sheets ke blank tr/td
+  Array.from(doc.body.querySelectorAll("table tr")).forEach((row) => {
+    const cells = Array.from(row.querySelectorAll("td, th"));
+    const isEmpty = cells.every((cell) => {
+      const text = cell.textContent?.trim() || "";
+      const hasChildren = cell.children.length > 0 &&
+        Array.from(cell.children).some((child) => child.textContent?.trim());
+      return !text && !hasChildren;
+    });
+    if (isEmpty) row.remove();
+  });
+
+  // ✅ Empty thead hatao
+  Array.from(doc.body.querySelectorAll("thead")).forEach((thead) => {
+    const hasContent = thead.textContent?.trim().length > 0;
+    if (!hasContent) thead.remove();
+  });
+
+  // ✅ Outer wrapper table hatao — sirf inner Google Sheets table rakho
+  Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
+    const innerTable = table.querySelector("google-sheets-html-origin table");
+    if (innerTable) {
+      // Outer table ki jagah sirf inner table rakho
+      const wrapper = doc.createElement("div");
+      wrapper.style.overflowX = "auto";
+      wrapper.style.width = "100%";
+      wrapper.style.margin = "24px 0";
+      wrapper.appendChild(innerTable.cloneNode(true));
+      table.replaceWith(wrapper);
+    }
+  });
+  // Inner table cells fix
+// ✅ Saari tables ke cells fix karo — vertical align top + proper padding
+Array.from(doc.body.querySelectorAll("table td, table th")).forEach((cell) => {
+  cell.style.verticalAlign = "top";
+  cell.style.whiteSpace = "normal";
+  cell.style.overflow = "visible";
+  cell.style.padding = "8px 12px";
+  cell.style.textAlign = "left";
+  cell.style.border = "1px solid #e2e8f0";
+  cell.style.fontSize = "14px";
+  cell.style.lineHeight = "1.6";
+});
+
+// ✅ th ko bold + background
+Array.from(doc.body.querySelectorAll("table th")).forEach((th) => {
+  th.style.fontWeight = "700";
+  th.style.background = "#f8fafc";
+});
   Array.from(doc.body.querySelectorAll("iframe")).forEach((iframe) => {
     if (iframe.closest(".article-media-frame")) return;
     iframe.setAttribute("loading", "lazy");
@@ -921,7 +1007,7 @@ export default function ArticleDetails() {
       <ReadingProgressBar />
 
       {/* ── 2. FLOATING SHARE BAR ── */}
-      
+
 
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
         <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
@@ -1056,20 +1142,25 @@ export default function ArticleDetails() {
             html={normalizedContent}
             contentRef={articleContentRef}
             className="article-content text-gray-700 text-left md:text-justify
-              [&_p]:text-[16px] [&_p]:leading-[1.7] [&_p]:mb-[1.2rem]
-              [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
-              [&_h3]:text-[18px] [&_h3]:leading-[1.4] [&_h3]:mb-[1.2rem] [&_h3]:font-bold
-              [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
-              [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
-              [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-              [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1
-              [&_.article-dropcap-first::first-letter]:float-left
-              [&_.article-dropcap-first::first-letter]:text-[3.8rem]
-              [&_.article-dropcap-first::first-letter]:font-extrabold
-              [&_.article-dropcap-first::first-letter]:leading-[0.85]
-              [&_.article-dropcap-first::first-letter]:mr-2
-              [&_.article-dropcap-first::first-letter]:mt-1
-              [&_.article-dropcap-first::first-letter]:text-red-600"
+    [&_p]:text-[16px] [&_p]:leading-[1.7] [&_p]:mb-[1.2rem]
+    [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
+    [&_h3]:text-[18px] [&_h3]:leading-[1.4] [&_h3]:mb-[1.2rem] [&_h3]:font-bold
+    [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
+    [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
+    [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
+    [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1
+    [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_table]:table-auto
+    [&_table_table]:w-full [&_table_table]:border-collapse [&_table_table]:table-auto
+  [&_td]:border [&_td]:border-gray-300 [&_td]:px-3 [&_td]:py-2 [&_td]:text-[14px] [&_td]:align-top [&_td]:whitespace-normal
+[&_th]:border [&_th]:border-gray-300 [&_th]:px-3 [&_th]:py-2 [&_th]:text-[14px] [&_th]:font-bold [&_th]:bg-gray-50 [&_th]:text-left [&_th]:align-top
+    [&_google-sheets-html-origin]:block [&_google-sheets-html-origin]:w-full [&_google-sheets-html-origin]:overflow-x-auto
+    [&_.article-dropcap-first::first-letter]:float-left
+    [&_.article-dropcap-first::first-letter]:text-[3.8rem]
+    [&_.article-dropcap-first::first-letter]:font-extrabold
+    [&_.article-dropcap-first::first-letter]:leading-[0.85]
+    [&_.article-dropcap-first::first-letter]:mr-2
+    [&_.article-dropcap-first::first-letter]:mt-1
+    [&_.article-dropcap-first::first-letter]:text-red-600"
             style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
 

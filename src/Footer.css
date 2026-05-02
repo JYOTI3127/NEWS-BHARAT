@@ -154,6 +154,10 @@
   flex-direction: column;
 }
 
+.ft-sub-col {
+  margin-top: 10px;
+}
+
 /* Only after ENTERTAINMENT (2nd column) */
 .ft-col:nth-child(2) {
   border-right: 1px solid #999999;
@@ -172,6 +176,12 @@
   letter-spacing: 0.8px;
   text-transform: uppercase;
   margin-bottom: 7px;
+}
+
+.ft-col-title-tight {
+  font-size: 12.5px;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
 }
 
 /* 3-color short underline */

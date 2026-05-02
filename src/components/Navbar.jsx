@@ -455,8 +455,13 @@ const navLinks = [
   { label: "Trending", path: "/category/trending" },
  
    { label: "Sports", path: "/category/sports" },
-     { label: "Health", path: "/category/health" },
+  { label: "Health", path: "/category/health" },
 ];
+
+const NAV_EDGE_HOVER_DELAY_MS = 220;
+const NAV_SLIDE_COOLDOWN_MS = 700;
+const NAV_EDGE_TOLERANCE_PX = 12;
+const NAV_PRE_EDGE_TRIGGER_PX = 90;
 
 const uniqueNavLinksByPath = (links) => {
   const seen = new Set();
@@ -669,6 +674,11 @@ const Header = () => {
   const headerRef = useRef(null);
   const measuredHeaderHeightRef = useRef(0);
   const navLinksRef = useRef(null);
+  const navEdgeHoverTimerRef = useRef(null);
+  const navEdgeRepeatTimerRef = useRef(null);
+  const navLastSlideAtRef = useRef(0);
+  const navPointerInsideRef = useRef(false);
+  const navPointerPosRef = useRef({ x: 0, y: 0 });
   const navigate = useNavigate();
 
   const extra2KNavLinks = [
@@ -699,6 +709,90 @@ const Header = () => {
     if (!navEl) return;
     navEl.scrollBy({ left: 220, behavior: "smooth" });
   }, []);
+
+  const clearNavEdgeHoverTimer = useCallback(() => {
+    if (navEdgeHoverTimerRef.current) {
+      window.clearTimeout(navEdgeHoverTimerRef.current);
+      navEdgeHoverTimerRef.current = null;
+    }
+  }, []);
+
+  const clearNavEdgeRepeatTimer = useCallback(() => {
+    if (navEdgeRepeatTimerRef.current) {
+      window.clearTimeout(navEdgeRepeatTimerRef.current);
+      navEdgeRepeatTimerRef.current = null;
+    }
+  }, []);
+
+  const maybeSlideFromHoveredLink = useCallback((linkElement) => {
+    if (isMobile || isCompactNav) return;
+
+    const navEl = navLinksRef.current;
+    if (!navEl || !linkElement) return;
+
+    const linkRect = linkElement.getBoundingClientRect();
+    const navRect = navEl.getBoundingClientRect();
+    const maxScrollLeft = Math.max(0, navEl.scrollWidth - navEl.clientWidth);
+
+    const rightDistance = navRect.right - linkRect.right;
+    const leftDistance = linkRect.left - navRect.left;
+
+    // Trigger in pre-edge zone (second-last feel), not only on absolute last edge.
+    const isNearRightPreEdge =
+      rightDistance > NAV_EDGE_TOLERANCE_PX &&
+      rightDistance <= NAV_PRE_EDGE_TRIGGER_PX;
+    const isNearLeftPreEdge =
+      leftDistance > NAV_EDGE_TOLERANCE_PX &&
+      leftDistance <= NAV_PRE_EDGE_TRIGGER_PX;
+
+    let direction = null;
+    if (isNearRightPreEdge) direction = "right";
+    else if (isNearLeftPreEdge) direction = "left";
+    if (!direction) return;
+
+    if (direction === "right" && maxScrollLeft - navEl.scrollLeft <= 2) return;
+    if (direction === "left" && navEl.scrollLeft <= 2) return;
+
+    const now = Date.now();
+    if (now - navLastSlideAtRef.current < NAV_SLIDE_COOLDOWN_MS) return;
+    navLastSlideAtRef.current = now;
+
+    const step = Math.max(120, Math.round(linkRect.width + 12));
+    navEl.scrollBy({
+      left: direction === "right" ? step : -step,
+      behavior: "smooth",
+    });
+
+    // Re-check so user doesn't need to remove/re-hover cursor every time.
+    clearNavEdgeRepeatTimer();
+    navEdgeRepeatTimerRef.current = window.setTimeout(() => {
+      navEdgeRepeatTimerRef.current = null;
+      if (!navPointerInsideRef.current) return;
+      const { x, y } = navPointerPosRef.current;
+      const hovered = document.elementFromPoint(x, y)?.closest?.(".nav-link");
+      maybeSlideFromHoveredLink(hovered);
+    }, NAV_SLIDE_COOLDOWN_MS + 80);
+  }, [clearNavEdgeRepeatTimer, isCompactNav, isMobile]);
+
+  const handleNavLinksPointerMove = useCallback((event) => {
+    navPointerInsideRef.current = true;
+    navPointerPosRef.current = { x: event.clientX, y: event.clientY };
+
+    const linkElement = event.target?.closest?.(".nav-link");
+    if (!linkElement) return;
+
+    clearNavEdgeHoverTimer();
+    navEdgeHoverTimerRef.current = window.setTimeout(() => {
+      navEdgeHoverTimerRef.current = null;
+      maybeSlideFromHoveredLink(linkElement);
+    }, NAV_EDGE_HOVER_DELAY_MS);
+  }, [clearNavEdgeHoverTimer, maybeSlideFromHoveredLink]);
+
+  const handleNavLinksPointerLeave = useCallback(() => {
+    navPointerInsideRef.current = false;
+    clearNavEdgeHoverTimer();
+    clearNavEdgeRepeatTimer();
+  }, [clearNavEdgeHoverTimer, clearNavEdgeRepeatTimer]);
 
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
@@ -987,6 +1081,14 @@ const Header = () => {
       if (resizeObserver) resizeObserver.disconnect();
     };
   }, [isCompactNav, isMobile, updateNavScrollState, visibleNavLinks]);
+
+  useEffect(
+    () => () => {
+      clearNavEdgeHoverTimer();
+      clearNavEdgeRepeatTimer();
+    },
+    [clearNavEdgeHoverTimer, clearNavEdgeRepeatTimer]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1664,9 +1766,18 @@ const Header = () => {
               </div>
             </div>
 
-            <ul className="nav-links" ref={navLinksRef}>
+            <ul
+              className="nav-links"
+              ref={navLinksRef}
+              onPointerMove={handleNavLinksPointerMove}
+              onPointerLeave={handleNavLinksPointerLeave}
+            >
               {visibleNavLinks.map((link, idx) => (
-                <Link key={`${link.path}-${idx}`} to={link.path} className="nav-link">
+                <Link
+                  key={`${link.path}-${idx}`}
+                  to={link.path}
+                  className="nav-link"
+                >
                   {link.label}
                 </Link>
               ))}

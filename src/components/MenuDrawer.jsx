@@ -413,6 +413,7 @@ export default function MenuDrawer({ open, onClose }) {
         .md-sec-head:hover { background:#fff5f5; }
         .md-sec-icon { width:30px;height:30px;border-radius:8px;background:#fff0f0;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
         .md-sec-label { font-size:13px;font-weight:600;color:#222;flex:1; }
+        .md-sec-toggle { border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer; }
         .md-sub-body { overflow:hidden;background:#fafafa; }
         .md-sub-link { display:block;padding:9px 16px 9px 40px;font-size:12.5px;font-weight:400;color:#555;border-bottom:1px solid #f0ece8;cursor:pointer;transition:color 0.15s,background 0.15s;font-family:'Poppins',sans-serif;background:none;width:100%;text-align:left;border-left:none;border-right:none;border-top:none; }
         .md-sub-link:hover { color:#D80100;background:#fff8f7; }
@@ -452,19 +453,40 @@ export default function MenuDrawer({ open, onClose }) {
 
             return (
               <div key={label}>
-                <button className="md-sec-head" onClick={() => toggleSection(label)}>
+                <div
+                  className="md-sec-head"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleNav(`/category/${finalSlug}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleNav(`/category/${finalSlug}`);
+                    }
+                  }}
+                >
                   <span className="md-sec-icon">
                     {createElement(SectionIcon, { size: 15, color: "#D80100", strokeWidth: 2 })}
                   </span>
-                  <span className="md-sec-label" onClick={(e) => { e.stopPropagation(); handleNav(`/category/${finalSlug}`); }}>
-                    {label}
-                  </span>
+                  <span className="md-sec-label">{label}</span>
                   {(hasSubcats || hasLinks) && (
-                    <ChevronDown size={14} color="#aaa"
-                      style={{ transition: "transform 0.2s", transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                    />
+                    <button
+                      type="button"
+                      className="md-sec-toggle"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSection(label);
+                      }}
+                      aria-label={`${sectionOpen ? "Collapse" : "Expand"} ${label}`}
+                    >
+                      <ChevronDown
+                        size={14}
+                        color="#aaa"
+                        style={{ transition: "transform 0.2s", transform: sectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      />
+                    </button>
                   )}
-                </button>
+                </div>
 
                 <div className="md-sub-body" style={{ maxHeight: sectionOpen ? "600px" : "0", transition: "max-height 0.3s ease" }}>
                   {hasSubcats ? (

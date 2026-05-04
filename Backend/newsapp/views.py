@@ -30,6 +30,7 @@ from .workflow import ALLOWED_TRANSITIONS
 import os
 import uuid
 import re
+from difflib import SequenceMatcher
 from pathlib import Path
 from openai import OpenAI
 from spellchecker import SpellChecker
@@ -2489,6 +2490,20 @@ def _openai_error_response(e):
 
 _SPELL_TOKEN_RE = re.compile(r"\b[A-Za-z][A-Za-z'-]{2,}\b")
 _TITLE_PREFIX_RE = re.compile(r"(rep|mr|mrs|ms|dr|sen|president|governor|gov|prof)\.?\s+$", re.IGNORECASE)
+_SAFE_SPELLING_WORDS = {
+    "defence",
+    "deep-tech",
+    "handholding",
+    "newspace",
+    "spacex",
+    "galaxeye",
+    "isro",
+    "nsil",
+    "optosar",
+    "drishti",
+    "tamil",
+    "nadu",
+}
 
 
 def _preserve_case(original, replacement):
@@ -2501,9 +2516,40 @@ def _preserve_case(original, replacement):
     return replacement
 
 
+def _has_internal_caps(token):
+    return any(char.isupper() for char in token[1:])
+
+
+def _looks_low_confidence_replacement(original, replacement):
+    if not replacement:
+        return True
+
+    original_lower = original.lower()
+    replacement_lower = replacement.lower()
+
+    if original_lower == replacement_lower:
+        return True
+    if original_lower in _SAFE_SPELLING_WORDS or replacement_lower in _SAFE_SPELLING_WORDS:
+        return True
+    if _has_internal_caps(original):
+        return True
+    if not original_lower[:1] or replacement_lower[:1] != original_lower[:1]:
+        return True
+    if len(replacement_lower) - len(original_lower) > 2:
+        return True
+    if SequenceMatcher(None, original_lower, replacement_lower).ratio() < 0.72:
+        return True
+
+    return False
+
+
 def _get_spelling_replacement(token):
     token = (token or "").strip()
     if not token:
+        return None
+    if token.lower() in _SAFE_SPELLING_WORDS:
+        return None
+    if _has_internal_caps(token):
         return None
 
     parts = token.split("-")
@@ -2531,6 +2577,8 @@ def _get_spelling_replacement(token):
 
     replacement = SPELLCHECKER.correction(normalized)
     if not replacement or replacement == normalized:
+        return None
+    if _looks_low_confidence_replacement(token, replacement):
         return None
 
     return _preserve_case(token, replacement)
@@ -2582,6 +2630,50 @@ def _collect_spelling_suggestions(content):
     return suggestions
 
 
+def _index_ai_spelling_suggestions(content, raw_suggestions):
+    indexed = []
+    used_ranges = set()
+    text = content or ""
+
+    for item in raw_suggestions:
+        if not isinstance(item, dict):
+            continue
+
+        original = str(item.get("original", "")).strip()
+        replacement = str(item.get("replacement", "")).strip()
+        reason = str(item.get("reason", "")).strip()
+
+        if not original or not replacement:
+            continue
+        if original == replacement:
+            continue
+        if original.lower() in _SAFE_SPELLING_WORDS or replacement.lower() in _SAFE_SPELLING_WORDS:
+            continue
+        if _has_internal_caps(original):
+            continue
+        if _looks_low_confidence_replacement(original, replacement):
+            continue
+
+        pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(original)}(?![A-Za-z0-9])")
+        for match in pattern.finditer(text):
+            key = (match.start(), match.end())
+            if key in used_ranges:
+                continue
+            used_ranges.add(key)
+            indexed.append(
+                {
+                    "start": match.start(),
+                    "end": match.end(),
+                    "original": original,
+                    "replacement": _preserve_case(original, replacement),
+                    "message": reason or f'Suggest "{replacement}"',
+                }
+            )
+
+    indexed.sort(key=lambda item: item["start"])
+    return indexed[:80]
+
+
 _SENTENCE_RE = re.compile(r"[^.!?\n]+(?:[.!?]+|$)")
 
 
@@ -2608,14 +2700,32 @@ def _collect_sentences(content):
 @staff_member_required
 @require_POST
 def ai_spell_check(request):
-    """Find spelling suggestions without rewriting the full article."""
+    """Use AI to suggest spelling fixes without rewriting the full article."""
     try:
         data    = json.loads(request.body)
         content = data.get("content", "").strip()
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
-        suggestions = _collect_spelling_suggestions(content)
+        prompt = (
+            "You are a professional copy editor. Review the article text for spelling mistakes only.\n\n"
+            "Return ONLY valid JSON in this exact shape:\n"
+            '{"suggestions":[{"original":"exact misspelled word from article","replacement":"correct spelling","reason":"short typo reason"}]}\n\n'
+            "Rules:\n"
+            "- Suggest only when you are highly confident the word is misspelled\n"
+            "- Do NOT rewrite sentences\n"
+            "- Do NOT suggest grammar, punctuation, style, capitalization, or wording changes\n"
+            "- Do NOT flag proper nouns, company names, product names, acronyms, Indian names, or British English spellings\n"
+            "- Keep each suggestion to a single word or a hyphenated word only\n"
+            "- The `original` value must match the exact word as it appears in the article\n"
+            "- If there are no spelling mistakes, return {\"suggestions\":[]}\n\n"
+            f"Article text:\n{content[:5000]}"
+        )
+        raw = _generate_ai_text(prompt, max_output_tokens=1000)
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(raw)
+        raw_suggestions = parsed.get("suggestions", []) if isinstance(parsed, dict) else []
+        suggestions = _index_ai_spelling_suggestions(content, raw_suggestions)
         return JsonResponse(
             {
                 "suggestions": suggestions,
@@ -2623,8 +2733,10 @@ def ai_spell_check(request):
             }
         )
 
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"error": f"Could not parse AI response: {str(e)}"}, status=500)
     except Exception as e:
-        return JsonResponse({"error": f"Spell check error: {str(e)}"}, status=500)
+        return _openai_error_response(e)
 
 
 @staff_member_required

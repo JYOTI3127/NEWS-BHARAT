@@ -30,10 +30,8 @@ from .workflow import ALLOWED_TRANSITIONS
 import os
 import uuid
 import re
-from difflib import SequenceMatcher
 from pathlib import Path
 from openai import OpenAI
-from spellchecker import SpellChecker
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
@@ -50,7 +48,6 @@ from .attendance import get_attendance_snapshot, pause_attendance, touch_attenda
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
-SPELLCHECKER = SpellChecker(distance=2)
 
 
 def _parse_ist_datetime(raw_value):
@@ -2488,193 +2485,35 @@ def _openai_error_response(e):
     return JsonResponse({"error": f"OpenAI error: {str(e)}"}, status=503)
 
 
-_SPELL_TOKEN_RE = re.compile(r"\b[A-Za-z][A-Za-z'-]{2,}\b")
-_TITLE_PREFIX_RE = re.compile(r"(rep|mr|mrs|ms|dr|sen|president|governor|gov|prof)\.?\s+$", re.IGNORECASE)
-_SAFE_SPELLING_WORDS = {
-    "defence",
-    "deep-tech",
-    "handholding",
-    "newspace",
-    "spacex",
-    "galaxeye",
-    "isro",
-    "nsil",
-    "optosar",
-    "drishti",
-    "tamil",
-    "nadu",
-}
-
-
-def _preserve_case(original, replacement):
-    if not replacement:
-        return replacement
-    if original.isupper():
-        return replacement.upper()
-    if original[:1].isupper():
-        return replacement[:1].upper() + replacement[1:]
-    return replacement
-
-
-def _has_internal_caps(token):
-    return any(char.isupper() for char in token[1:])
-
-
-def _looks_low_confidence_replacement(original, replacement):
-    if not replacement:
-        return True
-
-    original_lower = original.lower()
-    replacement_lower = replacement.lower()
-
-    if original_lower == replacement_lower:
-        return True
-    if original_lower in _SAFE_SPELLING_WORDS or replacement_lower in _SAFE_SPELLING_WORDS:
-        return True
-    if _has_internal_caps(original):
-        return True
-    if not original_lower[:1] or replacement_lower[:1] != original_lower[:1]:
-        return True
-    if len(replacement_lower) - len(original_lower) > 2:
-        return True
-    if SequenceMatcher(None, original_lower, replacement_lower).ratio() < 0.72:
-        return True
-
-    return False
-
-
-def _get_spelling_replacement(token):
-    token = (token or "").strip()
-    if not token:
-        return None
-    if token.lower() in _SAFE_SPELLING_WORDS:
-        return None
-    if _has_internal_caps(token):
-        return None
-
-    parts = token.split("-")
-    if len(parts) > 1:
-        updated_parts = []
-        changed = False
-        for part in parts:
-            replacement = _get_spelling_replacement(part)
-            if replacement and replacement.lower() != part.lower():
-                updated_parts.append(replacement)
-                changed = True
-            else:
-                updated_parts.append(part)
-        if changed:
-            return "-".join(updated_parts)
-        return None
-
-    normalized = token.strip("'").strip().lower()
-    if not normalized or len(normalized) < 3:
-        return None
-    if any(char.isdigit() for char in token):
-        return None
-    if token.isupper():
-        return None
-
-    replacement = SPELLCHECKER.correction(normalized)
-    if not replacement or replacement == normalized:
-        return None
-    if _looks_low_confidence_replacement(token, replacement):
-        return None
-
-    return _preserve_case(token, replacement)
-
-
-def _collect_spelling_suggestions(content):
-    suggestions = []
-    seen_ranges = set()
-    max_suggestions = 80
-
-    for match in _SPELL_TOKEN_RE.finditer(content or ""):
-        original = match.group(0)
-        prefix = (content or "")[max(0, match.start() - 24):match.start()]
-        suffix = (content or "")[match.end():match.end() + 2]
-        if "'" in original:
-            continue
-        if original[:1].isupper():
-            if '"' in prefix[-2:] or "'" in prefix[-2:] or '"' in suffix or "'" in suffix:
-                continue
-            if _TITLE_PREFIX_RE.search(prefix):
-                continue
-            prev_tokens = re.findall(r"\b[A-Za-z][A-Za-z'-]{1,}\b", prefix)
-            if prev_tokens:
-                prev_token = prev_tokens[-1]
-                if prev_token[:1].isupper():
-                    continue
-        replacement = _get_spelling_replacement(original)
-        if not replacement or replacement.lower() == original.lower():
-            continue
-
-        key = (match.start(), match.end(), replacement)
-        if key in seen_ranges:
-            continue
-        seen_ranges.add(key)
-
-        suggestions.append(
-            {
-                "start": match.start(),
-                "end": match.end(),
-                "original": original,
-                "replacement": replacement,
-                "message": f'Suggest "{replacement}"',
-            }
-        )
-
-        if len(suggestions) >= max_suggestions:
-            break
-
-    return suggestions
-
-
-def _index_ai_spelling_suggestions(content, raw_suggestions):
-    indexed = []
-    used_ranges = set()
-    text = content or ""
-
-    for item in raw_suggestions:
-        if not isinstance(item, dict):
-            continue
-
-        original = str(item.get("original", "")).strip()
-        replacement = str(item.get("replacement", "")).strip()
-        reason = str(item.get("reason", "")).strip()
-
-        if not original or not replacement:
-            continue
-        if original == replacement:
-            continue
-        if original.lower() in _SAFE_SPELLING_WORDS or replacement.lower() in _SAFE_SPELLING_WORDS:
-            continue
-        if _has_internal_caps(original):
-            continue
-        if _looks_low_confidence_replacement(original, replacement):
-            continue
-
-        pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(original)}(?![A-Za-z0-9])")
-        for match in pattern.finditer(text):
-            key = (match.start(), match.end())
-            if key in used_ranges:
-                continue
-            used_ranges.add(key)
-            indexed.append(
-                {
-                    "start": match.start(),
-                    "end": match.end(),
-                    "original": original,
-                    "replacement": _preserve_case(original, replacement),
-                    "message": reason or f'Suggest "{replacement}"',
-                }
-            )
-
-    indexed.sort(key=lambda item: item["start"])
-    return indexed[:80]
-
-
 _SENTENCE_RE = re.compile(r"[^.!?\n]+(?:[.!?]+|$)")
+_WORD_RE = re.compile(r"[A-Za-z']+")
+_AI_GENERIC_PHRASES = [
+    "in recent memory",
+    "in recent years",
+    "plays a key role",
+    "plays a crucial role",
+    "it remains to be seen",
+    "underscores the importance",
+    "highlights the importance",
+    "stands as a testament",
+    "offers a glimpse",
+    "serves as a reminder",
+    "is worth noting",
+    "from this perspective",
+    "at the same time",
+    "in simple terms",
+]
+_AI_TRANSITIONS = {
+    "however",
+    "moreover",
+    "furthermore",
+    "additionally",
+    "meanwhile",
+    "overall",
+    "therefore",
+    "consequently",
+    "notably",
+}
 
 
 def _collect_sentences(content):
@@ -2697,39 +2536,205 @@ def _collect_sentences(content):
     return sentences
 
 
+def _estimate_ai_likeness(content):
+    text = str(content or "").strip()
+    if not text:
+        return 0, "Content is empty."
+
+    sentences = [item["text"] for item in _collect_sentences(text)]
+    if not sentences:
+        sentences = [segment.strip() for segment in re.split(r"[\n]+", text) if segment.strip()]
+
+    lower_text = text.lower()
+    words = _WORD_RE.findall(text)
+    word_count = len(words)
+    sentence_word_counts = [len(_WORD_RE.findall(sentence)) for sentence in sentences if sentence]
+    sentence_count = len(sentence_word_counts)
+
+    score = 12
+    notes = []
+
+    generic_hits = sum(lower_text.count(phrase) for phrase in _AI_GENERIC_PHRASES)
+    if generic_hits:
+        score += min(24, generic_hits * 5)
+        notes.append("some generic phrasing")
+
+    transition_hits = 0
+    repeated_starters = {}
+    for sentence in sentences:
+        starter_match = re.match(r"\s*([A-Za-z']+)", sentence)
+        if not starter_match:
+            continue
+        starter = starter_match.group(1).lower()
+        repeated_starters[starter] = repeated_starters.get(starter, 0) + 1
+        if starter in _AI_TRANSITIONS:
+            transition_hits += 1
+    if transition_hits:
+        score += min(10, transition_hits * 2)
+        notes.append("heavy transition-led flow")
+
+    repeated_starter_hits = sum(count - 1 for count in repeated_starters.values() if count >= 3)
+    if repeated_starter_hits:
+        score += min(10, repeated_starter_hits * 2)
+        notes.append("repetitive sentence openings")
+
+    if sentence_word_counts:
+        avg_len = sum(sentence_word_counts) / len(sentence_word_counts)
+        if avg_len >= 30:
+            score += 16
+            notes.append("long sentence rhythm")
+        elif avg_len >= 24:
+            score += 10
+            notes.append("slightly over-extended sentences")
+
+        if len(sentence_word_counts) >= 4:
+            variance = sum((count - avg_len) ** 2 for count in sentence_word_counts) / len(sentence_word_counts)
+            std_dev = variance ** 0.5
+            if std_dev < 5:
+                score += 10
+                notes.append("very even sentence cadence")
+            elif std_dev < 7:
+                score += 5
+                notes.append("slightly uniform sentence cadence")
+
+        long_sentences = sum(1 for count in sentence_word_counts if count >= 32)
+        if long_sentences >= 2:
+            score += min(12, long_sentences * 3)
+            notes.append("multiple heavy sentences")
+
+    if word_count >= 220 and text.count("\n\n") <= 1:
+        score += 8
+        notes.append("dense block structure")
+
+    repeated_phrases = 0
+    trigrams = {}
+    normalized_words = [word.lower() for word in words]
+    for index in range(len(normalized_words) - 2):
+        trigram = " ".join(normalized_words[index:index + 3])
+        trigrams[trigram] = trigrams.get(trigram, 0) + 1
+    repeated_phrases = sum(count - 1 for count in trigrams.values() if count >= 3)
+    if repeated_phrases:
+        score += min(10, repeated_phrases * 2)
+        notes.append("noticeable phrase repetition")
+
+    score = max(0, min(100, int(round(score))))
+
+    if score <= 20:
+        summary = "This already reads fairly natural and human."
+    elif score <= 40:
+        summary = "This reads mostly natural, with a few lines that still sound templated."
+    elif score <= 60:
+        summary = "This has a mixed tone, with several lines that still feel AI-polished."
+    elif score <= 80:
+        summary = "This still sounds noticeably AI-shaped in rhythm and phrasing."
+    else:
+        summary = "This reads heavily AI-shaped right now and needs stronger rewriting."
+
+    if notes:
+        summary = f"{summary} Main signals: {', '.join(notes[:2])}."
+
+    return score, summary
+
+
+def _index_exact_sentence_suggestions(content, raw_suggestions, default_reason):
+    sentences = _collect_sentences(content)
+    indexed = []
+    used_starts = set()
+
+    for item in raw_suggestions:
+        if not isinstance(item, dict):
+            continue
+
+        original = str(item.get("original", "")).strip()
+        suggestion = str(item.get("suggestion", "")).strip()
+        reason = str(item.get("reason", "")).strip()
+        if not original or not suggestion or original == suggestion:
+            continue
+
+        match_sentence = next(
+            (
+                sentence
+                for sentence in sentences
+                if sentence["text"] == original and sentence["start"] not in used_starts
+            ),
+            None,
+        )
+        if not match_sentence:
+            continue
+
+        used_starts.add(match_sentence["start"])
+        indexed.append(
+            {
+                "start": match_sentence["start"],
+                "end": match_sentence["end"],
+                "original": original,
+                "suggestion": suggestion,
+                "reason": reason or default_reason,
+            }
+        )
+
+    return indexed
+
+
 @staff_member_required
 @require_POST
-def ai_spell_check(request):
-    """Use AI to suggest spelling fixes without rewriting the full article."""
+def ai_humanize_article(request):
+    """Review AI-sounding copy and return sentence-level humanization suggestions."""
     try:
-        data    = json.loads(request.body)
+        data = json.loads(request.body)
         content = data.get("content", "").strip()
+        analyze_only = bool(data.get("analyze_only"))
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
+        ai_score, summary = _estimate_ai_likeness(content)
+
+        if analyze_only:
+            return JsonResponse(
+                {
+                    "ai_score": ai_score,
+                    "summary": summary,
+                    "suggestions": [],
+                    "count": 0,
+                }
+            )
+
         prompt = (
-            "You are a professional copy editor. Review the article text for spelling mistakes only.\n\n"
+            "You are a senior newsroom editor reviewing article copy that may sound AI-generated. "
+            "The user will provide plain article text.\n\n"
             "Return ONLY valid JSON in this exact shape:\n"
-            '{"suggestions":[{"original":"exact misspelled word from article","replacement":"correct spelling","reason":"short typo reason"}]}\n\n'
+            '{"suggestions":[{"original":"exact sentence from article","suggestion":"more natural rewrite of that same sentence","reason":"short reason"}]}\n\n'
             "Rules:\n"
-            "- Suggest only when you are highly confident the word is misspelled\n"
-            "- Do NOT rewrite sentences\n"
-            "- Do NOT suggest grammar, punctuation, style, capitalization, or wording changes\n"
-            "- Do NOT flag proper nouns, company names, product names, acronyms, Indian names, or British English spellings\n"
-            "- Keep each suggestion to a single word or a hyphenated word only\n"
-            "- The `original` value must match the exact word as it appears in the article\n"
-            "- If there are no spelling mistakes, return {\"suggestions\":[]}\n\n"
-            f"Article text:\n{content[:5000]}"
+            "- Include at most 10 suggestions\n"
+            "- Each original must be copied exactly from the article\n"
+            "- Prioritize the highest-impact sentences first so one review pass gives the strongest improvement\n"
+            "- Suggest only sentences that genuinely sound robotic, repetitive, generic, overly polished, or unnatural\n"
+            "- Keep meaning, facts, names, dates, quotes, and claims unchanged\n"
+            "- Do not rewrite the full article\n"
+            "- Do not suggest changes for sentences that already sound natural\n"
+            "- Rewrite suggestions should sound sharper, more natural, and more newsroom-like without becoming casual\n"
+            "- Be aggressive about improving robotic wording while preserving facts and editorial meaning\n"
+            "- Do not return markdown or any extra commentary\n\n"
+            f"Article:\n{content[:7000]}"
         )
-        raw = _generate_ai_text(prompt, max_output_tokens=1000)
+        raw = _generate_ai_text(prompt, max_output_tokens=2200)
         raw = raw.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(raw)
+
         raw_suggestions = parsed.get("suggestions", []) if isinstance(parsed, dict) else []
-        suggestions = _index_ai_spelling_suggestions(content, raw_suggestions)
+
+        indexed = _index_exact_sentence_suggestions(
+            content,
+            raw_suggestions,
+            "Sounds more natural",
+        )
+
         return JsonResponse(
             {
-                "suggestions": suggestions,
-                "count": len(suggestions),
+                "ai_score": ai_score,
+                "summary": summary or "Review the suggested lines and apply only the ones you want.",
+                "suggestions": indexed[:10],
+                "count": len(indexed[:10]),
             }
         )
 
@@ -2790,8 +2795,7 @@ def ai_sentence_suggestions(request):
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
-        sentences = _collect_sentences(content)
-        if not sentences:
+        if not _collect_sentences(content):
             return JsonResponse({"suggestions": [], "count": 0})
 
         prompt = (
@@ -2813,38 +2817,11 @@ def ai_sentence_suggestions(request):
         parsed = json.loads(raw)
         raw_suggestions = parsed.get("suggestions", []) if isinstance(parsed, dict) else []
 
-        indexed = []
-        used_starts = set()
-        for item in raw_suggestions:
-            if not isinstance(item, dict):
-                continue
-            original = str(item.get("original", "")).strip()
-            suggestion = str(item.get("suggestion", "")).strip()
-            reason = str(item.get("reason", "")).strip()
-            if not original or not suggestion or original == suggestion:
-                continue
-
-            match_sentence = next(
-                (
-                    sentence
-                    for sentence in sentences
-                    if sentence["text"] == original and sentence["start"] not in used_starts
-                ),
-                None,
-            )
-            if not match_sentence:
-                continue
-
-            used_starts.add(match_sentence["start"])
-            indexed.append(
-                {
-                    "start": match_sentence["start"],
-                    "end": match_sentence["end"],
-                    "original": original,
-                    "suggestion": suggestion,
-                    "reason": reason or "Improves clarity",
-                }
-            )
+        indexed = _index_exact_sentence_suggestions(
+            content,
+            raw_suggestions,
+            "Improves clarity",
+        )
 
         return JsonResponse({"suggestions": indexed[:5], "count": len(indexed[:5])})
 

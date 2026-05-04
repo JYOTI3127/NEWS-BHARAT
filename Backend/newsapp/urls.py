@@ -27,7 +27,7 @@ urlpatterns = [
     path('logout/',         views.secure_logout_view, name='logout'),
     path('my-credentials/', views.my_credentials,     name='my_credentials'),
 
-    path('ai/spell-check/',      views.ai_spell_check,       name='ai_spell_check'),
+    path('ai/humanize/',         views.ai_humanize_article,  name='ai_humanize_article'),
     path('ai/grammar-check/',    views.ai_grammar_check,     name='ai_grammar_check'),   
     path('ai/sentence-suggestions/', views.ai_sentence_suggestions, name='ai_sentence_suggestions'),
     path('ai/plagiarism-check/', views.ai_plagiarism_check,  name='ai_plagiarism_check'),

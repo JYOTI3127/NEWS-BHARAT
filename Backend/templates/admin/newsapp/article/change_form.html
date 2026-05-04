@@ -297,79 +297,6 @@ label.image-drop {
 }
 .publish-date-cancel:hover { background: #f8fafc; color: #0f172a; }
 
-.ai-spell-mark {
-  background: rgba(245, 158, 11, 0.18);
-  border-bottom: 2px dotted #f59e0b;
-  border-radius: 3px;
-  cursor: pointer;
-}
-.ai-spell-mark:hover,
-.ai-spell-mark.active {
-  background: rgba(245, 158, 11, 0.28);
-}
-.ai-spell-popover {
-  position: fixed;
-  z-index: 100001;
-  min-width: 220px;
-  max-width: 280px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
-  padding: 12px;
-  display: none;
-}
-.ai-spell-popover.show {
-  display: block;
-}
-.ai-spell-popover__label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.ai-spell-popover__word {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-}
-.ai-spell-popover__hint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.45;
-}
-.ai-spell-popover__actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-.ai-spell-popover__btn {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 7px 10px;
-  cursor: pointer;
-}
-.ai-spell-popover__btn:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-}
-.ai-spell-popover__btn--apply {
-  background: #f59e0b;
-  border-color: #f59e0b;
-  color: #fff;
-}
-.ai-spell-popover__btn--apply:hover {
-  background: #d97706;
-  border-color: #d97706;
-}
-
 .sentence-suggest-modal {
   position: fixed;
   inset: 0;
@@ -671,9 +598,9 @@ grammarly-button,
     <option value="2.5">2.5×</option>
   </select>
   <div class="nb-it-sep"></div>
-  <button type="button" class="nb-it-ai-btn" onclick="runSpellCheck()" title="AI Spell Fix">
+  <button type="button" class="nb-it-ai-btn" onclick="runHumanize()" title="Humanize Article">
     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-    AI Fix
+    Humanize
   </button>
   <button type="button" class="ai-spell-btn" onclick="runGrammarCheck()"><div class="ai-dot"></div>&#10022; Grammar Fix</button>
   <button type="button" class="ai-spell-btn" onclick="runSentenceSuggest()"><div class="ai-dot"></div>&#10022; Sentence Suggest</button>
@@ -790,31 +717,22 @@ grammarly-button,
         <div class="sep"></div>
         <button onclick="fmt('removeFormat')" title="Clear Formatting">&#x2715;</button>
         <div class="sep"></div>
-        <button type="button" class="ai-spell-btn" onclick="runSpellCheck()"><div class="ai-dot"></div>&#10022; AI Spell Fix</button>
+        <button type="button" class="ai-spell-btn" onclick="runHumanize()"><div class="ai-dot"></div>&#10022; Humanize</button>
         <button type="button" class="ai-spell-btn" onclick="runSentenceSuggest()"><div class="ai-dot"></div>&#10022; Sentence Suggest</button>
         <button type="button" class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
       </div>
 
       <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article..." data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">{{ original.content|default:''|safe }}</div>
-      <div class="ai-status" id="ai_status"></div>
-      <div class="ai-spell-popover" id="ai_spell_popover">
-        <div class="ai-spell-popover__label">Spelling suggestion</div>
-        <div class="ai-spell-popover__word" id="ai_spell_popover_word"></div>
-        <div class="ai-spell-popover__hint" id="ai_spell_popover_hint"></div>
-        <div class="ai-spell-popover__actions">
-          <button type="button" class="ai-spell-popover__btn ai-spell-popover__btn--apply" id="ai_spell_apply_btn">Apply</button>
-          <button type="button" class="ai-spell-popover__btn" id="ai_spell_ignore_btn">Ignore</button>
-        </div>
-      </div>
-      <div class="sentence-suggest-modal" id="sentence_suggest_modal">
-        <div class="sentence-suggest-panel">
-          <div class="sentence-suggest-head">
-            <div>
-              <div class="sentence-suggest-title">Sentence Suggestions</div>
-              <div class="sentence-suggest-sub">Review and apply only the rewrites you like.</div>
+        <div class="ai-status" id="ai_status"></div>
+        <div class="sentence-suggest-modal" id="sentence_suggest_modal">
+          <div class="sentence-suggest-panel">
+            <div class="sentence-suggest-head">
+              <div>
+                <div class="sentence-suggest-title" id="sentence_suggest_title">Sentence Suggestions</div>
+                <div class="sentence-suggest-sub" id="sentence_suggest_sub">Review and apply only the rewrites you like.</div>
+              </div>
+              <button type="button" class="sentence-suggest-close" id="sentence_suggest_close_btn">&times;</button>
             </div>
-            <button type="button" class="sentence-suggest-close" id="sentence_suggest_close_btn">&times;</button>
-          </div>
           <div class="sentence-suggest-list" id="sentence_suggest_list"></div>
           <div class="sentence-suggest-empty" id="sentence_suggest_empty" style="display:none;">No sentence suggestions right now.</div>
         </div>
@@ -1432,7 +1350,7 @@ grammarly-button,
     'runPlagiarismCheck','nbClosePlagModal','addComment','jumpToField',
     'updateTagPermStatus','saveTagPerm',
     'generateSlug','updateCanonicalFromSlug','updateRobots','syncNoindex','updateSeoScore',
-    'runSpellCheck','runGrammarCheck','runSentenceSuggest','suggestKeywords','selectKw',
+    'runHumanize','runGrammarCheck','runSentenceSuggest','suggestKeywords','selectKw',
     'submitArticle','selectEditor','filterEditors','updateBioCount','updateSubtitleCount',
     'updateEditorPreview','switchPreviewTab','getCsrf','getInitials','nbSaveHistory',
     'nbItSaveSelection','nbItRestoreSelection','nbInlineInsertLink',
@@ -2559,9 +2477,6 @@ if(nbEditor){
   nbEditor.setAttribute('data-enable-grammarly','false');
   nbEditor.setAttribute('spellcheck','false');
   nbEditor.addEventListener('input',function(){
-    if(nbEditor.querySelector('.ai-spell-mark')){
-      clearSpellSuggestions(true);
-    }
     clearTimeout(nbHistTimer);
     nbHistTimer=setTimeout(nbSaveHistory,400);
   });
@@ -3569,22 +3484,73 @@ function _setAiStatus(msg){
   const s=document.getElementById('ai_status');
   if(s)s.innerHTML=msg;
 }
-const aiSpellPopover=document.getElementById('ai_spell_popover');
-const aiSpellPopoverWord=document.getElementById('ai_spell_popover_word');
-const aiSpellPopoverHint=document.getElementById('ai_spell_popover_hint');
-const aiSpellApplyBtn=document.getElementById('ai_spell_apply_btn');
-const aiSpellIgnoreBtn=document.getElementById('ai_spell_ignore_btn');
 const sentenceSuggestModal=document.getElementById('sentence_suggest_modal');
 const sentenceSuggestList=document.getElementById('sentence_suggest_list');
 const sentenceSuggestEmpty=document.getElementById('sentence_suggest_empty');
 const sentenceSuggestCloseBtn=document.getElementById('sentence_suggest_close_btn');
-let activeSpellMark=null;
+const sentenceSuggestTitle=document.getElementById('sentence_suggest_title');
+const sentenceSuggestSub=document.getElementById('sentence_suggest_sub');
+let humanizeReviewState=null;
 
 function showSentenceSuggestModal(){
   if(sentenceSuggestModal)sentenceSuggestModal.classList.add('show');
 }
 function hideSentenceSuggestModal(){
   if(sentenceSuggestModal)sentenceSuggestModal.classList.remove('show');
+}
+function setSentenceSuggestMeta(title,sub){
+  if(sentenceSuggestTitle)sentenceSuggestTitle.textContent=title||'Sentence Suggestions';
+  if(sentenceSuggestSub)sentenceSuggestSub.textContent=sub||'Review and apply only the rewrites you like.';
+}
+function startHumanizeReviewState(score,projectedScore,summary,items){
+  const safeScore=Math.max(0,Math.min(100,Number(score)||0));
+  const list=Array.isArray(items)?items:[];
+  humanizeReviewState={
+    active:true,
+    baseScore:safeScore,
+    summary:summary||'Review the suggestions and apply only what you like.',
+    totalSuggestions:list.length,
+    appliedSuggestions:0,
+    rescanned:false
+  };
+}
+function clearHumanizeReviewState(){
+  humanizeReviewState=null;
+}
+function refreshHumanizeMeta(){
+  if(!humanizeReviewState||!humanizeReviewState.active)return;
+  const applied=humanizeReviewState.appliedSuggestions||0;
+  const total=humanizeReviewState.totalSuggestions||0;
+  setSentenceSuggestMeta(
+    'Humanize Review',
+    'AI-likeness: '+humanizeReviewState.baseScore+'%. '+humanizeReviewState.summary+' Applied '+applied+'/'+total+'.'
+  );
+}
+async function rescanHumanizeScore(){
+  if(!nbEditor)return;
+  const content=(nbEditor.textContent||'').trim();
+  if(!content)return;
+  try{
+    _setAiStatus('<span class="ai-loading"></span> Rescanning article...');
+    const res=await fetch('/api/ai/humanize/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({content:content,analyze_only:true})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Server error');
+    const rescannedScore=Number.isFinite(Number(data.ai_score))?Math.max(0,Math.min(100,Number(data.ai_score))):0;
+    const summary=data.summary||'Scan complete.';
+    if(humanizeReviewState&&humanizeReviewState.active){
+      humanizeReviewState.baseScore=rescannedScore;
+      humanizeReviewState.summary=summary;
+      humanizeReviewState.rescanned=true;
+      refreshHumanizeMeta();
+    }
+    _setAiStatus('Humanize review complete. Current AI-likeness: '+rescannedScore+'%.');
+  }catch(e){
+    _setAiStatus('Re-scan failed: '+e.message);
+  }
 }
 function collectEditorTextNodes(){
   if(!nbEditor)return [];
@@ -3613,11 +3579,37 @@ function replaceEditorTextRange(start,end,replacement){
   nbSaveHistory();
   return true;
 }
+function reindexSentenceSuggestions(items){
+  if(!nbEditor||!Array.isArray(items))return items||[];
+  const content=nbEditor.textContent||'';
+  let cursor=0;
+  return items
+    .map(function(item){
+      const original=(item&&item.original)||'';
+      if(!original)return null;
+      const start=content.indexOf(original,cursor);
+      if(start===-1)return null;
+      const nextItem=Object.assign({},item,{
+        start:start,
+        end:start+original.length
+      });
+      cursor=nextItem.end;
+      return nextItem;
+    })
+    .filter(Boolean);
+}
 function renderSentenceSuggestions(items){
   if(!sentenceSuggestList||!sentenceSuggestEmpty)return;
   sentenceSuggestList.innerHTML='';
   if(!Array.isArray(items)||!items.length){
     sentenceSuggestEmpty.style.display='';
+    if(humanizeReviewState&&humanizeReviewState.active){
+      if(!humanizeReviewState.rescanned){
+        rescanHumanizeScore();
+      }else{
+        refreshHumanizeMeta();
+      }
+    }
     return;
   }
   sentenceSuggestEmpty.style.display='none';
@@ -3640,9 +3632,19 @@ function renderSentenceSuggestions(items){
     const buttons=card.querySelectorAll('.sentence-suggest-btn');
     buttons[0].addEventListener('click',function(){
       if(replaceEditorTextRange(item.start,item.end,item.suggestion||'')){
+        if(humanizeReviewState&&humanizeReviewState.active){
+          humanizeReviewState.appliedSuggestions+=1;
+          humanizeReviewState.rescanned=false;
+        }
         items.splice(index,1);
-        renderSentenceSuggestions(items);
-        _setAiStatus('Sentence suggestion applied.');
+        const refreshed=reindexSentenceSuggestions(items);
+        renderSentenceSuggestions(refreshed);
+        if(humanizeReviewState&&humanizeReviewState.active){
+          refreshHumanizeMeta();
+          _setAiStatus('Suggestion applied.');
+        }else{
+          _setAiStatus('Suggestion applied.');
+        }
       }
     });
     buttons[1].addEventListener('click',function(){
@@ -3799,33 +3801,39 @@ if(nbEditor){
     }
   });
 }
-if(aiSpellApplyBtn){
-  aiSpellApplyBtn.addEventListener('click',function(){
-    if(activeSpellMark)applySpellSuggestion(activeSpellMark);
-  });
-}
-if(aiSpellIgnoreBtn){
-  aiSpellIgnoreBtn.addEventListener('click',function(){
-    if(activeSpellMark){
-      removeSpellMark(activeSpellMark);
-      if(nbEditor)nbEditor.normalize();
-      hideSpellPopover();
-      updateSpellStatus();
-    }
-  });
-}
 if(sentenceSuggestCloseBtn){
   sentenceSuggestCloseBtn.addEventListener('click',hideSentenceSuggestModal);
 }
-document.addEventListener('click',function(e){
-  if(e.target.closest('.ai-spell-mark'))return;
-  if(e.target.closest('#ai_spell_popover'))return;
-  hideSpellPopover();
-});
 if(sentenceSuggestModal){
   sentenceSuggestModal.addEventListener('click',function(e){
     if(e.target===sentenceSuggestModal)hideSentenceSuggestModal();
   });
+}
+
+async function runHumanize(){
+  if(!nbEditor){alert('Editor not found.');return;}
+  const content=(nbEditor.textContent||'').trim();
+  if(!content){alert('Content is empty!');return;}
+  _setAiStatus('<span class="ai-loading"></span> Checking how AI-written the article sounds...');
+  try{
+    const res=await fetch('/api/ai/humanize/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({content:content})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Server error');
+    if(data.corrected){
+      nbEditor.innerHTML=data.corrected;
+      nbSaveHistory();
+      _setAiStatus('✓ Article humanized successfully!');
+    }else{
+      _setAiStatus('No humanization changes were suggested.');
+    }
+  }catch(e){
+    _setAiStatus('Humanize failed: '+e.message);
+  }
+  setTimeout(function(){_setAiStatus('');},4000);
 }
 
 async function runGrammarCheck(){
@@ -3866,6 +3874,53 @@ async function runSentenceSuggest(){
     });
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Server error');
+    renderSentenceSuggestions((data.suggestions||[]).slice());
+    showSentenceSuggestModal();
+    _setAiStatus(data.count ? ('Sentence suggestions found: '+data.count) : 'No sentence suggestions found.');
+  }catch(e){
+    _setAiStatus('Sentence suggestions failed: '+e.message);
+  }
+}
+async function runHumanize(){
+  if(!nbEditor){alert('Editor not found.');return;}
+  const content=(nbEditor.textContent||'').trim();
+  if(!content){alert('Content is empty!');return;}
+  _setAiStatus('<span class="ai-loading"></span> Checking how AI-written the article sounds...');
+  try{
+    const res=await fetch('/api/ai/humanize/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({content:content})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Server error');
+    const score=Number.isFinite(Number(data.ai_score))?Math.max(0,Math.min(100,Number(data.ai_score))):0;
+    const summary=data.summary||'Review the suggestions and apply only what you like.';
+    const suggestions=(data.suggestions||[]).slice();
+    startHumanizeReviewState(score,0,summary,suggestions);
+    refreshHumanizeMeta();
+    renderSentenceSuggestions(suggestions);
+    showSentenceSuggestModal();
+    _setAiStatus(data.count ? ('Humanize suggestions found: '+data.count+' | AI-likeness: '+score+'%') : ('AI-likeness: '+score+'%. No humanize suggestions found.'));
+  }catch(e){
+    _setAiStatus('Humanize failed: '+e.message);
+  }
+}
+async function runSentenceSuggest(){
+  if(!nbEditor){alert('Editor not found.');return;}
+  const content=(nbEditor.textContent||'').trim();
+  if(!content){alert('Content is empty!');return;}
+  _setAiStatus('<span class="ai-loading"></span> AI is reviewing sentence suggestions...');
+  try{
+    const res=await fetch('/api/ai/sentence-suggestions/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({content:content})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Server error');
+    clearHumanizeReviewState();
+    setSentenceSuggestMeta('Sentence Suggestions','Review and apply only the rewrites you like.');
     renderSentenceSuggestions((data.suggestions||[]).slice());
     showSentenceSuggestModal();
     _setAiStatus(data.count ? ('Sentence suggestions found: '+data.count) : 'No sentence suggestions found.');
@@ -4591,7 +4646,7 @@ window.updateRobots=updateRobots;
 window.syncNoindex=syncNoindex;
 window.updateSeoScore=updateSeoScore;
 
-window.runSpellCheck=runSpellCheck;
+window.runHumanize=runHumanize;
 window.runGrammarCheck=runGrammarCheck;
 window.runSentenceSuggest=runSentenceSuggest;
 window.suggestKeywords=suggestKeywords;

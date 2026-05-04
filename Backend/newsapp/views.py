@@ -31,7 +31,7 @@ import os
 import uuid
 import re
 from pathlib import Path
-import google.generativeai as genai
+from openai import OpenAI
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
@@ -2454,38 +2454,47 @@ def my_credentials(request):
 
 
 # ═══════════════════════════════════════════════════════
-# AI VIEWS  — Sabhi Google Gemini use karte hain (FREE)
+# AI VIEWS  - OpenAI gpt-5.4-mini
 # ═══════════════════════════════════════════════════════
 
-def _get_gemini_model(model_name="gemini-2.0-flash-lite"):
-    """Returns a configured Gemini GenerativeModel. Raises ValueError if key not set."""
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
-        raise ValueError("GEMINI_API_KEY not set in .env file")
-    genai.configure(api_key=key)
-    return genai.GenerativeModel(model_name)
+def _get_openai_client():
+    """Returns a configured OpenAI client. Raises ValueError if key not set."""
+    api_key = getattr(settings, "OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not set in .env file")
+    return OpenAI(api_key=api_key)
 
-def _gemini_error_response(e):
-    """Converts Gemini exceptions to a JsonResponse."""
+
+def _generate_ai_text(prompt, *, max_output_tokens=1200):
+    client = _get_openai_client()
+    response = client.responses.create(
+        model=getattr(settings, "OPENAI_MODEL", "gpt-5.4-mini"),
+        input=prompt,
+        max_output_tokens=max_output_tokens,
+    )
+    return (response.output_text or "").strip()
+
+
+def _openai_error_response(e):
+    """Converts OpenAI exceptions to a JsonResponse."""
     err = str(e).lower()
     if "api_key" in err or "api key" in err or "authentication" in err:
-        return JsonResponse({"error": "Invalid Gemini API key. Check GEMINI_API_KEY in .env"}, status=401)
+        return JsonResponse({"error": "Invalid OpenAI API key. Check OPENAI_API_KEY in .env"}, status=401)
     if "quota" in err or "rate" in err or "limit" in err:
-        return JsonResponse({"error": "Gemini rate limit exceeded. Please wait a moment and retry."}, status=429)
-    return JsonResponse({"error": f"Gemini error: {str(e)}"}, status=503)
+        return JsonResponse({"error": "OpenAI rate limit exceeded. Please wait a moment and retry."}, status=429)
+    return JsonResponse({"error": f"OpenAI error: {str(e)}"}, status=503)
 
 
 @staff_member_required
 @require_POST
 def ai_spell_check(request):
-    """Fix spelling errors only — Google Gemini 2.0 Flash (Free)"""
+    """Fix spelling errors only with OpenAI."""
     try:
         data    = json.loads(request.body)
         content = data.get("content", "").strip()
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
-        model  = _get_gemini_model()
         prompt = (
             "You are a professional news editor. "
             "Fix ONLY spelling errors and typos in the given text.\n\n"
@@ -2497,27 +2506,25 @@ def ai_spell_check(request):
             "- Return ONLY the corrected text, nothing else\n\n"
             f"Article text:\n{content}"
         )
-        response  = model.generate_content(prompt)
-        corrected = response.text.strip()
+        corrected = _generate_ai_text(prompt, max_output_tokens=1600)
         return JsonResponse({"corrected": corrected})
 
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=503)
     except Exception as e:
-        return _gemini_error_response(e)
+        return _openai_error_response(e)
 
 
 @staff_member_required
 @require_POST
 def ai_grammar_check(request):
-    """Fix grammar, punctuation, sentence structure — Google Gemini 2.0 Flash (Free)"""
+    """Fix grammar, punctuation, sentence structure with OpenAI."""
     try:
         data    = json.loads(request.body)
         content = data.get("content", "").strip()
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
-        model  = _get_gemini_model()
         prompt = (
             "You are a professional news editor specializing in grammar correction. "
             "The user will give you HTML article content. "
@@ -2532,8 +2539,7 @@ def ai_grammar_check(request):
             "- Return ONLY the corrected HTML, nothing else — no explanation, no preamble\n\n"
             f"HTML article content:\n{content}"
         )
-        response  = _get_gemini_model().generate_content(prompt)
-        corrected = response.text.strip()
+        corrected = _generate_ai_text(prompt, max_output_tokens=2200)
 
         if corrected.startswith("```"):
             parts     = corrected.split("```")
@@ -2547,20 +2553,19 @@ def ai_grammar_check(request):
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=503)
     except Exception as e:
-        return _gemini_error_response(e)
+        return _openai_error_response(e)
 
 
 @staff_member_required
 @require_POST
 def ai_plagiarism_check(request):
-    """Plagiarism / originality check — Google Gemini 2.0 Flash (Free)"""
+    """Plagiarism / originality check with OpenAI."""
     try:
         data = json.loads(request.body)
         text = data.get("text", "").strip()
         if not text or len(text) < 30:
             return JsonResponse({"error": "Content too short for plagiarism check"}, status=400)
 
-        model  = _get_gemini_model()
         prompt = (
             "You are a plagiarism detection assistant. "
             "Analyze the text and estimate its originality/plagiarism score.\n"
@@ -2571,8 +2576,7 @@ def ai_plagiarism_check(request):
             "Score guide: 0-20=low plagiarism (original), 21-60=medium, 61-100=high plagiarism.\n\n"
             f"Text to check:\n{text[:3000]}"
         )
-        response = model.generate_content(prompt)
-        raw      = response.text.strip()
+        raw = _generate_ai_text(prompt, max_output_tokens=600)
         raw      = raw.replace("```json", "").replace("```", "").strip()
         result   = json.loads(raw)
         return JsonResponse(result)
@@ -2580,13 +2584,13 @@ def ai_plagiarism_check(request):
     except (json.JSONDecodeError, ValueError) as e:
         return JsonResponse({"error": f"Could not parse AI response: {str(e)}"}, status=500)
     except Exception as e:
-        return _gemini_error_response(e)
+        return _openai_error_response(e)
 
 
 @staff_member_required
 @require_POST
 def ai_seo_keywords(request):
-    """Suggest SEO keywords — Google Gemini 2.0 Flash (Free)"""
+    """Suggest SEO keywords with OpenAI."""
     try:
         data    = json.loads(request.body)
         title   = data.get("title", "").strip()
@@ -2594,7 +2598,6 @@ def ai_seo_keywords(request):
         if not title and not content:
             return JsonResponse({"error": "No title or content provided"}, status=400)
 
-        model  = _get_gemini_model()
         prompt = (
             "You are an SEO expert for an Indian news website.\n"
             "Suggest 10 best SEO keywords for this article.\n"
@@ -2605,8 +2608,7 @@ def ai_seo_keywords(request):
             f"Title: {title}\n"
             f"Content: {content[:1000]}"
         )
-        response = model.generate_content(prompt)
-        raw      = response.text.strip()
+        raw = _generate_ai_text(prompt, max_output_tokens=500)
         raw      = raw.replace("```json", "").replace("```", "").strip()
         keywords = json.loads(raw)
         if not isinstance(keywords, list):
@@ -2616,7 +2618,7 @@ def ai_seo_keywords(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"keywords": [], "error": "Could not parse AI response"}, status=200)
     except Exception as e:
-        return _gemini_error_response(e)
+        return _openai_error_response(e)
 
 
 # ═══════════════════════════════════════════════════════

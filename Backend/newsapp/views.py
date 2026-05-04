@@ -32,6 +32,7 @@ import uuid
 import re
 from pathlib import Path
 from openai import OpenAI
+from spellchecker import SpellChecker
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
@@ -48,6 +49,7 @@ from .attendance import get_attendance_snapshot, pause_attendance, touch_attenda
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
+SPELLCHECKER = SpellChecker(distance=2)
 
 
 def _parse_ist_datetime(raw_value):
@@ -2485,34 +2487,144 @@ def _openai_error_response(e):
     return JsonResponse({"error": f"OpenAI error: {str(e)}"}, status=503)
 
 
+_SPELL_TOKEN_RE = re.compile(r"\b[A-Za-z][A-Za-z'-]{2,}\b")
+_TITLE_PREFIX_RE = re.compile(r"(rep|mr|mrs|ms|dr|sen|president|governor|gov|prof)\.?\s+$", re.IGNORECASE)
+
+
+def _preserve_case(original, replacement):
+    if not replacement:
+        return replacement
+    if original.isupper():
+        return replacement.upper()
+    if original[:1].isupper():
+        return replacement[:1].upper() + replacement[1:]
+    return replacement
+
+
+def _get_spelling_replacement(token):
+    token = (token or "").strip()
+    if not token:
+        return None
+
+    parts = token.split("-")
+    if len(parts) > 1:
+        updated_parts = []
+        changed = False
+        for part in parts:
+            replacement = _get_spelling_replacement(part)
+            if replacement and replacement.lower() != part.lower():
+                updated_parts.append(replacement)
+                changed = True
+            else:
+                updated_parts.append(part)
+        if changed:
+            return "-".join(updated_parts)
+        return None
+
+    normalized = token.strip("'").strip().lower()
+    if not normalized or len(normalized) < 3:
+        return None
+    if any(char.isdigit() for char in token):
+        return None
+    if token.isupper():
+        return None
+
+    replacement = SPELLCHECKER.correction(normalized)
+    if not replacement or replacement == normalized:
+        return None
+
+    return _preserve_case(token, replacement)
+
+
+def _collect_spelling_suggestions(content):
+    suggestions = []
+    seen_ranges = set()
+    max_suggestions = 80
+
+    for match in _SPELL_TOKEN_RE.finditer(content or ""):
+        original = match.group(0)
+        prefix = (content or "")[max(0, match.start() - 24):match.start()]
+        suffix = (content or "")[match.end():match.end() + 2]
+        if "'" in original:
+            continue
+        if original[:1].isupper():
+            if '"' in prefix[-2:] or "'" in prefix[-2:] or '"' in suffix or "'" in suffix:
+                continue
+            if _TITLE_PREFIX_RE.search(prefix):
+                continue
+            prev_tokens = re.findall(r"\b[A-Za-z][A-Za-z'-]{1,}\b", prefix)
+            if prev_tokens:
+                prev_token = prev_tokens[-1]
+                if prev_token[:1].isupper():
+                    continue
+        replacement = _get_spelling_replacement(original)
+        if not replacement or replacement.lower() == original.lower():
+            continue
+
+        key = (match.start(), match.end(), replacement)
+        if key in seen_ranges:
+            continue
+        seen_ranges.add(key)
+
+        suggestions.append(
+            {
+                "start": match.start(),
+                "end": match.end(),
+                "original": original,
+                "replacement": replacement,
+                "message": f'Suggest "{replacement}"',
+            }
+        )
+
+        if len(suggestions) >= max_suggestions:
+            break
+
+    return suggestions
+
+
+_SENTENCE_RE = re.compile(r"[^.!?\n]+(?:[.!?]+|$)")
+
+
+def _collect_sentences(content):
+    sentences = []
+    for match in _SENTENCE_RE.finditer(content or ""):
+        original = match.group(0)
+        stripped = original.strip()
+        if len(stripped) < 30:
+            continue
+        start_offset = original.find(stripped)
+        start = match.start() + max(start_offset, 0)
+        end = start + len(stripped)
+        sentences.append(
+            {
+                "start": start,
+                "end": end,
+                "text": stripped,
+            }
+        )
+    return sentences
+
+
 @staff_member_required
 @require_POST
 def ai_spell_check(request):
-    """Fix spelling errors only with OpenAI."""
+    """Find spelling suggestions without rewriting the full article."""
     try:
         data    = json.loads(request.body)
         content = data.get("content", "").strip()
         if not content:
             return JsonResponse({"error": "No content provided"}, status=400)
 
-        prompt = (
-            "You are a professional news editor. "
-            "Fix ONLY spelling errors and typos in the given text.\n\n"
-            "STRICT RULES:\n"
-            "- Fix spelling errors and typos ONLY\n"
-            "- Do NOT fix grammar or sentence structure\n"
-            "- Do NOT change meaning, tone, or structure\n"
-            "- Do NOT add or remove sentences\n"
-            "- Return ONLY the corrected text, nothing else\n\n"
-            f"Article text:\n{content}"
+        suggestions = _collect_spelling_suggestions(content)
+        return JsonResponse(
+            {
+                "suggestions": suggestions,
+                "count": len(suggestions),
+            }
         )
-        corrected = _generate_ai_text(prompt, max_output_tokens=1600)
-        return JsonResponse({"corrected": corrected})
 
-    except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=503)
     except Exception as e:
-        return _openai_error_response(e)
+        return JsonResponse({"error": f"Spell check error: {str(e)}"}, status=500)
 
 
 @staff_member_required
@@ -2552,6 +2664,80 @@ def ai_grammar_check(request):
 
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=503)
+    except Exception as e:
+        return _openai_error_response(e)
+
+
+@staff_member_required
+@require_POST
+def ai_sentence_suggestions(request):
+    """Suggest improved sentence rewrites without rewriting the whole article."""
+    try:
+        data = json.loads(request.body)
+        content = data.get("content", "").strip()
+        if not content:
+            return JsonResponse({"error": "No content provided"}, status=400)
+
+        sentences = _collect_sentences(content)
+        if not sentences:
+            return JsonResponse({"suggestions": [], "count": 0})
+
+        prompt = (
+            "You are a professional news editor. "
+            "Review the article and suggest only the sentences that would clearly benefit "
+            "from a readability, grammar, or clarity rewrite.\n\n"
+            "Return ONLY valid JSON with this shape:\n"
+            '{"suggestions":[{"original":"exact sentence from article","suggestion":"improved sentence","reason":"short reason"}]}\n\n'
+            "Rules:\n"
+            "- Use the exact original sentence text from the article\n"
+            "- Suggest at most 5 sentences\n"
+            "- Do not include sentences that are already fine\n"
+            "- Keep the meaning and facts unchanged\n"
+            "- Keep reasons very short\n\n"
+            f"Article:\n{content[:5000]}"
+        )
+        raw = _generate_ai_text(prompt, max_output_tokens=1400)
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(raw)
+        raw_suggestions = parsed.get("suggestions", []) if isinstance(parsed, dict) else []
+
+        indexed = []
+        used_starts = set()
+        for item in raw_suggestions:
+            if not isinstance(item, dict):
+                continue
+            original = str(item.get("original", "")).strip()
+            suggestion = str(item.get("suggestion", "")).strip()
+            reason = str(item.get("reason", "")).strip()
+            if not original or not suggestion or original == suggestion:
+                continue
+
+            match_sentence = next(
+                (
+                    sentence
+                    for sentence in sentences
+                    if sentence["text"] == original and sentence["start"] not in used_starts
+                ),
+                None,
+            )
+            if not match_sentence:
+                continue
+
+            used_starts.add(match_sentence["start"])
+            indexed.append(
+                {
+                    "start": match_sentence["start"],
+                    "end": match_sentence["end"],
+                    "original": original,
+                    "suggestion": suggestion,
+                    "reason": reason or "Improves clarity",
+                }
+            )
+
+        return JsonResponse({"suggestions": indexed[:5], "count": len(indexed[:5])})
+
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"error": f"Could not parse AI response: {str(e)}"}, status=500)
     except Exception as e:
         return _openai_error_response(e)
 

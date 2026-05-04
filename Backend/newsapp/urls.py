@@ -29,6 +29,7 @@ urlpatterns = [
 
     path('ai/spell-check/',      views.ai_spell_check,       name='ai_spell_check'),
     path('ai/grammar-check/',    views.ai_grammar_check,     name='ai_grammar_check'),   
+    path('ai/sentence-suggestions/', views.ai_sentence_suggestions, name='ai_sentence_suggestions'),
     path('ai/plagiarism-check/', views.ai_plagiarism_check,  name='ai_plagiarism_check'),
     path('ai/seo-keywords/',     views.ai_seo_keywords,      name='ai_seo_keywords'),
 

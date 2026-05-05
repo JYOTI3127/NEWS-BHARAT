@@ -78,22 +78,44 @@ def _unique_inline_image_name(original_filename, extension):
     return f"articles/inline/{safe_base}-{uuid.uuid4().hex[:10]}{extension}"
 
 
-def _compress_uploaded_image(uploaded_file, output_name, max_width=1600, quality=78):
+def _normalize_inline_image_format(uploaded_file):
+    content_type = (getattr(uploaded_file, 'content_type', '') or '').lower().strip()
+    extension = os.path.splitext(getattr(uploaded_file, 'name', '') or '')[1].lower()
+    format_map = {
+        'image/jpeg': ('JPEG', '.jpg', 'image/jpeg'),
+        'image/jpg': ('JPEG', '.jpg', 'image/jpeg'),
+        'image/png': ('PNG', '.png', 'image/png'),
+        'image/webp': ('WEBP', '.webp', 'image/webp'),
+    }
+    extension_map = {
+        '.jpg': ('JPEG', '.jpg', 'image/jpeg'),
+        '.jpeg': ('JPEG', '.jpg', 'image/jpeg'),
+        '.png': ('PNG', '.png', 'image/png'),
+        '.webp': ('WEBP', '.webp', 'image/webp'),
+    }
+
+    if content_type in format_map:
+        return format_map[content_type]
+    if extension in extension_map:
+        return extension_map[extension]
+    raise ValidationError('Only JPG, PNG, and WEBP inline images are allowed.')
+
+
+def _compress_uploaded_image(uploaded_file, output_name, output_format='WEBP', quality=78):
     from PIL import Image as PILImage
     import io
 
     uploaded_file.seek(0)
     img = PILImage.open(uploaded_file)
 
-    if img.mode in ("RGBA", "P", "LA"):
+    if output_format in {"JPEG", "WEBP"} and img.mode in ("RGBA", "P", "LA"):
         img = img.convert("RGB")
 
-    if img.width > max_width:
-        ratio = max_width / float(img.width)
-        img = img.resize((max_width, max(1, int(img.height * ratio))), PILImage.LANCZOS)
-
     output = io.BytesIO()
-    img.save(output, format='WEBP', quality=quality, optimize=True)
+    save_kwargs = {'format': output_format, 'optimize': True}
+    if output_format in {'JPEG', 'WEBP'}:
+        save_kwargs['quality'] = quality
+    img.save(output, **save_kwargs)
     output.seek(0)
     return ContentFile(output.read(), name=output_name)
 
@@ -142,10 +164,11 @@ def inline_image_upload(request):
         return Response({"error": "Only image uploads are allowed."}, status=400)
 
     try:
+        output_format, extension, response_content_type = _normalize_inline_image_format(uploaded_file)
         compressed_file = _compress_uploaded_image(
             uploaded_file,
-            _unique_inline_image_name(uploaded_file.name, '.webp'),
-            max_width=1600,
+            _unique_inline_image_name(uploaded_file.name, extension),
+            output_format=output_format,
             quality=78,
         )
         stored_name = default_storage.save(compressed_file.name, compressed_file)
@@ -155,6 +178,7 @@ def inline_image_upload(request):
     return Response({
         "url": default_storage.url(stored_name),
         "name": stored_name,
+        "content_type": response_content_type,
     }, status=201)
 
 

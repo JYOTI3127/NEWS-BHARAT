@@ -2734,32 +2734,32 @@ function nbInsertLink(){
 
 async function nbCompressInlineImageFile(file){
   if(!file||!file.type||file.type.indexOf('image/')!==0)return file;
+  var formatMap={
+    'image/jpeg':{mime:'image/jpeg',ext:'jpg',quality:0.82},
+    'image/png':{mime:'image/png',ext:'png'},
+    'image/webp':{mime:'image/webp',ext:'webp',quality:0.82}
+  };
+  var target=formatMap[file.type];
+  if(!target)return file;
   return new Promise(function(resolve){
     var img=new Image();
     var objectUrl=URL.createObjectURL(file);
     img.onload=function(){
       try{
-        var maxWidth=1600;
-        var width=img.width||1;
-        var height=img.height||1;
-        if(width>maxWidth){
-          height=Math.max(1,Math.round(height*(maxWidth/width)));
-          width=maxWidth;
-        }
         var canvas=document.createElement('canvas');
-        canvas.width=width;
-        canvas.height=height;
+        canvas.width=img.width||1;
+        canvas.height=img.height||1;
         var ctx=canvas.getContext('2d');
-        ctx.drawImage(img,0,0,width,height);
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
         canvas.toBlob(function(blob){
           URL.revokeObjectURL(objectUrl);
           if(!blob){
             resolve(file);
             return;
           }
-          var compressedName=(file.name||'inline-image').replace(/\.[^.]+$/,'')+'.webp';
-          resolve(new File([blob],compressedName,{type:'image/webp'}));
-        },'image/webp',0.82);
+          var compressedName=(file.name||'inline-image').replace(/\.[^.]+$/,'')+'.'+target.ext;
+          resolve(new File([blob],compressedName,{type:target.mime}));
+        },target.mime,target.quality);
       }catch(e){
         URL.revokeObjectURL(objectUrl);
         resolve(file);
@@ -2789,7 +2789,7 @@ function nbDataUrlToFile(dataUrl,filename){
 async function nbUploadInlineImageFile(file){
   var uploadFile=await nbCompressInlineImageFile(file);
   var fd=new FormData();
-  fd.append('image',uploadFile,uploadFile.name||'inline-image.webp');
+  fd.append('image',uploadFile,uploadFile.name||'inline-image');
   var res=await fetch('/api/media/inline-image/',{
     method:'POST',
     headers:{'X-CSRFToken':getCsrf()},
@@ -2823,7 +2823,7 @@ async function nbInsertInlineImage(){
   if(!nbEditor)return;
   var inp=document.createElement('input');
   inp.type='file';
-  inp.accept='image/*';
+  inp.accept='image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
   inp.style.display='none';
   document.body.appendChild(inp);
   inp.addEventListener('change',async function(){

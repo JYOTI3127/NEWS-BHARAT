@@ -4335,7 +4335,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from pywebpush import webpush, WebPushException
-from .models import PushSubscription
+from .models import PushNotificationLog, PushSubscription
 
 @csrf_exempt
 def save_push_subscription(request):
@@ -4346,19 +4346,34 @@ def save_push_subscription(request):
             endpoint = data.get("endpoint")
             p256dh   = data.get("keys", {}).get("p256dh")
             auth     = data.get("keys", {}).get("auth")
+            subscriber_name = str(data.get("subscriber_name") or data.get("name") or "").strip()
+            subscriber_email = str(data.get("subscriber_email") or data.get("email") or "").strip().lower()
+
+            if request.user.is_authenticated:
+                full_name = request.user.get_full_name().strip()
+                subscriber_name = subscriber_name or full_name or request.user.username
+                subscriber_email = subscriber_email or str(request.user.email or "").strip().lower()
 
             if not all([endpoint, p256dh, auth]):
                 return JsonResponse({"status": "error", "message": "Invalid data"}, status=400)
 
-            PushSubscription.objects.update_or_create(
+            subscription, created = PushSubscription.objects.update_or_create(
                 endpoint=endpoint,
                 defaults={
                     "p256dh": p256dh,
                     "auth": auth,
-                    "is_active": True
+                    "subscriber_name": subscriber_name,
+                    "subscriber_email": subscriber_email,
+                    "is_active": True,
                 }
             )
-            return JsonResponse({"status": "success"})
+            return JsonResponse({
+                "status": "success",
+                "created": created,
+                "subscription_id": subscription.id,
+                "subscriber_name": subscription.subscriber_name,
+                "subscriber_email": subscription.subscriber_email,
+            })
 
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=500)
@@ -4427,6 +4442,7 @@ def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
         return report if return_report else None
 
     failed = []
+    sent_ids = []
     failure_details = []
     for sub in subscriptions:
         try:
@@ -4447,16 +4463,43 @@ def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
                 vapid_private_key=vapid_private_key,
                 vapid_claims=settings.VAPID_CLAIMS
             )
+            PushNotificationLog.objects.create(
+                subscription=sub,
+                title=title,
+                body=body,
+                target_url=url,
+                icon=icon,
+                status=PushNotificationLog.STATUS_SENT,
+            )
+            sub.sent_count += 1
+            sub.last_sent_at = timezone.now()
+            sub.last_status = PushNotificationLog.STATUS_SENT
+            sub.save(update_fields=["sent_count", "last_sent_at", "last_status"])
+            sent_ids.append(sub.id)
         except WebPushException as e:
-            if "410" in str(e) or "404" in str(e):
-                # Expired/unsubscribed subscription ko DB se hata do.
-                sub.delete()
+            error_message = str(e)
+            if "410" in error_message or "404" in error_message:
+                # Record preserve karte hue expired subscription ko inactive mark karo.
+                sub.is_active = False
             failed.append(sub.id)
             failure_details.append({
                 "subscription_id": sub.id,
                 "endpoint": sub.endpoint[:120],
-                "error": str(e),
+                "error": error_message,
             })
+            PushNotificationLog.objects.create(
+                subscription=sub,
+                title=title,
+                body=body,
+                target_url=url,
+                icon=icon,
+                status=PushNotificationLog.STATUS_FAILED,
+                error_message=error_message,
+            )
+            sub.failed_count += 1
+            sub.last_sent_at = timezone.now()
+            sub.last_status = PushNotificationLog.STATUS_FAILED
+            sub.save(update_fields=["is_active", "failed_count", "last_sent_at", "last_status"])
             print(f"Failed for sub {sub.id}: {e}")
 
     success_count = subscriptions.count() - len(failed)
@@ -4466,6 +4509,7 @@ def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
         "message": "Push send completed",
         "total": subscriptions.count(),
         "sent": success_count,
+        "sent_ids": sent_ids,
         "failed": len(failed),
         "failed_ids": failed,
         "failures": failure_details,

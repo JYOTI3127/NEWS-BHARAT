@@ -7,7 +7,7 @@ from django.test.client import RequestFactory
 from rest_framework.test import APIClient
 from unittest.mock import patch
 
-from .models import Article, Notification, Permission, PushSubscription, Role
+from .models import Article, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .views import custom_permission_denied_view, send_push_to_all
 
 
@@ -286,18 +286,22 @@ class AccessDeniedViewTests(TestCase):
 class PushSubscriptionCleanupTests(TestCase):
     @patch('newsapp.views.webpush')
     @patch('newsapp.views.WebPushException', Exception)
-    def test_410_or_404_subscriptions_are_deleted_and_inactive_are_skipped(self, mock_webpush):
+    def test_410_or_404_subscriptions_are_marked_inactive_and_logged(self, mock_webpush):
         active_ok = PushSubscription.objects.create(
             endpoint='https://example.com/push/ok',
             p256dh='key-ok',
             auth='auth-ok',
             is_active=True,
+            subscriber_name='Active Ok',
+            subscriber_email='ok@example.com',
         )
         active_expired = PushSubscription.objects.create(
             endpoint='https://example.com/push/expired',
             p256dh='key-expired',
             auth='auth-expired',
             is_active=True,
+            subscriber_name='Active Expired',
+            subscriber_email='expired@example.com',
         )
         inactive_sub = PushSubscription.objects.create(
             endpoint='https://example.com/push/inactive',
@@ -323,7 +327,17 @@ class PushSubscriptionCleanupTests(TestCase):
         self.assertEqual(report['sent'], 1)
         self.assertEqual(report['failed'], 1)
         self.assertEqual(report['failed_ids'], [active_expired.id])
+        self.assertEqual(report['sent_ids'], [active_ok.id])
         self.assertEqual(mock_webpush.call_count, 2)
-        self.assertTrue(PushSubscription.objects.filter(pk=active_ok.pk).exists())
-        self.assertFalse(PushSubscription.objects.filter(pk=active_expired.pk).exists())
+        active_ok.refresh_from_db()
+        active_expired.refresh_from_db()
+        self.assertEqual(active_ok.sent_count, 1)
+        self.assertEqual(active_ok.failed_count, 0)
+        self.assertEqual(active_ok.last_status, PushNotificationLog.STATUS_SENT)
+        self.assertTrue(active_expired.pk)
+        self.assertFalse(active_expired.is_active)
+        self.assertEqual(active_expired.failed_count, 1)
+        self.assertEqual(active_expired.last_status, PushNotificationLog.STATUS_FAILED)
         self.assertTrue(PushSubscription.objects.filter(pk=inactive_sub.pk).exists())
+        self.assertEqual(PushNotificationLog.objects.filter(subscription=active_ok, status='sent').count(), 1)
+        self.assertEqual(PushNotificationLog.objects.filter(subscription=active_expired, status='failed').count(), 1)

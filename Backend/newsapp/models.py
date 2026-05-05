@@ -1124,6 +1124,12 @@ class PushSubscription(models.Model):
     endpoint = models.TextField(unique=True)
     p256dh   = models.TextField()
     auth     = models.TextField()
+    subscriber_name = models.CharField(max_length=255, blank=True, default='')
+    subscriber_email = models.EmailField(blank=True, default='')
+    sent_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    last_status = models.CharField(max_length=20, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     is_active  = models.BooleanField(default=True)
 
@@ -1133,3 +1139,33 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"Subscription {self.id} - {self.endpoint[:50]}"
+
+
+class PushNotificationLog(models.Model):
+    STATUS_SENT = 'sent'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_SENT, 'Sent'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    subscription = models.ForeignKey(
+        PushSubscription,
+        on_delete=models.CASCADE,
+        related_name='notification_logs',
+    )
+    title = models.CharField(max_length=255)
+    body = models.TextField(blank=True, default='')
+    target_url = models.CharField(max_length=500, blank=True, default='')
+    icon = models.CharField(max_length=255, blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    error_message = models.TextField(blank=True, default='')
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name = 'Push Notification Log'
+        verbose_name_plural = 'Push Notification Logs'
+
+    def __str__(self):
+        return f"{self.subscription_id} - {self.status} - {self.sent_at:%d %b %Y %H:%M}"

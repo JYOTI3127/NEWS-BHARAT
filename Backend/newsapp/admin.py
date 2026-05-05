@@ -66,6 +66,32 @@ class NewsletterLogAdmin(admin.ModelAdmin):
 #  INLINES
 # ══════════════════════════════════════════════════════════════
 
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'subscriber_name', 'subscriber_email', 'is_active',
+        'sent_count', 'failed_count', 'last_status', 'last_sent_at', 'created_at'
+    )
+    search_fields = ('subscriber_name', 'subscriber_email', 'endpoint')
+    list_filter = ('is_active', 'last_status', 'created_at', 'last_sent_at')
+    readonly_fields = (
+        'endpoint', 'p256dh', 'auth', 'sent_count', 'failed_count',
+        'last_status', 'last_sent_at', 'created_at'
+    )
+
+
+class PushNotificationLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'subscription', 'status', 'title', 'sent_at')
+    search_fields = (
+        'subscription__subscriber_name', 'subscription__subscriber_email',
+        'title', 'target_url', 'error_message'
+    )
+    list_filter = ('status', 'sent_at')
+    readonly_fields = (
+        'subscription', 'title', 'body', 'target_url', 'icon',
+        'status', 'error_message', 'sent_at'
+    )
+
+
 class ContactQueryAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'email', 'phone_number', 'subject', 'status', 'created_at')
     list_filter = ('status', 'created_at')
@@ -1632,3 +1658,5 @@ admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)
 admin_site.register(NewsletterCard,              NewsletterCardAdmin)
+admin_site.register(PushSubscription,            PushSubscriptionAdmin)
+admin_site.register(PushNotificationLog,         PushNotificationLogAdmin)

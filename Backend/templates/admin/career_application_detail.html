@@ -30,7 +30,7 @@
       <a href="/admin/career-applications/" class="ca-btn-ghost">Back</a>
       {% if can_delete_application %}
         <form method="post" action="/admin/career-applications/{{ application.pk }}/delete/" onsubmit="return confirm('Delete this application permanently?');">
-          {% csrf_token %}
+          {% csrf_token %} 
           <input type="hidden" name="next" value="/admin/career-applications/">
           <button type="submit" class="ca-btn-danger">Delete</button>
         </form>

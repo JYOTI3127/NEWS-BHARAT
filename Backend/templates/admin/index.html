@@ -231,6 +231,33 @@
 
   <!-- HERO TAB -->
   <div class="hpc-panel active" id="hpc-hero">
+    <div class="hero-shell">
+      <div class="hero-topbar">
+        <div>
+          <div class="hero-eyebrow">Homepage hero curation</div>
+          <div class="hero-title">Hero News Grid</div>
+        </div>
+        <div class="hero-summary">
+          <div class="hero-summary-chip">
+            <span class="hero-summary-label">Mode</span>
+            <span class="hero-summary-value" id="heroModeSummary">{% if hero_slot and hero_slot.mode == 'manual' %}Manual{% else %}Auto{% endif %}</span>
+          </div>
+          <div class="hero-summary-chip">
+            <span class="hero-summary-label">Count</span>
+            <span class="hero-summary-value">9</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-mode-row">
+        <button type="button" class="ln-mode-btn {% if not hero_slot or hero_slot.mode != 'manual' %}active{% endif %}" id="heroBtnAuto" onclick="setHeroMode('auto')">Auto</button>
+        <button type="button" class="ln-mode-btn {% if hero_slot and hero_slot.mode == 'manual' %}active{% endif %}" id="heroBtnManual" onclick="setHeroMode('manual')">Manual</button>
+      </div>
+      <input type="hidden" id="heroMode" value="{% if hero_slot %}{{ hero_slot.mode|default:'auto' }}{% else %}auto{% endif %}">
+      <input type="hidden" id="heroManualIds" value="{% if hero_slot and hero_slot.mode == 'manual' %}{% for article_id in hero_slot.manual_order %}{{ article_id }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+      <div class="hero-auto-note" id="heroAutoBlock">Auto mode latest 9 published articles ko same-size hero cards me show karega.</div>
+      <div class="hero-manual-note" id="heroManualBlock" style="display:none">Manual mode me har slot ke liye article choose karo. Total 9 cards homepage hero me dikhenge.</div>
+      <div class="hero-grid" id="heroGrid"></div>
+    </div>
     <div class="hero-layout">
       <div class="hero-main-slot {% if hero_slot and hero_slot.article %}filled{% endif %}" id="heroMainSlot">
         {% if hero_slot and hero_slot.article %}
@@ -251,7 +278,7 @@
       </div>
 
       <div class="overlay-col">
-        <div class="overlay-col-label">Bottom overlay articles (3)</div>
+        <div class="overlay-col-label">Bottom overlay articles (4)</div>
         <div class="overlay-slot-card" onclick="openPicker('overlay_1')">
           <div class="overlay-num">1</div>
           <div class="overlay-info">
@@ -291,6 +318,19 @@
           </div>
           <button class="overlay-clear" onclick="clearOverlay(event,3)">&#xd7;</button>
         </div>
+        <div class="overlay-slot-card" onclick="openPicker('overlay_4')">
+          <div class="overlay-num">4</div>
+          <div class="overlay-info">
+            {% if hero_slot and hero_slot.overlay_article_4 %}
+              <div class="overlay-title" id="overlayTitle4">{{ hero_slot.overlay_article_4.title|truncatechars:42 }}</div>
+              <div class="overlay-meta" id="overlayMeta4">{% if hero_slot.overlay_article_4.categories.first %}{{ hero_slot.overlay_article_4.categories.first.name }}{% endif %}</div>
+            {% else %}
+              <div class="overlay-title empty" id="overlayTitle4">â€” Select article</div>
+              <div class="overlay-meta" id="overlayMeta4">Click to pick</div>
+            {% endif %}
+          </div>
+          <button class="overlay-clear" onclick="clearOverlay(event,4)">&#xd7;</button>
+        </div>
       </div>
     </div>
 
@@ -312,6 +352,7 @@
     <input type="hidden" id="heroOverlay1" value="{% if hero_slot and hero_slot.overlay_article_1 %}{{ hero_slot.overlay_article_1.pk }}{% endif %}">
     <input type="hidden" id="heroOverlay2" value="{% if hero_slot and hero_slot.overlay_article_2 %}{{ hero_slot.overlay_article_2.pk }}{% endif %}">
     <input type="hidden" id="heroOverlay3" value="{% if hero_slot and hero_slot.overlay_article_3 %}{{ hero_slot.overlay_article_3.pk }}{% endif %}">
+    <input type="hidden" id="heroOverlay4" value="{% if hero_slot and hero_slot.overlay_article_4 %}{{ hero_slot.overlay_article_4.pk }}{% endif %}">
   </div>
 
   <!-- LATEST NEWS TAB -->
@@ -545,16 +586,19 @@
 
 <script>
 var HPC_ARTICLES=[{% for a in published_articles_for_picker %}{id:{{a.pk}},title:"{{a.title|escapejs}}",cat:"{% if a.categories.first %}{{a.categories.first.name|escapejs}}{% endif %}",image:"{% if a.image %}{{a.image.url}}{% elif a.image_url %}{{a.image_url}}{% endif %}",date:"{% if a.published_at %}{{a.published_at|date:'M d, Y'}}{% else %}{{a.created_at|date:'M d, Y'}}{% endif %}"}{% if not forloop.last %},{% endif %}{% empty %}{% endfor %}];
-HPC_ARTICLES.sort(function(a,b){return b.id-a.id;});
+var heroArticles=[];
+var HERO_SLOT_COUNT=9;
+var HERO_DRAFT_KEY='homepage_hero_manual_draft_v1';
+var _heroPickerSlotIndex=0;
 var lnArticles=[{% if latest_slot and latest_slot.mode == 'manual' %}{% for art in latest_manual_articles %}{id:{{art.pk}},title:"{{art.title|escapejs}}",cat:"{% if art.categories.first %}{{art.categories.first.name|escapejs}}{% endif %}",image:"{% if art.image %}{{art.image.url}}{% elif art.image_url %}{{art.image_url}}{% endif %}",date:"{{art.published_at|date:'M d, Y'|default:art.created_at|date:'M d, Y'}}"}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}];
 var _lnPickerSlotIndex=0;
 var LN_DRAFT_KEY='homepage_latest_news_manual_draft_v1';
 
 function hpcTab(btn,id){document.querySelectorAll('.hpc-tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.hpc-panel').forEach(function(p){p.classList.remove('active');});btn.classList.add('active');document.getElementById('hpc-'+id).classList.add('active');}
 
-var _pickerTarget='hero_main';
-var PICKER_TITLES={hero_main:'Select main hero article',overlay_1:'Select overlay 1',overlay_2:'Select overlay 2',overlay_3:'Select overlay 3'};
-function openPicker(t){_pickerTarget=t;document.getElementById('pickerTitle').textContent=PICKER_TITLES[t]||'Select article';document.getElementById('pickerSearchInp').value='';document.getElementById('pickerWrap').classList.add('open');renderPicker('');document.getElementById('pickerWrap').scrollIntoView({behavior:'smooth',block:'nearest'});}
+var _pickerTarget='hero_slot_0';
+var PICKER_TITLES={};
+function openPicker(t){_pickerTarget=t;var title=(String(t||'').indexOf('hero_slot_')===0)?('Select article for hero slot '+(parseInt(String(t).split('_').pop(),10)+1)):(PICKER_TITLES[t]||'Select article');document.getElementById('pickerTitle').textContent=title;document.getElementById('pickerSearchInp').value='';document.getElementById('pickerWrap').classList.add('open');renderPicker('');document.getElementById('pickerWrap').scrollIntoView({behavior:'smooth',block:'nearest'});}
 function closePicker(){document.getElementById('pickerWrap').classList.remove('open');}
 function renderPicker(q){var list=document.getElementById('pickerList');var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No published articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';return'<div class="picker-item" onclick="selectHeroArticle('+a.id+')">'+'<div class="picker-thumb">'+th+'</div>'+'<div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'—')+' · '+a.date+'</div></div>'+'<button class="picker-sel-btn" onclick="selectHeroArticle('+a.id+');event.stopPropagation()">Select</button></div>';}).join('');}
 function selectHeroArticle(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;if(_pickerTarget==='hero_main'){document.getElementById('heroMainId').value=id;var slot=document.getElementById('heroMainSlot');var ih=art.image?'<img class="hero-img" src="'+art.image+'" alt="">':'<div class="hero-slot-ph"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>No image</p></div>';slot.innerHTML=ih+'<div class="hero-overlay"><div class="hero-overlay-cat">'+(art.cat||'')+'</div><div class="hero-overlay-title">'+art.title.substring(0,80)+'</div></div><button class="hero-change-btn" onclick="openPicker(\'hero_main\')">Change</button>';slot.classList.add('filled');}else{var n=_pickerTarget.replace('overlay_','');document.getElementById('heroOverlay'+n).value=id;var te=document.getElementById('overlayTitle'+n);te.textContent=art.title.substring(0,42);te.classList.remove('empty');document.getElementById('overlayMeta'+n).textContent=(art.cat||'—');}closePicker();}
@@ -577,6 +621,23 @@ function openLnPicker(index){_lnPickerSlotIndex=index||0;var title=document.getE
 function renderLnPicker(q){var list=document.getElementById('lnPickerList');var sids=lnArticles.map(function(a){return a&&a.id;});var f=HPC_ARTICLES.filter(function(a){return!q||a.title.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!f.length){list.innerHTML='<div class="picker-empty">No articles found.</div>';return;}list.innerHTML=f.slice(0,40).map(function(a){var sel=sids.indexOf(a.id)!==-1;var th=a.image?'<img src="'+a.image+'" onerror="this.style.display=\'none\'">':'<div class="picker-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>';var btn=sel?'<button class="picker-sel-btn" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5" onclick="removeLnById('+a.id+');renderLnPicker(document.getElementById(\'lnSearchInp\').value);event.stopPropagation()">Remove</button>':'<button class="picker-sel-btn" onclick="addLn('+a.id+');event.stopPropagation()">Select</button>';return'<div class="picker-item'+(sel?' selected':'')+'"><div class="picker-thumb">'+th+'</div><div class="picker-info"><div class="picker-title">'+a.title+'</div><div class="picker-meta">'+(a.cat||'â€”')+' Â· '+a.date+'</div></div>'+btn+'</div>';}).join('');}
 function removeLnById(id){lnArticles=lnArticles.map(function(a){return a&&a.id===id?null:a;});renderLnList();}
 function addLn(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;lnArticles=lnArticles.map(function(a){return a&&a.id===id?null:a;});lnArticles[_lnPickerSlotIndex]=art;renderLnList();closeLnPicker();}
+
+function getHeroDraftState(){try{return JSON.parse(sessionStorage.getItem(HERO_DRAFT_KEY)||'null');}catch(e){return null;}}
+function clearHeroDraftState(){try{sessionStorage.removeItem(HERO_DRAFT_KEY);}catch(e){}}
+function persistHeroDraftState(){try{sessionStorage.setItem(HERO_DRAFT_KEY,JSON.stringify({mode:document.getElementById('heroMode').value||'auto',manual_ids:heroArticles.filter(Boolean).map(function(a){return a.id;})}));}catch(e){}}
+function setHeroArticlesFromIds(ids){var articleMap=buildLnArticleMap();var ordered=(Array.isArray(ids)?ids:[]).map(function(id){return parseInt(id,10);}).filter(function(id){return !isNaN(id);}).slice(0,HERO_SLOT_COUNT);heroArticles=ordered.map(function(id){return articleMap[String(id)]||null;});while(heroArticles.length<HERO_SLOT_COUNT)heroArticles.push(null);}
+function syncHeroSlotsCount(){heroArticles=heroArticles.filter(Boolean).slice(0,HERO_SLOT_COUNT);while(heroArticles.length<HERO_SLOT_COUNT)heroArticles.push(null);var hidden=document.getElementById('heroManualIds');if(hidden)hidden.value=heroArticles.filter(Boolean).map(function(a){return a.id;}).join(',');}
+function refreshHeroSummary(){var modeEl=document.getElementById('heroModeSummary');if(modeEl)modeEl.textContent=(document.getElementById('heroMode').value==='manual'?'Manual':'Auto');}
+function heroRenderCard(article,index,interactive){var image=article&&article.image?'<img class="hero-card-image" src="'+article.image+'" alt="">':'<div class="hero-card-image hero-card-image--empty"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>';var title=article?article.title:'Select article';var meta=article?(article.cat||'General')+' · '+article.date:'Click to choose manually';var actions=interactive?'<div class="hero-card-actions"><button type="button" class="hero-card-btn" onclick="openHeroPicker('+index+');event.stopPropagation()">'+(article?'Change':'Select')+'</button>'+(article?'<button type="button" class="hero-card-btn hero-card-btn--danger" onclick="removeHeroArticle('+index+');event.stopPropagation()">Clear</button>':'')+'</div>':'<div class="hero-card-auto-tag">Auto</div>';return '<div class="hero-card'+(interactive?' hero-card--interactive':'')+'"'+(interactive?' onclick="openHeroPicker('+index+')"':'')+'><div class="hero-card-index">'+(index+1)+'</div>'+image+'<div class="hero-card-body"><div class="hero-card-title'+(article?'':' empty')+'">'+title+'</div><div class="hero-card-meta">'+meta+'</div>'+actions+'</div></div>';}
+function renderHeroGrid(){var grid=document.getElementById('heroGrid');if(!grid)return;var mode=document.getElementById('heroMode').value||'auto';if(mode==='manual'){syncHeroSlotsCount();grid.innerHTML=Array.from({length:HERO_SLOT_COUNT}).map(function(_,i){return heroRenderCard(heroArticles[i],i,true);}).join('');}else{var autoArticles=HPC_ARTICLES.slice(0,HERO_SLOT_COUNT);grid.innerHTML=Array.from({length:HERO_SLOT_COUNT}).map(function(_,i){return heroRenderCard(autoArticles[i]||null,i,false);}).join('');}}
+function setHeroMode(mode){var autoBtn=document.getElementById('heroBtnAuto');var manualBtn=document.getElementById('heroBtnManual');var autoBlock=document.getElementById('heroAutoBlock');var manualBlock=document.getElementById('heroManualBlock');document.getElementById('heroMode').value=(mode==='manual'?'manual':'auto');if(autoBtn)autoBtn.classList.toggle('active',mode!=='manual');if(manualBtn)manualBtn.classList.toggle('active',mode==='manual');if(autoBlock)autoBlock.style.display=(mode==='manual'?'none':'');if(manualBlock)manualBlock.style.display=(mode==='manual'?'':'none');refreshHeroSummary();renderHeroGrid();persistHeroDraftState();}
+function openHeroPicker(index){_heroPickerSlotIndex=index||0;openPicker('hero_slot_'+_heroPickerSlotIndex);}
+function removeHeroArticle(index){heroArticles[index]=null;syncHeroSlotsCount();renderHeroGrid();persistHeroDraftState();}
+function restoreHeroDraftState(){var draft=getHeroDraftState();if(!draft)return false;setHeroArticlesFromIds(draft.manual_ids||[]);setHeroMode(draft.mode==='manual'?'manual':'auto');return true;}
+async function hydrateHeroFromServer(){try{var r=await fetch('/api/homepage/hero/current/',{headers:{'Accept':'application/json'},credentials:'same-origin'});if(!r.ok)return false;var data=await r.json();if(String(data.mode||'auto')==='manual'){heroArticles=(Array.isArray(data.articles)?data.articles:[]).slice(0,HERO_SLOT_COUNT).map(function(a){var rawDate=String((a&&((a.published_at)||(a.created_at)))||'');return a?{id:a.id,title:a.title,cat:(a.categories&&a.categories[0]&&a.categories[0].name)||'',image:a.image||'',date:(rawDate.indexOf('T')!==-1?rawDate.slice(0,10):rawDate)}:null;});while(heroArticles.length<HERO_SLOT_COUNT)heroArticles.push(null);}else{setHeroArticlesFromIds(data.manual_order||[]);}setHeroMode(String(data.mode||'auto')==='manual'?'manual':'auto');return true;}catch(e){return false;}}
+function openPicker(t){_pickerTarget=t;var title=(String(t||'').indexOf('hero_slot_')===0)?('Select article for hero slot '+(parseInt(String(t).split('_').pop(),10)+1)):(PICKER_TITLES[t]||'Select article');document.getElementById('pickerTitle').textContent=title;document.getElementById('pickerSearchInp').value='';document.getElementById('pickerWrap').classList.add('open');renderPicker('');document.getElementById('pickerWrap').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function selectHeroArticle(id){var art=HPC_ARTICLES.find(function(a){return a.id===id;});if(!art)return;if(String(_pickerTarget||'').indexOf('hero_slot_')===0){heroArticles=heroArticles.map(function(a){return a&&a.id===id?null:a;});heroArticles[_heroPickerSlotIndex]=art;syncHeroSlotsCount();renderHeroGrid();persistHeroDraftState();}closePicker();}
+function clearOverlay(e,n){if(e&&typeof e.stopPropagation==='function')e.stopPropagation();removeHeroArticle((parseInt(n,10)||1)-1);}
 
 function buildLnArticleMap(){var map={};HPC_ARTICLES.forEach(function(a){if(a&&a.id!=null)map[String(a.id)]=a;});return map;}
 function getLnDraftState(){try{return JSON.parse(sessionStorage.getItem(LN_DRAFT_KEY)||'null');}catch(e){return null;}}
@@ -605,7 +666,7 @@ function previewAdFile(inp){var file=inp.files[0];if(!file)return;var placement=
 function getCookie(name){return document.cookie.split(';').map(function(item){return item.trim();}).filter(function(item){return item.indexOf(name+'=')===0;}).map(function(item){return decodeURIComponent(item.substring(name.length+1));})[0]||'';}
 function getCsrf(){var el=document.querySelector('[name=csrfmiddlewaretoken]');var token=el&&el.value?el.value:getCookie('csrftoken');return token||'';}
 function getActiveHomepageTab(){var panel=document.querySelector('.hpc-panel.active');return panel?panel.id.replace('hpc-',''):'hero';}
-async function saveHeroControl(){var r=await fetch('/api/homepage/hero/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({main_article_id:document.getElementById('heroMainId').value||null,overlay_article_1:document.getElementById('heroOverlay1').value||null,overlay_article_2:document.getElementById('heroOverlay2').value||null,overlay_article_3:document.getElementById('heroOverlay3').value||null})});if(!r.ok)throw new Error('Hero save failed');return r.json();}
+async function saveHeroControl(){var mode=document.getElementById('heroMode').value||'auto';var payload={mode:mode,display_count:HERO_SLOT_COUNT,manual_ids:mode==='manual'?(document.getElementById('heroManualIds').value||'').split(',').filter(Boolean).map(Number):[]};var r=await fetch('/api/homepage/hero/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(payload)});if(!r.ok)throw new Error('Hero save failed');clearHeroDraftState();return r.json();}
 async function saveLatestNewsControl(){var lm=document.getElementById('lnMode').value;var r=await fetch('/api/homepage/latest_news/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},credentials:'same-origin',body:JSON.stringify({mode:lm,display_count:document.getElementById('lnCount').value,category_id:document.getElementById('lnCat').value||null,manual_ids:lm==='manual'?(document.getElementById('lnManualIds').value||'').split(',').filter(Boolean).map(Number):[]})});if(!r.ok)throw new Error('Latest news save failed');var data=await r.json();clearLnDraftState();return data;}
 function getSelectedAdPages(placement){var el=document.getElementById('adPages_'+placement);if(!el)return['home'];var pages=Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(function(inp){return inp.value;}).filter(Boolean);return pages.length?pages:['home'];}
 function setSelectedAdPages(placement,pages){var el=document.getElementById('adPages_'+placement);if(!el)return;pages=Array.isArray(pages)&&pages.length?pages:['home'];Array.from(el.querySelectorAll('input[type="checkbox"]')).forEach(function(inp){inp.checked=pages.indexOf(inp.value)!==-1;});}
@@ -613,6 +674,16 @@ async function saveAdBannerControl(){var afd=new FormData();document.querySelect
 async function saveHomepageControl(){var btn=document.getElementById('hpcSaveBtn');btn.classList.add('saving');btn.innerHTML='Saving…';try{var active=getActiveHomepageTab();if(active==='ad'){await saveAdBannerControl();}else if(active==='latest'){await saveLatestNewsControl();}else{await saveHeroControl();}btn.classList.remove('saving');btn.classList.add('saved');btn.innerHTML='&#10003; Saved!';setTimeout(function(){btn.classList.remove('saved');btn.innerHTML='Save Changes';},2500);}catch(e){console.error(e);btn.classList.remove('saving');btn.innerHTML='&#x2715; '+(e.message||'Error');btn.style.background='#dc2626';setTimeout(function(){btn.style.background='';btn.innerHTML='Save Changes';},3000);}}
 
 document.addEventListener('DOMContentLoaded',async function(){
+  syncHeroSlotsCount();
+  var restoredHeroDraft=restoreHeroDraftState();
+  if(!restoredHeroDraft){
+    var heroIds=(document.getElementById('heroManualIds').value||'').split(',').filter(Boolean).map(Number);
+    setHeroArticlesFromIds(heroIds);
+    setHeroMode((document.getElementById('heroMode').value||'auto')==='manual'?'manual':'auto');
+    if((document.getElementById('heroMode').value||'auto')==='manual'){
+      await hydrateHeroFromServer();
+    }
+  }
   syncLnSlotsCount();
   var restoredDraft=restoreLnDraftState();
   if(!restoredDraft&&document.getElementById('lnMode').value==='manual'&&!lnArticles.some(Boolean)){

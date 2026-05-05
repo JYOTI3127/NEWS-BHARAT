@@ -382,6 +382,13 @@ class HomepageSlot(models.Model):
         blank=True,
         related_name='homepage_overlay_slot_3'
     )
+    overlay_article_4 = models.ForeignKey(
+        'Article',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homepage_overlay_slot_4'
+    )
 
     display_count = models.PositiveSmallIntegerField(default=4)
     category_filter = models.ForeignKey(

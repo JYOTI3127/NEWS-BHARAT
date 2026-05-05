@@ -1070,7 +1070,7 @@ class NewsAdminSite(AdminSite):
 
         try:
             extra_context['hero_slot'] = HomepageSlot.objects.filter(slot_name='hero').select_related(
-                'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
+                'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3', 'overlay_article_4',
             ).first()
         except Exception:
             extra_context['hero_slot'] = None

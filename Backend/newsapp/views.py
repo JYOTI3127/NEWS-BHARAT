@@ -1277,7 +1277,7 @@ def dashboard_view(request):
 
     try:
         hero_slot = HomepageSlot.objects.filter(slot_name='hero').select_related(
-            'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3',
+            'article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3', 'overlay_article_4',
         ).first()
     except Exception:
         hero_slot = None
@@ -1434,6 +1434,19 @@ def _latest_news_queryset(slot):
     return queryset.order_by('-updated_at', '-published_at', '-created_at')[:count]
 
 
+def _hero_slot_queryset(slot):
+    count = max(1, min(int(getattr(slot, 'display_count', 9) or 9), 12))
+    if slot.mode == 'manual':
+        return _ordered_slot_manual_articles(slot)[:count]
+
+    return (
+        Article.objects.filter(status='published')
+        .select_related('author', 'primary_category')
+        .prefetch_related('categories')
+        .order_by('-updated_at', '-published_at', '-created_at')[:count]
+    )
+
+
 def _normalize_ad_target_pages(raw_pages):
     allowed_pages = {page for page, _label in HomepageAdBanner.PAGE_CHOICES}
     if isinstance(raw_pages, str):
@@ -1460,28 +1473,30 @@ def update_hero_slot(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    slot      = _get_or_create_slot('hero')
-    slot.mode = 'manual'
+    slot = _get_or_create_slot('hero')
+    mode = str(data.get('mode', 'auto') or 'auto').strip().lower()
+    if mode not in {'auto', 'manual'}:
+        mode = 'auto'
 
-    main_id = data.get('main_article_id')
-    if main_id:
-        try:
-            slot.article = Article.objects.get(pk=main_id, status='published')
-        except Article.DoesNotExist:
-            return JsonResponse({'error': 'Main article not found'}, status=404)
-    else:
-        slot.article = None
-
-    ov1 = data.get('overlay_article_1')
-    slot.overlay_article_1 = Article.objects.filter(pk=ov1, status='published').first() if ov1 else None
-
-    ov2 = data.get('overlay_article_2')
-    slot.overlay_article_2 = Article.objects.filter(pk=ov2, status='published').first() if ov2 else None
-
-    ov3 = data.get('overlay_article_3')
-    slot.overlay_article_3 = Article.objects.filter(pk=ov3, status='published').first() if ov3 else None
-
+    slot.mode = mode
+    slot.display_count = 9
+    slot.auto_rule = 'latest'
+    manual_ids = _normalize_latest_manual_ids(data.get('manual_ids', []), slot.display_count)
+    slot.manual_order = manual_ids if mode == 'manual' else []
+    slot.article = None
+    slot.overlay_article_1 = None
+    slot.overlay_article_2 = None
+    slot.overlay_article_3 = None
+    slot.overlay_article_4 = None
     slot.save()
+
+    if mode == 'manual':
+        slot.manual_articles.set(
+            Article.objects.filter(pk__in=manual_ids, status='published')
+        )
+    else:
+        slot.manual_articles.clear()
+
     return JsonResponse({'status': 'saved', 'slot': 'hero'})
 
 
@@ -1489,28 +1504,23 @@ def update_hero_slot(request):
 def homepage_hero_current(request):
     slot = (
         HomepageSlot.objects.filter(slot_name='hero')
-        .select_related('article', 'overlay_article_1', 'overlay_article_2', 'overlay_article_3')
+        .select_related('category_filter')
         .first()
     )
     if not slot:
         slot = _get_or_create_slot('hero')
+    if not slot.display_count:
+        slot.display_count = 9
 
-    def serialize_article(article):
-        if not article:
-            return None
-        return ArticleHomepageSerializer(article, context={'request': request}).data
+    articles = _hero_slot_queryset(slot)
+    serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})
 
     return JsonResponse({
         'slot': 'hero',
-        'mode': getattr(slot, 'mode', 'manual') or 'manual',
-        'main_article_id': getattr(slot, 'article_id', None),
-        'overlay_article_1_id': getattr(slot, 'overlay_article_1_id', None),
-        'overlay_article_2_id': getattr(slot, 'overlay_article_2_id', None),
-        'overlay_article_3_id': getattr(slot, 'overlay_article_3_id', None),
-        'main_article': serialize_article(getattr(slot, 'article', None)),
-        'overlay_article_1': serialize_article(getattr(slot, 'overlay_article_1', None)),
-        'overlay_article_2': serialize_article(getattr(slot, 'overlay_article_2', None)),
-        'overlay_article_3': serialize_article(getattr(slot, 'overlay_article_3', None)),
+        'mode': slot.mode,
+        'display_count': max(1, min(int(getattr(slot, 'display_count', 9) or 9), 12)),
+        'manual_order': list(getattr(slot, 'manual_order', []) or []),
+        'articles': serializer.data,
     })
 
 

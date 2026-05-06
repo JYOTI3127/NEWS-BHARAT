@@ -1612,6 +1612,67 @@ def _serialize_homepage_ad_banner(request, banner):
     return item
 
 
+def _compatible_ad_placements(placement):
+    width, height = HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement, (0, 0))
+    return [
+        candidate
+        for candidate, _label in HomepageAdBanner.PLACEMENT_CHOICES
+        if HomepageAdBanner.PLACEMENT_DIMENSIONS.get(candidate) == (width, height)
+    ]
+
+
+def _serialize_saved_ad_banner(request, banner):
+    image_url = request.build_absolute_uri(banner.image.url) if banner.image else banner.image_url
+    target_pages = _normalize_ad_target_pages(getattr(banner, 'target_pages', []))
+    page_labels = dict(HomepageAdBanner.PAGE_CHOICES)
+    placement_labels = dict(HomepageAdBanner.PLACEMENT_CHOICES)
+    compatible_placements = _compatible_ad_placements(banner.placement)
+    return {
+        'id': banner.pk,
+        'name': banner.name,
+        'placement': banner.placement,
+        'placement_label': placement_labels.get(banner.placement, banner.placement),
+        'size': banner.size,
+        'width': banner.width,
+        'height': banner.height,
+        'breakpoint': banner.breakpoint,
+        'image_url': image_url or '',
+        'link_url': banner.link_url or '',
+        'alt': banner.alt or 'Sponsored advertisement',
+        'target_pages': target_pages,
+        'target_page_labels': [page_labels.get(page, page) for page in target_pages],
+        'is_active': bool(banner.is_active and image_url),
+        'stored_is_active': bool(banner.is_active),
+        'compatible_placements': compatible_placements,
+        'created_at': banner.created_at.isoformat() if banner.created_at else None,
+        'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
+    }
+
+
+def _clone_ad_file(field_file, upload_dir):
+    file_name = getattr(field_file, 'name', '') or ''
+    if not file_name:
+        return None, None
+    base_name = os.path.basename(file_name)
+    stem, ext = os.path.splitext(base_name)
+    safe_stem = slugify(stem)[:45] or 'banner'
+    ext = (ext or '.jpg').lower()
+    new_name = f"{upload_dir.rstrip('/')}/{safe_stem}-{uuid.uuid4().hex[:10]}{ext}"
+    with default_storage.open(file_name, 'rb') as handle:
+        return new_name, ContentFile(handle.read())
+
+
+def _apply_saved_ad_media(instance, source, upload_dir):
+    if getattr(source, 'image', None) and getattr(source.image, 'name', ''):
+        new_name, content = _clone_ad_file(source.image, upload_dir)
+        if new_name and content is not None:
+            instance.image.save(new_name, content, save=False)
+            instance.image_url = ''
+            return
+    instance.image = None
+    instance.image_url = getattr(source, 'image_url', '') or ''
+
+
 def _empty_homepage_ad_banner(placement):
     width, height = HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement, (None, None))
     target_pages = list(HomepageAdBanner.DEFAULT_TARGET_PAGES)
@@ -1678,6 +1739,71 @@ def _validate_ad_banner_for_save(banner, *, validate_image=False):
 
 
 @staff_member_required
+@require_GET
+def saved_ad_banner_library(request):
+    items = [
+        _serialize_saved_ad_banner(request, banner)
+        for banner in SavedAdBanner.objects.all()[:100]
+    ]
+    return JsonResponse({'banners': items})
+
+
+@staff_member_required
+@require_POST
+def save_ad_banner_library_item(request):
+    placement = (request.POST.get('placement') or '').strip()
+    allowed_placements = {item[0] for item in HomepageAdBanner.PLACEMENT_CHOICES}
+    if placement not in allowed_placements:
+        return JsonResponse({'error': 'Invalid placement.'}, status=400)
+
+    existing_banner = HomepageAdBanner.objects.filter(placement=placement).first()
+    source_library_id = (request.POST.get('source_library_id') or '').strip()
+    image_url = request.POST.get('ad_image_url', '').strip()
+    upload = request.FILES.get('ad_image')
+    name = (request.POST.get('name') or '').strip()
+
+    banner = SavedAdBanner(
+        name=name or f"{dict(HomepageAdBanner.PLACEMENT_CHOICES).get(placement, placement)} {timezone.now().strftime('%d %b %Y %I:%M %p')}",
+        placement=placement,
+        link_url=request.POST.get('ad_link_url', '').strip(),
+        alt=request.POST.get('ad_alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement',
+        is_active=request.POST.get('is_active', 'true').lower() in ('true', '1', 'on'),
+        target_pages=_normalize_ad_target_pages(request.POST.get('ad_pages', '')),
+    )
+
+    if upload:
+        banner.image = upload
+        banner.image_url = ''
+    elif source_library_id:
+        source_banner = get_object_or_404(SavedAdBanner, pk=source_library_id)
+        if HomepageAdBanner.PLACEMENT_DIMENSIONS.get(source_banner.placement) != HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement):
+            return JsonResponse({'error': 'Saved banner size does not match this placement.'}, status=400)
+        _apply_saved_ad_media(banner, source_banner, 'saved_homepage_ads')
+    elif image_url and not image_url.startswith('blob:'):
+        url_error = _validate_remote_ad_image_url(image_url, placement)
+        if url_error:
+            return JsonResponse({'error': url_error}, status=400)
+        banner.image = None
+        banner.image_url = image_url
+    elif existing_banner and ((existing_banner.image and existing_banner.image.name) or existing_banner.image_url):
+        _apply_saved_ad_media(banner, existing_banner, 'saved_homepage_ads')
+    else:
+        return JsonResponse({'error': 'Please choose or upload a banner image before saving it.'}, status=400)
+
+    try:
+        _validate_ad_banner_for_save(banner, validate_image=bool(getattr(banner.image, 'name', '')))
+        banner.save()
+    except ValidationError as exc:
+        errors = exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+        return JsonResponse({'error': 'Could not save banner.', 'errors': errors}, status=400)
+
+    return JsonResponse({
+        'status': 'saved',
+        'banner': _serialize_saved_ad_banner(request, banner),
+    })
+
+
+@staff_member_required
 @require_POST
 def update_ad_slot(request):
     slot             = _get_or_create_slot('ad_banner')
@@ -1709,11 +1835,22 @@ def update_ad_slot(request):
 
             upload = request.FILES.get(f'ad_image_{placement}')
             image_url = request.POST.get(f'ad_image_url_{placement}', '').strip()
+            library_banner_id = (request.POST.get(f'ad_library_banner_id_{placement}') or '').strip()
             media_changed = False
 
             if upload:
                 banner.image = upload
                 banner.image_url = ''
+                media_changed = True
+            elif library_banner_id:
+                source_banner = SavedAdBanner.objects.filter(pk=library_banner_id).first()
+                if not source_banner:
+                    errors[placement] = ['Saved banner not found.']
+                    continue
+                if HomepageAdBanner.PLACEMENT_DIMENSIONS.get(source_banner.placement) != HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement):
+                    errors[placement] = ['Saved banner size does not match this placement.']
+                    continue
+                _apply_saved_ad_media(banner, source_banner, 'homepage_ads')
                 media_changed = True
             elif image_url and not image_url.startswith('blob:'):
                 if image_url != (banner.image_url or '') or banner.image:

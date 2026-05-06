@@ -536,6 +536,59 @@ class HomepageAdBanner(models.Model):
         labels = dict(self.PAGE_CHOICES)
         pages = self.target_pages if isinstance(self.target_pages, list) else []
         return ', '.join(labels.get(page, page) for page in pages) or 'No pages'
+
+
+class SavedAdBanner(models.Model):
+    name = models.CharField(max_length=120)
+    placement = models.CharField(max_length=40, choices=HomepageAdBanner.PLACEMENT_CHOICES)
+    image = models.ImageField(upload_to='saved_homepage_ads/', blank=True, null=True)
+    image_url = models.URLField(blank=True, default='')
+    link_url = models.URLField(blank=True, default='')
+    alt = models.CharField(max_length=255, blank=True, default='Sponsored advertisement')
+    target_pages = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-created_at']
+        verbose_name = 'Saved Ad Banner'
+        verbose_name_plural = 'Saved Ad Banners'
+
+    @property
+    def width(self):
+        return HomepageAdBanner.PLACEMENT_DIMENSIONS.get(self.placement, (0, 0))[0]
+
+    @property
+    def height(self):
+        return HomepageAdBanner.PLACEMENT_DIMENSIONS.get(self.placement, (0, 0))[1]
+
+    @property
+    def size(self):
+        return f'{self.width}x{self.height}'
+
+    @property
+    def breakpoint(self):
+        return HomepageAdBanner.PLACEMENT_BREAKPOINTS.get(self.placement, '')
+
+    def clean(self):
+        super().clean()
+        allowed_pages = {page for page, _label in HomepageAdBanner.PAGE_CHOICES}
+        pages = self.target_pages if isinstance(self.target_pages, list) else []
+        self.target_pages = [
+            page for page in dict.fromkeys(str(page).strip() for page in pages)
+            if page in allowed_pages
+        ]
+        if self.image and self.placement in HomepageAdBanner.PLACEMENT_DIMENSIONS:
+            expected_width, expected_height = HomepageAdBanner.PLACEMENT_DIMENSIONS[self.placement]
+            image_width, image_height = get_image_dimensions(self.image)
+            if image_width != expected_width or image_height != expected_height:
+                raise ValidationError(
+                    f'{self.placement} banner must be exactly {expected_width}x{expected_height}px.'
+                )
+
+    def __str__(self):
+        return f'{self.name} ({self.size})'
     
 
 class MetalRate(models.Model):

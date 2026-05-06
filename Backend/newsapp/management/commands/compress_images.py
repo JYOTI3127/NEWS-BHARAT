@@ -51,7 +51,7 @@ class Command(BaseCommand):
                     img = img.resize((1200, int(img.height * ratio)), PILImage.LANCZOS)
 
                 output = io.BytesIO()
-                img.save(output, format='WEBP', quality=75, optimize=True)
+                img.save(output, format='WEBP', quality=88, optimize=True)
                 output.seek(0)
 
                 filename = f"articles/{article.slug}.webp"

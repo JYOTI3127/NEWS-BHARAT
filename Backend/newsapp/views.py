@@ -101,7 +101,7 @@ def _normalize_inline_image_format(uploaded_file):
     raise ValidationError('Only JPG, PNG, and WEBP inline images are allowed.')
 
 
-def _compress_uploaded_image(uploaded_file, output_name, output_format='WEBP', quality=78):
+def _compress_uploaded_image(uploaded_file, output_name, output_format='WEBP', quality=88):
     from PIL import Image as PILImage
     import io
 
@@ -169,7 +169,7 @@ def inline_image_upload(request):
             uploaded_file,
             _unique_inline_image_name(uploaded_file.name, extension),
             output_format=output_format,
-            quality=78,
+            quality=88,
         )
         stored_name = default_storage.save(compressed_file.name, compressed_file)
     except Exception as exc:
@@ -745,7 +745,7 @@ def _save_article_from_request(request, article=None):
                 img = img.resize((1200, new_height), PILImage.LANCZOS)
 
             output = io.BytesIO()
-            img.save(output, format='WEBP', quality=75, optimize=True)
+            img.save(output, format='WEBP', quality=88, optimize=True)
             output.seek(0)
 
             original_name = _unique_article_image_name(article, uploaded_file.name, '.webp')

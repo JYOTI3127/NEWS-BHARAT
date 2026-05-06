@@ -306,24 +306,39 @@ const getArticleImage = (article) => {
   return candidates.find((value) => typeof value === "string" && value.trim().length > 0) || null;
 };
 
-const getArticleBodyHtml = (article) => {
+const CLEAN_ARTICLE_BODY_FIELDS = new Set([
+  "content_clean",
+  "clean_content",
+  "sanitized_content_html",
+  "normalized_content_html",
+]);
+
+const getArticleBodyPayload = (article) => {
   const candidates = [
-    article?.content_html,
-    article?.content,
-    article?.article_content_html,
-    article?.article_content,
-    article?.body_html,
-    article?.body,
-    article?.article_body,
-    article?.full_content,
-    article?.description_html,
-    article?.description,
+    ["content_clean", article?.content_clean],
+    ["clean_content", article?.clean_content],
+    ["sanitized_content_html", article?.sanitized_content_html],
+    ["normalized_content_html", article?.normalized_content_html],
+    ["content_html", article?.content_html],
+    ["content", article?.content],
+    ["article_content_html", article?.article_content_html],
+    ["article_content", article?.article_content],
+    ["body_html", article?.body_html],
+    ["body", article?.body],
+    ["article_body", article?.article_body],
+    ["full_content", article?.full_content],
+    ["description_html", article?.description_html],
+    ["description", article?.description],
   ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim().length > 0) return value;
+  for (const [source, value] of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) return { html: value, source };
   }
-  return "";
+  return { html: "", source: "" };
 };
+
+const getArticleBodyHtml = (article) => getArticleBodyPayload(article).html;
+
+const isCleanArticleBodySource = (source) => CLEAN_ARTICLE_BODY_FIELDS.has(String(source || ""));
 
 const hasRenderableArticleBody = (article) => Boolean(getArticleBodyHtml(article));
 
@@ -503,7 +518,8 @@ const useIs2K = () => {
   return is2K;
 };
 
-const normalizeArticleContent = (html) => {
+const normalizeArticleContent = (html, options = {}) => {
+  const { isPreSanitized = false } = options;
   if (typeof html !== "string" || !html.trim()) return "";
   let normalized = html
     .replace(/<\/?font\b[^>]*>/gi, "")
@@ -519,6 +535,9 @@ const normalizeArticleContent = (html) => {
     replacement.innerHTML = heading.innerHTML;
     heading.replaceWith(replacement);
   });
+  const hasGoogleSheetsMarkup = Boolean(
+    doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
+  );
 
   const isChatExportLike = Boolean(
     doc.body.querySelector(
@@ -526,7 +545,7 @@ const normalizeArticleContent = (html) => {
     )
   );
 
-  if (isChatExportLike) {
+  if (!isPreSanitized && isChatExportLike && !hasGoogleSheetsMarkup) {
     const topLevelBlockTags = new Set([
       "H2", "H3", "H4", "H5", "H6", "P", "UL", "OL", "TABLE", "BLOCKQUOTE", "DIV", "GOOGLE-SHEETS-HTML-ORIGIN",
     ]);
@@ -614,10 +633,29 @@ const normalizeArticleContent = (html) => {
     }
   }
 
+  if (!isPreSanitized) {
+    // Incoming CMS/editor HTML may carry utility classes (e.g. flex/w-fit) that can break layout.
+    // Keep only internal placeholders; drop all other classes before style normalization.
+    Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
+      const classAttr = element.getAttribute("class");
+      if (!classAttr) return;
+      const keep = classAttr
+        .split(/\s+/)
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .filter((name) => name === "react-tweet-placeholder");
+      if (keep.length > 0) element.setAttribute("class", keep.join(" "));
+      else element.removeAttribute("class");
+    });
+  }
+
   const elements = doc.body.querySelectorAll("*");
   elements.forEach((element) => {
-    const insideTable = Boolean(element.closest("table, google-sheets-html-origin"));
-    if (insideTable) return;
+    const tagName = String(element.tagName || "").toUpperCase();
+    const isTableStructuralElement = new Set([
+      "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TD", "TH", "COLGROUP", "COL",
+    ]).has(tagName);
+    if (isTableStructuralElement) return;
 
     element.removeAttribute("width");
     element.removeAttribute("height");
@@ -824,13 +862,18 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     const result = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-    const firstTextBlock = Array.from(doc.body.querySelectorAll("p, div, span, blockquote, li")).find((node) => {
-      if (!node) return false;
-      if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
-      if (node.matches("div, span") && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
-      const text = getPlainText(node.textContent || "");
-      return text.length > 1;
-    });
+    const hasGoogleSheetsMarkup = Boolean(
+      doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
+    );
+    const firstTextBlock = hasGoogleSheetsMarkup
+      ? Array.from(doc.body.querySelectorAll("p")).find((node) => getPlainText(node?.textContent || "").length > 1)
+      : Array.from(doc.body.querySelectorAll("p, div, span, blockquote, li")).find((node) => {
+        if (!node) return false;
+        if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
+        if (node.matches("div, span") && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
+        const text = getPlainText(node.textContent || "");
+        return text.length > 1;
+      });
     if (firstTextBlock) {
       firstTextBlock.classList.add("article-dropcap-first");
       if (firstTextBlock.tagName.toLowerCase() === "span") {
@@ -891,8 +934,13 @@ export default function ArticleDetails() {
   const mainArticleRef = useRef(null);
   const articleContentRef = useRef(null);
   const moreInListRef = useRef(null);
-  const articleBodyHtml = getArticleBodyHtml(article);
-  const normalizedContent = useMemo(() => normalizeArticleContent(articleBodyHtml), [articleBodyHtml]);
+  const articleBodyPayload = getArticleBodyPayload(article);
+  const articleBodyHtml = articleBodyPayload.html;
+  const articleBodySource = articleBodyPayload.source;
+  const normalizedContent = useMemo(
+    () => normalizeArticleContent(articleBodyHtml, { isPreSanitized: isCleanArticleBodySource(articleBodySource) }),
+    [articleBodyHtml, articleBodySource]
+  );
   const plainArticleContent = useMemo(() => getPlainText(articleBodyHtml), [articleBodyHtml]);
 
   useEffect(() => {

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getArticlePath } from "../lib/articleUrl";
 import { formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
-import patternBg from "../assets/Pattern.png";
 
 const getCategoryLabel = (article) => {
   if (article?.primary_category?.name) return article.primary_category.name;
@@ -13,6 +12,18 @@ const getCategoryLabel = (article) => {
 
 const getBannerTitle = (article) =>
   String(article?.title || article?.headline || article?.article_title || article?.name || "Untitled").trim();
+
+const getBannerDescription = (article) =>
+  String(
+    article?.subtitle ||
+    article?.description ||
+    article?.excerpt ||
+    article?.summary ||
+    ""
+  )
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const getBannerImage = (article) => {
   const candidates = [
@@ -61,19 +72,35 @@ const getCardPositionClass = (relative, total) => {
   return "cb-pos-hidden";
 };
 
-const CARD_BASE_CLASSNAME = "absolute cursor-pointer overflow-hidden rounded-xl [clip-path:inset(0_round_12px)] shadow-[0_22px_44px_rgba(0,0,0,0.8)] will-change-[transform,opacity] transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] w-[clamp(178px,19vw,282px)] aspect-[3/4.6] max-[1440px]:w-[clamp(170px,19vw,270px)] max-[1024px]:w-[clamp(188px,29vw,276px)] max-[768px]:w-[clamp(220px,77vw,304px)] max-[425px]:w-[clamp(214px,90vw,292px)] max-[375px]:w-[clamp(224px,94vw,304px)] max-[375px]:aspect-[3/3.95] max-[320px]:w-[clamp(206px,88vw,278px)] max-[320px]:aspect-[3/3.9]";
+// CardImage: no crop, anchored at bottom
+const CardImage = ({ src, alt, isCenter, onLoad, onError }) => (
+  <div className="absolute inset-0 overflow-hidden rounded-[inherit] bg-transparent">
+    <img
+      src={src}
+      alt={alt}
+      className="absolute inset-0 h-full w-full object-contain object-top"
+      loading={isCenter ? "eager" : "lazy"}
+      fetchPriority={isCenter ? "high" : "auto"}
+      onLoad={onLoad}
+      onError={onError}
+    />
+  </div>
+);
+// ────────────────────────────────────────────────────────────────────────────
+
+const CARD_BASE_CLASSNAME = "absolute cursor-pointer overflow-hidden shadow-[0_22px_44px_rgba(0,0,0,0.8)] will-change-[transform,opacity] transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] w-[clamp(212px,23vw,344px)] aspect-[3/4] max-[1440px]:w-[clamp(200px,22vw,320px)] max-[1024px]:w-[clamp(218px,33vw,316px)] max-[768px]:w-[clamp(246px,84vw,344px)] max-[425px]:w-[clamp(214px,90vw,292px)] max-[375px]:w-[clamp(224px,94vw,304px)] max-[375px]:aspect-[3/3.95] max-[320px]:w-[clamp(206px,88vw,278px)] max-[320px]:aspect-[3/3.9]";
 
 const CARD_POSITION_CLASSNAMES = {
   "cb-pos-center":
-    "z-[5] opacity-100 [transform:translateX(0)_scale(1.14)_rotateY(0deg)] max-[1024px]:[transform:translateX(0)_scale(1.08)_rotateY(0deg)] max-[768px]:[transform:translateX(0)_scale(1)_rotateY(0deg)]",
+    "z-[5] opacity-100 [transform:translateX(0)_scale(1.08)_rotateY(0deg)] max-[1024px]:[transform:translateX(0)_scale(1.04)_rotateY(0deg)] max-[768px]:[transform:translateX(0)_scale(1)_rotateY(0deg)]",
   "cb-pos-left-1":
-    "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-215px)_scale(0.92)_rotateY(18deg)] max-[1440px]:[transform:translateX(-200px)_scale(0.92)_rotateY(18deg)] max-[1024px]:[transform:translateX(-178px)_scale(0.9)_rotateY(16deg)] max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
+    "z-[4] opacity-95 [filter:brightness(0.92)] [transform:translateX(-226px)_scale(0.92)_rotateY(14deg)] max-[1440px]:[transform:translateX(-210px)_scale(0.92)_rotateY(14deg)] max-[1024px]:[transform:translateX(-190px)_scale(0.9)_rotateY(12deg)] max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
   "cb-pos-right-1":
-    "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(215px)_scale(0.92)_rotateY(-18deg)] max-[1440px]:[transform:translateX(200px)_scale(0.92)_rotateY(-18deg)] max-[1024px]:[transform:translateX(178px)_scale(0.9)_rotateY(-16deg)] max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
+    "z-[4] opacity-95 [filter:brightness(0.92)] [transform:translateX(226px)_scale(0.92)_rotateY(-14deg)] max-[1440px]:[transform:translateX(210px)_scale(0.92)_rotateY(-14deg)] max-[1024px]:[transform:translateX(190px)_scale(0.9)_rotateY(-12deg)] max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
   "cb-pos-left-2":
-    "z-[3] opacity-80 [filter:brightness(0.72)] [transform:translateX(-385px)_scale(0.82)_rotateY(28deg)] max-[1440px]:[transform:translateX(-350px)_scale(0.82)_rotateY(26deg)] max-[1024px]:pointer-events-none max-[1024px]:opacity-0 max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
+    "z-[3] opacity-90 [filter:brightness(0.9)] pointer-events-none [transform:translateX(-340px)_scale(0.86)_rotateY(16deg)] max-[1440px]:[transform:translateX(-312px)_scale(0.86)_rotateY(14deg)] max-[1024px]:pointer-events-none max-[1024px]:opacity-0",
   "cb-pos-right-2":
-    "z-[3] opacity-80 [filter:brightness(0.72)] [transform:translateX(385px)_scale(0.82)_rotateY(-28deg)] max-[1440px]:[transform:translateX(350px)_scale(0.82)_rotateY(-26deg)] max-[1024px]:pointer-events-none max-[1024px]:opacity-0 max-[768px]:pointer-events-none max-[768px]:opacity-0 max-[768px]:[transform:scale(0.85)]",
+    "z-[3] opacity-90 [filter:brightness(0.9)] pointer-events-none [transform:translateX(340px)_scale(0.86)_rotateY(-16deg)] max-[1440px]:[transform:translateX(312px)_scale(0.86)_rotateY(-14deg)] max-[1024px]:pointer-events-none max-[1024px]:opacity-0",
   "cb-pos-hidden":
     "z-[1] opacity-0 pointer-events-none [transform:scale(0.7)_translateX(0)]",
 };
@@ -108,6 +135,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
         id: article.id,
         slug: article.slug,
         title: getBannerTitle(article),
+        description: getBannerDescription(article),
         category: getCategoryLabel(article),
         image,
         image_alt: article.image_alt,
@@ -125,7 +153,6 @@ export default function NewsBanner({ articles = [], loading = false }) {
       if (items.length >= 5) break;
     }
 
-    // Ensure exactly 5 cards so layout always looks complete.
     if (items.length > 0 && items.length < 5) {
       const base = [...items];
       let duplicateIndex = 0;
@@ -202,7 +229,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const is320Layout = viewportWidth <= 320;
   const is375Layout = viewportWidth > 320 && viewportWidth <= 375;
   const isFourCard768Layout = viewportWidth > 425 && viewportWidth <= 768;
-  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(158px,22vw,220px)]";
+  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(192px,26vw,268px)]";
   const FOUR_CARD_1024_POSITION_CLASSNAMES = {
     center: "z-[5] opacity-100 [transform:translateX(0)_scale(1.02)_rotateY(0deg)]",
     left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-168px)_scale(0.9)_rotateY(12deg)]",
@@ -211,23 +238,23 @@ export default function NewsBanner({ articles = [], loading = false }) {
     right2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(300px)_scale(0.82)_rotateY(-20deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
-  const FOUR_CARD_768_CARD_SIZE_CLASSNAME = "!w-[clamp(176px,34vw,232px)]";
+  const FOUR_CARD_768_CARD_SIZE_CLASSNAME = "!w-[clamp(210px,38vw,276px)]";
   const FOUR_CARD_768_POSITION_CLASSNAMES = {
     center: "z-[5] opacity-100 [transform:translateX(0)_scale(1.08)_rotateY(0deg)]",
     left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-165px)_scale(0.9)_rotateY(14deg)]",
+    left2: "z-[3] opacity-88 [filter:brightness(0.86)] [transform:translateX(-290px)_scale(0.82)_rotateY(18deg)]",
     right1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(165px)_scale(0.9)_rotateY(-14deg)]",
+    right2: "z-[3] opacity-88 [filter:brightness(0.86)] [transform:translateX(290px)_scale(0.82)_rotateY(-18deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
-  const rootClassName = `cb-root relative isolate w-full overflow-visible rounded-[10px] bg-[#f8f9fb] bg-cover bg-center bg-no-repeat px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-10 max-[320px]:pt-1 max-[320px]:pb-8${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
+  const rootClassName = `cb-root relative isolate w-full overflow-visible rounded-none bg-[#18254a] bg-cover bg-center bg-no-repeat px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-10 max-[320px]:pt-1 max-[320px]:pb-8${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
   const stageClassName = "cb-stage relative z-[1] flex h-[420px] items-center justify-center overflow-visible [perspective:1200px] max-[2048px]:h-[430px] max-[1440px]:h-[392px] max-[1024px]:h-[340px] max-[768px]:h-[374px] max-[425px]:h-[386px] max-[375px]:h-[386px] max-[320px]:h-[360px] max-[425px]:items-start";
-  const sectionInlineStyle = {
-    backgroundImage: `url(${patternBg})`,
-    ...(isLaptop1440Layout
+  const sectionInlineStyle =
+    isLaptop1440Layout
       ? { paddingTop: "20px", paddingBottom: "24px" }
       : is2KLayout
         ? { paddingTop: "56px", paddingBottom: "72px" }
-        : {}),
-  };
+        : undefined;
   const stageInlineStyle = isLaptop1440Layout
     ? { marginTop: "4px", height: "420px", alignItems: "center", paddingTop: "0px" }
     : is2KLayout
@@ -257,7 +284,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[#f8f9fb]/90" />
+      <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-transparent" />
 
       {isTwoCard425Layout ? (
         <div className="relative z-[1] mx-auto grid w-[min(392px,96vw)] grid-cols-2 gap-2">
@@ -269,7 +296,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-pair-${offset}`}
-                className="relative w-full cursor-pointer overflow-hidden rounded-xl shadow-[0_16px_28px_rgba(0,0,0,0.45)] aspect-[3/5]"
+                className="relative flex w-full cursor-pointer flex-col overflow-hidden rounded-none bg-transparent shadow-[0_16px_28px_rgba(0,0,0,0.45)] aspect-[3/5]"
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -280,32 +307,31 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.image_alt || slide.title}
-                  className="h-full w-full object-cover"
-                  loading={isCenter ? "eager" : "lazy"}
-                  fetchPriority={isCenter ? "high" : "auto"}
-                  onLoad={() => {
-                    if (isCenter) emitBannerReady();
-                  }}
-                  onError={(event) => {
-                    event.target.style.display = "none";
-                  }}
-                />
-
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_24%,rgba(0,0,0,0.9)_100%)]" />
-                <div className="absolute bottom-0 left-0 right-0 p-[10px_10px] text-white">
-                  <span className="mb-1 inline-block text-[0.68rem] font-bold uppercase tracking-[0.03em] text-[#ffd164]">
+                <div className="relative h-[50%] w-full">
+                  <CardImage
+                    src={slide.image}
+                    alt={slide.image_alt || slide.title}
+                    isCenter={isCenter}
+                    onLoad={() => { if (isCenter) emitBannerReady(); }}
+                    onError={(event) => { event.target.style.display = "none"; }}
+                  />
+                </div>
+                <div className="relative h-[50%] w-full bg-white p-[10px_10px] text-[#111827]">
+                  <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
-                  <h2
-                    className="m-0 overflow-hidden text-[0.64rem] font-extrabold leading-[1.2]"
-                    style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}
-                  >
+                  <h2 className="m-0 break-words text-[0.64rem] font-semibold leading-[1.2]">
                     {slide.title}
                   </h2>
-                  {slide.time ? <p className="mt-1 text-[0.6rem] text-white/80">{slide.time}</p> : null}
+                  {slide.description ? (
+                    <p
+                      className="mt-1 overflow-hidden text-[0.64rem] leading-[1.3] text-gray-600"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    >
+                      {slide.description}
+                    </p>
+                  ) : null}
+                  {slide.time ? <p className="mt-1 text-[0.6rem] text-gray-500">{slide.time}</p> : null}
                 </div>
               </article>
             );
@@ -326,7 +352,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-tab4-${index}`}
-                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_1024_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass}`}
+                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_1024_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -337,32 +363,31 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.image_alt || slide.title}
-                  className="h-full w-full rounded-[inherit] object-cover object-center"
-                  loading={isCenter ? "eager" : "lazy"}
-                  fetchPriority={isCenter ? "high" : "auto"}
-                  onLoad={() => {
-                    if (isCenter) emitBannerReady();
-                  }}
-                  onError={(event) => {
-                    event.target.style.display = "none";
-                  }}
-                />
-
-                <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_24%,rgba(0,0,0,0.85)_100%)]" />
-                <div className="absolute bottom-0 left-0 right-0 p-[12px_10px] text-white">
-                  <span className="mb-1 inline-block text-[0.68rem] font-bold uppercase tracking-[0.03em] text-[#ffd164]">
+                <div className="relative h-[50%] w-full">
+                  <CardImage
+                    src={slide.image}
+                    alt={slide.image_alt || slide.title}
+                    isCenter={isCenter}
+                    onLoad={() => { if (isCenter) emitBannerReady(); }}
+                    onError={(event) => { event.target.style.display = "none"; }}
+                  />
+                </div>
+                <div className="relative h-[50%] w-full bg-white p-[12px_10px] text-[#111827]">
+                  <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
-                  <h2
-                    className="m-0 overflow-hidden text-[0.76rem] font-extrabold leading-[1.22]"
-                    style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
-                  >
+                  <h2 className="m-0 break-words text-[0.68rem] font-semibold leading-[1.2]">
                     {slide.title}
                   </h2>
-                  {slide.time ? <p className="mt-1 text-[0.62rem] text-white/80">{slide.time}</p> : null}
+                  {slide.description ? (
+                    <p
+                      className="mt-1 overflow-hidden text-[0.62rem] leading-[1.3] text-gray-600"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    >
+                      {slide.description}
+                    </p>
+                  ) : null}
+                  {slide.time ? <p className="mt-1 text-[0.56rem] text-gray-500">{slide.time}</p> : null}
                 </div>
               </article>
             );
@@ -375,13 +400,15 @@ export default function NewsBanner({ articles = [], loading = false }) {
             let activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.hidden;
             if (relative === 0) activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.center;
             else if (relative === -1) activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.left1;
+            else if (relative === -2) activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.left2;
             else if (relative === 1) activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.right1;
+            else if (relative === 2) activePositionClass = FOUR_CARD_768_POSITION_CLASSNAMES.right2;
             const isCenter = relative === 0;
 
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-quad-${index}`}
-                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_768_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass}`}
+                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_768_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -392,32 +419,31 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.image_alt || slide.title}
-                  className="h-full w-full rounded-[inherit] object-cover object-center"
-                  loading={isCenter ? "eager" : "lazy"}
-                  fetchPriority={isCenter ? "high" : "auto"}
-                  onLoad={() => {
-                    if (isCenter) emitBannerReady();
-                  }}
-                  onError={(event) => {
-                    event.target.style.display = "none";
-                  }}
-                />
-
-                <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_24%,rgba(0,0,0,0.85)_100%)]" />
-                <div className="absolute bottom-0 left-0 right-0 p-[12px_10px] text-white">
-                  <span className="mb-1 inline-block text-[0.68rem] font-bold uppercase tracking-[0.03em] text-[#ffd164]">
+                <div className="relative h-[50%] w-full">
+                  <CardImage
+                    src={slide.image}
+                    alt={slide.image_alt || slide.title}
+                    isCenter={isCenter}
+                    onLoad={() => { if (isCenter) emitBannerReady(); }}
+                    onError={(event) => { event.target.style.display = "none"; }}
+                  />
+                </div>
+                <div className="relative h-[50%] w-full bg-white p-[12px_10px] text-[#111827]">
+                  <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
-                  <h2
-                    className="m-0 overflow-hidden text-[0.76rem] font-extrabold leading-[1.22]"
-                    style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
-                  >
+                  <h2 className="m-0 break-words text-[0.76rem] font-semibold leading-[1.22]">
                     {slide.title}
                   </h2>
-                  {slide.time ? <p className="mt-1 text-[0.62rem] text-white/80">{slide.time}</p> : null}
+                  {slide.description ? (
+                    <p
+                      className="mt-1 overflow-hidden text-[0.66rem] leading-[1.32] text-gray-600"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    >
+                      {slide.description}
+                    </p>
+                  ) : null}
+                  {slide.time ? <p className="mt-1 text-[0.62rem] text-gray-500">{slide.time}</p> : null}
                 </div>
               </article>
             );
@@ -434,7 +460,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={slide._cardKey || slide.id || slide.slug || index}
-                className={`${CARD_BASE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass}`}
+                className={`${CARD_BASE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -445,32 +471,31 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.image_alt || slide.title}
-                  className="h-full w-full rounded-[inherit] object-cover object-center"
-                  loading={isCenter ? "eager" : "lazy"}
-                  fetchPriority={isCenter ? "high" : "auto"}
-                  onLoad={() => {
-                    if (isCenter) emitBannerReady();
-                  }}
-                  onError={(event) => {
-                    event.target.style.display = "none";
-                  }}
-                />
-
-                <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_24%,rgba(0,0,0,0.85)_100%)]" />
-                <div className="absolute bottom-0 left-0 right-0 p-[14px_12px] text-white">
-                  <span className="mb-1.5 inline-block text-[0.7rem] font-bold uppercase tracking-[0.04em] text-[#ffd164]">
+                <div className="relative h-[50%] w-full">
+                  <CardImage
+                    src={slide.image}
+                    alt={slide.image_alt || slide.title}
+                    isCenter={isCenter}
+                    onLoad={() => { if (isCenter) emitBannerReady(); }}
+                    onError={(event) => { event.target.style.display = "none"; }}
+                  />
+                </div>
+                <div className="relative h-[50%] w-full bg-white p-[14px_12px] text-[#111827]">
+                  <span className="mb-1.5 inline-block text-[0.7rem] font-semibold uppercase tracking-[0.04em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
-                  <h2
-                    className="m-0 overflow-hidden text-[clamp(0.82rem,1.5vw,1.45rem)] font-extrabold leading-[1.28] max-[768px]:text-[0.92rem] max-[425px]:text-[0.9rem] max-[320px]:text-[0.84rem] max-[320px]:leading-[1.24]"
-                    style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
-                  >
+                  <h2 className="m-0 break-words text-[clamp(0.72rem,1.2vw,1.12rem)] font-semibold leading-[1.22] max-[768px]:text-[0.9rem] max-[425px]:text-[0.88rem] max-[320px]:text-[0.82rem] max-[320px]:leading-[1.22]">
                     {slide.title}
                   </h2>
-                  {slide.time ? <p className="mt-2 text-[0.76rem] text-white/80 max-[768px]:text-[0.72rem] max-[320px]:text-[0.68rem]">{slide.time}</p> : null}
+                  {slide.description ? (
+                    <p
+                      className="mt-1 overflow-hidden text-[0.72rem] leading-[1.34] text-gray-600 max-[768px]:text-[0.66rem] max-[320px]:text-[0.6rem]"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    >
+                      {slide.description}
+                    </p>
+                  ) : null}
+                  {slide.time ? <p className="mt-2 text-[0.68rem] text-gray-500 max-[768px]:text-[0.68rem] max-[320px]:text-[0.64rem]">{slide.time}</p> : null}
                 </div>
               </article>
             );
@@ -488,7 +513,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             <button
               key={`dot-${slide._cardKey || slide.id || slide.slug || index}`}
               type="button"
-              className={`h-[10px] w-[10px] cursor-pointer rounded-full border border-[rgba(0,39,101,0.38)] bg-[rgba(0,39,101,0.24)] transition-all duration-200 max-[320px]:h-2 max-[320px]:w-2 ${index === activeIndex ? "scale-[1.22] border-[#002765] bg-[#002765] shadow-[0_0_0_3px_rgba(0,39,101,0.14)]" : ""}`}
+              className={`h-[10px] w-[10px] cursor-pointer rounded-full border border-white bg-white transition-all duration-200 max-[320px]:h-2 max-[320px]:w-2 ${index === activeIndex ? "scale-[1.22] border-white bg-white shadow-[0_0_0_3px_rgba(255,255,255,0.28)]" : "opacity-90"}`}
               onClick={() => setCurrent(index)}
               aria-label={`Go to slide ${index + 1}`}
             />

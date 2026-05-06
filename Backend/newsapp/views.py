@@ -1630,6 +1630,8 @@ def _serialize_saved_ad_banner(request, banner):
     return {
         'id': banner.pk,
         'name': banner.name,
+        'bundle_key': banner.bundle_key or '',
+        'bundle_name': banner.bundle_name or '',
         'placement': banner.placement,
         'placement_label': placement_labels.get(banner.placement, banner.placement),
         'size': banner.size,
@@ -1646,6 +1648,25 @@ def _serialize_saved_ad_banner(request, banner):
         'compatible_placements': compatible_placements,
         'created_at': banner.created_at.isoformat() if banner.created_at else None,
         'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
+    }
+
+
+def _serialize_saved_ad_bundle(request, bundle_key, items):
+    ordered_items = sorted(
+        items,
+        key=lambda item: [placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES].index(item['placement'])
+        if item['placement'] in dict(HomepageAdBanner.PLACEMENT_CHOICES) else 999
+    )
+    first = ordered_items[0]
+    return {
+        'bundle_key': bundle_key,
+        'bundle_name': first.get('bundle_name') or first.get('name') or 'Saved Banner Set',
+        'count': len(ordered_items),
+        'placements': [item['placement'] for item in ordered_items],
+        'placement_labels': [item['placement_label'] for item in ordered_items],
+        'preview_image_url': first.get('image_url', ''),
+        'updated_at': max((item.get('updated_at') or '') for item in ordered_items),
+        'items': ordered_items,
     }
 
 
@@ -1745,7 +1766,18 @@ def saved_ad_banner_library(request):
         _serialize_saved_ad_banner(request, banner)
         for banner in SavedAdBanner.objects.all()[:100]
     ]
-    return JsonResponse({'banners': items})
+    bundles = []
+    grouped = {}
+    for item in items:
+        bundle_key = item.get('bundle_key') or ''
+        if not bundle_key:
+            continue
+        grouped.setdefault(bundle_key, []).append(item)
+    for bundle_key, bundle_items in grouped.items():
+        if bundle_items:
+            bundles.append(_serialize_saved_ad_bundle(request, bundle_key, bundle_items))
+    bundles.sort(key=lambda item: item.get('updated_at') or '', reverse=True)
+    return JsonResponse({'banners': items, 'bundles': bundles})
 
 
 @staff_member_required
@@ -1761,9 +1793,13 @@ def save_ad_banner_library_item(request):
     image_url = request.POST.get('ad_image_url', '').strip()
     upload = request.FILES.get('ad_image')
     name = (request.POST.get('name') or '').strip()
+    bundle_key = (request.POST.get('bundle_key') or '').strip()
+    bundle_name = (request.POST.get('bundle_name') or '').strip()
 
     banner = SavedAdBanner(
         name=name or f"{dict(HomepageAdBanner.PLACEMENT_CHOICES).get(placement, placement)} {timezone.now().strftime('%d %b %Y %I:%M %p')}",
+        bundle_key=bundle_key,
+        bundle_name=bundle_name,
         placement=placement,
         link_url=request.POST.get('ad_link_url', '').strip(),
         alt=request.POST.get('ad_alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement',

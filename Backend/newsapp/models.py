@@ -540,6 +540,8 @@ class HomepageAdBanner(models.Model):
 
 class SavedAdBanner(models.Model):
     name = models.CharField(max_length=120)
+    bundle_key = models.CharField(max_length=40, blank=True, default='')
+    bundle_name = models.CharField(max_length=120, blank=True, default='')
     placement = models.CharField(max_length=40, choices=HomepageAdBanner.PLACEMENT_CHOICES)
     image = models.ImageField(upload_to='saved_homepage_ads/', blank=True, null=True)
     image_url = models.URLField(blank=True, default='')

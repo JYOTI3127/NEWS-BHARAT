@@ -163,10 +163,10 @@ export default function DisclaimerPage() {
       {...STATIC_PAGE_SEO["/disclaimer"]}
     />
     <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
-      <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+      <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={1024} />
     </aside>
     <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
-      <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+      <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={1024} />
     </aside>
     <AdvertisementSlot
       page="disclaimer"
@@ -185,9 +185,9 @@ export default function DisclaimerPage() {
     <div className="terms-page disclaimer-page">
 
       {/* ══════ HERO ══════ */}
-      <section className="terms-hero">
+      <section className="terms-hero relative w-full max-[768px]:!h-auto max-[768px]:!min-h-0 max-[768px]:aspect-[3/2]">
         <img
-          className="terms-hero-img"
+          className="terms-hero-img absolute inset-0 h-full w-full object-cover object-center"
           src={disclaimerImg}
           alt="Disclaimer — News4Bharat"
         />
@@ -280,3 +280,4 @@ export default function DisclaimerPage() {
     </>
   );
 }
+

@@ -306,6 +306,27 @@ const getArticleImage = (article) => {
   return candidates.find((value) => typeof value === "string" && value.trim().length > 0) || null;
 };
 
+const getArticleBodyHtml = (article) => {
+  const candidates = [
+    article?.content_html,
+    article?.content,
+    article?.article_content_html,
+    article?.article_content,
+    article?.body_html,
+    article?.body,
+    article?.article_body,
+    article?.full_content,
+    article?.description_html,
+    article?.description,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) return value;
+  }
+  return "";
+};
+
+const hasRenderableArticleBody = (article) => Boolean(getArticleBodyHtml(article));
+
 const normalizeCategoryToken = (value) => String(value || "").trim().toLowerCase();
 
 const getArticleCategoryDetails = (article) => {
@@ -501,14 +522,60 @@ const normalizeArticleContent = (html) => {
 
   const isChatExportLike = Boolean(
     doc.body.querySelector(
-      '[data-message-model-slug], [data-testid^="conversation-turn"], .text-token-text-primary, .TyagGW_tableContainer, .markdown-new-styling'
+      '[data-message-model-slug], [data-testid^="conversation-turn"], .markdown-new-styling'
     )
   );
 
   if (isChatExportLike) {
+    const topLevelBlockTags = new Set([
+      "H2", "H3", "H4", "H5", "H6", "P", "UL", "OL", "TABLE", "BLOCKQUOTE", "DIV", "GOOGLE-SHEETS-HTML-ORIGIN",
+    ]);
+    const inlinePassTags = new Set([
+      "SPAN", "STRONG", "B", "I", "EM", "U", "A", "SMALL", "MARK", "SUB", "SUP", "BR",
+    ]);
+    const bodyChildren = Array.from(doc.body.childNodes);
+    const rebuilt = [];
+    let inlineBuffer = [];
+
+    const flushInlineBuffer = () => {
+      if (inlineBuffer.length === 0) return;
+      const paragraph = doc.createElement("p");
+      inlineBuffer.forEach((node) => paragraph.appendChild(node));
+      rebuilt.push(paragraph);
+      inlineBuffer = [];
+    };
+
+    const isInlineLikeNode = (node) => {
+      if (!node) return false;
+      if (node.nodeType === Node.TEXT_NODE) return String(node.textContent || "").trim().length > 0;
+      if (node.nodeType !== Node.ELEMENT_NODE) return false;
+      const tag = node.tagName.toUpperCase();
+      if (inlinePassTags.has(tag)) return true;
+      if (topLevelBlockTags.has(tag)) return false;
+      return true;
+    };
+
+    bodyChildren.forEach((node) => {
+      if (isInlineLikeNode(node)) {
+        inlineBuffer.push(node);
+        return;
+      }
+      flushInlineBuffer();
+      rebuilt.push(node);
+    });
+    flushInlineBuffer();
+
+    if (rebuilt.length > 0) {
+      doc.body.innerHTML = "";
+      rebuilt.forEach((node) => doc.body.appendChild(node));
+    }
+
     const extracted = [];
     const seen = new Set();
-    const candidates = doc.body.querySelectorAll("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote");
+    const candidates = Array.from(doc.body.children).filter((node) => {
+      const tag = node.tagName.toLowerCase();
+      return ["h2", "h3", "h4", "h5", "h6", "p", "ul", "ol", "table", "blockquote", "div", "google-sheets-html-origin"].includes(tag);
+    });
 
     const getTextSignature = (node) =>
       getPlainText(node?.textContent || "")
@@ -522,7 +589,12 @@ const normalizeArticleContent = (html) => {
       const tag = node.tagName.toLowerCase();
       const textSig = getTextSignature(node);
 
-      if (tag !== "table" && textSig.length < 2) return;
+      // Keep only meaningful neutral wrappers to avoid duplicate container extraction.
+      if (tag === "div" && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return;
+
+      if (tag === "div") {
+        if (textSig.length < 20) return;
+      } else if (tag !== "table" && textSig.length < 2) return;
 
       let signature = `${tag}|${textSig.slice(0, 320)}`;
       if (tag === "table") {
@@ -752,10 +824,19 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     const result = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-    const firstParagraph = Array.from(doc.body.querySelectorAll("p")).find(
-      (node) => String(node?.textContent || "").trim().length > 0
-    );
-    if (firstParagraph) firstParagraph.classList.add("article-dropcap-first");
+    const firstTextBlock = Array.from(doc.body.querySelectorAll("p, div, span, blockquote, li")).find((node) => {
+      if (!node) return false;
+      if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
+      if (node.matches("div, span") && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
+      const text = getPlainText(node.textContent || "");
+      return text.length > 1;
+    });
+    if (firstTextBlock) {
+      firstTextBlock.classList.add("article-dropcap-first");
+      if (firstTextBlock.tagName.toLowerCase() === "span") {
+        firstTextBlock.style.display = "block";
+      }
+    }
     const children = Array.from(doc.body.childNodes);
     let buffer = "";
     children.forEach((node, i) => {
@@ -810,7 +891,7 @@ export default function ArticleDetails() {
   const mainArticleRef = useRef(null);
   const articleContentRef = useRef(null);
   const moreInListRef = useRef(null);
-  const articleBodyHtml = article?.content_html || article?.content || "";
+  const articleBodyHtml = getArticleBodyHtml(article);
   const normalizedContent = useMemo(() => normalizeArticleContent(articleBodyHtml), [articleBodyHtml]);
   const plainArticleContent = useMemo(() => getPlainText(articleBodyHtml), [articleBodyHtml]);
 
@@ -855,7 +936,7 @@ export default function ArticleDetails() {
           });
           if (listMatch && (listMatch.slug || listMatch.id)) {
             const hasSeoTitle = [listMatch?.meta_title, listMatch?.metaTitle, listMatch?.seo_title, listMatch?.seoTitle, listMatch?.seo?.meta_title, listMatch?.seo?.metaTitle, listMatch?.seo?.seo_title, listMatch?.seo?.seoTitle].map((value) => getPlainText(value)).some(Boolean);
-            if (!hasSeoTitle && listMatch?.id) {
+            if ((!hasSeoTitle || !hasRenderableArticleBody(listMatch)) && listMatch?.id) {
               try {
                 const idDetailResponse = await fetchWithRetry(apiUrl(`/articles/${encodeURIComponent(String(listMatch.id))}/`), { signal: controller.signal, cache: "no-store" }, 3);
                 if (idDetailResponse.ok) {
@@ -871,7 +952,25 @@ export default function ArticleDetails() {
         }
         const detailData = await detailResponse.json();
         const found = Array.isArray(detailData) ? detailData[0] : detailData;
-        if (found && (found.slug || found.id)) { setArticle(found); return; }
+        if (found && (found.slug || found.id)) {
+          if (!hasRenderableArticleBody(found) && found.id) {
+            try {
+              const idDetailResponse = await fetchWithRetry(apiUrl(`/articles/${encodeURIComponent(String(found.id))}/`), { signal: controller.signal, cache: "no-store" }, 3);
+              if (idDetailResponse.ok) {
+                const idDetailData = await idDetailResponse.json();
+                const hydratedArticle = Array.isArray(idDetailData) ? idDetailData[0] : idDetailData;
+                if (hydratedArticle && (hydratedArticle.slug || hydratedArticle.id)) {
+                  setArticle({ ...found, ...hydratedArticle });
+                  return;
+                }
+              }
+            } catch (error) {
+              if (error?.name === "AbortError") throw error;
+            }
+          }
+          setArticle(found);
+          return;
+        }
         setNotFound(true);
       } catch (error) {
         if (error.name === "AbortError") return;
@@ -1230,7 +1329,7 @@ export default function ArticleDetails() {
             contentRef={articleContentRef}
             className="article-content text-gray-700 text-left md:text-justify
     [&_p]:text-[16px] [&_p]:leading-[1.7] [&_p]:mb-[1.2rem]
-    [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
+    [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mt-[0.9rem] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
     [&_h3]:text-[18px] [&_h3]:leading-[1.4] [&_h3]:mb-[1.2rem] [&_h3]:font-bold
     [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
     [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
@@ -1241,17 +1340,28 @@ export default function ArticleDetails() {
   [&_td]:border [&_td]:border-gray-300 [&_td]:px-3 [&_td]:py-2 [&_td]:text-[14px] [&_td]:align-top [&_td]:whitespace-normal
 [&_th]:border [&_th]:border-gray-300 [&_th]:px-3 [&_th]:py-2 [&_th]:text-[14px] [&_th]:font-bold [&_th]:bg-gray-50 [&_th]:text-left [&_th]:align-top
     [&_google-sheets-html-origin]:block [&_google-sheets-html-origin]:w-full [&_google-sheets-html-origin]:overflow-x-auto
-    [&_.article-dropcap-first::first-letter]:float-left
-    [&_.article-dropcap-first::first-letter]:text-[3.8rem]
-    [&_.article-dropcap-first::first-letter]:font-extrabold
-    [&_.article-dropcap-first::first-letter]:leading-[0.85]
-    [&_.article-dropcap-first::first-letter]:mr-2
-    [&_.article-dropcap-first::first-letter]:mt-1
-    [&_.article-dropcap-first::first-letter]:text-red-600
   [&_.article-table-wrapper]:overflow-x-auto [&_.article-table-wrapper]:w-full
   [&_.article-table-wrapper]:my-6"
             style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
+
+          <style>{`
+            .article-content .article-dropcap-first {
+              display: inline;
+              margin: 0;
+              font-size: 16px;
+              line-height: 1.7;
+            }
+            .article-content .article-dropcap-first::first-letter {
+              float: left;
+              font-size: 4.4rem;
+              font-weight: 800;
+              line-height: 0.85;
+              margin-right: 0.5rem;
+              margin-top: 0.25rem;
+              color: #dc2626;
+            }
+          `}</style>
 
           {/* ── 7. TAGS — "Related Topics" ── */}
           {tags.length > 0 && (

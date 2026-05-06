@@ -287,29 +287,21 @@ export default function ContactPage() {
         {...STATIC_PAGE_SEO["/contact-us"]}
       />
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
-        <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+        <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={1024} />
       </aside>
       <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
-        <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+        <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={1024} />
       </aside>
       <AdvertisementSlot page="contact" placement="home_top" variant="leaderboard" className="home-top-ad home-top-ad--desktop" minWidth={769} />
       <AdvertisementSlot page="contact" placement="home_top_mobile" variant="mobileStrip" className="home-top-ad home-top-ad--mobile" maxWidth={768} />
       <div className="contact-page">
 
         {/* ══════════ HERO ══════════ */}
-        <section className="ct-hero">
+        <section className="ct-hero relative w-full max-[768px]:!h-auto max-[768px]:!min-h-0 max-[768px]:aspect-[3/2]">
           <img
             src={contactBg}
             alt=""
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center",
-              zIndex: 0,
-            }}
+            className="absolute inset-0 z-0 h-full w-full object-cover object-center"
           />
           <div className="ct-hero-overlay" />
           {/* <div className="ct-hero-content">

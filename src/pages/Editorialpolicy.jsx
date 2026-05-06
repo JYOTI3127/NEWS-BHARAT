@@ -121,10 +121,10 @@ export default function EditorialPolicy() {
                 {...STATIC_PAGE_SEO["/editorial-policy"]}
             />
             <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
-                <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+                <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={1024} />
             </aside>
             <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
-                <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+                <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={1024} />
             </aside>
             <AdvertisementSlot
                 page="editorial_policy"
@@ -143,19 +143,11 @@ export default function EditorialPolicy() {
             <div className="ep-page">
 
                 {/* ══════════ HERO ══════════ */}
-                <section className="ep-hero">
+                <section className="ep-hero relative w-full max-[768px]:!h-auto max-[768px]:!min-h-0 max-[768px]:aspect-[3/2]">
                     <img
                         src={editorialBg}
                         alt=""
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            objectPosition: "center",
-                            zIndex: 0,
-                        }}
+                        className="absolute inset-0 z-0 h-full w-full object-cover object-center"
                     />
                     <div className="ep-hero-overlay" />
                 </section>

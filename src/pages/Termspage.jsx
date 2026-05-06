@@ -3,7 +3,6 @@ import PageSeo from "../components/PageSeo";
 import AdvertisementSlot from "../components/AdvertisementSlot";
 import { STATIC_PAGE_SEO } from "../lib/staticPageSeo";
 import "../style.css";
-import "./Termspage.css";
 import termsBg from "../assets/terms-conditions.png";
 
 /* ── FADE IN HOOK ── */
@@ -262,10 +261,10 @@ export default function TermsPage() {
         {...STATIC_PAGE_SEO["/terms-and-conditions"]}
       />
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
-        <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={768} />
+        <AdvertisementSlot page="home" placement="home_side_left" variant="sideRail" className="home-side-ad home-side-ad--left" dismissible minWidth={1024} />
       </aside>
       <aside className="home-layout-ad home-layout-ad--right" aria-label="Right advertisement">
-        <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={768} />
+        <AdvertisementSlot page="home" placement="home_side_right" variant="sideRail" className="home-side-ad home-side-ad--right" dismissible minWidth={1024} />
       </aside>
       <AdvertisementSlot
         page="terms_conditions"
@@ -284,9 +283,9 @@ export default function TermsPage() {
       <div className="terms-page">
 
         {/* ══════ HERO ══════ */}
-        <section className="terms-hero">
+        <section className="terms-hero relative w-full max-[768px]:!h-auto max-[768px]:!min-h-0 max-[768px]:aspect-[3/2]">
           <img
-            className="terms-hero-img"
+            className="terms-hero-img absolute inset-0 h-full w-full object-cover object-center"
             src={termsBg}
             alt="Terms and Conditions — News4Bharat"
           />
@@ -484,3 +483,4 @@ export default function TermsPage() {
     </>
   );
 }
+

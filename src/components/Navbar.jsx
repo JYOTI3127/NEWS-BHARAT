@@ -478,6 +478,87 @@ const PUSH_SUBSCRIBE_URL = apiUrl("/push/subscribe/");
 const LIVE_VAPID_PUBLIC_KEY = "BJ-tbAcljktBC5rfkAWNi7pkhFn_s6pHHd9fo6GwZBi_olNVUxltcE0ErPM6qHTNhX2oCMVpwUOmmD6qhI7LNSE";
 const PUSH_STATE_STORAGE_KEY = "news4bharat_push_subscribed";
 const PUSH_REQUEST_TIMEOUT_MS = 12000;
+const PUSH_USER_IDENTITY_STORAGE_KEYS = [
+  "news4bharat_user",
+  "news4bharat_auth_user",
+  "auth_user",
+  "current_user",
+  "currentUser",
+  "user",
+  "profile",
+];
+
+const readJsonFromStorageKey = (storage, key) => {
+  if (!storage || !key) return null;
+  try {
+    const rawValue = storage.getItem(key);
+    if (!rawValue) return null;
+    const parsed = JSON.parse(rawValue);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (error) {
+    void error;
+    return null;
+  }
+};
+
+const pickFirstNonEmptyString = (values = []) =>
+  values.find((value) => typeof value === "string" && value.trim())?.trim() || "";
+
+const getPushSubscriberIdentity = () => {
+  if (typeof window === "undefined") {
+    return { subscriberName: "", subscriberEmail: "" };
+  }
+
+  const storageObjects = [window.localStorage, window.sessionStorage];
+  const storedObjects = [];
+
+  storageObjects.forEach((storage) => {
+    PUSH_USER_IDENTITY_STORAGE_KEYS.forEach((key) => {
+      const parsedObject = readJsonFromStorageKey(storage, key);
+      if (parsedObject) storedObjects.push(parsedObject);
+    });
+  });
+
+  const globalUserCandidates = [
+    window.__NEWS4BHARAT_USER__,
+    window.__CURRENT_USER__,
+    window.__USER__,
+  ].filter((value) => value && typeof value === "object");
+
+  const userSources = [...storedObjects, ...globalUserCandidates];
+
+  const subscriberName = pickFirstNonEmptyString([
+    ...userSources.map((item) => item?.subscriber_name),
+    ...userSources.map((item) => item?.subscriberName),
+    ...userSources.map((item) => item?.full_name),
+    ...userSources.map((item) => item?.fullName),
+    ...userSources.map((item) => item?.name),
+    ...userSources.map((item) => item?.username),
+    window.localStorage.getItem("subscriber_name"),
+    window.localStorage.getItem("user_name"),
+    window.localStorage.getItem("name"),
+    window.sessionStorage.getItem("subscriber_name"),
+    window.sessionStorage.getItem("user_name"),
+    window.sessionStorage.getItem("name"),
+  ]);
+
+  const subscriberEmail = pickFirstNonEmptyString([
+    ...userSources.map((item) => item?.subscriber_email),
+    ...userSources.map((item) => item?.subscriberEmail),
+    ...userSources.map((item) => item?.email),
+    ...userSources.map((item) => item?.user_email),
+    ...userSources.map((item) => item?.userEmail),
+    window.localStorage.getItem("subscriber_email"),
+    window.localStorage.getItem("user_email"),
+    window.localStorage.getItem("email"),
+    window.sessionStorage.getItem("subscriber_email"),
+    window.sessionStorage.getItem("user_email"),
+    window.sessionStorage.getItem("email"),
+  ]);
+
+  return { subscriberName, subscriberEmail };
+};
+
 const normalizeBasePath = (value) => {
   const rawBase = String(value || "/").trim();
   const trimmedBase = rawBase.replace(/^\/+/, "").replace(/\/+$/, "");
@@ -1325,12 +1406,15 @@ const Header = () => {
       });
 
       const subscriptionJson = subscription.toJSON();
+      const { subscriberName, subscriberEmail } = getPushSubscriberIdentity();
       const payload = {
         endpoint: subscriptionJson.endpoint,
         keys: {
           p256dh: subscriptionJson.keys?.p256dh || "",
           auth: subscriptionJson.keys?.auth || "",
         },
+        subscriber_name: subscriberName,
+        subscriber_email: subscriberEmail,
       };
 
       const subscribeResponse = await fetchWithTimeout(PUSH_SUBSCRIBE_URL, {

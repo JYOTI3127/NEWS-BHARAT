@@ -722,7 +722,7 @@ grammarly-button,
         <button type="button" class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
       </div>
 
-      <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article..." data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">{{ original.content_raw|default:original.content|default:''|safe }}</div>
+      <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article..." data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">{% if original %}{{ original.content_raw|default:original.content|default:''|safe }}{% endif %}</div>
         <div class="ai-status" id="ai_status"></div>
         <div class="sentence-suggest-modal" id="sentence_suggest_modal">
           <div class="sentence-suggest-panel">

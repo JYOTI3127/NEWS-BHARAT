@@ -6,7 +6,12 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import *
-from .utils import has_permission
+from .utils import (
+    ARTICLE_CLEAN_VERSION,
+    get_article_render_content,
+    has_permission,
+    sanitize_article_html,
+)
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -614,19 +619,25 @@ def _save_article_from_request(request, article=None):
     else:
         primary_category_id = None
 
-    title    = data.get('title', '').strip()
+    title = data.get('title', '').strip()
     subtitle = data.get('subtitle', '').strip()
-    content  = data.get('content', '').strip()
+    content_raw = data.get('content', '').strip()
+    content_clean = sanitize_article_html(content_raw)
 
-    if not title or not content:
+    if not title or not content_raw:
         return None, {'error': 'Title aur content required hain'}
+    if not content_clean:
+        return None, {'error': 'Content becomes empty after sanitization. Please use supported HTML only.'}
 
     if is_new:
         article = Article(author=request.user)
 
-    article.title    = title
+    article.title = title
     article.subtitle = subtitle
-    article.content  = content
+    article.content_raw = content_raw
+    article.content_clean = content_clean
+    article.clean_version = ARTICLE_CLEAN_VERSION
+    article.content = content_clean
 
     requested_status = data.get('status', article.status if not is_new else 'draft')
     if previous_status == 'published' and requested_status not in {'archived', 'review'}:
@@ -1169,6 +1180,7 @@ def article_detail_page(request, slug, category_slug=None):
 
     return render(request, 'article.html', {
         'article': article,
+        'article_render_content': get_article_render_content(article),
         'seo_head': seo_head
     })
 

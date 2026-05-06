@@ -74,7 +74,7 @@
         <img class="hero-image" src="{{ article.get_image }}" alt="{{ article.image_alt|default:article.title }}">
       {% endif %}
       <div class="content">
-        {{ article.content|safe }}
+        {{ article_render_content|safe }}
       </div>
     </article>
   </main>

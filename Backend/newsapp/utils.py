@@ -14,12 +14,109 @@ def has_permission(user, perm_code):
 
     return profile.roles.filter(permissions__code=perm_code).exists()
 
+import bleach
 import requests
+import html
+import re
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
 from .models import MetalRate
+
+ARTICLE_CLEAN_VERSION = 1
+ARTICLE_ALLOWED_TAGS = [
+    'p', 'h2', 'h3', 'h4',
+    'ul', 'ol', 'li',
+    'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    'a', 'strong', 'em', 'br', 'img', 'blockquote',
+]
+ARTICLE_ALLOWED_ATTRIBUTES = {
+    'a': ['href', 'target', 'rel'],
+    'img': ['src', 'alt'],
+}
+ARTICLE_ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+
+_TWITTER_EMBED_RE = re.compile(
+    r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
+    re.IGNORECASE,
+)
+_TWITTER_IFRAME_RE = re.compile(
+    r'<iframe\b(?=[^>]*(?:platform\.twitter\.com|twitter-widget))(?P<attrs>[^>]*)></iframe>',
+    re.IGNORECASE,
+)
+_ANCHOR_TAG_RE = re.compile(r'<a\b(?P<attrs>[^>]*)>', re.IGNORECASE)
+_TARGET_BLANK_RE = re.compile(r'target\s*=\s*([\'"])_blank\1', re.IGNORECASE)
+_REL_ATTR_RE = re.compile(r'\srel\s*=\s*([\'"])(?P<value>.*?)\1', re.IGNORECASE)
+
+
+def normalize_twitter_embeds(content):
+    def tweet_block(tweet_url):
+        safe_url = html.escape(tweet_url, quote=True)
+        return (
+            '<blockquote>'
+            f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer">{safe_url}</a>'
+            '</blockquote>'
+        )
+
+    def replace_embed(match):
+        return tweet_block(match.group('url'))
+
+    def replace_iframe(match):
+        attrs = html.unescape(match.group('attrs') or '')
+        id_match = re.search(r'data-tweet-id=["\']?(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            id_match = re.search(r'(?:[?&]|;)id=(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            id_match = re.search(r'/status/(\d+)', attrs, re.IGNORECASE)
+        if not id_match:
+            return ''
+        return tweet_block(f"https://twitter.com/i/status/{id_match.group(1)}")
+
+    normalized = _TWITTER_EMBED_RE.sub(replace_embed, content or '')
+    normalized = _TWITTER_IFRAME_RE.sub(replace_iframe, normalized)
+    return normalized
+
+
+def _ensure_safe_anchor_attrs(match):
+    tag = match.group(0)
+    if not _TARGET_BLANK_RE.search(tag):
+        return tag
+
+    rel_match = _REL_ATTR_RE.search(tag)
+    required_tokens = ['noopener', 'noreferrer']
+    if rel_match:
+        existing = rel_match.group('value').split()
+        merged = []
+        for token in existing + required_tokens:
+            token = token.strip()
+            if token and token not in merged:
+                merged.append(token)
+        return _REL_ATTR_RE.sub(f' rel="{" ".join(merged)}"', tag, count=1)
+    return tag[:-1] + ' rel="noopener noreferrer">'
+
+
+def sanitize_article_html(content):
+    normalized = normalize_twitter_embeds(str(content or ''))
+    cleaned = bleach.clean(
+        normalized,
+        tags=ARTICLE_ALLOWED_TAGS,
+        attributes=ARTICLE_ALLOWED_ATTRIBUTES,
+        protocols=ARTICLE_ALLOWED_PROTOCOLS,
+        strip=True,
+        strip_comments=True,
+    )
+    cleaned = _ANCHOR_TAG_RE.sub(_ensure_safe_anchor_attrs, cleaned)
+    cleaned = re.sub(r'<p>\s*</p>', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'(?:<br\s*/?>\s*){3,}', '<br><br>', cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
+def get_article_render_content(article):
+    stored_clean = getattr(article, 'content_clean', '') or ''
+    if stored_clean.strip():
+        return stored_clean
+    return sanitize_article_html(getattr(article, 'content', '') or '')
 
 OZ_TO_GRAM = 31.1035
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"

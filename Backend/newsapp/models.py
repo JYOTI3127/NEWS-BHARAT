@@ -61,6 +61,9 @@ class Article(models.Model):
     title    = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255, blank=True)
     content  = models.TextField()
+    content_raw = models.TextField(blank=True, default='')
+    content_clean = models.TextField(blank=True, default='')
+    clean_version = models.PositiveIntegerField(default=1)
     image    = models.ImageField(upload_to="articles/", blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
     # FIX 1: image_alt and image_source were already in model — confirmed present

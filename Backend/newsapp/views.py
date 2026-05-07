@@ -756,7 +756,7 @@ def _save_article_from_request(request, article=None):
                 img = img.resize((1200, new_height), PILImage.LANCZOS)
 
             output = io.BytesIO()
-            img.save(output, format='WEBP', quality=88, optimize=True)
+            img.save(output, format='WEBP', quality=95, optimize=True)
             output.seek(0)
 
             original_name = _unique_article_image_name(article, uploaded_file.name, '.webp')

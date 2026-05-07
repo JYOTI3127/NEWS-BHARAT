@@ -1314,6 +1314,9 @@ def dashboard_view(request):
         ad_slot = None
 
     try:
+        saved_banner_choices = {}
+        for saved_banner in SavedAdBanner.objects.all().order_by('-updated_at', '-created_at'):
+            saved_banner_choices.setdefault(saved_banner.placement, []).append(saved_banner)
         saved_banners = {
             banner.placement: banner
             for banner in HomepageAdBanner.objects.filter(
@@ -1328,6 +1331,9 @@ def dashboard_view(request):
                 'height': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][1],
                 'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS[placement],
                 'banner': saved_banners.get(placement),
+                'saved_options': saved_banner_choices.get(placement, []),
+                'selected_rotation_ids': list(getattr(saved_banners.get(placement), 'rotation_banner_ids', []) or []),
+                'current_source_saved_banner_id': getattr(saved_banners.get(placement), 'source_saved_banner_id', None),
             }
             for placement, label in HomepageAdBanner.PLACEMENT_CHOICES
         ]
@@ -1599,10 +1605,16 @@ def homepage_latest_news_current(request):
     })
 
 
-def _serialize_homepage_ad_banner(request, banner):
+def _serialize_homepage_ad_banner(request, banner, requested_page=''):
     image_url = request.build_absolute_uri(banner.image.url) if banner.image else banner.image_url
     target_pages = _normalize_ad_target_pages(getattr(banner, 'target_pages', []))
     target_page_labels = dict(HomepageAdBanner.PAGE_CHOICES)
+    rotation_saved_banners = _get_rotation_saved_banners(banner, requested_page=requested_page)
+    rotation_banners = [
+        _serialize_saved_ad_banner(request, saved_banner)
+        for saved_banner in rotation_saved_banners
+    ]
+    rotation_active = len(rotation_banners) > 1
     item = {
         'placement': banner.placement,
         'size': banner.size,
@@ -1611,7 +1623,7 @@ def _serialize_homepage_ad_banner(request, banner):
         'breakpoint': banner.breakpoint,
         'target_pages': target_pages,
         'target_page_labels': [target_page_labels.get(page, page) for page in target_pages],
-        'is_active': bool(banner.is_active and image_url),
+        'is_active': bool(banner.is_active and (image_url or rotation_banners)),
         'stored_is_active': bool(banner.is_active),
         'image_url': image_url or '',
         'ad_image_url': image_url or '',
@@ -1619,6 +1631,12 @@ def _serialize_homepage_ad_banner(request, banner):
         'ad_image': image_url or '',
         'link_url': banner.link_url or '',
         'alt': banner.alt or 'Sponsored advertisement',
+        'current_source_saved_banner_id': getattr(banner, 'source_saved_banner_id', None),
+        'rotation_enabled': bool(getattr(banner, 'rotation_enabled', False) or rotation_active),
+        'rotation_interval_seconds': int(getattr(banner, 'rotation_interval_seconds', 10) or 10),
+        'rotation_banner_ids': list(getattr(banner, 'rotation_banner_ids', []) or []),
+        'rotation_banners': rotation_banners,
+        'rotation_count': len(rotation_banners),
         'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
     }
     return item
@@ -1682,6 +1700,32 @@ def _serialize_saved_ad_bundle(request, bundle_key, items):
     }
 
 
+def _normalize_rotation_banner_ids(raw_value):
+    if isinstance(raw_value, list):
+        values = raw_value
+    else:
+        parsed = raw_value
+        if isinstance(raw_value, str):
+            raw_value = raw_value.strip()
+            if not raw_value:
+                values = []
+            else:
+                try:
+                    parsed = json.loads(raw_value)
+                except (TypeError, ValueError):
+                    parsed = [part.strip() for part in raw_value.split(',')]
+        values = parsed if isinstance(parsed, list) else []
+    normalized = []
+    for value in values:
+        try:
+            banner_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if banner_id > 0 and banner_id not in normalized:
+            normalized.append(banner_id)
+    return normalized
+
+
 def _clone_ad_file(field_file, upload_dir):
     file_name = getattr(field_file, 'name', '') or ''
     if not file_name:
@@ -1726,15 +1770,21 @@ def _empty_homepage_ad_banner(placement):
         'ad_image': '',
         'link_url': '',
         'alt': 'Sponsored advertisement',
+        'current_source_saved_banner_id': None,
+        'rotation_enabled': False,
+        'rotation_interval_seconds': 10,
+        'rotation_banner_ids': [],
+        'rotation_banners': [],
+        'rotation_count': 0,
         'updated_at': None,
     }
 
 
-def _homepage_ad_banner_payload(request, banners, placements=None):
+def _homepage_ad_banner_payload(request, banners, placements=None, requested_page=''):
     banner_by_placement = {banner.placement: banner for banner in banners}
     placement_list = placements or [placement for placement, _label in HomepageAdBanner.PLACEMENT_CHOICES]
     items = [
-        _serialize_homepage_ad_banner(request, banner_by_placement[placement])
+        _serialize_homepage_ad_banner(request, banner_by_placement[placement], requested_page=requested_page)
         if placement in banner_by_placement else _empty_homepage_ad_banner(placement)
         for placement in placement_list
     ]
@@ -1742,6 +1792,46 @@ def _homepage_ad_banner_payload(request, banners, placements=None):
         'banners': items,
         'by_placement': {item['placement']: item for item in items},
     }
+
+
+def _get_rotation_saved_banners(banner, requested_page=''):
+    if not banner:
+        return []
+    selected_ids = _normalize_rotation_banner_ids(getattr(banner, 'rotation_banner_ids', []))
+    if selected_ids:
+        saved_banner_map = {
+            saved_banner.pk: saved_banner
+            for saved_banner in SavedAdBanner.objects.filter(
+                pk__in=selected_ids,
+                placement=banner.placement,
+                is_active=True,
+            )
+        }
+    else:
+        auto_saved_banners = list(
+            SavedAdBanner.objects.filter(
+                placement=banner.placement,
+                is_active=True,
+            ).order_by('-updated_at', '-created_at')[:10]
+        )
+        saved_banner_map = {saved_banner.pk: saved_banner for saved_banner in auto_saved_banners}
+        selected_ids = [saved_banner.pk for saved_banner in auto_saved_banners]
+    ordered = []
+    for banner_id in selected_ids:
+        saved_banner = saved_banner_map.get(banner_id)
+        if not saved_banner:
+            continue
+        has_image = bool(
+            (getattr(saved_banner, 'image', None) and getattr(saved_banner.image, 'name', ''))
+            or getattr(saved_banner, 'image_url', '')
+        )
+        if not has_image:
+            continue
+        target_pages = _normalize_ad_target_pages(getattr(saved_banner, 'target_pages', []))
+        if requested_page and requested_page not in target_pages:
+            continue
+        ordered.append(saved_banner)
+    return ordered
 
 
 def _validate_remote_ad_image_url(image_url, placement):
@@ -1822,19 +1912,23 @@ def save_ad_banner_library_item(request):
     if upload:
         banner.image = upload
         banner.image_url = ''
+        banner.source_saved_banner = None
     elif source_library_id:
         source_banner = get_object_or_404(SavedAdBanner, pk=source_library_id)
         if HomepageAdBanner.PLACEMENT_DIMENSIONS.get(source_banner.placement) != HomepageAdBanner.PLACEMENT_DIMENSIONS.get(placement):
             return JsonResponse({'error': 'Saved banner size does not match this placement.'}, status=400)
         _apply_saved_ad_media(banner, source_banner, 'saved_homepage_ads')
+        banner.source_saved_banner = source_banner
     elif image_url and not image_url.startswith('blob:'):
         url_error = _validate_remote_ad_image_url(image_url, placement)
         if url_error:
             return JsonResponse({'error': url_error}, status=400)
         banner.image = None
         banner.image_url = image_url
+        banner.source_saved_banner = None
     elif existing_banner and ((existing_banner.image and existing_banner.image.name) or existing_banner.image_url):
         _apply_saved_ad_media(banner, existing_banner, 'saved_homepage_ads')
+        banner.source_saved_banner = None
     else:
         return JsonResponse({'error': 'Please choose or upload a banner image before saving it.'}, status=400)
 
@@ -1849,6 +1943,44 @@ def save_ad_banner_library_item(request):
         'status': 'saved',
         'banner': _serialize_saved_ad_banner(request, banner),
     })
+
+
+@staff_member_required
+@require_POST
+def rename_saved_ad_banner(request, banner_id):
+    banner = get_object_or_404(SavedAdBanner, pk=banner_id)
+    name = ' '.join((request.POST.get('name') or '').strip().split())
+    if not name:
+        return JsonResponse({'error': 'Banner name is required.'}, status=400)
+    banner.name = name[:120]
+    banner.save(update_fields=['name', 'updated_at'])
+    return JsonResponse({'status': 'renamed', 'banner': _serialize_saved_ad_banner(request, banner)})
+
+
+@staff_member_required
+@require_POST
+def delete_saved_ad_banner(request, banner_id):
+    banner = get_object_or_404(SavedAdBanner, pk=banner_id)
+    image_name = banner.image.name if getattr(banner, 'image', None) else ''
+    for homepage_banner in HomepageAdBanner.objects.filter(rotation_banner_ids__contains=[banner_id]):
+        rotation_ids = [
+            value for value in _normalize_rotation_banner_ids(getattr(homepage_banner, 'rotation_banner_ids', []))
+            if value != banner_id
+        ]
+        homepage_banner.rotation_banner_ids = rotation_ids
+        if getattr(homepage_banner, 'source_saved_banner_id', None) == banner_id:
+            homepage_banner.source_saved_banner = None
+            homepage_banner.save(update_fields=['rotation_banner_ids', 'source_saved_banner', 'updated_at'])
+        else:
+            homepage_banner.save(update_fields=['rotation_banner_ids', 'updated_at'])
+    HomepageAdBanner.objects.filter(source_saved_banner_id=banner_id).update(source_saved_banner=None)
+    banner.delete()
+    if image_name:
+        try:
+            default_storage.delete(image_name)
+        except Exception:
+            pass
+    return JsonResponse({'status': 'deleted', 'id': banner_id})
 
 
 @staff_member_required
@@ -1880,6 +2012,14 @@ def update_ad_slot(request):
             banner.target_pages = _normalize_ad_target_pages(
                 request.POST.get(f'ad_pages_{placement}', '')
             )
+            banner.rotation_enabled = request.POST.get(f'ad_rotation_enabled_{placement}', 'false').lower() in ('true', '1', 'on')
+            try:
+                banner.rotation_interval_seconds = int(request.POST.get(f'ad_rotation_interval_{placement}', '10') or '10')
+            except (TypeError, ValueError):
+                banner.rotation_interval_seconds = 10
+            banner.rotation_banner_ids = _normalize_rotation_banner_ids(
+                request.POST.get(f'ad_rotation_banner_ids_{placement}', '[]')
+            )
 
             upload = request.FILES.get(f'ad_image_{placement}')
             image_url = request.POST.get(f'ad_image_url_{placement}', '').strip()
@@ -1889,6 +2029,7 @@ def update_ad_slot(request):
             if upload:
                 banner.image = upload
                 banner.image_url = ''
+                banner.source_saved_banner = None
                 media_changed = True
             elif library_banner_id:
                 source_banner = SavedAdBanner.objects.filter(pk=library_banner_id).first()
@@ -1899,6 +2040,7 @@ def update_ad_slot(request):
                     errors[placement] = ['Saved banner size does not match this placement.']
                     continue
                 _apply_saved_ad_media(banner, source_banner, 'homepage_ads')
+                banner.source_saved_banner = source_banner
                 media_changed = True
             elif image_url and not image_url.startswith('blob:'):
                 if image_url != (banner.image_url or '') or banner.image:
@@ -1908,6 +2050,7 @@ def update_ad_slot(request):
                         continue
                     banner.image = None
                     banner.image_url = image_url
+                    banner.source_saved_banner = None
                     media_changed = True
 
             try:
@@ -1929,6 +2072,10 @@ def update_ad_slot(request):
         legacy_banner.alt = request.POST.get('alt', 'Sponsored advertisement').strip() or 'Sponsored advertisement'
         legacy_banner.is_active = slot.is_active
         legacy_banner.target_pages = _normalize_ad_target_pages(request.POST.get('ad_pages', ''))
+        legacy_banner.rotation_enabled = False
+        legacy_banner.rotation_interval_seconds = 10
+        legacy_banner.rotation_banner_ids = []
+        legacy_banner.source_saved_banner = None
         if request.FILES.get('ad_image'):
             legacy_banner.image = request.FILES['ad_image']
             legacy_banner.image_url = ''
@@ -1987,7 +2134,7 @@ def homepage_ad_banner(request):
         if requested_placement not in allowed_placements:
             return JsonResponse({'placement': requested_placement, 'is_active': False})
         banner = HomepageAdBanner.objects.filter(placement=requested_placement).first()
-        item = _serialize_homepage_ad_banner(request, banner) if banner else _empty_homepage_ad_banner(requested_placement)
+        item = _serialize_homepage_ad_banner(request, banner, requested_page=requested_page) if banner else _empty_homepage_ad_banner(requested_placement)
         if requested_page and requested_page not in item['target_pages']:
             return JsonResponse({'placement': requested_placement, 'page': requested_page, 'is_active': False})
         if not item['is_active']:
@@ -2014,7 +2161,7 @@ def homepage_ad_banner(request):
         ] or allowed_placements
 
     banners = HomepageAdBanner.objects.filter(placement__in=placements)
-    payload = _homepage_ad_banner_payload(request, banners, placements=placements)
+    payload = _homepage_ad_banner_payload(request, banners, placements=placements, requested_page=requested_page)
     if requested_page:
         filtered_items = [
             item for item in payload['banners']

@@ -1090,6 +1090,9 @@ class NewsAdminSite(AdminSite):
             extra_context['ad_page_choices'] = []
 
         try:
+            saved_banner_choices = {}
+            for saved_banner in SavedAdBanner.objects.all().order_by('-updated_at', '-created_at'):
+                saved_banner_choices.setdefault(saved_banner.placement, []).append(saved_banner)
             saved_banners = {
                 banner.placement: banner
                 for banner in HomepageAdBanner.objects.filter(
@@ -1104,6 +1107,9 @@ class NewsAdminSite(AdminSite):
                     'height': HomepageAdBanner.PLACEMENT_DIMENSIONS[placement][1],
                     'breakpoint': HomepageAdBanner.PLACEMENT_BREAKPOINTS[placement],
                     'banner': saved_banners.get(placement),
+                    'saved_options': saved_banner_choices.get(placement, []),
+                    'selected_rotation_ids': list(getattr(saved_banners.get(placement), 'rotation_banner_ids', []) or []),
+                    'current_source_saved_banner_id': getattr(saved_banners.get(placement), 'source_saved_banner_id', None),
                 }
                 for placement, label in HomepageAdBanner.PLACEMENT_CHOICES
             ]

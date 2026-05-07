@@ -488,9 +488,19 @@ class HomepageAdBanner(models.Model):
     placement = models.CharField(max_length=40, choices=PLACEMENT_CHOICES, unique=True)
     image = models.ImageField(upload_to='homepage_ads/', blank=True, null=True)
     image_url = models.URLField(blank=True, default='')
+    source_saved_banner = models.ForeignKey(
+        'SavedAdBanner',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='applied_homepage_banners',
+    )
     link_url = models.URLField(blank=True, default='')
     alt = models.CharField(max_length=255, blank=True, default='Sponsored advertisement')
     target_pages = models.JSONField(default=list, blank=True)
+    rotation_enabled = models.BooleanField(default=False)
+    rotation_interval_seconds = models.PositiveIntegerField(default=10)
+    rotation_banner_ids = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -523,6 +533,17 @@ class HomepageAdBanner(models.Model):
             page for page in dict.fromkeys(str(page).strip() for page in pages)
             if page in allowed_pages
         ]
+        rotation_ids = self.rotation_banner_ids if isinstance(self.rotation_banner_ids, list) else []
+        normalized_rotation_ids = []
+        for value in rotation_ids:
+            try:
+                banner_id = int(value)
+            except (TypeError, ValueError):
+                continue
+            if banner_id > 0 and banner_id not in normalized_rotation_ids:
+                normalized_rotation_ids.append(banner_id)
+        self.rotation_banner_ids = normalized_rotation_ids
+        self.rotation_interval_seconds = min(max(int(self.rotation_interval_seconds or 10), 3), 300)
         if self.image and self.placement in self.PLACEMENT_DIMENSIONS:
             expected_width, expected_height = self.PLACEMENT_DIMENSIONS[self.placement]
             image_width, image_height = get_image_dimensions(self.image)

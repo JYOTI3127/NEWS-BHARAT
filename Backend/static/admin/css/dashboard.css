@@ -16458,8 +16458,8 @@ tr.art-row td:has(.art-cat-text) {
 }
 
 .saved-banners-modal {
-  width: min(980px, 100%);
-  max-height: min(82vh, 760px);
+  width: min(1240px, calc(100% - 32px));
+  max-height: min(92vh, 920px);
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, .2);
@@ -16521,7 +16521,7 @@ tr.art-row td:has(.art-cat-text) {
   padding: 20px;
   overflow: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
   background: #f8fafc;
 }
@@ -16533,6 +16533,8 @@ tr.art-row td:has(.art-cat-text) {
   background: #fff;
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
   transition: transform .15s, box-shadow .15s, border-color .15s;
 }
@@ -16548,8 +16550,52 @@ tr.art-row td:has(.art-cat-text) {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
   padding: 14px;
+}
+
+.saved-banner-library-card__actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+}
+
+.saved-banner-action-btn {
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: rgba(255, 255, 255, .94);
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+}
+
+.saved-banner-action-btn--danger {
+  background: rgba(255, 241, 242, .96);
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.saved-banner-current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(191, 219, 254, .24);
+  border: 1px solid rgba(191, 219, 254, .38);
+  color: #dbeafe;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
 }
 
 .saved-banner-library-card__preview img {
@@ -16565,12 +16611,13 @@ tr.art-row td:has(.art-cat-text) {
 
 .saved-banner-library-card__body {
   padding: 14px;
+  background: #1e3a8a;
 }
 
 .saved-banner-library-card__title {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: #fff;
   margin-bottom: 4px;
 }
 
@@ -16579,12 +16626,12 @@ tr.art-row td:has(.art-cat-text) {
 .saved-banner-library-card__hint,
 .saved-banner-empty {
   font-size: 12px;
-  color: #64748b;
+  color: #dbe7ff;
 }
 
 .saved-banner-library-card__hint {
   margin-top: 10px;
-  color: #1d4ed8;
+  color: #fafafa;
   font-weight: 600;
 }
 

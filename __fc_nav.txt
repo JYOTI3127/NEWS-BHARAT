@@ -1,0 +1,3 @@
+Comparing files __check_nav.txt and SRC\COMPONENTS\NAVBAR.JSX
+FC: no differences encountered
+

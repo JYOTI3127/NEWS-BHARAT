@@ -440,6 +440,7 @@ export default function FreshPopularShowcase({
   );
 
   const isResponsiveViewport = viewportWidth < 1024;
+  const is375Viewport = viewportWidth > 320 && viewportWidth <= 375;
 
   const sidePanelArticles = useMemo(() => {
     if (isResponsiveViewport) return backendArticles;
@@ -543,7 +544,7 @@ export default function FreshPopularShowcase({
   return (
     <section className="mx-auto mb-5 w-full font-['Poppins',sans-serif] min-[320px]:mb-5 min-[768px]:mb-6 min-[1024px]:mb-7 min-[1440px]:mb-8 min-[1920px]:mb-10">
       <div className="rounded-lg  p-2.5 min-[320px]:p-2.5 min-[375px]:p-3 min-[425px]:p-3.5 min-[768px]:p-3 min-[1024px]:p-3.5 min-[1440px]:p-4 min-[1920px]:p-5">
-        <div className="mb-2.5 flex items-center gap-2 min-[768px]:mb-3">
+        {/* <div className="mb-2.5 flex items-center gap-2 min-[768px]:mb-3">
           <button
             type="button"
             onClick={() => canPrev && setRailStart((prev) => Math.max(0, prev - 1))}
@@ -594,7 +595,7 @@ export default function FreshPopularShowcase({
           >
             &#62;
           </button>
-        </div>
+        </div> */}
 
         <div className="grid items-start gap-2.5 min-[425px]:gap-3 min-[768px]:grid-cols-[200px_minmax(0,1fr)] min-[1024px]:grid-cols-[180px_minmax(0,1fr)_180px] min-[1440px]:grid-cols-[220px_minmax(0,1fr)_220px] min-[1920px]:grid-cols-[270px_minmax(0,1fr)_270px]">
           <aside
@@ -633,7 +634,7 @@ export default function FreshPopularShowcase({
                         idx === 0 ? "border-t-0 pt-0" : "border-t border-[#ebebeb]"
                       }`}
                     >
-                      <h3 className="fps-title-only m-0 mb-1 line-clamp-3 text-[8px] font-normal leading-[1.3] text-[#1c1c1c] transition-colors hover:text-[#D80100] min-[425px]:text-[8.5px] min-[1440px]:text-[9px] min-[1920px]:text-[10px]">
+                      <h3 className="fps-title-only fps-breaking-title m-0 mb-1 line-clamp-3 text-[8px] font-normal leading-[1.3] text-[#d80100] transition-colors hover:text-[#b90000] min-[425px]:text-[8.5px] min-[1440px]:text-[9px] min-[1920px]:text-[10px]">
                         {truncate(getArticleTitle(article), 90)}
                       </h3>
                       <div className="flex flex-wrap items-center gap-1">
@@ -656,15 +657,17 @@ export default function FreshPopularShowcase({
                   <img
                     src={getArticleImage(hero)}
                     alt={getArticleTitle(hero)}
-                    className="absolute inset-0 h-full w-full object-cover object-center max-[375px]:object-cover max-[375px]:object-top max-[320px]:object-cover max-[320px]:object-top"
+                    className={`absolute left-0 right-0 top-0 h-[65%] w-full ${
+                      is375Viewport ? "object-cover object-center" : "object-cover object-center"
+                    } max-[320px]:object-cover max-[320px]:object-top`}
                     style={{
-                      objectPosition: getArticleImageFocus(hero),
+                      objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
                     }}
                     loading="lazy"
                     decoding="async"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-[#ddd] text-xs font-semibold text-[#777]">
+                  <div className="absolute left-0 right-0 top-0 flex h-[65%] w-full items-center justify-center bg-[#ddd] text-xs font-semibold text-[#777]">
                     No image
                   </div>
                 )}
@@ -689,6 +692,11 @@ export default function FreshPopularShowcase({
 
             <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2">
               {middleImageOnlyCards.map((article, idx) => (
+                (() => {
+                  const mobileImageHeightClass =
+                    idx === 1 ? "max-[320px]:h-[176px]" : "max-[320px]:h-[165px]";
+
+                  return (
                 <StoryLink
                   key={`${article?.id || article?.slug || idx}-image-only`}
                   article={article}
@@ -698,7 +706,7 @@ export default function FreshPopularShowcase({
                     <img
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
-                      className="block h-[180px] w-full object-cover object-center max-[320px]:h-[150px] min-[425px]:h-[190px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]"
+                      className={`block h-[180px] w-full object-cover object-center max-[375px]:h-[230px] ${mobileImageHeightClass} max-[320px]:object-cover min-[425px]:h-[155px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]`}
                       style={{
                         objectPosition: getArticleImageFocus(article),
                       }}
@@ -706,7 +714,7 @@ export default function FreshPopularShowcase({
                       decoding="async"
                     />
                   ) : (
-                    <div className="flex h-[180px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[320px]:h-[150px] min-[425px]:h-[190px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]">
+                    <div className={`flex h-[180px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[230px] ${mobileImageHeightClass} min-[425px]:h-[155px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]`}>
                       No image
                     </div>
                   )}
@@ -724,11 +732,18 @@ export default function FreshPopularShowcase({
                     </span>
                   </div>
                 </StoryLink>
+                  );
+                })()
               ))}
             </div>
 
             <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 min-[1024px]:grid-cols-3">
               {middleStoryCards.map((article, idx) => (
+                (() => {
+                  const mobileStoryHeightClass =
+                    "max-[320px]:h-[199px]";
+
+                  return (
                 <StoryLink
                   key={`${article?.id || article?.slug || idx}-card`}
                   article={article}
@@ -738,7 +753,7 @@ export default function FreshPopularShowcase({
                     <img
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
-                      className="block h-[96px] w-full object-cover object-center max-[375px]:h-[180px] max-[375px]:object-cover max-[320px]:h-[138px] max-[320px]:object-cover min-[425px]:h-[108px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]"
+                      className={`block h-[96px] w-full object-cover object-center max-[375px]:h-[230px] max-[375px]:object-cover ${mobileStoryHeightClass} max-[320px]:object-cover min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}
                       style={{
                         objectPosition: getArticleImageFocus(article),
                       }}
@@ -746,7 +761,7 @@ export default function FreshPopularShowcase({
                       decoding="async"
                     />
                   ) : (
-                    <div className="flex h-[96px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[180px] max-[320px]:h-[138px] min-[425px]:h-[108px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]">
+                    <div className={`flex h-[96px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[230px] ${mobileStoryHeightClass} min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}>
                       No image
                     </div>
                   )}
@@ -764,6 +779,8 @@ export default function FreshPopularShowcase({
                     </span>
                   </div>
                 </StoryLink>
+                  );
+                })()
               ))}
             </div>
           </div>

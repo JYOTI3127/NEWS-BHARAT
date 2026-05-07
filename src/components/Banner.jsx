@@ -229,6 +229,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const is320Layout = viewportWidth <= 320;
   const is375Layout = viewportWidth > 320 && viewportWidth <= 375;
   const isFourCard768Layout = viewportWidth > 425 && viewportWidth <= 768;
+  const isMobileViewport = viewportWidth <= 768;
   const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(192px,26vw,268px)]";
   const FOUR_CARD_1024_POSITION_CLASSNAMES = {
     center: "z-[5] opacity-100 [transform:translateX(0)_scale(1.02)_rotateY(0deg)]",
@@ -247,8 +248,8 @@ export default function NewsBanner({ articles = [], loading = false }) {
     right2: "z-[3] opacity-88 [filter:brightness(0.86)] [transform:translateX(290px)_scale(0.82)_rotateY(-18deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
-  const rootClassName = `cb-root relative isolate w-full overflow-visible rounded-none bg-[#18254a] bg-cover bg-center bg-no-repeat px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-10 max-[320px]:pt-1 max-[320px]:pb-8${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
-  const stageClassName = "cb-stage relative z-[1] flex h-[420px] items-center justify-center overflow-visible [perspective:1200px] max-[2048px]:h-[430px] max-[1440px]:h-[392px] max-[1024px]:h-[340px] max-[768px]:h-[374px] max-[425px]:h-[386px] max-[375px]:h-[386px] max-[320px]:h-[360px] max-[425px]:items-start";
+  const rootClassName = `cb-root relative isolate w-full rounded-none bg-[#18254a] bg-cover bg-center bg-no-repeat px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-8 max-[320px]:pt-1 max-[320px]:pb-6${isMobileViewport ? " overflow-x-hidden overflow-y-visible" : " overflow-visible"}${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
+  const stageClassName = "cb-stage relative z-[1] flex h-[420px] items-center justify-center overflow-visible [perspective:1200px] max-[2048px]:h-[430px] max-[1440px]:h-[392px] max-[1024px]:h-[340px] max-[768px]:h-[374px] max-[425px]:h-[386px] max-[375px]:h-[386px] max-[320px]:h-[344px] max-[425px]:items-start";
   const sectionInlineStyle =
     isLaptop1440Layout
       ? { paddingTop: "20px", paddingBottom: "24px" }
@@ -259,23 +260,25 @@ export default function NewsBanner({ articles = [], loading = false }) {
     ? { marginTop: "4px", height: "420px", alignItems: "center", paddingTop: "0px" }
     : is2KLayout
       ? { marginTop: "28px", height: "620px", alignItems: "flex-start", paddingTop: "40px" }
+    : isFourCard768Layout
+      ? { paddingTop: "14px", alignItems: "flex-start" }
       : undefined;
   const controlsInlineStyle = isLaptop1440Layout
-    ? { marginTop: "10px" }
+    ? { marginTop: "28px" }
     : is2KLayout
       ? { marginTop: "128px" }
-    : is375Layout
-      ? { bottom: "-8px", marginTop: "0px" }
-    : is320Layout
-      ? { bottom: "-4px", marginTop: "0px" }
       : undefined;
   const controlsClassName = isTwoCard425Layout
     ? "relative z-[20] mx-auto mt-4 flex items-center justify-center gap-2"
     : isFourCard1024Layout
       ? "relative z-[20] mx-auto mt-8 flex items-center justify-center gap-3"
     : isFourCard768Layout
-      ? "relative z-[20] mx-auto mt-5 flex items-center justify-center gap-2"
-    : `relative z-[12] mx-auto mt-[-18px] flex items-center justify-center gap-3 max-[768px]:absolute max-[768px]:-bottom-2 max-[768px]:left-1/2 max-[768px]:z-[30] max-[768px]:mt-0 max-[768px]:-translate-x-1/2 max-[768px]:gap-2 max-[375px]:-bottom-3 max-[320px]:-bottom-4 max-[320px]:gap-1.5${isLaptop1440Layout ? " mt-20" : ""}${is2KLayout ? " mt-[96px]" : ""}`;
+      ? "relative z-[20] mx-auto mt-10 flex items-center justify-center gap-2"
+    : is320Layout
+      ? "relative z-[20] mx-auto mt-7 flex items-center justify-center gap-2"
+    : is375Layout
+      ? "relative z-[20] mx-auto mt-7 flex items-center justify-center gap-2"
+    : `relative z-[12] mx-auto mt-[-18px] flex items-center justify-center gap-3 max-[768px]:absolute max-[768px]:-bottom-2 max-[768px]:left-1/2 max-[768px]:z-[30] max-[768px]:mt-0 max-[768px]:-translate-x-1/2 max-[768px]:gap-2 max-[375px]:bottom-2 max-[320px]:bottom-2 max-[320px]:gap-1.5${isLaptop1440Layout ? " mt-20" : ""}${is2KLayout ? " mt-[96px]" : ""}`;
 
   return (
     <section

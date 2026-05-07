@@ -10,6 +10,8 @@ const SLOT_SIZES = {
 };
 
 const requestCache = new Map();
+const DEFAULT_ROTATION_INTERVAL_MS = 5000;
+const ROTATION_FADE_MS = 260;
 
 const getAdImageUrl = (ad) => {
   const image = ad?.image_url || ad?.ad_image_url || ad?.image || ad?.ad_image;
@@ -59,6 +61,58 @@ const pickAdForPlacement = (payload, placement, allowUnmatchedPlacement) => {
   if (!hasPlacementData && allowUnmatchedPlacement) return ads[0];
 
   return null;
+};
+
+const getRotationBanners = (payload, placement) => {
+  const list = Array.isArray(payload?.rotation_banners) ? payload.rotation_banners : [];
+  const eligible = list.filter((ad) => isAdActive(ad) && getAdImageUrl(ad));
+  if (eligible.length === 0) return [];
+
+  const withPlacement = eligible.filter((ad) => getAdPlacement(ad));
+  if (withPlacement.length === 0) return eligible;
+
+  const exact = eligible.filter((ad) => getAdPlacement(ad) === placement);
+  return exact.length > 0 ? exact : [];
+};
+
+const parseBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+  return false;
+};
+
+const buildAdSlotState = (payload, placement, allowUnmatchedPlacement) => {
+  const primaryAd = pickAdForPlacement(payload, placement, allowUnmatchedPlacement);
+  if (!primaryAd) return null;
+
+  const rotationEnabled = parseBoolean(payload?.rotation_enabled);
+  const intervalSeconds = Number(payload?.rotation_interval_seconds);
+  const rotationIntervalMs = Number.isFinite(intervalSeconds) && intervalSeconds > 0
+    ? intervalSeconds * 1000
+    : DEFAULT_ROTATION_INTERVAL_MS;
+
+  let rotationAds = getRotationBanners(payload, placement);
+  const rotationCount = Number(payload?.rotation_count);
+  if (Number.isFinite(rotationCount) && rotationCount > 0) {
+    rotationAds = rotationAds.slice(0, rotationCount);
+  }
+
+  if (!(rotationEnabled && rotationAds.length > 1)) {
+    return {
+      primaryAd,
+      rotationAds: [primaryAd],
+      rotationEnabled: false,
+      rotationIntervalMs,
+    };
+  }
+
+  return {
+    primaryAd,
+    rotationAds,
+    rotationEnabled: true,
+    rotationIntervalMs,
+  };
 };
 
 const buildCurrentAdPath = (endpoint, { page, placement, size }) => {
@@ -140,7 +194,9 @@ function AdvertisementSlot({
   minWidth,
   maxWidth,
 }) {
-  const [adSlot, setAdSlot] = useState(null);
+  const [adSlotState, setAdSlotState] = useState(null);
+  const [activeRotationIndex, setActiveRotationIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const size = SLOT_SIZES[variant] || SLOT_SIZES.leaderboard;
@@ -163,10 +219,10 @@ function AdvertisementSlot({
       for (const url of candidateUrls) {
         try {
           const payload = await fetchCachedJson(url);
-          const picked = pickAdForPlacement(payload, placement, allowUnmatchedPlacement);
+          const picked = buildAdSlotState(payload, placement, allowUnmatchedPlacement);
 
           if (picked) {
-            if (!ignore) setAdSlot(picked);
+            if (!ignore) setAdSlotState(picked);
             return;
           }
         } catch {
@@ -174,7 +230,7 @@ function AdvertisementSlot({
         }
       }
 
-      if (!ignore) setAdSlot(null);
+      if (!ignore) setAdSlotState(null);
     }
 
     loadAd();
@@ -184,21 +240,51 @@ function AdvertisementSlot({
     };
   }, [allowUnmatchedPlacement, candidateUrls, isViewportMatch, placement]);
 
+  useEffect(() => {
+    setActiveRotationIndex(0);
+    setIsFading(false);
+  }, [adSlotState]);
+
+  useEffect(() => {
+    if (!isViewportMatch || dismissed) return undefined;
+    if (!adSlotState?.rotationEnabled || (adSlotState?.rotationAds?.length || 0) <= 1) return undefined;
+
+    let fadeTimeout = null;
+    const interval = setInterval(() => {
+      setIsFading(true);
+      fadeTimeout = setTimeout(() => {
+        setActiveRotationIndex((prev) => (prev + 1) % adSlotState.rotationAds.length);
+        setIsFading(false);
+      }, ROTATION_FADE_MS);
+    }, adSlotState.rotationIntervalMs);
+
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeout) clearTimeout(fadeTimeout);
+    };
+  }, [adSlotState, dismissed, isViewportMatch]);
+
   if (!isViewportMatch || dismissed) return null;
 
-  const adImageUrl = getAdImageUrl(adSlot);
+  const rotationAds = adSlotState?.rotationAds || [];
+  const activeAd = rotationAds.length > 0
+    ? rotationAds[activeRotationIndex % rotationAds.length]
+    : adSlotState?.primaryAd;
+
+  const adImageUrl = getAdImageUrl(activeAd);
   if (!adImageUrl) return null;
 
-  const adLinkUrl = getAdLinkUrl(adSlot);
+  const adLinkUrl = getAdLinkUrl(activeAd);
   const image = (
     <img
       src={adImageUrl}
-      alt={adSlot?.alt || adSlot?.title || "Sponsored advertisement"}
+      alt={activeAd?.alt || activeAd?.title || "Sponsored advertisement"}
       loading="lazy"
       decoding="async"
       width={size.width}
       height={size.height}
       className="home-ad-image"
+      style={{ opacity: isFading ? 0 : 1, transition: `opacity ${ROTATION_FADE_MS}ms ease` }}
     />
   );
 

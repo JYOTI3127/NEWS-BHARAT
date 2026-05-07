@@ -27,6 +27,17 @@ function useCategoryArticles(slug) {
 
 // ── Helpers ───────────────────────────────────────────────────
 const imgSrc = (a) => a?.image_url || a?.image || null;
+const getArticleSummary = (article) =>
+  String(
+    article?.subtitle ||
+    article?.description ||
+    article?.excerpt ||
+    article?.summary ||
+    ""
+  )
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const useIs4K = () => {
   const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
@@ -205,6 +216,22 @@ export function EntertainmentSection() {
                   />
                   <div className="hs-featured-overlay">
                     <p className="hs-featured-title">{featured.title}</p>
+                    {getArticleSummary(featured) ? (
+                      <p
+                        style={{
+                          margin: "6px 0 4px",
+                          color: "rgba(255,255,255,0.92)",
+                          fontSize: "12px",
+                          lineHeight: 1.35,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {getArticleSummary(featured)}
+                      </p>
+                    ) : null}
                     <DateLabel date={formatArticleDateTimeIST(featured)} />
                   </div>
                 </div>
@@ -249,6 +276,22 @@ export function EntertainmentSection() {
                       </div>
                       <div className="hs-small-text">
                         <p className="hs-small-title">{card.title}</p>
+                        {getArticleSummary(card) ? (
+                          <p
+                            style={{
+                              margin: "4px 0",
+                              color: "#666",
+                              fontSize: "11px",
+                              lineHeight: 1.35,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {getArticleSummary(card)}
+                          </p>
+                        ) : null}
                         <DateLabel date={formatArticleDateTimeIST(card)} />
                       </div>
                     </div>
@@ -261,7 +304,7 @@ export function EntertainmentSection() {
             {explainersLoading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="hs-mid-card">
-                    <div className="hs-mid-img" style={{ background: "#f0ece8" }} />
+                    <div className="hs-mid-img hs-mid-img--right" style={{ background: "#f0ece8" }} />
                     <div className="hs-mid-text">
                       <Sk h="11px" w="60px" mb="5px" />
                       <Sk h="13px" w="95%" mb="4px" />
@@ -279,7 +322,7 @@ export function EntertainmentSection() {
                       if (articlePath) navigate(articlePath);
                     }}
                   >
-                    <div className="hs-mid-img">
+                    <div className="hs-mid-img hs-mid-img--right">
                       <ArticleImg
                         src={imgSrc(card)}
                         alt={card.title}
@@ -289,6 +332,22 @@ export function EntertainmentSection() {
                     </div>
                     <div className="hs-mid-text">
                       <p className="hs-mid-title">{card.title}</p>
+                      {getArticleSummary(card) ? (
+                        <p
+                          style={{
+                            margin: "4px 0",
+                            color: "#666",
+                            fontSize: "11px",
+                            lineHeight: 1.35,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {getArticleSummary(card)}
+                        </p>
+                      ) : null}
                       <DateLabel date={formatArticleDateTimeIST(card)} />
                     </div>
                   </div>

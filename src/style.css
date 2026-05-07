@@ -1616,7 +1616,8 @@ img {
   color: #999;
   font-weight: 500;
   display: block;
-  padding-left: 2%;
+  padding-left: 0;
+  margin: 0;
 }
 
 .sn-big-date {
@@ -1637,6 +1638,7 @@ img {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 3px;
 }
 
 .sn-mid-text {
@@ -1645,6 +1647,7 @@ img {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 3px;
 }
 
 .sn-di-text-wrap {
@@ -1670,9 +1673,16 @@ img {
   gap: 12px;
 }
 
+@media (min-width: 1025px) {
+  .sn-left-mid.sn-left-mid--desktop-wide {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+}
+
 .sn-featured-wrap {
   grid-column: 1;
   grid-row: 1;
+  height: 100%;
 }
 
 .sn-big-card {
@@ -1738,6 +1748,7 @@ img {
   cursor: pointer;
   width: 100%;
   padding: 8px;
+  min-height: 88px;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   transition: background 0.18s;
@@ -1781,7 +1792,8 @@ img {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  padding: 4px 8px;
+  padding: 0;
+  margin: 0;
   transition: color 0.18s;
 }
 
@@ -1800,13 +1812,13 @@ img {
 .sn-mid-card {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   cursor: pointer;
   padding: 8px 6px;
   padding-bottom: 8px;
   border-bottom: 1px solid #999 !important;
   transition: background 0.18s;
-  min-height: 78px;
+  min-height: 96px;
   overflow: hidden;
 }
 
@@ -1899,7 +1911,31 @@ img {
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.18s;
-  padding-left: 2%;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sn-card-summary {
+  margin: 0;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sn-card-summary--mid {
+  font-size: 10.5px;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+}
+
+.sn-card-summary--left {
+  font-size: 10.5px;
+  line-height: 1.3;
+  -webkit-line-clamp: 1;
 }
 
 /* Defence Sidebar */
@@ -2434,9 +2470,18 @@ img {
 
 /* Allow 3D banner side cards to render full rounded edges. */
 @supports selector(:has(*)) {
-  .home-page-shell:has(.cb-root),
-  .home-main-column:has(.cb-root) {
-    overflow-x: visible;
+  @media (min-width: 1025px) {
+    .home-page-shell:has(.cb-root),
+    .home-main-column:has(.cb-root) {
+      overflow-x: visible;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .home-page-shell:has(.cb-root),
+    .home-main-column:has(.cb-root) {
+      overflow-x: clip;
+    }
   }
 }
 
@@ -2499,6 +2544,14 @@ img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* Bharat Explainers: increase right-column image height without shrinking larger breakpoints */
+.nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+  width: 112px !important;
+  min-width: 112px !important;
+  flex: 0 0 112px !important;
+  min-height: 88px !important;
 }
 
 .home-top-ad {
@@ -15140,6 +15193,15 @@ img {
 .fps-title-only:hover,
 .fps-title-only:focus-visible {
   color: #D80100 !important;
+}
+
+.fps-breaking-title {
+  color: #d80100 !important;
+}
+
+.fps-breaking-title:hover,
+.fps-breaking-title:focus-visible {
+  color: #b90000 !important;
 }
 
 /* FreshPopular top rail: tablet (768-1023) par 3-line title clamp */

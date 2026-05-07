@@ -35,6 +35,17 @@ const categoryLabel = (article, fallback = "STATE NEWS") =>
   article?.category_details?.[0]?.name ||
   article?.categories?.[0]?.name ||
   fallback;
+const getArticleSummary = (article) =>
+  String(
+    article?.subtitle ||
+    article?.description ||
+    article?.excerpt ||
+    article?.summary ||
+    ""
+  )
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const getSelectedStateName = (article) => {
   if (typeof article?.selected_state_name === "string" && article.selected_state_name.trim()) {
@@ -209,6 +220,7 @@ export default function StateNews() {
   const isMobile = ["s", "m", "l", "mobile"].includes(bp);
   const isTablet = bp === "tablet";
   const is2K = bp === "laptop-l";
+  const showMidCardSummary = true;
 
   useEffect(() => {
     setStateLoading(true);
@@ -376,12 +388,12 @@ export default function StateNews() {
       >
         {/* ── LEFT + MIDDLE ── */}
         <div
-          className="sn-left-mid"
+          className="sn-left-mid sn-left-mid--desktop-wide"
           style={{
             flex: 1, minWidth: 0,
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: isMobile ? "1fr" : is2K ? "1.08fr minmax(0, 0.92fr)" : "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : is2K ? "1.34fr minmax(0, 0.66fr)" : "1.28fr minmax(0, 0.72fr)",
             gridTemplateRows: isMobile ? "auto" : "auto auto",
           }}
         >
@@ -393,7 +405,8 @@ export default function StateNews() {
             {loading ? (
               <div style={{
                 borderRadius: 8, overflow: "hidden",
-                height: isMobile ? "200px" : isTablet ? "220px" : "260px",
+                height: isMobile ? "200px" : isTablet ? "220px" : "100%",
+                minHeight: is2K ? "340px" : "300px",
                 background: "#f0ece8", animation: "shimmer 1.4s infinite",
               }} />
             ) : featuredCard ? (
@@ -401,7 +414,8 @@ export default function StateNews() {
                 className="sn-big-card"
                 style={{
                   position: "relative", borderRadius: "8px", overflow: "hidden",
-                  height: isMobile ? "200px" : isTablet ? "220px" : is2K ? "300px" : "260px",
+                  height: isMobile ? "200px" : isTablet ? "220px" : "100%",
+                  minHeight: is2K ? "340px" : "300px",
                   cursor: "pointer",
                 }}
                 onClick={() => goToArticle(featuredCard)}
@@ -424,6 +438,22 @@ export default function StateNews() {
                   <p className="sn-big-title" style={{ fontSize: isMobile ? "12px" : "14px" }}>
                     {featuredCard.title}
                   </p>
+                  {getArticleSummary(featuredCard) ? (
+                    <p
+                      style={{
+                        margin: "5px 0 3px",
+                        color: "rgba(255,255,255,0.92)",
+                        fontSize: isMobile ? "10px" : "11px",
+                        lineHeight: 1.35,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {getArticleSummary(featuredCard)}
+                    </p>
+                  ) : null}
                   <span className="sn-big-date">
                     {formatArticleDateTimeIST(featuredCard)}
                   </span>
@@ -431,7 +461,9 @@ export default function StateNews() {
               </div>
             ) : (
               <div style={{
-                borderRadius: 8, height: isMobile ? "200px" : "260px",
+                borderRadius: 8,
+                height: isMobile ? "200px" : "100%",
+                minHeight: "300px",
                 background: "#f0ece8", display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <span style={{ color: "#bbb", fontSize: 13 }}>
@@ -454,7 +486,7 @@ export default function StateNews() {
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="sn-mid-card" style={{ display: "flex", gap: "8px" }}>
-                  <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                  <div style={{ flexShrink: 0, width: 108, height: 96, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
                   <div style={{ flex: 1 }}>
                     <Sk h="10px" w="50px" mb="5px" />
                     <Sk h="12px" w="95%" mb="4px" />
@@ -472,7 +504,7 @@ export default function StateNews() {
                     onClick={() => goToArticle(card)}
                   >
                     <div className="sn-mid-img" style={{
-                      flexShrink: 0, width: "100px", height: "78px",
+                      flexShrink: 0, width: "108px", height: "96px",
                       borderRadius: "6px", overflow: "hidden",
                     }}>
                       <ArticleImg
@@ -484,6 +516,11 @@ export default function StateNews() {
                     <div className="sn-mid-text" style={{ flex: 1, minWidth: 0 }}>
                       <span className="sn-card-tag">{getStateTagLabel(card, activeState, "STATE")}</span>
                       <p className="sn-mid-title">{card.title}</p>
+                      {showMidCardSummary && getArticleSummary(card) ? (
+                        <p className="sn-card-summary sn-card-summary--mid">
+                          {getArticleSummary(card)}
+                        </p>
+                      ) : null}
                       <span className="sn-card-date">
                         {formatArticleDateTimeIST(card)}
                       </span>
@@ -501,12 +538,13 @@ export default function StateNews() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "8px",
+                height: "100%",
               }}
             >
               {loading ? (
                 Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="sn-small-card" style={{ display: "flex", gap: "8px" }}>
-                    <div style={{ flexShrink: 0, width: 100, height: 78, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
+                  <div key={index} className="sn-small-card" style={{ display: "flex", gap: "8px", flex: 1 }}>
+                    <div style={{ flexShrink: 0, width: 100, height: 88, borderRadius: 6, background: "#f0ece8", animation: "shimmer 1.4s infinite" }} />
                     <div style={{ flex: 1 }}>
                       <Sk h="10px" w="50px" mb="5px" />
                       <Sk h="12px" w="95%" mb="4px" />
@@ -518,15 +556,20 @@ export default function StateNews() {
                 <div
                   key={card.id || card.slug || card.title}
                   className="sn-small-card"
-                  style={{ display: "flex", gap: "8px", cursor: "pointer" }}
+                  style={{ display: "flex", gap: "8px", cursor: "pointer", flex: 1 }}
                   onClick={() => goToArticle(card)}
                 >
-                  <div style={{ flexShrink: 0, width: "100px", height: "78px", borderRadius: "6px", overflow: "hidden" }}>
+                  <div style={{ flexShrink: 0, width: "100px", height: "88px", borderRadius: "6px", overflow: "hidden" }}>
                     <ArticleImg src={imgSrc(card)} alt={card.title} style={{ width: "100%", height: "100%" }} />
                   </div>
                   <div className="sn-sc-text" style={{ flex: 1, minWidth: 0 }}>
                     <span className="sn-card-tag">{getStateTagLabel(card, activeState, "STATE")}</span>
                     <p className="sn-sc-title">{card.title}</p>
+                    {getArticleSummary(card) ? (
+                      <p className="sn-card-summary sn-card-summary--left">
+                        {getArticleSummary(card)}
+                      </p>
+                    ) : null}
                     <span className="sn-card-date">{formatArticleDateTimeIST(card)}</span>
                   </div>
                 </div>
@@ -546,6 +589,11 @@ export default function StateNews() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span className="sn-card-tag">{getStateTagLabel(mobileSmallCard, activeState, "STATE")}</span>
                 <p className="sn-sc-title">{mobileSmallCard.title}</p>
+                {getArticleSummary(mobileSmallCard) ? (
+                  <p className="sn-card-summary sn-card-summary--left">
+                    {getArticleSummary(mobileSmallCard)}
+                  </p>
+                ) : null}
                 <span className="sn-card-date">
                   {formatArticleDateTimeIST(mobileSmallCard)}
                 </span>

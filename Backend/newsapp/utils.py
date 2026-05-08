@@ -24,9 +24,9 @@ from django.utils import timezone
 
 from .models import MetalRate
 
-ARTICLE_CLEAN_VERSION = 1
+ARTICLE_CLEAN_VERSION = 2
 ARTICLE_ALLOWED_TAGS = [
-    'p', 'h2', 'h3', 'h4',
+    'p', 'div', 'h2', 'h3', 'h4',
     'ul', 'ol', 'li',
     'table', 'thead', 'tbody', 'tr', 'td', 'th',
     'a', 'strong', 'em', 'br', 'img', 'blockquote',
@@ -108,15 +108,23 @@ def sanitize_article_html(content):
     )
     cleaned = _ANCHOR_TAG_RE.sub(_ensure_safe_anchor_attrs, cleaned)
     cleaned = re.sub(r'<p>\s*</p>', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'<div>\s*</div>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'(?:<br\s*/?>\s*){3,}', '<br><br>', cleaned, flags=re.IGNORECASE)
     return cleaned.strip()
 
 
 def get_article_render_content(article):
     stored_clean = getattr(article, 'content_clean', '') or ''
-    if stored_clean.strip():
+    current_clean_version = int(getattr(article, 'clean_version', 0) or 0)
+    if stored_clean.strip() and current_clean_version >= ARTICLE_CLEAN_VERSION:
         return stored_clean
-    return sanitize_article_html(getattr(article, 'content', '') or '')
+    source_html = (
+        getattr(article, 'content_raw', '') or
+        getattr(article, 'content_clean', '') or
+        getattr(article, 'content', '') or
+        ''
+    )
+    return sanitize_article_html(source_html)
 
 OZ_TO_GRAM = 31.1035
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"

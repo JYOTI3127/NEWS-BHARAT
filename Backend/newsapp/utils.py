@@ -14,7 +14,6 @@ def has_permission(user, perm_code):
 
     return profile.roles.filter(permissions__code=perm_code).exists()
 
-import bleach
 import requests
 import html
 import re
@@ -24,18 +23,7 @@ from django.utils import timezone
 
 from .models import MetalRate
 
-ARTICLE_CLEAN_VERSION = 2
-ARTICLE_ALLOWED_TAGS = [
-    'p', 'div', 'h2', 'h3', 'h4',
-    'ul', 'ol', 'li',
-    'table', 'thead', 'tbody', 'tr', 'td', 'th',
-    'a', 'strong', 'em', 'br', 'img', 'blockquote',
-]
-ARTICLE_ALLOWED_ATTRIBUTES = {
-    'a': ['href', 'target', 'rel'],
-    'img': ['src', 'alt'],
-}
-ARTICLE_ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+ARTICLE_CLEAN_VERSION = 3
 
 _TWITTER_EMBED_RE = re.compile(
     r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
@@ -48,6 +36,14 @@ _TWITTER_IFRAME_RE = re.compile(
 _ANCHOR_TAG_RE = re.compile(r'<a\b(?P<attrs>[^>]*)>', re.IGNORECASE)
 _TARGET_BLANK_RE = re.compile(r'target\s*=\s*([\'"])_blank\1', re.IGNORECASE)
 _REL_ATTR_RE = re.compile(r'\srel\s*=\s*([\'"])(?P<value>.*?)\1', re.IGNORECASE)
+_HTML_COMMENT_RE = re.compile(r'<!--[\s\S]*?-->', re.IGNORECASE)
+_DANGEROUS_BLOCK_RE = re.compile(
+    r'<\s*(script|iframe|object|embed|form|input|button|textarea|select|option|link|meta)\b[\s\S]*?(?:</\1\s*>|/?>)',
+    re.IGNORECASE,
+)
+_INLINE_EVENT_ATTR_RE = re.compile(r'\son[a-z]+\s*=\s*([\'"]).*?\1', re.IGNORECASE | re.DOTALL)
+_JS_PROTOCOL_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*javascript:[^\'"]*\2', re.IGNORECASE)
+_DATA_HTML_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*data:text\/html[^\'"]*\2', re.IGNORECASE)
 
 
 def normalize_twitter_embeds(content):
@@ -98,14 +94,11 @@ def _ensure_safe_anchor_attrs(match):
 
 def sanitize_article_html(content):
     normalized = normalize_twitter_embeds(str(content or ''))
-    cleaned = bleach.clean(
-        normalized,
-        tags=ARTICLE_ALLOWED_TAGS,
-        attributes=ARTICLE_ALLOWED_ATTRIBUTES,
-        protocols=ARTICLE_ALLOWED_PROTOCOLS,
-        strip=True,
-        strip_comments=True,
-    )
+    cleaned = _HTML_COMMENT_RE.sub('', normalized)
+    cleaned = _DANGEROUS_BLOCK_RE.sub('', cleaned)
+    cleaned = _INLINE_EVENT_ATTR_RE.sub('', cleaned)
+    cleaned = _JS_PROTOCOL_RE.sub('', cleaned)
+    cleaned = _DATA_HTML_RE.sub('', cleaned)
     cleaned = _ANCHOR_TAG_RE.sub(_ensure_safe_anchor_attrs, cleaned)
     cleaned = re.sub(r'<p>\s*</p>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'<div>\s*</div>', '', cleaned, flags=re.IGNORECASE)

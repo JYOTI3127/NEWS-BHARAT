@@ -1798,12 +1798,13 @@ def _get_rotation_saved_banners(banner, requested_page=''):
     if not banner:
         return []
     selected_ids = _normalize_rotation_banner_ids(getattr(banner, 'rotation_banner_ids', []))
+    compatible_placements = _compatible_ad_placements(banner.placement)
     if selected_ids:
         saved_banner_map = {
             saved_banner.pk: saved_banner
             for saved_banner in SavedAdBanner.objects.filter(
                 pk__in=selected_ids,
-                placement=banner.placement,
+                placement__in=compatible_placements,
                 is_active=True,
             )
         }
@@ -2139,17 +2140,28 @@ def homepage_ad_banner(request):
             return JsonResponse({'placement': requested_placement, 'page': requested_page, 'is_active': False})
         if not item['is_active']:
             return JsonResponse({'placement': requested_placement, 'is_active': False})
+        first_rotation = next(
+            (rotation for rotation in item.get('rotation_banners', []) if rotation.get('image_url')),
+            None,
+        )
+        image_url = item['image_url'] or (first_rotation.get('image_url') if first_rotation else '')
+        link_url = item['link_url'] or (first_rotation.get('link_url') if first_rotation else '')
+        alt = item['alt'] or (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
         return JsonResponse({
             'placement': item['placement'],
             'page': requested_page,
             'is_active': True,
-            'image_url': item['image_url'],
-            'ad_image_url': item['ad_image_url'],
-            'image': item['image'],
-            'ad_image': item['ad_image'],
-            'link_url': item['link_url'],
-            'alt': item['alt'],
+            'image_url': image_url,
+            'ad_image_url': image_url,
+            'image': image_url,
+            'ad_image': image_url,
+            'link_url': link_url,
+            'alt': alt,
             'target_pages': item['target_pages'],
+            'rotation_enabled': item['rotation_enabled'],
+            'rotation_interval_seconds': item['rotation_interval_seconds'],
+            'rotation_count': item['rotation_count'],
+            'rotation_banners': item['rotation_banners'],
         })
 
     requested_size = (request.GET.get('size') or '').strip()
@@ -2172,22 +2184,44 @@ def homepage_ad_banner(request):
             'by_placement': {item['placement']: item for item in filtered_items},
         }
     first_active = next((item for item in payload['banners'] if item['is_active']), None)
+    first_rotation = next(
+        (
+            rotation for rotation in (first_active.get('rotation_banners', []) if first_active else [])
+            if rotation.get('image_url')
+        ),
+        None,
+    )
+    image_url = (
+        first_active['image_url']
+        if first_active and first_active.get('image_url')
+        else (first_rotation.get('image_url') if first_rotation else '')
+    )
+    link_url = (
+        first_active['link_url']
+        if first_active and first_active.get('link_url')
+        else (first_rotation.get('link_url') if first_rotation else '')
+    )
+    alt = (
+        first_active['alt']
+        if first_active and first_active.get('alt')
+        else (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
+    )
 
     return JsonResponse({
         'page': requested_page,
         'is_active': bool(first_active),
         'has_slot': bool(payload['banners']),
         'stored_is_active': any(item['stored_is_active'] for item in payload['banners']),
-        'image_url': first_active['image_url'] if first_active else '',
-        'ad_image_url': first_active['ad_image_url'] if first_active else '',
-        'image': first_active['image'] if first_active else '',
-        'ad_image': first_active['ad_image'] if first_active else '',
-        'link_url': first_active['link_url'] if first_active else '',
+        'image_url': image_url,
+        'ad_image_url': image_url,
+        'image': image_url,
+        'ad_image': image_url,
+        'link_url': link_url,
         'placement': first_active['placement'] if first_active else '',
         'size': first_active['size'] if first_active else '',
         'width': first_active['width'] if first_active else None,
         'height': first_active['height'] if first_active else None,
-        'alt': first_active['alt'] if first_active else 'Sponsored advertisement',
+        'alt': alt,
         'banners': payload['banners'],
         'by_placement': payload['by_placement'],
         'updated_at': first_active['updated_at'] if first_active else None,

@@ -1,0 +1,197 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Editorial Calendar | Admin{% endblock %}
+{% block content_title %}Editorial Calendar{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+{{ editorial_events_json|json_script:"editorial-calendar-events" }}
+{{ editorial_month_summary_json|json_script:"editorial-calendar-summary" }}
+
+<div class="edcal-shell">
+  <div class="edcal-hero">
+    <div>
+      <div class="edcal-eyebrow">News Planning Desk</div>
+      <h1 class="edcal-title">Editorial Calendar {{ calendar_year }}</h1>
+      <p class="edcal-subtitle">Track important days, festivals, national moments, and editorial hooks in one place. Event dates are highlighted on the calendar, with a month-wise event list shown in the right sidebar.</p>
+    </div>
+    <div class="edcal-hero-card">
+      <div class="edcal-hero-label">Coverage View</div>
+      <div class="edcal-hero-value" id="edcalMonthLabel">Loading...</div>
+      <div class="edcal-hero-note" id="edcalMonthCount">0 events planned</div>
+    </div>
+  </div>
+
+  <div class="edcal-layout">
+    <section class="edcal-board">
+      <div class="edcal-toolbar">
+        <div class="edcal-toolbar-left">
+          <button type="button" class="edcal-nav-btn" id="edcalPrevBtn" aria-label="Previous month">&lsaquo;</button>
+          <div class="edcal-toolbar-title" id="edcalToolbarTitle">Month Year</div>
+          <button type="button" class="edcal-nav-btn" id="edcalNextBtn" aria-label="Next month">&rsaquo;</button>
+        </div>
+        <div class="edcal-toolbar-right">
+          <button type="button" class="edcal-chip-btn" id="edcalTodayBtn">Current Month</button>
+        </div>
+      </div>
+
+      <div class="edcal-weekdays">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+      <div class="edcal-grid" id="edcalGrid"></div>
+    </section>
+
+    <aside class="edcal-sidebar">
+      <div class="edcal-sidebar-card">
+        <div class="edcal-side-head">
+          <div>
+            <div class="edcal-side-label">This Month</div>
+            <div class="edcal-side-title" id="edcalSideTitle">Month Highlights</div>
+          </div>
+          <div class="edcal-side-badge" id="edcalSideBadge">0</div>
+        </div>
+        <div class="edcal-event-list" id="edcalEventList"></div>
+      </div>
+
+      <div class="edcal-sidebar-card edcal-sidebar-card--legend">
+        <div class="edcal-side-label">Legend</div>
+        <div class="edcal-legend-list">
+          <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--festival"></span><span>Festivals</span></div>
+          <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--national"></span><span>National Days</span></div>
+          <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--important_day"></span><span>Important Days</span></div>
+          <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--occasion"></span><span>Editorial Occasions</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const eventsEl = document.getElementById('editorial-calendar-events');
+  const summaryEl = document.getElementById('editorial-calendar-summary');
+  const events = eventsEl ? JSON.parse(eventsEl.textContent || '[]') : [];
+  const monthSummary = summaryEl ? JSON.parse(summaryEl.textContent || '{}') : {};
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const today = new Date();
+  let activeMonth = today.getFullYear() === {{ calendar_year }} ? today.getMonth() : 0;
+  const activeYear = {{ calendar_year }};
+
+  const grid = document.getElementById('edcalGrid');
+  const toolbarTitle = document.getElementById('edcalToolbarTitle');
+  const monthLabel = document.getElementById('edcalMonthLabel');
+  const monthCount = document.getElementById('edcalMonthCount');
+  const sideTitle = document.getElementById('edcalSideTitle');
+  const sideBadge = document.getElementById('edcalSideBadge');
+  const eventList = document.getElementById('edcalEventList');
+  const prevBtn = document.getElementById('edcalPrevBtn');
+  const nextBtn = document.getElementById('edcalNextBtn');
+  const todayBtn = document.getElementById('edcalTodayBtn');
+
+  function getMonthEvents(monthIndex){
+    return events.filter(function(item){ return Number(item.month) === monthIndex + 1; });
+  }
+
+  function categoryClass(category){
+    return 'edcal-event-tag--' + String(category || 'important_day').replace(/[^a-z_]/gi, '');
+  }
+
+  function renderSidebar(monthIndex){
+    const monthEvents = getMonthEvents(monthIndex).sort(function(a,b){ return Number(a.day) - Number(b.day); });
+    sideTitle.textContent = monthNames[monthIndex] + ' Highlights';
+    sideBadge.textContent = String(monthEvents.length);
+    monthLabel.textContent = monthNames[monthIndex] + ' ' + activeYear;
+    monthCount.textContent = (monthSummary[String(monthIndex + 1)] || monthEvents.length || 0) + ' events planned';
+
+    if(!monthEvents.length){
+      eventList.innerHTML = '<div class="edcal-empty">No seeded events are available for this month yet.</div>';
+      return;
+    }
+
+    eventList.innerHTML = monthEvents.map(function(item){
+      return '' +
+        '<article class="edcal-event-card" data-day="' + item.day + '">' +
+          '<div class="edcal-event-date">' +
+            '<span class="edcal-event-day">' + item.day + '</span>' +
+            '<span class="edcal-event-weekday">' + item.weekday.slice(0,3) + '</span>' +
+          '</div>' +
+          '<div class="edcal-event-copy">' +
+            '<div class="edcal-event-top">' +
+              '<span class="edcal-event-tag ' + categoryClass(item.category) + '">' + item.tag + '</span>' +
+              '<span class="edcal-event-display-date">' + item.display_date + '</span>' +
+            '</div>' +
+            '<h3 class="edcal-event-title">' + item.title + '</h3>' +
+            '<p class="edcal-event-note">' + item.note + '</p>' +
+          '</div>' +
+        '</article>';
+    }).join('');
+  }
+
+  function renderGrid(monthIndex){
+    const firstDay = new Date(activeYear, monthIndex, 1);
+    const lastDay = new Date(activeYear, monthIndex + 1, 0);
+    const monthEvents = getMonthEvents(monthIndex);
+    const eventMap = {};
+    monthEvents.forEach(function(item){
+      const day = Number(item.day);
+      if(!eventMap[day]) eventMap[day] = [];
+      eventMap[day].push(item);
+    });
+
+    toolbarTitle.textContent = monthNames[monthIndex] + ' ' + activeYear;
+    grid.innerHTML = '';
+
+    const leading = firstDay.getDay();
+    for(let i = 0; i < leading; i += 1){
+      const pad = document.createElement('div');
+      pad.className = 'edcal-cell edcal-cell--pad';
+      grid.appendChild(pad);
+    }
+
+    for(let day = 1; day <= lastDay.getDate(); day += 1){
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      const dayEvents = eventMap[day] || [];
+      const isToday = today.getFullYear() === activeYear && today.getMonth() === monthIndex && today.getDate() === day;
+      cell.className = 'edcal-cell' + (dayEvents.length ? ' edcal-cell--event' : '') + (isToday ? ' edcal-cell--today' : '');
+      cell.innerHTML =
+        '<span class="edcal-cell-date">' + day + '</span>' +
+        (dayEvents.length ? '<div class="edcal-cell-events">' + dayEvents.slice(0, 2).map(function(item){
+          return '<span class="edcal-mini-pill ' + categoryClass(item.category) + '">' + item.title + '</span>';
+        }).join('') + '</div>' : '<span class="edcal-cell-empty">No event</span>');
+      cell.addEventListener('click', function(){
+        const target = document.querySelector('.edcal-event-card[data-day="' + day + '"]');
+        if(target) target.scrollIntoView({behavior:'smooth', block:'center'});
+      });
+      grid.appendChild(cell);
+    }
+
+    renderSidebar(monthIndex);
+  }
+
+  function syncMonth(monthIndex){
+    activeMonth = (monthIndex + 12) % 12;
+    renderGrid(activeMonth);
+  }
+
+  prevBtn.addEventListener('click', function(){ syncMonth(activeMonth - 1); });
+  nextBtn.addEventListener('click', function(){ syncMonth(activeMonth + 1); });
+  todayBtn.addEventListener('click', function(){
+    syncMonth(today.getFullYear() === activeYear ? today.getMonth() : 0);
+  });
+
+  renderGrid(activeMonth);
+})();
+</script>
+{% endblock %}

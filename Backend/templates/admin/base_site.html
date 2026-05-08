@@ -109,6 +109,13 @@
       </a>
     </div>
 
+    <div class="media-btn-wrap" id="editorialCalendarBtnWrap">
+      <a href="/admin/editorial-calendar/" class="media-post-btn" style="background:linear-gradient(135deg,rgba(15,118,110,0.14),rgba(59,130,246,0.14));text-decoration:none;" data-tooltip="Editorial Calendar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+        <span>Editorial Calendar</span>
+      </a>
+    </div>
+
     <nav class="sidebar-nav">
       <p class="nav-section-label">MENU</p>
       <ul class="nav-list">
@@ -430,7 +437,7 @@ function socArchivePost(id){var p=SOCIAL_DEMO_POSTS.find(function(x){return x.id
 
 <script>
 // Quick Search
-function buildSearchItems(){var items=[];items.push({label:'Overview',url:'/admin/'});items.push({label:'Inbox',url:"{% url 'admin_inbox' %}"});items.push({label:'Notifications',url:"{% url 'admin_notifications' %}"});items.push({label:'Post Article',url:'/admin/newsapp/article/add/'});items.push({label:'Photos',url:"{% url 'admin_media_library' %}?tab=photos"});items.push({label:'Videos',url:"{% url 'admin_media_library' %}?tab=videos"});items.push({label:'Newsletter',url:'/admin/newsletter/'});items.push({label:'Settings',url:"{% url 'admin:password_change' %}"});items.push({label:'Logout',url:"{% url 'admin:logout' %}"});document.querySelectorAll('.nav-link[href], .submenu li a').forEach(function(el){var label=(el.querySelector('.nav-label')||el).textContent.trim();var url=el.getAttribute('href');if(label&&url&&url!=='#'&&url!=='javascript:void(0)'){var exists=items.some(function(i){return i.url===url;});if(!exists)items.push({label:label,url:url});}});return items;}
+function buildSearchItems(){var items=[];items.push({label:'Overview',url:'/admin/'});items.push({label:'Inbox',url:"{% url 'admin_inbox' %}"});items.push({label:'Notifications',url:"{% url 'admin_notifications' %}"});items.push({label:'Post Article',url:'/admin/newsapp/article/add/'});items.push({label:'Photos',url:"{% url 'admin_media_library' %}?tab=photos"});items.push({label:'Videos',url:"{% url 'admin_media_library' %}?tab=videos"});items.push({label:'Newsletter',url:'/admin/newsletter/'});items.push({label:'Editorial Calendar',url:'/admin/editorial-calendar/'});items.push({label:'Settings',url:"{% url 'admin:password_change' %}"});items.push({label:'Logout',url:"{% url 'admin:logout' %}"});document.querySelectorAll('.nav-link[href], .submenu li a').forEach(function(el){var label=(el.querySelector('.nav-label')||el).textContent.trim();var url=el.getAttribute('href');if(label&&url&&url!=='#'&&url!=='javascript:void(0)'){var exists=items.some(function(i){return i.url===url;});if(!exists)items.push({label:label,url:url});}});return items;}
 function toggleQuickSearch(){var input=document.getElementById('quickSearchInput');var toggle=document.getElementById('quickSearchToggle');var sidebar=document.getElementById('adminSidebar');if(sidebar.classList.contains('collapsed')){sidebar.classList.remove('collapsed');localStorage.setItem('sidebarCollapsed','false');}if(input.style.display==='none'){toggle.style.display='none';input.style.display='block';input.focus();}else{closeQuickSearch();}}
 function closeQuickSearch(){document.getElementById('quickSearchInput').style.display='none';document.getElementById('quickSearchInput').value='';document.getElementById('quickSearchToggle').style.display='flex';document.getElementById('quickSearchResults').style.display='none';}
 function runQuickSearch(q){var results=document.getElementById('quickSearchResults');if(!q.trim()){results.style.display='none';return;}var items=buildSearchItems();var matches=items.filter(function(item){return item.label.toLowerCase().indexOf(q.toLowerCase())!==-1;});if(!matches.length){results.innerHTML='<div class="qs-empty">No results found</div>';results.style.display='block';return;}results.innerHTML=matches.map(function(item){var clickAttr=item.onclick?'onclick="'+item.onclick+'; closeQuickSearch(); return false;"':'';return'<a href="'+item.url+'" class="qs-item" '+clickAttr+'><span class="qs-label">'+item.label+'</span></a>';}).join('');results.style.display='block';}

@@ -14,7 +14,7 @@ from django.db.models import Count, Q, Case, When, F
 from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
-from datetime import timedelta
+from datetime import timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html
@@ -41,6 +41,50 @@ except:
 def _ensure_superuser(request):
     if not request.user.is_superuser:
         raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
+
+
+def _build_editorial_calendar_events(year):
+    return [
+        {"date": date(year, 1, 1), "title": "New Year's Day", "category": "occasion", "tag": "Planning", "note": "New-year newsroom themes, predictions, year-ahead explainers."},
+        {"date": date(year, 1, 12), "title": "National Youth Day", "category": "important_day", "tag": "India", "note": "Youth, education, skilling and startup stories."},
+        {"date": date(year, 1, 14), "title": "Makar Sankranti / Pongal", "category": "festival", "tag": "Festival", "note": "Regional celebration, agriculture and travel coverage."},
+        {"date": date(year, 1, 26), "title": "Republic Day", "category": "national", "tag": "National", "note": "Parade, policy, defence and civic stories."},
+        {"date": date(year, 2, 21), "title": "International Mother Language Day", "category": "important_day", "tag": "Language", "note": "Culture, language and education angle."},
+        {"date": date(year, 2, 28), "title": "National Science Day", "category": "important_day", "tag": "Science", "note": "Science explainers, innovation and campus stories."},
+        {"date": date(year, 3, 4), "title": "Holi", "category": "festival", "tag": "Festival", "note": "Color festival coverage, travel, commerce and public advisory."},
+        {"date": date(year, 3, 8), "title": "International Women's Day", "category": "important_day", "tag": "Global", "note": "Profiles, gender, workforce and leadership pieces."},
+        {"date": date(year, 3, 21), "title": "Id-ul-Fitr", "category": "festival", "tag": "Festival", "note": "Moon-sighting dependent. Community, market and celebration coverage."},
+        {"date": date(year, 3, 22), "title": "World Water Day", "category": "important_day", "tag": "Environment", "note": "Water crisis, climate and policy coverage."},
+        {"date": date(year, 3, 26), "title": "Ram Navami", "category": "festival", "tag": "Festival", "note": "Faith, crowd management and local celebration stories."},
+        {"date": date(year, 3, 31), "title": "Mahavir Jayanti", "category": "festival", "tag": "Festival", "note": "Religion, heritage and civic coverage."},
+        {"date": date(year, 4, 3), "title": "Good Friday", "category": "festival", "tag": "Festival", "note": "Faith coverage and community observance stories."},
+        {"date": date(year, 4, 7), "title": "World Health Day", "category": "important_day", "tag": "Health", "note": "Public health, hospitals and wellness agenda."},
+        {"date": date(year, 4, 14), "title": "Ambedkar Jayanti", "category": "national", "tag": "National", "note": "Constitution, inclusion and social justice coverage."},
+        {"date": date(year, 4, 22), "title": "Earth Day", "category": "important_day", "tag": "Climate", "note": "Environment, sustainability and climate reporting."},
+        {"date": date(year, 5, 1), "title": "Labour Day / Buddha Purnima", "category": "important_day", "tag": "Public", "note": "Workers, economy, labour and spiritual coverage."},
+        {"date": date(year, 5, 11), "title": "National Technology Day", "category": "important_day", "tag": "Tech", "note": "Innovation, AI, startup and science features."},
+        {"date": date(year, 5, 27), "title": "Bakrid (Id-ul-Zuha)", "category": "festival", "tag": "Festival", "note": "Moon-sighting dependent. Faith, travel and civic updates."},
+        {"date": date(year, 6, 5), "title": "World Environment Day", "category": "important_day", "tag": "Climate", "note": "Green economy, climate and sustainability coverage."},
+        {"date": date(year, 6, 21), "title": "International Yoga Day", "category": "important_day", "tag": "Health", "note": "Yoga events, wellness and public participation."},
+        {"date": date(year, 6, 26), "title": "Muharram", "category": "festival", "tag": "Festival", "note": "Moon-sighting dependent. Community and local observance coverage."},
+        {"date": date(year, 7, 1), "title": "National Doctors' Day", "category": "important_day", "tag": "Health", "note": "Healthcare workers, hospitals and policy stories."},
+        {"date": date(year, 7, 16), "title": "Rath Yatra", "category": "festival", "tag": "Festival", "note": "Faith, Odisha and travel angle."},
+        {"date": date(year, 8, 15), "title": "Independence Day", "category": "national", "tag": "National", "note": "National events, security, governance and citizen voices."},
+        {"date": date(year, 8, 26), "title": "Onam / Milad-un-Nabi", "category": "festival", "tag": "Festival", "note": "Kerala festivities plus moon-sighting dependent Milad coverage."},
+        {"date": date(year, 8, 28), "title": "Raksha Bandhan", "category": "festival", "tag": "Festival", "note": "Family, commerce, gifting and culture stories."},
+        {"date": date(year, 9, 4), "title": "Janmashtami", "category": "festival", "tag": "Festival", "note": "Faith, temple crowds and civic prep coverage."},
+        {"date": date(year, 9, 5), "title": "Teachers' Day", "category": "important_day", "tag": "Education", "note": "Schools, teachers, policy and student voices."},
+        {"date": date(year, 9, 14), "title": "Ganesh Chaturthi / Hindi Diwas", "category": "festival", "tag": "Culture", "note": "Festival coverage plus language and culture angles."},
+        {"date": date(year, 10, 2), "title": "Gandhi Jayanti", "category": "national", "tag": "National", "note": "Governance, civic values and historical features."},
+        {"date": date(year, 10, 20), "title": "Dussehra", "category": "festival", "tag": "Festival", "note": "Festivities, travel and local administration angles."},
+        {"date": date(year, 11, 8), "title": "Diwali", "category": "festival", "tag": "Festival", "note": "Markets, pollution, travel, consumption and culture."},
+        {"date": date(year, 11, 14), "title": "Children's Day", "category": "important_day", "tag": "Education", "note": "Schools, child welfare and youth stories."},
+        {"date": date(year, 11, 15), "title": "Chhath Puja", "category": "festival", "tag": "Festival", "note": "Bihar/UP regional coverage and civic prep."},
+        {"date": date(year, 11, 24), "title": "Guru Nanak Jayanti", "category": "festival", "tag": "Festival", "note": "Faith, history and community observances."},
+        {"date": date(year, 12, 4), "title": "Navy Day", "category": "important_day", "tag": "Defence", "note": "Defence, maritime and strategy coverage."},
+        {"date": date(year, 12, 25), "title": "Christmas Day", "category": "festival", "tag": "Festival", "note": "Celebrations, travel, retail and culture coverage."},
+        {"date": date(year, 12, 31), "title": "Year-End Wrap", "category": "occasion", "tag": "Planning", "note": "Roundups, trends, explainers and next-year planning."},
+    ]
 
 admin.site.site_header = "News Bharat Admin Panel"
 admin.site.site_title  = "News Bharat Admin"
@@ -693,6 +737,11 @@ class NewsAdminSite(AdminSite):
                 name='newsletter',
             ),
             path(
+                'editorial-calendar/',
+                self.admin_view(self.editorial_calendar_view),
+                name='editorial_calendar',
+            ),
+            path(
                 'contact-queries/',
                 self.admin_view(self.contact_queries_view),
                 name='contact_queries',
@@ -1042,6 +1091,41 @@ class NewsAdminSite(AdminSite):
             'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
         }
         return TemplateResponse(request, 'admin/newsletter.html', context)
+
+    def editorial_calendar_view(self, request):
+        active_year = 2026
+        raw_year = (request.GET.get('year') or '').strip()
+        if raw_year.isdigit():
+            active_year = max(2024, min(int(raw_year), 2035))
+
+        events = _build_editorial_calendar_events(active_year)
+        event_rows = [
+            {
+                'date': item['date'].isoformat(),
+                'title': item['title'],
+                'category': item['category'],
+                'tag': item['tag'],
+                'note': item['note'],
+                'month': item['date'].month,
+                'day': item['date'].day,
+                'weekday': item['date'].strftime('%A'),
+                'display_date': item['date'].strftime('%d %b %Y'),
+            }
+            for item in sorted(events, key=lambda row: row['date'])
+        ]
+        month_summary = {}
+        for item in event_rows:
+            month_summary.setdefault(item['month'], 0)
+            month_summary[item['month']] += 1
+
+        context = {
+            **self.each_context(request),
+            'title': 'Editorial Calendar',
+            'calendar_year': active_year,
+            'editorial_events_json': event_rows,
+            'editorial_month_summary_json': month_summary,
+        }
+        return TemplateResponse(request, 'admin/editorial_calendar.html', context)
 
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout

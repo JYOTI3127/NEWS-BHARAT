@@ -20247,3 +20247,499 @@ tr.art-row td:has(.art-cat-text) {
     grid-template-columns: 1fr;
   }
 }
+
+/* =============================================
+   EDITORIAL CALENDAR
+   ============================================= */
+
+.edcal-shell {
+  display: grid;
+  gap: 22px;
+}
+
+.edcal-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px 26px;
+  border: 1px solid #dbe6f5;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 30%),
+    linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.edcal-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+  margin-bottom: 8px;
+}
+
+.edcal-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.edcal-subtitle {
+  margin: 12px 0 0;
+  max-width: 760px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #64748b;
+}
+
+.edcal-hero-card {
+  min-width: 230px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: #0f766e;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(15, 118, 110, 0.18);
+}
+
+.edcal-hero-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.72);
+}
+
+.edcal-hero-value {
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.edcal-hero-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.82);
+}
+
+.edcal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.8fr);
+  gap: 20px;
+}
+
+.edcal-board,
+.edcal-sidebar-card {
+  border: 1px solid #dbe6f5;
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.edcal-board {
+  padding: 20px;
+}
+
+.edcal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.edcal-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edcal-toolbar-title {
+  min-width: 220px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.edcal-nav-btn,
+.edcal-chip-btn {
+  border: 1px solid #dbe6f5;
+  background: #f8fbff;
+  color: #1e3a8a;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.edcal-nav-btn {
+  width: 42px;
+  height: 42px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.edcal-chip-btn {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.edcal-nav-btn:hover,
+.edcal-chip-btn:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.12);
+  transform: translateY(-1px);
+}
+
+.edcal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.edcal-weekdays span {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  text-align: center;
+}
+
+.edcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edcal-cell {
+  min-height: 136px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff !important;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.edcal-cell:hover {
+  transform: translateY(-1px);
+  border-color: #93c5fd;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.edcal-cell--pad {
+  background: transparent;
+  border-style: dashed;
+  border-color: #eff6ff;
+  cursor: default;
+  box-shadow: none;
+}
+
+.edcal-cell--pad:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.edcal-cell--today {
+  border-color: #0f766e;
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
+}
+
+.edcal-cell--event {
+  background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);
+}
+
+.edcal-cell-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 14px;
+  font-weight: 800;
+  border: 1px solid #e2e8f0;
+}
+
+.edcal-cell-empty {
+  display: block;
+  margin-top: 24px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.edcal-cell-events {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.edcal-mini-pill,
+.edcal-event-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.edcal-mini-pill {
+  padding: 6px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edcal-sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.edcal-sidebar-card {
+  padding: 18px;
+}
+
+.edcal-side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.edcal-side-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.edcal-side-title {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.edcal-side-badge {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edcal-event-list {
+  display: grid;
+  gap: 12px;
+}
+
+.edcal-event-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fbfdff;
+}
+
+.edcal-event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #0f172a;
+  min-height: 74px;
+}
+
+.edcal-event-day {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.edcal-event-weekday {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.edcal-event-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edcal-event-tag {
+  padding: 5px 10px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.edcal-event-display-date {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.edcal-event-title {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.edcal-event-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #64748b;
+}
+
+.edcal-legend-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.edcal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.edcal-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.edcal-event-tag--festival,
+.edcal-mini-pill.edcal-event-tag--festival,
+.edcal-legend-dot--festival {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.edcal-event-tag--national,
+.edcal-mini-pill.edcal-event-tag--national,
+.edcal-legend-dot--national {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.edcal-event-tag--important_day,
+.edcal-mini-pill.edcal-event-tag--important_day,
+.edcal-legend-dot--important_day {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.edcal-event-tag--occasion,
+.edcal-mini-pill.edcal-event-tag--occasion,
+.edcal-legend-dot--occasion {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.edcal-empty {
+  padding: 22px 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
+@media (max-width: 1200px) {
+  .edcal-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .edcal-hero {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .edcal-title {
+    font-size: 28px;
+  }
+
+  .edcal-hero-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .edcal-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .edcal-toolbar-left,
+  .edcal-toolbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .edcal-toolbar-title {
+    min-width: 0;
+    text-align: center;
+    font-size: 20px;
+  }
+
+  .edcal-weekdays span {
+    padding: 8px 4px;
+    font-size: 10px;
+  }
+
+  .edcal-grid {
+    gap: 8px;
+  }
+
+  .edcal-cell {
+    min-height: 110px;
+    padding: 10px;
+  }
+
+  .edcal-mini-pill {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .edcal-event-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}

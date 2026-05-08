@@ -88,6 +88,61 @@ def _normalize_image_url(url: str, base: str = None) -> str:
     return f"{base}/{raw.lstrip('/')}"
 
 
+def _schema_csv(value: str, fallback: list[str] = None) -> list[str]:
+    values = [item.strip() for item in str(value or "").split(",") if item.strip()]
+    if values:
+        return list(dict.fromkeys(values))
+    return list(fallback or [])
+
+
+def _schema_json_list(value, fallback: list[str] = None) -> list[str]:
+    if isinstance(value, list):
+        items = value
+    elif isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            items = []
+        else:
+            try:
+                parsed = json.loads(raw)
+                items = parsed if isinstance(parsed, list) else [raw]
+            except Exception:
+                items = [part.strip() for part in raw.split(",")]
+    else:
+        items = []
+    normalized = []
+    for item in items:
+        text = str(item or "").strip()
+        if text and text not in normalized:
+            normalized.append(text)
+    return normalized or list(fallback or [])
+
+
+def _parse_custom_schema_blob(raw_value):
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return []
+    if isinstance(parsed, dict):
+        return [parsed]
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+    return []
+
+
+def article_schema_payloads(article) -> list[dict]:
+    return [
+        SchemaEngine.news_article(article),
+        SchemaEngine.breadcrumb(article),
+        SchemaEngine.organization(article),
+        SchemaEngine.website(article),
+        *_parse_custom_schema_blob(getattr(article, "schema_custom_jsonld", "")),
+    ]
+
+
 def _extract_article_image_entries(article, base: str = None) -> list[dict]:
     base = (base or SEO["SITE_URL"]).rstrip("/")
     images = []
@@ -482,32 +537,52 @@ class SitemapEngine:
 class SchemaEngine:
 
     @staticmethod
-    def organization() -> dict:
+    def organization(article=None) -> dict:
         base = SEO["SITE_URL"]
-        return {
-            "@context": "https://schema.org",
-            "@type": "NewsMediaOrganization",
-            "@id": f"{base}/#organization",
-            "name": SEO["SITE_NAME"],
-            "url":  base,
-            "logo": {"@type": "ImageObject", "url": SEO["LOGO_URL"]},
-            "sameAs": [
+        org_name = (
+            str(getattr(article, "schema_publisher_name", "") or "").strip()
+            or SEO["SITE_NAME"]
+        )
+        org_type = (
+            str(getattr(article, "schema_organization_type", "") or "").strip()
+            or "NewsMediaOrganization"
+        )
+        logo_url = _normalize_image_url(
+            getattr(article, "schema_publisher_logo_url", "") if article else "",
+            base,
+        ) or SEO["LOGO_URL"]
+        same_as = _schema_json_list(
+            getattr(article, "schema_organization_sameas", []) if article else [],
+            [
                 "https://www.facebook.com/news4bharat",
                 "https://twitter.com/news4bharat",
                 "https://www.instagram.com/news4bharat",
                 "https://www.youtube.com/c/news4bharat",
             ],
+        )
+        return {
+            "@context": "https://schema.org",
+            "@type": org_type,
+            "@id": f"{base}/#organization",
+            "name": org_name,
+            "url":  base,
+            "logo": {"@type": "ImageObject", "url": logo_url},
+            "sameAs": same_as,
         }
 
     @staticmethod
-    def website() -> dict:
+    def website(article=None) -> dict:
         base = SEO["SITE_URL"]
+        site_name = (
+            str(getattr(article, "schema_publisher_name", "") or "").strip()
+            or SEO["SITE_NAME"]
+        )
         return {
             "@context": "https://schema.org",
             "@type": "WebSite",
             "@id": f"{base}/#website",
             "url":  base,
-            "name": SEO["SITE_NAME"],
+            "name": site_name,
             "description": SEO["TAGLINE"],
             "publisher": {"@id": f"{base}/#organization"},
             "potentialAction": {
@@ -525,44 +600,75 @@ class SchemaEngine:
         """
         base    = SEO["SITE_URL"]
         url     = article_url(article, base)
-        img_url = article.get_image()
-        if img_url and not img_url.startswith("http"):
-            img_url = f"{base}{img_url}"
+        img_url = _normalize_image_url(
+            getattr(article, "schema_image_url", "") or article.get_image(),
+            base,
+        )
 
         # Tags from comma-separated string (tera model: tags = CharField)
         tags_list = [t.strip() for t in (article.tags or "").split(",") if t.strip()]
 
         # Keywords = focus_keyword + secondary_keywords + tags
         kw_parts = []
-        if article.focus_keyword:
-            kw_parts.append(article.focus_keyword)
-        if article.secondary_keywords:
-            kw_parts += [k.strip() for k in article.secondary_keywords.split(",") if k.strip()]
-        kw_parts += tags_list
+        manual_keywords = _schema_csv(getattr(article, "schema_keywords", ""))
+        if manual_keywords:
+            kw_parts += manual_keywords
+        else:
+            if article.focus_keyword:
+                kw_parts.append(article.focus_keyword)
+            if article.secondary_keywords:
+                kw_parts += [k.strip() for k in article.secondary_keywords.split(",") if k.strip()]
+            kw_parts += tags_list
 
         # Author display name (tera model: author_display_name)
         author_name = (
-            article.author_display_name.strip()
+            str(getattr(article, "schema_author_name", "") or "").strip()
+            or article.author_display_name.strip()
             or article.author.get_full_name()
             or article.author.username
         )
         author_pos = article.author_display_position or ""
+        author_url = (
+            str(getattr(article, "schema_author_url", "") or "").strip()
+            or f"{base}/author/{article.author_id}"
+        )
 
         # Category
         primary_cat = primary_category(article)
-        cat_name  = str(primary_cat) if primary_cat else ""
+        cat_name  = (
+            str(getattr(article, "schema_article_section", "") or "").strip()
+            or (str(primary_cat) if primary_cat else "")
+        )
+        schema_types = _schema_csv(getattr(article, "schema_types", ""), ["NewsArticle", "Article"])
+        headline = str(getattr(article, "schema_headline", "") or "").strip() or article.title
+        alt_headline = (
+            str(getattr(article, "schema_alternative_headline", "") or "").strip()
+            or article.subtitle
+            or article.title
+        )
+        description = (
+            str(getattr(article, "schema_description", "") or "").strip()
+            or article.meta_description
+            or _strip(article.content, 160)
+        )
+        date_published = getattr(article, "schema_date_published", None) or article.published_at
+        date_modified = (
+            getattr(article, "schema_date_modified", None)
+            or getattr(article, "updated_at", None)
+            or article.published_at
+        )
 
         schema = {
             "@context": "https://schema.org",
-            "@type":    ["NewsArticle", "Article"],
+            "@type":    schema_types,
             "@id":      f"{url}#article",
-            "headline": article.title,
-            "alternativeHeadline": article.subtitle or article.title,
-            "description": article.meta_description or _strip(article.content, 160),
+            "headline": headline,
+            "alternativeHeadline": alt_headline,
+            "description": description,
             "articleBody": _strip(article.content, 5000),
             "inLanguage":  "en-IN",
-            "datePublished": _iso(article.published_at),
-            "dateModified":  _iso(article.updated_at if hasattr(article, "updated_at") else article.published_at),
+            "datePublished": _iso(date_published),
+            "dateModified":  _iso(date_modified),
             "url": url,
             "mainEntityOfPage": {"@type": "WebPage", "@id": url},
             "publisher": {"@id": f"{base}/#organization"},
@@ -570,7 +676,7 @@ class SchemaEngine:
             "author": {
                 "@type": "Person",
                 "name":  author_name,
-                "url":   f"{base}/author/{article.author_id}",
+                "url":   author_url,
                 **({"jobTitle": author_pos} if author_pos else {}),
                 **({"image": {"@type": "ImageObject", "url": article.author_display_photo}}
                    if article.author_display_photo else {}),

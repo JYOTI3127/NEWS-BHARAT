@@ -1081,22 +1081,37 @@ grammarly-button,
         Schema &amp; Sitemaps
       </div>
       <div class="seo-field">
-        <div class="seo-field-label">Structured Data (JSON-LD) <span class="seo-tag seo-tag--auto">Auto-injected</span></div>
+        <div class="seo-field-label">Structured Data (JSON-LD) <span class="seo-tag seo-tag--editable">Editable</span></div>
         <div class="seo-schema-box">
-          <div class="schema-type-row"><span class="schema-type-chip">Article</span><span class="schema-type-chip">NewsArticle</span></div>
-          <div class="schema-kv"><span class="schema-k">datePublished</span><span class="schema-v" id="schema_pub">{{ original.published_at|date:'Y-m-d'|default:'— set on publish' }}</span></div>
-          <div class="schema-kv"><span class="schema-k">dateModified</span><span class="schema-v" id="schema_mod">{% now "Y-m-d" %}</span></div>
-          <div class="schema-kv"><span class="schema-k">author</span><span class="schema-v">{{ original.author_display_name|default:'— from Editor panel' }}</span></div>
-          <div class="schema-kv"><span class="schema-k">headline</span><span class="schema-v schema-v--live" id="schema_headline">{{ original.title|default:'— from Headline' }}</span></div>
-          <div class="schema-kv"><span class="schema-k">image</span><span class="schema-v schema-v--live" id="schema_image">{% if original.image %}{{ original.image.url }}{% else %}— from Featured Image{% endif %}</span></div>
-          <div class="schema-note">Injected as JSON-LD in <code>&lt;head&gt;</code> on every page load.</div>
+          <div class="schema-type-row"><span class="schema-type-chip">Article</span><span class="schema-type-chip">NewsArticle</span><span class="schema-type-chip">Organization</span><span class="schema-type-chip">WebSite</span></div>
+          <div class="seo-field" style="margin-top:12px"><div class="seo-field-label">Schema Types</div><input type="text" class="seo-inp" id="ui_schema_types" placeholder="NewsArticle, Article" value="{{ original.schema_types|default:'NewsArticle,Article' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Headline</div><input type="text" class="seo-inp" id="ui_schema_headline" placeholder="Leave blank to use article headline" value="{{ original.schema_headline|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Alternative Headline</div><input type="text" class="seo-inp" id="ui_schema_alt_headline" placeholder="Leave blank to use subtitle" value="{{ original.schema_alternative_headline|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Description</div><textarea class="seo-inp seo-meta-textarea" id="ui_schema_description" rows="3" placeholder="Leave blank to use meta description">{{ original.schema_description|default:'' }}</textarea></div>
+          <div class="seo-field"><div class="seo-field-label">Article Section</div><input type="text" class="seo-inp" id="ui_schema_article_section" placeholder="Leave blank to use primary category" value="{{ original.schema_article_section|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Keywords</div><input type="text" class="seo-inp" id="ui_schema_keywords" placeholder="Comma separated keywords" value="{{ original.schema_keywords|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Author Name</div><input type="text" class="seo-inp" id="ui_schema_author_name" placeholder="Leave blank to use editor/author name" value="{{ original.schema_author_name|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Author URL</div><input type="url" class="seo-inp" id="ui_schema_author_url" placeholder="https://example.com/author/..." value="{{ original.schema_author_url|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Image URL</div><input type="url" class="seo-inp" id="ui_schema_image_url" placeholder="Leave blank to use featured image" value="{{ original.schema_image_url|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Publisher / Organization Name</div><input type="text" class="seo-inp" id="ui_schema_publisher_name" placeholder="Leave blank to use site name" value="{{ original.schema_publisher_name|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Publisher Logo URL</div><input type="url" class="seo-inp" id="ui_schema_publisher_logo_url" placeholder="Leave blank to use default site logo" value="{{ original.schema_publisher_logo_url|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Organization Type</div><input type="text" class="seo-inp" id="ui_schema_org_type" placeholder="NewsMediaOrganization" value="{{ original.schema_organization_type|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Organization Social Links</div><textarea class="seo-inp seo-meta-textarea" id="ui_schema_org_sameas" rows="2" placeholder="Comma separated URLs">{{ original.schema_organization_sameas|join:', ' }}</textarea></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Publish Date</div><input type="datetime-local" class="seo-inp" id="ui_schema_date_published" value="{{ original.schema_date_published|date:'Y-m-d\\TH:i'|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Schema Modified Date</div><input type="datetime-local" class="seo-inp" id="ui_schema_date_modified" value="{{ original.schema_date_modified|date:'Y-m-d\\TH:i'|default:'' }}"></div>
+          <div class="seo-field"><div class="seo-field-label">Custom JSON-LD</div><textarea class="seo-inp seo-meta-textarea" id="ui_schema_custom_jsonld" rows="5" placeholder='{"@context":"https://schema.org","@type":"FAQPage"}'>{{ original.schema_custom_jsonld|default:'' }}</textarea></div>
+          <div class="schema-note">Yahan bhari hui values se page source ke JSON-LD schemas generate honge aur API response me bhi available rahenge.</div>
         </div>
       </div>
       <div class="seo-field">
         <div class="seo-field-label">Sitemaps &amp; Indexing</div>
         <div class="seo-sitemap-list">
-          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--blue"></div><div class="sitemap-body"><div class="sitemap-name">XML Sitemap</div><div class="sitemap-url">/sitemap.xml — auto-updated on publish</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
-          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--green"></div><div class="sitemap-body"><div class="sitemap-name">Google News Sitemap</div><div class="sitemap-url">/news-sitemap.xml — articles within 2 days</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--blue"></div><div class="sitemap-body"><div class="sitemap-name">Sitemap Index</div><div class="sitemap-url">/sitemap_index.xml — master sitemap index</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--green"></div><div class="sitemap-body"><div class="sitemap-name">Articles Sitemap</div><div class="sitemap-url">/sitemap-articles.xml — published article URLs</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--green"></div><div class="sitemap-body"><div class="sitemap-name">Google News Sitemap</div><div class="sitemap-url">/sitemap-news.xml — articles within 2 days</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--blue"></div><div class="sitemap-body"><div class="sitemap-name">Images Sitemap</div><div class="sitemap-url">/sitemap-images.xml — featured and inline images</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--blue"></div><div class="sitemap-body"><div class="sitemap-name">Categories Sitemap</div><div class="sitemap-url">/sitemap-categories.xml — active category pages</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
+          <div class="sitemap-row sitemap-row--active"><div class="sitemap-led sitemap-led--blue"></div><div class="sitemap-body"><div class="sitemap-name">Static Sitemap</div><div class="sitemap-url">/sitemap-static.xml — static pages</div></div><span class="sitemap-badge sitemap-badge--on">On</span></div>
           <div class="sitemap-row"><div class="sitemap-led sitemap-led--grey"></div><div class="sitemap-body"><div class="sitemap-name">Include this article</div><div class="sitemap-url">Uncheck to exclude from sitemaps &amp; noindex</div></div><label class="seo-toggle"><input type="checkbox" id="ui_in_sitemap" {% if original.in_sitemap|default:True %}checked{% endif %} onchange="syncNoindex()"><span class="seo-toggle-track"><span class="seo-toggle-thumb"></span></span></label></div>
         </div>
       </div>
@@ -1132,6 +1147,7 @@ grammarly-button,
         <div class="seo-field-label">Live SEO Checklist</div>
         <div class="seo-live-checklist" id="seo_checklist">
           <div class="slc-item" id="chk_title"      onclick="jumpToField('ui_title')"><span class="slc-icon"></span><span class="slc-text">Headline 30–70 characters</span><svg class="slc-jump" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
+          <div class="slc-item" id="chk_meta_title" onclick="jumpToField('ui_meta_title')"><span class="slc-icon"></span><span class="slc-text">Meta title 50–70 characters</span><svg class="slc-jump" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
           <div class="slc-item" id="chk_focus"      onclick="jumpToField('ui_focus_kw')"><span class="slc-icon"></span><span class="slc-text">Focus keyword set</span><svg class="slc-jump" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
           <div class="slc-item" id="chk_kw_title"   onclick="jumpToField('ui_title')"><span class="slc-icon"></span><span class="slc-text">Keyword in headline</span><svg class="slc-jump" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
           <div class="slc-item" id="chk_meta"       onclick="jumpToField('ui_meta_desc')"><span class="slc-icon"></span><span class="slc-text">Meta description 120–160 chars</span><svg class="slc-jump" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
@@ -1714,6 +1730,22 @@ function _asGetHash(){
     (document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'') +
     (document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'') +
     (document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'') +
+    (document.getElementById('ui_schema_types')?document.getElementById('ui_schema_types').value:'') +
+    (document.getElementById('ui_schema_headline')?document.getElementById('ui_schema_headline').value:'') +
+    (document.getElementById('ui_schema_alt_headline')?document.getElementById('ui_schema_alt_headline').value:'') +
+    (document.getElementById('ui_schema_description')?document.getElementById('ui_schema_description').value:'') +
+    (document.getElementById('ui_schema_article_section')?document.getElementById('ui_schema_article_section').value:'') +
+    (document.getElementById('ui_schema_keywords')?document.getElementById('ui_schema_keywords').value:'') +
+    (document.getElementById('ui_schema_author_name')?document.getElementById('ui_schema_author_name').value:'') +
+    (document.getElementById('ui_schema_author_url')?document.getElementById('ui_schema_author_url').value:'') +
+    (document.getElementById('ui_schema_image_url')?document.getElementById('ui_schema_image_url').value:'') +
+    (document.getElementById('ui_schema_publisher_name')?document.getElementById('ui_schema_publisher_name').value:'') +
+    (document.getElementById('ui_schema_publisher_logo_url')?document.getElementById('ui_schema_publisher_logo_url').value:'') +
+    (document.getElementById('ui_schema_org_type')?document.getElementById('ui_schema_org_type').value:'') +
+    (document.getElementById('ui_schema_org_sameas')?document.getElementById('ui_schema_org_sameas').value:'') +
+    (document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'') +
+    (document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'') +
+    (document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'') +
     _asSecondaryKwsValue() +
     _asArticleTagsValue()
   );
@@ -1749,6 +1781,22 @@ function _asSaveToLocalStorage(){
       meta:document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'',
       slug:document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'',
       focus_kw:document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'',
+      schema_types:document.getElementById('ui_schema_types')?document.getElementById('ui_schema_types').value:'',
+      schema_headline:document.getElementById('ui_schema_headline')?document.getElementById('ui_schema_headline').value:'',
+      schema_alt_headline:document.getElementById('ui_schema_alt_headline')?document.getElementById('ui_schema_alt_headline').value:'',
+      schema_description:document.getElementById('ui_schema_description')?document.getElementById('ui_schema_description').value:'',
+      schema_article_section:document.getElementById('ui_schema_article_section')?document.getElementById('ui_schema_article_section').value:'',
+      schema_keywords:document.getElementById('ui_schema_keywords')?document.getElementById('ui_schema_keywords').value:'',
+      schema_author_name:document.getElementById('ui_schema_author_name')?document.getElementById('ui_schema_author_name').value:'',
+      schema_author_url:document.getElementById('ui_schema_author_url')?document.getElementById('ui_schema_author_url').value:'',
+      schema_image_url:document.getElementById('ui_schema_image_url')?document.getElementById('ui_schema_image_url').value:'',
+      schema_publisher_name:document.getElementById('ui_schema_publisher_name')?document.getElementById('ui_schema_publisher_name').value:'',
+      schema_publisher_logo_url:document.getElementById('ui_schema_publisher_logo_url')?document.getElementById('ui_schema_publisher_logo_url').value:'',
+      schema_org_type:document.getElementById('ui_schema_org_type')?document.getElementById('ui_schema_org_type').value:'',
+      schema_org_sameas:document.getElementById('ui_schema_org_sameas')?document.getElementById('ui_schema_org_sameas').value:'',
+      schema_date_published:document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'',
+      schema_date_modified:document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'',
+      schema_custom_jsonld:document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'',
       sec_kws:_asSecondaryKwsValue(),
       tags:_asArticleTagsValue(),
       ts:new Date().toISOString()
@@ -1764,6 +1812,22 @@ function _asApplyLocalDraft(data){
   if(document.getElementById('ui_meta_desc'))document.getElementById('ui_meta_desc').value=data.meta||'';
   if(document.getElementById('ui_slug'))document.getElementById('ui_slug').value=data.slug||'';
   if(document.getElementById('ui_focus_kw'))document.getElementById('ui_focus_kw').value=data.focus_kw||'';
+  if(document.getElementById('ui_schema_types'))document.getElementById('ui_schema_types').value=data.schema_types||'';
+  if(document.getElementById('ui_schema_headline'))document.getElementById('ui_schema_headline').value=data.schema_headline||'';
+  if(document.getElementById('ui_schema_alt_headline'))document.getElementById('ui_schema_alt_headline').value=data.schema_alt_headline||'';
+  if(document.getElementById('ui_schema_description'))document.getElementById('ui_schema_description').value=data.schema_description||'';
+  if(document.getElementById('ui_schema_article_section'))document.getElementById('ui_schema_article_section').value=data.schema_article_section||'';
+  if(document.getElementById('ui_schema_keywords'))document.getElementById('ui_schema_keywords').value=data.schema_keywords||'';
+  if(document.getElementById('ui_schema_author_name'))document.getElementById('ui_schema_author_name').value=data.schema_author_name||'';
+  if(document.getElementById('ui_schema_author_url'))document.getElementById('ui_schema_author_url').value=data.schema_author_url||'';
+  if(document.getElementById('ui_schema_image_url'))document.getElementById('ui_schema_image_url').value=data.schema_image_url||'';
+  if(document.getElementById('ui_schema_publisher_name'))document.getElementById('ui_schema_publisher_name').value=data.schema_publisher_name||'';
+  if(document.getElementById('ui_schema_publisher_logo_url'))document.getElementById('ui_schema_publisher_logo_url').value=data.schema_publisher_logo_url||'';
+  if(document.getElementById('ui_schema_org_type'))document.getElementById('ui_schema_org_type').value=data.schema_org_type||'';
+  if(document.getElementById('ui_schema_org_sameas'))document.getElementById('ui_schema_org_sameas').value=data.schema_org_sameas||'';
+  if(document.getElementById('ui_schema_date_published'))document.getElementById('ui_schema_date_published').value=data.schema_date_published||'';
+  if(document.getElementById('ui_schema_date_modified'))document.getElementById('ui_schema_date_modified').value=data.schema_date_modified||'';
+  if(document.getElementById('ui_schema_custom_jsonld'))document.getElementById('ui_schema_custom_jsonld').value=data.schema_custom_jsonld||'';
   if(data.sec_kws!==undefined){
     secondaryKws=String(data.sec_kws||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
     if(typeof renderSecKws==='function')renderSecKws();
@@ -1793,6 +1857,22 @@ function _asRestoreLocalDraftIfNeeded(){
       (data.meta||'')+
       (data.slug||'')+
       (data.focus_kw||'')+
+      (data.schema_types||'')+
+      (data.schema_headline||'')+
+      (data.schema_alt_headline||'')+
+      (data.schema_description||'')+
+      (data.schema_article_section||'')+
+      (data.schema_keywords||'')+
+      (data.schema_author_name||'')+
+      (data.schema_author_url||'')+
+      (data.schema_image_url||'')+
+      (data.schema_publisher_name||'')+
+      (data.schema_publisher_logo_url||'')+
+      (data.schema_org_type||'')+
+      (data.schema_org_sameas||'')+
+      (data.schema_date_published||'')+
+      (data.schema_date_modified||'')+
+      (data.schema_custom_jsonld||'')+
       (data.sec_kws||'')+
       (data.tags||'')
     );
@@ -1829,6 +1909,22 @@ async function _asAutoSave(){
     formData.append('meta_description',document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'');
     formData.append('focus_keyword',document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'');
     formData.append('secondary_keywords',_asSecondaryKwsValue());
+    formData.append('schema_types',document.getElementById('ui_schema_types')?document.getElementById('ui_schema_types').value:'');
+    formData.append('schema_headline',document.getElementById('ui_schema_headline')?document.getElementById('ui_schema_headline').value:'');
+    formData.append('schema_alternative_headline',document.getElementById('ui_schema_alt_headline')?document.getElementById('ui_schema_alt_headline').value:'');
+    formData.append('schema_description',document.getElementById('ui_schema_description')?document.getElementById('ui_schema_description').value:'');
+    formData.append('schema_article_section',document.getElementById('ui_schema_article_section')?document.getElementById('ui_schema_article_section').value:'');
+    formData.append('schema_keywords',document.getElementById('ui_schema_keywords')?document.getElementById('ui_schema_keywords').value:'');
+    formData.append('schema_author_name',document.getElementById('ui_schema_author_name')?document.getElementById('ui_schema_author_name').value:'');
+    formData.append('schema_author_url',document.getElementById('ui_schema_author_url')?document.getElementById('ui_schema_author_url').value:'');
+    formData.append('schema_image_url',document.getElementById('ui_schema_image_url')?document.getElementById('ui_schema_image_url').value:'');
+    formData.append('schema_publisher_name',document.getElementById('ui_schema_publisher_name')?document.getElementById('ui_schema_publisher_name').value:'');
+    formData.append('schema_publisher_logo_url',document.getElementById('ui_schema_publisher_logo_url')?document.getElementById('ui_schema_publisher_logo_url').value:'');
+    formData.append('schema_organization_type',document.getElementById('ui_schema_org_type')?document.getElementById('ui_schema_org_type').value:'');
+    formData.append('schema_organization_sameas',JSON.stringify((document.getElementById('ui_schema_org_sameas')?document.getElementById('ui_schema_org_sameas').value:'').split(',').map(function(v){return v.trim();}).filter(Boolean)));
+    formData.append('schema_date_published',document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'');
+    formData.append('schema_date_modified',document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'');
+    formData.append('schema_custom_jsonld',document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'');
 
     var url = _asArticleId ? ('/api/articles/' + _asArticleId + '/') : '/api/articles/';
     var method = _asArticleId ? 'PUT' : 'POST';
@@ -3044,8 +3140,8 @@ function previewImage(inp){
       btn=document.getElementById('change_img_btn');
   if(dz)dz.style.display='none';
   if(btn)btn.style.display='flex';
-  var schemaImg=document.getElementById('schema_image');
-  if(schemaImg)schemaImg.textContent=file.name;
+  var schemaImg=document.getElementById('ui_schema_image_url');
+  if(schemaImg&&!schemaImg.value.trim())schemaImg.placeholder='Leave blank to use featured image';
   var urlInp=document.getElementById('ui_image');
   if(urlInp)urlInp.value='';
   updateSeoScore();
@@ -3097,8 +3193,8 @@ function previewUrl(url){
   if(url&&!url.startsWith('blob:')){
     prev.src=url;
     prev.style.display='block';
-    var schemaImg=document.getElementById('schema_image');
-    if(schemaImg)schemaImg.textContent=url;
+    var schemaImg=document.getElementById('ui_schema_image_url');
+    if(schemaImg&&!schemaImg.value.trim())schemaImg.placeholder=url;
   }else{
     prev.style.display='none';
   }
@@ -3117,8 +3213,8 @@ function previewImageFile(file){
       btn=document.getElementById('change_img_btn');
   if(dz)dz.style.display='none';
   if(btn)btn.style.display='flex';
-  var schemaImg=document.getElementById('schema_image');
-  if(schemaImg)schemaImg.textContent=file.name;
+  var schemaImg=document.getElementById('ui_schema_image_url');
+  if(schemaImg&&!schemaImg.value.trim())schemaImg.placeholder='Leave blank to use featured image';
   var urlInp=document.getElementById('ui_image');
   if(urlInp)urlInp.value='';
   updateSeoScore();
@@ -3338,8 +3434,8 @@ function generateSlug(){
   var titleEl=document.getElementById('ui_title');
   if(titleEl){
     titleEl.addEventListener('input',function(){
-      const el=document.getElementById('schema_headline');
-      if(el)el.textContent=this.value||'— from Headline';
+      const el=document.getElementById('ui_schema_headline');
+      if(el&&!el.value.trim())el.placeholder=this.value||'Leave blank to use article headline';
       updateSeoScore();
       updateEditorPreview();
     });
@@ -4167,6 +4263,22 @@ async function submitArticle(forceStatus){
   formData.append('noindex',document.getElementById('ui_noindex')&&document.getElementById('ui_noindex').checked?'true':'false');
   formData.append('nofollow',document.getElementById('ui_nofollow')&&document.getElementById('ui_nofollow').checked?'true':'false');
   formData.append('in_sitemap',document.getElementById('ui_in_sitemap')&&document.getElementById('ui_in_sitemap').checked?'true':'false');
+  formData.append('schema_types',document.getElementById('ui_schema_types')?document.getElementById('ui_schema_types').value:'');
+  formData.append('schema_headline',document.getElementById('ui_schema_headline')?document.getElementById('ui_schema_headline').value:'');
+  formData.append('schema_alternative_headline',document.getElementById('ui_schema_alt_headline')?document.getElementById('ui_schema_alt_headline').value:'');
+  formData.append('schema_description',document.getElementById('ui_schema_description')?document.getElementById('ui_schema_description').value:'');
+  formData.append('schema_article_section',document.getElementById('ui_schema_article_section')?document.getElementById('ui_schema_article_section').value:'');
+  formData.append('schema_keywords',document.getElementById('ui_schema_keywords')?document.getElementById('ui_schema_keywords').value:'');
+  formData.append('schema_author_name',document.getElementById('ui_schema_author_name')?document.getElementById('ui_schema_author_name').value:'');
+  formData.append('schema_author_url',document.getElementById('ui_schema_author_url')?document.getElementById('ui_schema_author_url').value:'');
+  formData.append('schema_image_url',document.getElementById('ui_schema_image_url')?document.getElementById('ui_schema_image_url').value:'');
+  formData.append('schema_publisher_name',document.getElementById('ui_schema_publisher_name')?document.getElementById('ui_schema_publisher_name').value:'');
+  formData.append('schema_publisher_logo_url',document.getElementById('ui_schema_publisher_logo_url')?document.getElementById('ui_schema_publisher_logo_url').value:'');
+  formData.append('schema_organization_type',document.getElementById('ui_schema_org_type')?document.getElementById('ui_schema_org_type').value:'');
+  formData.append('schema_organization_sameas',JSON.stringify((document.getElementById('ui_schema_org_sameas')?document.getElementById('ui_schema_org_sameas').value:'').split(',').map(function(v){return v.trim();}).filter(Boolean)));
+  formData.append('schema_date_published',document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'');
+  formData.append('schema_date_modified',document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'');
+  formData.append('schema_custom_jsonld',document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'');
 
   const schedEl=document.getElementById('ui_scheduled_at');
   if(schedEl&&schedEl.value)formData.append('scheduled_at',schedEl.value);

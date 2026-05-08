@@ -300,7 +300,7 @@ def new_user_notification(sender, instance, created, **kwargs):
 import requests
 
 def ping_google_sitemap():
-    sitemap_url = "https://news4bharat.com/sitemap.xml"
+    sitemap_url = "https://news4bharat.com/sitemap_index.xml"
     google_ping = f"https://www.google.com/ping?sitemap={sitemap_url}"
 
     try:

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User
-from .seo_direct import article_url, normalized_canonical
+from .seo_direct import article_url, normalized_canonical, article_schema_payloads
 from django.utils import timezone
 from datetime import timedelta
 from .utils import get_article_render_content
@@ -195,6 +195,7 @@ class ArticleSerializer(serializers.ModelSerializer):
     canonical_url = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     content_html = serializers.SerializerMethodField()
+    structured_data = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
@@ -264,6 +265,9 @@ class ArticleSerializer(serializers.ModelSerializer):
     def get_content_html(self, obj):
         return get_article_render_content(obj)
 
+    def get_structured_data(self, obj):
+        return article_schema_payloads(obj)
+
     def get_effective_updated_at(self, obj):
         return (
             getattr(obj, 'updated_at', None)
@@ -298,6 +302,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         data['content_clean'] = rendered_content
         data['content_raw'] = instance.content_raw or instance.content or ''
         data['content_html'] = rendered_content
+        data['structured_data'] = article_schema_payloads(instance)
         return data
 
     def get_posted_by_username(self, obj):

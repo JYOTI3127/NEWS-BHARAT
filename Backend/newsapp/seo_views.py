@@ -21,6 +21,7 @@ from newsapp.seo_direct import (
     SitemapEngine,
     SchemaEngine,
     MetaEngine,
+    article_schema_payloads,
     generate_rss,
     GoogleIndexingAPI,
     IndexNow,
@@ -203,12 +204,7 @@ def api_seo_article(request, slug):
         return JsonResponse({"error": "Not found"}, status=404)
 
     meta    = MetaEngine.for_article(article)
-    schemas = [
-        SchemaEngine.news_article(article),
-        SchemaEngine.breadcrumb(article),
-        SchemaEngine.organization(),
-        SchemaEngine.website(),
-    ]
+    schemas = article_schema_payloads(article)
     head_html = MetaEngine.render_head(meta, schemas)
 
     return JsonResponse({

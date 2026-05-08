@@ -715,6 +715,34 @@ def _save_article_from_request(request, article=None):
     article.noindex            = data.get('noindex', 'false').lower() in ('true', '1', 'on')
     article.nofollow           = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
     article.in_sitemap         = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
+    article.schema_types       = data.get('schema_types', 'NewsArticle,Article').strip() or 'NewsArticle,Article'
+    article.schema_headline    = data.get('schema_headline', '').strip()
+    article.schema_alternative_headline = data.get('schema_alternative_headline', '').strip()
+    article.schema_description = data.get('schema_description', '').strip()
+    article.schema_article_section = data.get('schema_article_section', '').strip()
+    article.schema_keywords    = data.get('schema_keywords', '').strip()
+    article.schema_author_name = data.get('schema_author_name', '').strip()
+    article.schema_author_url  = data.get('schema_author_url', '').strip()
+    article.schema_image_url   = data.get('schema_image_url', '').strip()
+    article.schema_publisher_name = data.get('schema_publisher_name', '').strip()
+    article.schema_publisher_logo_url = data.get('schema_publisher_logo_url', '').strip()
+    article.schema_organization_type = data.get('schema_organization_type', '').strip()
+    article.schema_custom_jsonld = data.get('schema_custom_jsonld', '').strip()
+
+    schema_sameas_raw = data.get('schema_organization_sameas', '[]')
+    try:
+        parsed_sameas = json.loads(schema_sameas_raw) if isinstance(schema_sameas_raw, str) else schema_sameas_raw
+    except (TypeError, ValueError):
+        parsed_sameas = [part.strip() for part in str(schema_sameas_raw or '').split(',')]
+    article.schema_organization_sameas = [
+        item for item in dict.fromkeys(str(item or '').strip() for item in (parsed_sameas or []))
+        if item
+    ]
+
+    schema_date_published_val = data.get('schema_date_published', '').strip()
+    article.schema_date_published = _parse_ist_datetime(schema_date_published_val) if schema_date_published_val else None
+    schema_date_modified_val = data.get('schema_date_modified', '').strip()
+    article.schema_date_modified = _parse_ist_datetime(schema_date_modified_val) if schema_date_modified_val else None
 
     article.image_alt    = data.get('image_alt', '').strip()
     article.image_source = data.get('image_source', '').strip()
@@ -1142,7 +1170,7 @@ def article_detail(request, pk):
 
 from django.shortcuts import render, get_object_or_404
 from newsapp.models import Article
-from newsapp.seo_direct import MetaEngine, SchemaEngine
+from newsapp.seo_direct import MetaEngine, SchemaEngine, article_schema_payloads
 
 def normalize_article_canonical(raw_value, slug):
     canonical = (raw_value or '').strip()
@@ -1171,10 +1199,7 @@ def article_detail_page(request, slug, category_slug=None):
         return redirect(article_path(article), permanent=True)
 
     meta = MetaEngine.for_article(article)
-    schemas = [
-        SchemaEngine.news_article(article),
-        SchemaEngine.breadcrumb(article),
-    ]
+    schemas = article_schema_payloads(article)
 
     seo_head = MetaEngine.render_head(meta, schemas)
 
@@ -3300,6 +3325,7 @@ def ai_seo_keywords(request):
 # SETTINGS API
 # ═══════════════════════════════════════════════════════
 
+@staff_member_required
 @staff_member_required
 @require_POST
 def save_tag_creation_perm(request):

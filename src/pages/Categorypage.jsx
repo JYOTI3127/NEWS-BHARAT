@@ -463,7 +463,7 @@ export default function CategoryPage() {
                           <img
                             src={article.image}
                             alt={article.title}
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full ${isWorldNewsCategory ? "object-contain" : "object-cover"}`}
                             loading="lazy"
                             decoding="async"
                             width={128}

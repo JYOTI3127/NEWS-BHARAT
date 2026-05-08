@@ -74,11 +74,12 @@ const getCardPositionClass = (relative, total) => {
 
 // CardImage: no crop, anchored at bottom
 const CardImage = ({ src, alt, isCenter, onLoad, onError }) => (
-  <div className="absolute inset-0 overflow-hidden rounded-[inherit] bg-transparent">
+  <div className="absolute inset-0 overflow-hidden rounded-[inherit] bg-[#f3f4f6]">
     <img
       src={src}
       alt={alt}
-      className="absolute inset-0 h-full w-full object-contain object-top"
+      className="absolute inset-0 h-full w-full object-contain object-center [backface-visibility:hidden]"
+      style={{ transform: "translateZ(0)" }}
       loading={isCenter ? "eager" : "lazy"}
       fetchPriority={isCenter ? "high" : "auto"}
       onLoad={onLoad}
@@ -299,7 +300,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-pair-${offset}`}
-                className="relative flex w-full cursor-pointer flex-col overflow-hidden rounded-none bg-transparent shadow-[0_16px_28px_rgba(0,0,0,0.45)] aspect-[3/5]"
+                className="relative flex w-full cursor-pointer flex-col overflow-hidden rounded-none bg-white shadow-[0_16px_28px_rgba(0,0,0,0.45)] aspect-[3/5]"
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -310,7 +311,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full">
+                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -355,7 +356,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-tab4-${index}`}
-                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_1024_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
+                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_1024_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-white`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -366,7 +367,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full">
+                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -411,7 +412,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={`${slide._cardKey || slide.id || slide.slug || index}-quad-${index}`}
-                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_768_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
+                className={`${CARD_BASE_CLASSNAME} ${FOUR_CARD_768_CARD_SIZE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-white`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -422,7 +423,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full">
+                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -463,7 +464,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
             return (
               <article
                 key={slide._cardKey || slide.id || slide.slug || index}
-                className={`${CARD_BASE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-transparent`}
+                className={`${CARD_BASE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-white`}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -474,7 +475,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full">
+                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}

@@ -70,7 +70,32 @@ const normalizeArticles = (data) => {
 
 const getArticleImage   = (a) => a?.image_url || a?.image || "";
 const getArticleTitle   = (a) => a?.title || a?.headline || "Untitled";
-const getArticleSummary = (a) => a?.subtitle || a?.description || a?.summary || a?.excerpt || "";
+const getSectionArticleTitle = (article, section) => {
+  const primary = String(getArticleTitle(article) || "").trim();
+
+  if (section?.key === "automobile" && /(\.\.\.|�)$/.test(primary)) {
+    const fallback = String(article?.headline || article?.article_title || "").trim();
+    if (fallback && fallback.length > primary.length) return fallback;
+  }
+
+  return primary || "Untitled";
+};
+const getArticleSummary = (a) =>
+  String(
+    a?.subtitle ||
+    a?.description ||
+    a?.summary ||
+    a?.excerpt ||
+    a?.short_description ||
+    a?.intro ||
+    a?.content ||
+    ""
+  )
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 const getCategoryLabel  = (a, fallback) => {
   const details = Array.isArray(a?.category_details) ? a.category_details : [];
   const breakingCategory = details.find((cat) => {
@@ -248,7 +273,10 @@ const EditorialSection = memo(({ section, articles }) => {
     <section className="hcs-section">
       <SectionHeader title={section.title} path={section.path} />
       <div className="hcs-editorial">
-        <StoryLink article={featured} className="hcs-editorial-featured">
+        <StoryLink
+          article={featured}
+          className={`hcs-editorial-featured${section.key === "world-news" ? " hcs-editorial-featured--world" : ""}${section.key === "ai" ? " hcs-editorial-featured--ai" : ""}`}
+        >
           <div className="hcs-editorial-image-wrap">
             <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-editorial-image" />
             <div className="hcs-editorial-overlay" />
@@ -257,7 +285,7 @@ const EditorialSection = memo(({ section, articles }) => {
             {shouldShowCategoryLabel(section) ? (
               <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
             ) : null}
-            <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
+            <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
           </div>
@@ -265,7 +293,11 @@ const EditorialSection = memo(({ section, articles }) => {
         <div className="hcs-editorial-side">
           {sideItems.map((article) => (
             <StoryLink key={article.id || article.slug} article={article} className="hcs-side-card">
-              <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-side-thumb" />
+              <ArticleThumb
+                article={article}
+                alt={getArticleTitle(article)}
+                className={`hcs-side-thumb${section.key === "world-news" ? " hcs-world-news-side-thumb" : ""}${section.key === "ai" ? " hcs-ai-side-thumb" : ""}`}
+              />
               <div className="hcs-side-copy">
                 {shouldShowCategoryLabel(section) ? (
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
@@ -294,7 +326,11 @@ const ScorelineSection = memo(({ section, articles }) => {
       <div className="hcs-scoreline">
         <StoryLink article={featured} className="hcs-scoreline-featured">
           <div className="hcs-scoreline-image-wrap">
-            <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-scoreline-image" />
+            <ArticleThumb
+              article={featured}
+              alt={getArticleTitle(featured)}
+              className={`hcs-scoreline-image${section.key === "sports" ? " hcs-scoreline-image--sports" : ""}`}
+            />
           </div>
           <div className="hcs-scoreline-text">
             <span className="hcs-kicker">Top Story</span>
@@ -384,16 +420,20 @@ const SpotlightSection = memo(({ section, articles }) => {
   const bottomItems = articles.slice(3, 6);
   if (!featured) return <SectionFallback title={section.title} path={section.path} />;
   return (
-    <section className="hcs-section">
+    <section className={`hcs-section${section.key === "automobile" ? " hcs-section-automobile" : ""}`}>
       <SectionHeader title={section.title} path={section.path} />
       <div className="hcs-spotlight">
         <StoryLink article={featured} className="hcs-spotlight-main">
-          <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-spotlight-main-image" />
+          <ArticleThumb
+            article={featured}
+            alt={getArticleTitle(featured)}
+            className={`hcs-spotlight-main-image${section.key === "automobile" ? " hcs-automobile-main-image" : ""}`}
+          />
           <div className="hcs-spotlight-main-copy">
             {shouldShowCategoryLabel(section) ? (
               <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
             ) : null}
-            <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
+            <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
           </div>
@@ -401,12 +441,16 @@ const SpotlightSection = memo(({ section, articles }) => {
         <div className="hcs-spotlight-side">
           {sideItems.map((article) => (
             <StoryLink key={article.id || article.slug} article={article} className="hcs-side-card">
-              <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-side-thumb" />
+              <ArticleThumb
+                article={article}
+                alt={getArticleTitle(article)}
+                className={`hcs-side-thumb${section.key === "automobile" ? " hcs-automobile-side-thumb" : ""}`}
+              />
               <div className="hcs-side-copy">
                 {shouldShowCategoryLabel(section) ? (
                   <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
                 ) : null}
-                <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getArticleTitle(article)}</h4>
+                <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getSectionArticleTitle(article, section)}</h4>
                 {section.key === "automobile" && getArticleSummary(article) ? (
                   <p className="hcs-side-summary hcs-automobile-side-summary">{getArticleSummary(article)}</p>
                 ) : null}
@@ -419,9 +463,13 @@ const SpotlightSection = memo(({ section, articles }) => {
       <div className="hcs-bottom-rail">
         {bottomItems.map((article) => (
           <StoryLink key={article.id || article.slug} article={article} className="hcs-bottom-rail-card">
-            <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-bottom-rail-thumb" />
+            <ArticleThumb
+              article={article}
+              alt={getArticleTitle(article)}
+              className={`hcs-bottom-rail-thumb${section.key === "automobile" ? " hcs-automobile-bottom-thumb" : ""}`}
+            />
             <div className="hcs-bottom-rail-copy">
-              <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getArticleTitle(article)}</h4>
+              <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getSectionArticleTitle(article, section)}</h4>
               {section.key === "automobile" && getArticleSummary(article) ? (
                 <p className="hcs-side-summary hcs-automobile-side-summary">{getArticleSummary(article)}</p>
               ) : null}
@@ -529,3 +577,4 @@ export default function HomeCategorySections({ articles: passedArticles = null }
     </div>
   );
 }
+

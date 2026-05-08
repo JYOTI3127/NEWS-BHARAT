@@ -481,9 +481,12 @@ const PUSH_REQUEST_TIMEOUT_MS = 12000;
 const PUSH_USER_IDENTITY_STORAGE_KEYS = [
   "news4bharat_user",
   "news4bharat_auth_user",
+  "news4bharat_user_profile",
   "auth_user",
   "current_user",
   "currentUser",
+  "logged_in_user",
+  "loggedInUser",
   "user",
   "profile",
 ];
@@ -503,6 +506,34 @@ const readJsonFromStorageKey = (storage, key) => {
 
 const pickFirstNonEmptyString = (values = []) =>
   values.find((value) => typeof value === "string" && value.trim())?.trim() || "";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+const isValidEmailAddress = (value) => EMAIL_PATTERN.test(String(value || "").trim());
+
+const collectUserSourceObjects = (sources = []) => {
+  const seen = new Set();
+  const queue = [...sources];
+  const collected = [];
+
+  const nestedObjectKeys = ["user", "profile", "data", "result", "subscriber", "account"];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object") continue;
+
+    if (seen.has(current)) continue;
+    seen.add(current);
+    collected.push(current);
+
+    nestedObjectKeys.forEach((key) => {
+      const nested = current?.[key];
+      if (nested && typeof nested === "object") queue.push(nested);
+    });
+  }
+
+  return collected;
+};
 
 const getPushSubscriberIdentity = () => {
   if (typeof window === "undefined") {
@@ -525,7 +556,7 @@ const getPushSubscriberIdentity = () => {
     window.__USER__,
   ].filter((value) => value && typeof value === "object");
 
-  const userSources = [...storedObjects, ...globalUserCandidates];
+  const userSources = collectUserSourceObjects([...storedObjects, ...globalUserCandidates]);
 
   const subscriberName = pickFirstNonEmptyString([
     ...userSources.map((item) => item?.subscriber_name),
@@ -534,9 +565,13 @@ const getPushSubscriberIdentity = () => {
     ...userSources.map((item) => item?.fullName),
     ...userSources.map((item) => item?.name),
     ...userSources.map((item) => item?.username),
+    window.localStorage.getItem("full_name"),
+    window.localStorage.getItem("fullName"),
     window.localStorage.getItem("subscriber_name"),
     window.localStorage.getItem("user_name"),
     window.localStorage.getItem("name"),
+    window.sessionStorage.getItem("full_name"),
+    window.sessionStorage.getItem("fullName"),
     window.sessionStorage.getItem("subscriber_name"),
     window.sessionStorage.getItem("user_name"),
     window.sessionStorage.getItem("name"),
@@ -548,9 +583,11 @@ const getPushSubscriberIdentity = () => {
     ...userSources.map((item) => item?.email),
     ...userSources.map((item) => item?.user_email),
     ...userSources.map((item) => item?.userEmail),
+    window.localStorage.getItem("email_address"),
     window.localStorage.getItem("subscriber_email"),
     window.localStorage.getItem("user_email"),
     window.localStorage.getItem("email"),
+    window.sessionStorage.getItem("email_address"),
     window.sessionStorage.getItem("subscriber_email"),
     window.sessionStorage.getItem("user_email"),
     window.sessionStorage.getItem("email"),
@@ -1406,7 +1443,28 @@ const Header = () => {
       });
 
       const subscriptionJson = subscription.toJSON();
-      const { subscriberName, subscriberEmail } = getPushSubscriberIdentity();
+      let { subscriberName, subscriberEmail } = getPushSubscriberIdentity();
+
+      if (!subscriberName) {
+        const enteredName = window.prompt("Notifications ke liye apna naam enter karein:") || "";
+        subscriberName = String(enteredName).trim();
+      }
+
+      if (!subscriberEmail) {
+        const enteredEmail = window.prompt("Notifications ke liye apni email enter karein:") || "";
+        subscriberEmail = String(enteredEmail).trim();
+      }
+
+      if (!subscriberName || !subscriberEmail || !isValidEmailAddress(subscriberEmail)) {
+        await subscription.unsubscribe().catch(() => { });
+        setIsPushSubscribed(false);
+        window.localStorage.removeItem(PUSH_STATE_STORAGE_KEY);
+        window.alert("Valid name aur email required hain notifications enable karne ke liye.");
+        return;
+      }
+
+      window.localStorage.setItem("subscriber_name", subscriberName);
+      window.localStorage.setItem("subscriber_email", subscriberEmail);
       const payload = {
         endpoint: subscriptionJson.endpoint,
         keys: {

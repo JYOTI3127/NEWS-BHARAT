@@ -514,7 +514,7 @@ export default function VisualStoriesWithScore() {
                         />
                         <span
                             className="font-bold text-[#111] uppercase"
-                            style={{ fontSize: is4K ? "26px" : isMobile ? "14px" : "18px" }}
+                            style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px" }}
                         >
                             Bharat Economy & Business
                         </span>

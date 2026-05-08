@@ -38,7 +38,7 @@
 .mss-header-title {
   margin: 0;
   color: #101010;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
@@ -178,7 +178,7 @@
 }
 
 .mss-root-4k .mss-header-title {
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .mss-root-4k .mss-grid {
@@ -234,7 +234,7 @@
   }
 
   .mss-header-title {
-    font-size: 28px;
+    font-size: 30px;
   }
 
   .mss-grid {
@@ -276,7 +276,7 @@
   }
 
   .mss-header-title {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .mss-thumb {
@@ -333,7 +333,7 @@
   }
 
   .mss-header-title {
-    font-size: 17px;
+    font-size: 19px;
   }
 }
 
@@ -353,7 +353,7 @@
   }
 
   .mss-header-title {
-    font-size: 15px;
+    font-size: 17px;
   }
 
   .mss-thumb {
@@ -386,7 +386,7 @@
   }
 
   .mss-header-title {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .mss-thumb {

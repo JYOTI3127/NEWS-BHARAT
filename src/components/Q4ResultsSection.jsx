@@ -138,7 +138,7 @@ export default function Q4ResultsSection({ articles = [] }) {
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-red-600">
             Corporate Tracker
           </p>
-          <h2 id="q4-results-heading" className="text-[24px] font-extrabold leading-none text-slate-900">
+          <h2 id="q4-results-heading" className="text-[28px] font-extrabold leading-none text-slate-900 max-[425px]:text-[22px]">
             Q4 Results
           </h2>
         </div>
@@ -162,4 +162,3 @@ export default function Q4ResultsSection({ articles = [] }) {
     </section>
   );
 }
-

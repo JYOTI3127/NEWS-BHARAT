@@ -329,6 +329,25 @@ img {
   margin: 0 auto !important;
 }
 
+.article-content blockquote:not(.twitter-tweet) {
+  margin: 1.4rem 0;
+  padding: 14px 18px;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-style: italic;
+  line-height: 1.75;
+}
+
+.article-content blockquote:not(.twitter-tweet) p {
+  margin: 0;
+}
+
+.article-content blockquote:not(.twitter-tweet) + blockquote:not(.twitter-tweet) {
+  margin-top: 0.9rem;
+}
+
 .article-content .article-twitter-embed iframe,
 .article-content iframe.twitter-tweet,
 .article-content .twitter-tweet-rendered {
@@ -15332,6 +15351,80 @@ img {
 @media (min-width: 769px) and (max-width: 1024px) {
   .article-hero-image-card {
     margin-bottom: 10px !important;
+  }
+}
+
+/* Homepage section heading size boost */
+.nps-section-title,
+.sn-heading-text {
+  font-size: 20px !important;
+}
+
+.nps-health-header-text {
+  font-size: 15px !important;
+}
+
+.sn-defence-head {
+  font-size: 14px !important;
+}
+
+@media (min-width: 1441px) {
+  .nps-section-title,
+  .sn-heading-text {
+    font-size: 24px !important;
+  }
+
+  .nps-health-header-text {
+    font-size: 18px !important;
+  }
+
+  .sn-defence-head {
+    font-size: 17px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nps-section-title,
+  .sn-heading-text {
+    font-size: 18px !important;
+  }
+
+  .nps-health-header-text {
+    font-size: 14px !important;
+  }
+
+  .sn-defence-head {
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 425px) {
+  .nps-section-title,
+  .sn-heading-text {
+    font-size: 16px !important;
+  }
+
+  .nps-health-header-text {
+    font-size: 13px !important;
+  }
+
+  .sn-defence-head {
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .nps-section-title,
+  .sn-heading-text {
+    font-size: 14px !important;
+  }
+
+  .nps-health-header-text {
+    font-size: 12px !important;
+  }
+
+  .sn-defence-head {
+    font-size: 11px !important;
   }
 }
 

@@ -40,7 +40,7 @@
 .hcs-header-title {
   margin: 0;
   color: #101010;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
@@ -124,8 +124,10 @@
 }
 
 .hcs-world-news-side-title {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
 }
 
 .hcs-world-news-side-summary {
@@ -133,14 +135,49 @@
   line-clamp: 1;
 }
 
+.hcs-world-news-side-thumb {
+  object-fit: contain;
+  object-position: center;
+  background: #f3f4f6;
+}
+
+.hcs-ai-side-thumb {
+  object-fit: contain;
+  object-position: center;
+  background: #f3f4f6;
+}
+
+.hcs-automobile-main-image,
+.hcs-automobile-side-thumb,
+.hcs-automobile-bottom-thumb {
+  object-fit: contain;
+  object-position: center;
+  background: #f3f4f6;
+}
+
 .hcs-automobile-side-title {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  -webkit-box-orient: initial;
+  overflow: visible;
 }
 
 .hcs-automobile-side-summary {
   -webkit-line-clamp: 1;
   line-clamp: 1;
+}
+
+@media (max-width: 768px) {
+  .hcs-section-automobile .hcs-featured-title,
+  .hcs-section-automobile .hcs-side-title,
+  .hcs-automobile-side-title {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    overflow: visible !important;
+  }
 }
 
 @media (min-width: 1025px) {
@@ -150,8 +187,8 @@
   }
 
   .hcs-ai-side-summary {
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 }
 
@@ -227,6 +264,18 @@
   object-fit: cover;
   display: block;
   transition: transform 0.35s ease;
+}
+
+.hcs-editorial-featured--world .hcs-editorial-image {
+  object-fit: contain;
+  object-position: center;
+  background: #f3f4f6;
+}
+
+.hcs-editorial-featured--ai .hcs-editorial-image {
+  object-fit: contain;
+  object-position: center top;
+  background: #111;
 }
 
 .hcs-editorial-overlay {
@@ -325,6 +374,11 @@
   object-fit: cover;
   display: block;
   transition: transform 0.35s ease;
+}
+
+.hcs-scoreline-image--sports {
+  object-fit: cover;
+  object-position: center top;
 }
 
 .hcs-scoreline-text {
@@ -440,7 +494,7 @@
 
 .hcs-card-thumb {
   width: 100%;
-  height: 180px;
+  height: 133px;
   object-fit: cover;
   display: block;
   background: #eee6dd;
@@ -513,7 +567,7 @@
 }
 
 .hcs-root-4k .hcs-header-title {
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .hcs-root-4k .hcs-header-link {
@@ -565,7 +619,7 @@
   }
 
   .hcs-header-title {
-    font-size: 28px;
+    font-size: 30px;
   }
 
   .hcs-header-link {
@@ -617,6 +671,30 @@
   transition: transform 0.35s ease;
 }
 
+.hcs-section-automobile .hcs-bottom-rail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.hcs-section-automobile .hcs-bottom-rail-thumb {
+  width: 100%;
+  height: 150px;
+  border-radius: 0;
+}
+
+.hcs-section-automobile .hcs-bottom-rail-copy {
+  padding: 12px;
+  gap: 6px;
+}
+
+.hcs-section-automobile .hcs-bottom-rail-copy .hcs-automobile-side-summary {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .hcs-editorial-featured:hover .hcs-editorial-image,
 .hcs-side-card:hover .hcs-side-thumb,
 .hcs-scoreline-featured:hover .hcs-scoreline-image,
@@ -642,7 +720,7 @@
   }
 
   .hcs-header-title {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .hcs-header-link {
@@ -691,8 +769,9 @@
 
 @media (min-width: 768px) and (max-width: 1440px) {
   .hcs-world-news-side-title {
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
   }
 
   .hcs-world-news-side-summary {
@@ -762,7 +841,7 @@
   }
 
   .hcs-header-title {
-    font-size: 17px;
+    font-size: 19px;
   }
 
   .hcs-header-link {
@@ -817,7 +896,7 @@
   }
 
   .hcs-header-title {
-    font-size: 15px;
+    font-size: 17px;
   }
 
   .hcs-header-link {
@@ -920,7 +999,7 @@
   }
 
   .hcs-header-title {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .hcs-featured-title {
@@ -988,7 +1067,7 @@
   }
 
   .hcs-header-title {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .hcs-header-link {

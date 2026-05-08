@@ -320,6 +320,8 @@ const getArticleBodyPayload = (article) => {
     ["sanitized_content_html", article?.sanitized_content_html],
     ["normalized_content_html", article?.normalized_content_html],
     ["content_html", article?.content_html],
+    ["content_raw", article?.content_raw],
+    ["article_content_raw", article?.article_content_raw],
     ["content", article?.content],
     ["article_content_html", article?.article_content_html],
     ["article_content", article?.article_content],
@@ -395,6 +397,101 @@ const getRobotsContent = (article) => {
   const parts = [article?.noindex ? "noindex" : "index", article?.nofollow ? "nofollow" : "follow"];
   if (!article?.noindex) parts.push("max-snippet:-1", "max-image-preview:large");
   return parts.join(",");
+};
+
+const STRUCTURED_DATA_CONTAINER_KEYS = [
+  "schemas",
+  "schema",
+  "schema_list",
+  "structured_data",
+  "structured_datakey",
+  "json_ld",
+  "jsonld",
+  "custom_json_ld",
+  "custom_schema",
+  "custom_schemas",
+  "payload",
+  "data",
+  "result",
+  "results",
+  "items",
+];
+
+const parseJsonMaybe = (value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value;
+  try { return JSON.parse(trimmed); } catch { return value; }
+};
+
+const isSchemaPlainObject = (value) =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const looksLikeSchemaObject = (value) =>
+  isSchemaPlainObject(value) &&
+  (Object.prototype.hasOwnProperty.call(value, "@type") ||
+    Object.prototype.hasOwnProperty.call(value, "@context"));
+
+const extractStructuredDataSchemas = (input, depth = 0, seen = new Set()) => {
+  if (depth > 10 || input == null) return [];
+
+  const parsed = parseJsonMaybe(input);
+  if (parsed !== input) {
+    return extractStructuredDataSchemas(parsed, depth + 1, seen);
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.flatMap((item) => extractStructuredDataSchemas(item, depth + 1, seen));
+  }
+
+  if (!isSchemaPlainObject(parsed)) return [];
+  if (seen.has(parsed)) return [];
+  seen.add(parsed);
+
+  if (looksLikeSchemaObject(parsed)) return [parsed];
+
+  const prioritized = STRUCTURED_DATA_CONTAINER_KEYS.flatMap((key) =>
+    Object.prototype.hasOwnProperty.call(parsed, key)
+      ? extractStructuredDataSchemas(parsed[key], depth + 1, seen)
+      : []
+  );
+  if (prioritized.length > 0) return prioritized;
+
+  return Object.values(parsed).flatMap((value) =>
+    extractStructuredDataSchemas(value, depth + 1, seen)
+  );
+};
+
+const getSchemaTypeTokens = (schema) => {
+  const raw = schema?.["@type"];
+  if (Array.isArray(raw)) return raw.map((item) => String(item || "").trim()).filter(Boolean);
+  const one = String(raw || "").trim();
+  return one ? [one] : [];
+};
+
+const schemaHasType = (schema, expectedType) =>
+  getSchemaTypeTokens(schema).some((type) => type.toLowerCase() === String(expectedType || "").toLowerCase());
+
+const normalizeStructuredSchemaObject = (schema) => {
+  if (!looksLikeSchemaObject(schema)) return null;
+  const normalized = { ...schema };
+  if (!normalized["@context"]) normalized["@context"] = "https://schema.org";
+  return normalized;
+};
+
+const dedupeStructuredSchemas = (schemas) => {
+  const seen = new Set();
+  const unique = [];
+  schemas.forEach((schema) => {
+    const normalized = normalizeStructuredSchemaObject(schema);
+    if (!normalized) return;
+    const key = JSON.stringify(normalized);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    unique.push(normalized);
+  });
+  return unique;
 };
 
 const XIcon = ({ size = 15 }) => (
@@ -526,6 +623,29 @@ const normalizeArticleContent = (html, options = {}) => {
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
     .replace(/<h1(\b[^>]*)>/gi, "<h2$1>")
     .replace(/<\/h1>/gi, "</h2>");
+
+  // Preserve paragraph/block formatting for raw text payloads.
+  // When backend sends plain text in content_raw, convert newlines into block HTML.
+  const hasHtmlMarkup = /<\/?[a-z][\s\S]*>/i.test(normalized);
+  if (!hasHtmlMarkup) {
+    const escapeHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    const blocks = normalized
+      .replace(/\r\n?/g, "\n")
+      .split(/\n{2,}/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (blocks.length > 0) {
+      normalized = blocks
+        .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br />")}</p>`)
+        .join("");
+    }
+  }
+
   if (typeof window === "undefined" || typeof DOMParser === "undefined") return normalized;
   const doc = new DOMParser().parseFromString(normalized, "text/html");
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
@@ -928,6 +1048,7 @@ export default function ArticleDetails() {
   const [allArticles, setAllArticles] = useState([]);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [seoEndpointSchemaState, setSeoEndpointSchemaState] = useState({ slug: "", schemas: [] });
   const [categoryMoreArticles, setCategoryMoreArticles] = useState([]);
   const [copied, setCopied] = useState(false);
   const [moreInListMaxHeight, setMoreInListMaxHeight] = useState(null);
@@ -1030,6 +1151,69 @@ export default function ArticleDetails() {
   }, [articleLookupCandidates, articleSlug, categorySlug]);
 
   useEffect(() => {
+    if (!article) return;
+
+    const controller = new AbortController();
+    let ignore = false;
+    const currentSlug = normalizeSlugValue(article?.slug || articleSlug);
+
+    const seoSlugCandidates = collectSlugCandidates(
+      article?.slug,
+      ...articleLookupCandidates,
+      getSlugFromUrlLikeValue(article?.public_url),
+      getSlugFromUrlLikeValue(article?.canonical_url),
+      getSlugFromUrlLikeValue(article?.url),
+      getSlugFromUrlLikeValue(article?.link)
+    );
+
+    const loadSeoSchemas = async () => {
+      for (const slugCandidate of seoSlugCandidates) {
+        try {
+          const response = await fetchWithRetry(
+            apiUrl(`/seo/article/${encodeURIComponent(slugCandidate)}/`),
+            { signal: controller.signal, cache: "no-store" },
+            2
+          );
+
+          if (!response.ok) {
+            if (response.status === 404) continue;
+            break;
+          }
+
+          const payload = await response.json();
+          const schemas = dedupeStructuredSchemas(extractStructuredDataSchemas(payload));
+          if (schemas.length > 0) {
+            if (!ignore) {
+              setSeoEndpointSchemaState({
+                slug: currentSlug || slugCandidate,
+                schemas,
+              });
+            }
+            return;
+          }
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          break;
+        }
+      }
+
+      if (!ignore) {
+        setSeoEndpointSchemaState({
+          slug: currentSlug,
+          schemas: [],
+        });
+      }
+    };
+
+    loadSeoSchemas();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [article, articleLookupCandidates, articleSlug]);
+
+  useEffect(() => {
     if (!article) { setCategoryMoreArticles([]); return; }
     const primary = getArticleCategoryDetails(article)[0];
     const primarySlug = String(primary?.slug || primary?.category_slug || categorySlug || "").trim();
@@ -1059,9 +1243,8 @@ export default function ArticleDetails() {
       const bodyText = articleContentRef.current?.textContent?.trim() || "";
       const hasBodyContent = bodyText.length >= 120;
       const jsonLdScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-      const hasNewsArticleSchema = jsonLdScripts.some((node) => /"@type"\s*:\s*"NewsArticle"|"@type"\s*:\s*\[\s*"NewsArticle"/i.test(node.textContent || ""));
-      const hasBreadcrumbSchema = jsonLdScripts.some((node) => /"@type"\s*:\s*"BreadcrumbList"/i.test(node.textContent || ""));
-      return hasBodyContent && hasNewsArticleSchema && hasBreadcrumbSchema;
+      const hasStructuredData = jsonLdScripts.length > 0;
+      return hasBodyContent && hasStructuredData;
     };
     if (!isPrerenderRequest || !article) { rafId = window.requestAnimationFrame(emitReady); return () => window.cancelAnimationFrame(rafId); }
     const checkAndEmit = () => { if (isArticleRenderReady()) { window.clearInterval(intervalId); window.clearTimeout(timeoutId); emitReady(); } };
@@ -1234,6 +1417,41 @@ export default function ArticleDetails() {
     ],
   };
 
+  const articlePayloadSchemas = dedupeStructuredSchemas(
+    extractStructuredDataSchemas({
+      structured_datakey: article?.structured_datakey,
+      structured_data: article?.structured_data,
+      schema: article?.schema,
+      schemas: article?.schemas,
+      seo: article?.seo,
+    })
+  );
+
+  const currentArticleSlugToken = normalizeSlugValue(article?.slug || articleSlug).toLowerCase();
+  const seoEndpointSchemas =
+    currentArticleSlugToken &&
+      normalizeSlugValue(seoEndpointSchemaState.slug).toLowerCase() === currentArticleSlugToken
+      ? seoEndpointSchemaState.schemas
+      : [];
+
+  const backendPreferredSchemas = seoEndpointSchemas.length > 0 ? seoEndpointSchemas : articlePayloadSchemas;
+  const resolvedJsonLdSchemas = (() => {
+    if (backendPreferredSchemas.length === 0) {
+      return [articleSchema, breadcrumbSchema];
+    }
+
+    const merged = [...backendPreferredSchemas];
+    const hasArticleSchema =
+      backendPreferredSchemas.some((schema) => schemaHasType(schema, "NewsArticle")) ||
+      backendPreferredSchemas.some((schema) => schemaHasType(schema, "Article"));
+    const hasBreadcrumbSchema = backendPreferredSchemas.some((schema) => schemaHasType(schema, "BreadcrumbList"));
+
+    if (!hasArticleSchema) merged.push(articleSchema);
+    if (!hasBreadcrumbSchema) merged.push(breadcrumbSchema);
+
+    return dedupeStructuredSchemas(merged);
+  })();
+
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
 
@@ -1277,8 +1495,11 @@ export default function ArticleDetails() {
         <meta name="twitter:image:alt" content={imageAlt} />
         {date && <meta property="article:published_time" content={date} />}
         {modifiedDate && <meta property="article:modified_time" content={modifiedDate} />}
-        <script type="application/ld+json">{JSON.stringify(articleSchema)}</script>
-        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
+        {resolvedJsonLdSchemas.map((schema, index) => (
+          <script key={`article-schema-${index}`} type="application/ld+json">
+            {JSON.stringify(schema)}
+          </script>
+        ))}
       </Helmet>
 
       <AdvertisementSlot page="article_detail" placement="home_top" variant="leaderboard" className="home-top-ad home-top-ad--desktop" minWidth={769} />

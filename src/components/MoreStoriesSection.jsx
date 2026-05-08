@@ -5,6 +5,7 @@ import { API_BASE, fetchArticles } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
 const CATEGORY_API = `${API_BASE}/categories/`;
+const MORE_STORIES_OLD_LIMIT = 20;
 
 const HOME_VISIBLE_SECTIONS = [
   { slugs: ["world-news", "worldnews"], visibleCount: 5 },
@@ -233,9 +234,11 @@ export default function MoreStoriesSection({ articles: passedArticles = [] }) {
         const fetchedArticles = await fetchMergedArticles();
         const sourceArticles = fetchedArticles.length > localArticles.length ? fetchedArticles : localArticles;
         const homeVisibleKeys = getHomeVisibleArticleKeys(sourceArticles);
+        const nonVisibleArticles = sourceArticles.filter((article) => !hasAnyArticleKey(article, homeVisibleKeys));
+        const oldestArticles = nonVisibleArticles.slice(-MORE_STORIES_OLD_LIMIT);
 
         if (!ignore) {
-          setArticles(sourceArticles.filter((article) => !hasAnyArticleKey(article, homeVisibleKeys)));
+          setArticles(oldestArticles);
         }
       } catch {
         if (!ignore) {

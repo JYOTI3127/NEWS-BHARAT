@@ -21,9 +21,16 @@ const getAdImageUrl = (ad) => {
 };
 
 const getAdLinkUrl = (ad) => ad?.link_url || ad?.ad_link_url || ad?.ad_link || "";
+const getAdAltText = (ad, fallback = "") =>
+  String(ad?.alt || ad?.image_alt || ad?.name || ad?.title || fallback || "Sponsored advertisement").trim();
 
 const getAdPlacement = (ad) =>
   String(ad?.placement || ad?.slot || ad?.slot_name || ad?.position || ad?.location || "").trim();
+
+const normalizePlacement = (value) => String(value || "").trim().toLowerCase();
+
+const isSamePlacement = (ad, placement) =>
+  normalizePlacement(getAdPlacement(ad)) === normalizePlacement(placement);
 
 const isAdActive = (ad) => ad?.is_active !== false && ad?.active !== false;
 
@@ -54,7 +61,7 @@ const pickAdForPlacement = (payload, placement, allowUnmatchedPlacement) => {
   const ads = getListFromPayload(payload).filter((ad) => isAdActive(ad) && getAdImageUrl(ad));
   if (ads.length === 0) return null;
 
-  const exactMatch = ads.find((ad) => getAdPlacement(ad) === placement);
+  const exactMatch = ads.find((ad) => isSamePlacement(ad, placement));
   if (exactMatch) return exactMatch;
 
   const hasPlacementData = ads.some((ad) => getAdPlacement(ad));
@@ -71,8 +78,33 @@ const getRotationBanners = (payload, placement) => {
   const withPlacement = eligible.filter((ad) => getAdPlacement(ad));
   if (withPlacement.length === 0) return eligible;
 
-  const exact = eligible.filter((ad) => getAdPlacement(ad) === placement);
-  return exact.length > 0 ? exact : [];
+  const exact = eligible.filter((ad) => isSamePlacement(ad, placement));
+  return exact.length > 0 ? exact : eligible;
+};
+
+const toAdIdentity = (ad, index = 0) =>
+  String(
+    ad?.id ||
+    ad?.slug ||
+    ad?.banner_id ||
+    ad?.ad_id ||
+    getAdImageUrl(ad) ||
+    index
+  ).trim().toLowerCase();
+
+const mergeUniqueAds = (...lists) => {
+  const merged = [];
+  const seen = new Set();
+
+  lists.flat().forEach((ad, index) => {
+    if (!ad || !getAdImageUrl(ad) || !isAdActive(ad)) return;
+    const key = toAdIdentity(ad, index);
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(ad);
+  });
+
+  return merged;
 };
 
 const parseBoolean = (value) => {
@@ -85,6 +117,7 @@ const parseBoolean = (value) => {
 const buildAdSlotState = (payload, placement, allowUnmatchedPlacement) => {
   const primaryAd = pickAdForPlacement(payload, placement, allowUnmatchedPlacement);
   if (!primaryAd) return null;
+  const slotAltText = getAdAltText(primaryAd, payload?.alt);
 
   const rotationEnabled = parseBoolean(payload?.rotation_enabled);
   const intervalSeconds = Number(payload?.rotation_interval_seconds);
@@ -93,6 +126,7 @@ const buildAdSlotState = (payload, placement, allowUnmatchedPlacement) => {
     : DEFAULT_ROTATION_INTERVAL_MS;
 
   let rotationAds = getRotationBanners(payload, placement);
+  rotationAds = mergeUniqueAds([primaryAd], rotationAds);
   const rotationCount = Number(payload?.rotation_count);
   if (Number.isFinite(rotationCount) && rotationCount > 0) {
     rotationAds = rotationAds.slice(0, rotationCount);
@@ -104,6 +138,7 @@ const buildAdSlotState = (payload, placement, allowUnmatchedPlacement) => {
       rotationAds: [primaryAd],
       rotationEnabled: false,
       rotationIntervalMs,
+      slotAltText,
     };
   }
 
@@ -112,6 +147,7 @@ const buildAdSlotState = (payload, placement, allowUnmatchedPlacement) => {
     rotationAds,
     rotationEnabled: true,
     rotationIntervalMs,
+    slotAltText,
   };
 };
 
@@ -275,10 +311,12 @@ function AdvertisementSlot({
   if (!adImageUrl) return null;
 
   const adLinkUrl = getAdLinkUrl(activeAd);
+  const adAltText = getAdAltText(activeAd, adSlotState?.slotAltText);
   const image = (
     <img
       src={adImageUrl}
-      alt={activeAd?.alt || activeAd?.title || "Sponsored advertisement"}
+      alt={adAltText}
+      title={adAltText}
       loading="lazy"
       decoding="async"
       width={size.width}
@@ -291,7 +329,7 @@ function AdvertisementSlot({
   return (
     <aside
       className={`home-ad-slot home-ad-slot--${variant} ${className}`.trim()}
-      aria-label="Sponsored advertisement"
+      aria-label={adAltText}
       style={{
         "--ad-width": `${size.width}px`,
         "--ad-height": `${size.height}px`,

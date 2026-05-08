@@ -1,4 +1,4 @@
-import { createElement, useState, useEffect } from "react";
+import { createElement, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart2, TrendingUp, PenLine, Cpu, Flame,
@@ -277,6 +277,13 @@ export default function MenuDrawer({ open, onClose }) {
   const [breakingArticles, setBreakingArticles] = useState([]);
   const [breakingLoading, setBreakingLoading] = useState(false);
 
+  const quickLinks = useMemo(() => {
+    const categoryPaths = new Set(
+      navSections.map((section) => `/category/${getFinalSlug(section?.slug, section?.label)}`)
+    );
+    return navLinks.filter((link) => !categoryPaths.has(String(link?.path || "").trim()));
+  }, [navSections]);
+
   useEffect(() => {
     if (!showBreaking || breakingArticles.length > 0) return;
     setBreakingLoading(true);
@@ -547,7 +554,7 @@ export default function MenuDrawer({ open, onClose }) {
           <div className="md-divider" />
           <div className="md-section-title">Quick Links</div>
 
-          {navLinks.map(({ label, path, isBreaking }) => (
+          {quickLinks.map(({ label, path, isBreaking }) => (
             <button key={label}
               className={`md-link${isBreaking && showBreaking ? " active" : ""}`}
               onClick={() => isBreaking ? setShowBreaking(v => !v) : handleNav(path)}

@@ -330,14 +330,19 @@ img {
 }
 
 .article-content blockquote:not(.twitter-tweet) {
-  margin: 1.4rem 0;
-  padding: 14px 18px;
-  border-left: 4px solid #2563eb;
-  border-radius: 10px;
-  background: #eff6ff;
-  color: #1e3a8a;
-  font-style: italic;
-  line-height: 1.75;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  margin: 1.4rem 0 !important;
+  padding: 14px 18px !important;
+  border-left: 4px solid #2563eb !important;
+  border-radius: 10px !important;
+  background: #eff6ff !important;
+  color: #1e3a8a !important;
+  font-style: italic !important;
+  line-height: 1.75 !important;
+  clear: both;
 }
 
 .article-content blockquote:not(.twitter-tweet) p {
@@ -15425,6 +15430,38 @@ img {
 
   .sn-defence-head {
     font-size: 11px !important;
+  }
+}
+
+@keyframes moreArticlesFloat {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 rgba(216, 1, 0, 0);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 18px rgba(216, 1, 0, 0.22);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 rgba(216, 1, 0, 0);
+  }
+}
+
+.more-articles-cta {
+  animation: moreArticlesFloat 2.6s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+.more-articles-cta:hover,
+.more-articles-cta:focus-visible {
+  animation-play-state: paused;
+  transform: translateY(-1px) scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-articles-cta {
+    animation: none;
   }
 }
 

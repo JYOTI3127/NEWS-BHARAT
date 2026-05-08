@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useEffect, Profiler } from 'react';
+import { Link } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchArticlePage,
@@ -363,6 +364,18 @@ const Home = () => {
         <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
           <MoreStoriesSection articles={allArticles} />
         </DeferredSection>
+
+        <div className="home-section-align mb-2 mt-2 px-4 sm:mt-3 sm:mb-4">
+          <div className="flex w-full justify-center">
+            <Link
+              to="/more-articles"
+              className="more-articles-cta inline-flex w-auto items-center justify-center rounded-full border border-[#D80100] bg-[#D80100] px-4 py-2 text-[13px] font-semibold leading-none tracking-[0.01em] text-white no-underline transition-colors hover:bg-[#b80000] hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D80100]/40 focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm"
+              style={{ textDecoration: "none" }}
+            >
+              More Articles
+            </Link>
+          </div>
+        </div>
 
         <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
           <Newsletter />

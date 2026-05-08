@@ -232,7 +232,17 @@ const toCategoryArray = (categoryDetails) => {
 };
 
 const getPlainText = (value) =>
-  String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  String(value || "")
+    .replace(/&nbsp;?|&#160;?|&#xa0;?/gi, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const formatArticleDateTimeForDisplay = (articleOrDate) =>
+  String(formatArticleDateTimeIST(articleOrDate) || "")
+    .replace(/\s+at\s+/gi, " - ")
+    .trim();
 
 const normalizeKeywordPhrase = (value) =>
   String(value || "").replace(/^\s*hy(\b)/i, "why$1").trim();
@@ -313,6 +323,18 @@ const CLEAN_ARTICLE_BODY_FIELDS = new Set([
   "normalized_content_html",
 ]);
 
+const getFormattingSignalScore = (value) => {
+  if (typeof value !== "string" || !value.trim()) return 0;
+  const text = value;
+  const countMatches = (regex) => (text.match(regex) || []).length;
+  return (
+    countMatches(/<(strong|b|em|i|u)\b/gi) * 3 +
+    countMatches(/<h[2-6]\b/gi) * 2 +
+    countMatches(/<(ul|ol|li|table|blockquote)\b/gi) * 2 +
+    Math.min(8, Math.floor(text.length / 1800))
+  );
+};
+
 const getArticleBodyPayload = (article) => {
   const candidates = [
     ["content_clean", article?.content_clean],
@@ -332,9 +354,56 @@ const getArticleBodyPayload = (article) => {
     ["description_html", article?.description_html],
     ["description", article?.description],
   ];
-  for (const [source, value] of candidates) {
-    if (typeof value === "string" && value.trim().length > 0) return { html: value, source };
-  }
+
+  const validCandidates = candidates
+    .map(([source, value]) => [source, typeof value === "string" ? value.trim() : ""])
+    .filter(([, value]) => value.length > 0);
+
+  if (validCandidates.length === 0) return { html: "", source: "" };
+
+  const sourceBias = {
+    content_html: 26,
+    content_raw: 12,
+    article_content_raw: 16,
+    article_content_html: 14,
+    content: 12,
+    article_content: 12,
+    body_html: 12,
+    full_content: 11,
+    body: 10,
+    article_body: 10,
+    description_html: 8,
+    description: 7,
+    content_clean: 4,
+    clean_content: 4,
+    sanitized_content_html: 4,
+    normalized_content_html: 4,
+  };
+
+  const scoreCandidate = (source, html) => {
+    const formattingScore = getFormattingSignalScore(html);
+    const plainLengthScore = Math.min(24, Math.floor(getPlainText(html).length / 350));
+    const sourceScore = sourceBias[source] ?? 5;
+    const noisyAttrPenalty = Math.min(
+      30,
+      (html.match(/\sdata-(start|end|section-id|state|testid|message-model-slug)=/gi) || []).length
+    );
+    const presentationNoisePenalty =
+      Math.min(24, (html.match(/<font\b/gi) || []).length) +
+      Math.min(24, (html.match(/\sstyle=["']/gi) || []).length);
+    return formattingScore * 6 + plainLengthScore + sourceScore - noisyAttrPenalty - presentationNoisePenalty;
+  };
+
+  let best = null;
+  validCandidates.forEach(([source, html]) => {
+    const score = scoreCandidate(source, html);
+    if (!best || score > best.score) {
+      best = { source, html, score };
+    }
+  });
+
+  if (best) return { html: best.html, source: best.source };
+
   return { html: "", source: "" };
 };
 
@@ -405,6 +474,11 @@ const STRUCTURED_DATA_CONTAINER_KEYS = [
   "schema_list",
   "structured_data",
   "structured_datakey",
+  "faq_schema",
+  "faq_schemas",
+  "faqpage",
+  "faq_page",
+  "faq",
   "json_ld",
   "jsonld",
   "custom_json_ld",
@@ -615,12 +689,76 @@ const useIs2K = () => {
   return is2K;
 };
 
+const INLINE_ELEMENT_TAGS = new Set([
+  "A", "ABBR", "B", "BDI", "BDO", "BR", "CITE", "CODE", "EM", "I", "IMG", "KBD",
+  "MARK", "Q", "S", "SAMP", "SMALL", "SPAN", "STRONG", "SUB", "SUP", "TIME", "U",
+]);
+
+const HEADING_ELEMENT_TAGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
+
+const normalizeHeadingStructure = (doc) => {
+  const headings = Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6"));
+  headings.forEach((heading) => {
+    const inlineNodes = [];
+    const blockNodes = [];
+
+    Array.from(heading.childNodes).forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (String(node.textContent || "").trim().length > 0) inlineNodes.push(node.cloneNode(true));
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const tag = String(node.tagName || "").toUpperCase();
+      if (INLINE_ELEMENT_TAGS.has(tag)) inlineNodes.push(node.cloneNode(true));
+      else blockNodes.push(node.cloneNode(true));
+    });
+
+    const inlineText = getPlainText(inlineNodes.map((node) => node.textContent || "").join(" "));
+
+    if (blockNodes.length > 0) {
+      if (!inlineText) {
+        const fragment = doc.createDocumentFragment();
+        blockNodes.forEach((node) => {
+          const tag = String(node.tagName || "").toUpperCase();
+          if ((tag === "DIV" || tag === "SPAN") && node.childNodes.length > 0) {
+            while (node.firstChild) fragment.appendChild(node.firstChild);
+            return;
+          }
+          if (HEADING_ELEMENT_TAGS.has(tag) && getPlainText(node.textContent || "").length > 0) {
+            const replacement = doc.createElement("h3");
+            replacement.innerHTML = node.innerHTML;
+            fragment.appendChild(replacement);
+            return;
+          }
+          fragment.appendChild(node);
+        });
+        heading.replaceWith(fragment);
+        return;
+      }
+
+      heading.innerHTML = "";
+      inlineNodes.forEach((node) => heading.appendChild(node));
+      let anchor = heading;
+      blockNodes.forEach((node) => {
+        anchor.parentNode?.insertBefore(node, anchor.nextSibling);
+        anchor = node;
+      });
+    }
+
+    if (getPlainText(heading.textContent || "").length === 0) heading.remove();
+  });
+};
+
 const normalizeArticleContent = (html, options = {}) => {
   const { isPreSanitized = false } = options;
   if (typeof html !== "string" || !html.trim()) return "";
   let normalized = html
+    .replace(/&nbsp;?|&#160;?|&#xa0;?/gi, " ")
+    .replace(/\u00a0/g, " ")
     .replace(/<\/?font\b[^>]*>/gi, "")
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
+    // Some editor payloads keep a trailing "\" before blockquote markup.
+    .replace(/\\+\s*(?=<blockquote\b)/gi, "")
     .replace(/<h1(\b[^>]*)>/gi, "<h2$1>")
     .replace(/<\/h1>/gi, "</h2>");
 
@@ -649,11 +787,37 @@ const normalizeArticleContent = (html, options = {}) => {
   if (typeof window === "undefined" || typeof DOMParser === "undefined") return normalized;
   const doc = new DOMParser().parseFromString(normalized, "text/html");
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
+  normalizeHeadingStructure(doc);
   Array.from(doc.body.querySelectorAll("h1")).forEach((heading) => {
     const replacement = doc.createElement("h2");
     Array.from(heading.attributes).forEach((attribute) => replacement.setAttribute(attribute.name, attribute.value));
     replacement.innerHTML = heading.innerHTML;
     heading.replaceWith(replacement);
+  });
+  Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
+    Array.from(element.childNodes).forEach((node) => {
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const cleanedValue = String(node.textContent || "").replace(/\u00a0/g, " ");
+      if (cleanedValue !== node.textContent) node.textContent = cleanedValue;
+    });
+  });
+  Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
+    if (getPlainText(heading.textContent || "").length === 0) heading.remove();
+  });
+  Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
+    const childElements = Array.from(node.children);
+    if (
+      childElements.length === 1 &&
+      ["P", "DIV", "SPAN"].includes(childElements[0].tagName) &&
+      getPlainText(node.textContent || "").length > 0
+    ) {
+      node.replaceWith(childElements[0]);
+    }
+  });
+  Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
+    const hasMediaChild = node.querySelector("img, iframe, video, table, .react-tweet-placeholder, .article-media-frame");
+    if (hasMediaChild) return;
+    if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
   const hasGoogleSheetsMarkup = Boolean(
     doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
@@ -803,6 +967,42 @@ const normalizeArticleContent = (html, options = {}) => {
   });
 
   // ✅ Table fix — width:0 wali tables ko proper banao
+  // Normalize blockquote input from editor:
+  // 1) remove standalone "\" rows
+  // 2) trim trailing "\" before blockquote
+  // 3) ensure quote text stays in a stable block wrapper
+  Array.from(doc.body.querySelectorAll("blockquote:not(.twitter-tweet)")).forEach((blockquote) => {
+    const previousElement = blockquote.previousElementSibling;
+    if (previousElement && previousElement.matches("p, div, span")) {
+      const rawText = String(previousElement.textContent || "");
+      const trimmedRawText = rawText.trim();
+      const cleanedText = rawText.replace(/[ \t]*\\+\s*$/g, "").trim();
+      if (trimmedRawText === "\\" || cleanedText !== trimmedRawText) {
+        if (!cleanedText) previousElement.remove();
+        else previousElement.textContent = cleanedText;
+      }
+    }
+
+    const hasBlockChild = Array.from(blockquote.children).some((child) =>
+      ["P", "DIV", "H2", "H3", "H4", "H5", "H6", "UL", "OL"].includes(child.tagName)
+    );
+
+    if (!hasBlockChild) {
+      const quoteText = getPlainText(blockquote.textContent || "");
+      blockquote.innerHTML = "";
+      if (quoteText) {
+        const paragraph = doc.createElement("p");
+        paragraph.textContent = quoteText;
+        blockquote.appendChild(paragraph);
+      }
+    }
+  });
+
+  Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
+    const text = String(node.textContent || "").replace(/\u00a0/g, " ").trim();
+    if (text === "\\") node.remove();
+  });
+
   Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
     const firstRow = table.querySelector("tr");
     const colCount = firstRow ? firstRow.querySelectorAll("th, td").length : 0;
@@ -1434,7 +1634,11 @@ export default function ArticleDetails() {
       ? seoEndpointSchemaState.schemas
       : [];
 
-  const backendPreferredSchemas = seoEndpointSchemas.length > 0 ? seoEndpointSchemas : articlePayloadSchemas;
+  // Consume both sources fully so schema types like FAQPage are never dropped.
+  const backendPreferredSchemas = dedupeStructuredSchemas([
+    ...seoEndpointSchemas,
+    ...articlePayloadSchemas,
+  ]);
   const resolvedJsonLdSchemas = (() => {
     if (backendPreferredSchemas.length === 0) {
       return [articleSchema, breadcrumbSchema];
@@ -1562,7 +1766,9 @@ export default function ArticleDetails() {
             {date && (
               <span className="flex items-center gap-1.5 text-gray-500">
                 <Clock size={13} />
-                {article.updated_display ? article.updated_display : formatArticleDateTimeIST(article)}
+                {article.updated_display
+                  ? String(article.updated_display).replace(/\s+at\s+/gi, " - ").trim()
+                  : formatArticleDateTimeForDisplay(article)}
               </span>
             )}
 
@@ -1724,7 +1930,7 @@ export default function ArticleDetails() {
                       </p>
                       <span className="flex items-center gap-1 text-[11px] text-slate-400 mt-1.5">
                         <Clock size={10} />
-                        {formatArticleDateTimeIST(a)}
+                        {formatArticleDateTimeForDisplay(a)}
                       </span>
                     </div>
                   </Link>

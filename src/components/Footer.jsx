@@ -69,7 +69,7 @@ const footerLinks = {
 
 };
 
-// ── Har pill ka apna path ──
+// Har pill ka apna path
 const policyLinks = [
   { label: "About Us", path: "/about-us" },
   { label: "Founder's Note", path: "/founders-note" },
@@ -143,7 +143,9 @@ export default function Footer() {
         {/* LEFT: Brand */}
         <div className="ft-brand">
 
-          <img src={logo} alt="News4Bharat" className="ft-logo" width="384" height="58" loading="lazy" decoding="async" />
+          <Link to="/" aria-label="Go to homepage">
+            <img src={logo} alt="News4Bharat" className="ft-logo" width="384" height="58" loading="lazy" decoding="async" />
+          </Link>
 
           <p className="ft-desc">
             In An Era Where Information Moves Faster Than Verification,
@@ -175,7 +177,7 @@ export default function Footer() {
             <a href="https://www.linkedin.com/company/news4bharat" className="ft-soc"><Linkedin size={18} /></a>
           </div>
 
-          {/* App buttons — side by side */}
+          {/* App buttons - side by side */}
           {/* <div className="ft-app-row">
             <a href="#" className="ft-app-btn">
               <AppleIcon />
@@ -265,7 +267,7 @@ export default function Footer() {
           {/* Horizontal line above policy pills */}
           <div className="ft-policy-divider" />
 
-          {/* Policy pills — Link se page navigate hoga */}
+          {/* Policy pills - Link se page navigate hoga */}
           <div className="ft-policy-row">
             {policyLinks.map(({ label, path }) => (
               <Link key={label} to={path} className="ft-pill">
@@ -280,10 +282,17 @@ export default function Footer() {
       {/* COPYRIGHT */}
       <div className="ft-bottom">
         <p className="ft-copy">
-          © Copyright {year} <strong>News4Bharat</strong> - All Rights Reserved.
+          &copy; Copyright {year}{" "}
+          <strong>
+            <a href="https://news4bharat.com" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+              News4Bharat
+            </a>
+          </strong>{" "}
+          - All Rights Reserved.
         </p>
       </div>
 
     </footer>
   );
 }
+

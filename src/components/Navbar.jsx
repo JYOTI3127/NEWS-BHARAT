@@ -1609,22 +1609,27 @@ const Header = () => {
 
             return (
               <div className="drawer-section" key={label}>
-                <div className="drawer-section-head" onClick={() => toggleSection(label)}>
+                <div className="drawer-section-head" onClick={() => goTo(`/category/${finalSlug}`)}>
                   <span className="drawer-section-label">
                     {Icon && <Icon size={15} color="#D80100" strokeWidth={2} />}
-                    <span
-                      className="no-underline text-inherit cursor-pointer"
-                      onClick={(e) => { e.stopPropagation(); goTo(`/category/${finalSlug}`); }}
-                    >
-                      {label}
-                    </span>
+                    <span className="no-underline text-inherit cursor-pointer">{label}</span>
                   </span>
                   {(hasSubcats || hasLinks) && (
-                    <ChevronDown
-                      size={14}
-                      color="#aa9977"
-                      className={`transition-transform duration-200 ease-out ${sectionOpen ? "rotate-180" : "rotate-0"}`}
-                    />
+                    <button
+                      type="button"
+                      className="flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSection(label);
+                      }}
+                      aria-label={`${sectionOpen ? "Collapse" : "Expand"} ${label}`}
+                    >
+                      <ChevronDown
+                        size={14}
+                        color="#aa9977"
+                        className={`transition-transform duration-200 ease-out ${sectionOpen ? "rotate-180" : "rotate-0"}`}
+                      />
+                    </button>
                   )}
                 </div>
 

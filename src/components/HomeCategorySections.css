@@ -138,7 +138,7 @@
 .hcs-world-news-side-thumb {
   object-fit: contain;
   object-position: center;
-  background: #f3f4f6;
+  background: transparent;
 }
 
 .hcs-ai-side-thumb {
@@ -150,6 +150,14 @@
 .hcs-automobile-main-image,
 .hcs-automobile-side-thumb,
 .hcs-automobile-bottom-thumb {
+  object-fit: contain;
+  object-position: center;
+  background: #f3f4f6;
+}
+
+.hcs-spotlight-main-image.hcs-automobile-main-image,
+.hcs-side-thumb.hcs-automobile-side-thumb,
+.hcs-bottom-rail-thumb.hcs-automobile-bottom-thumb {
   object-fit: contain;
   object-position: center;
   background: #f3f4f6;
@@ -704,6 +712,18 @@
 .hcs-spotlight-main:hover .hcs-spotlight-main-image,
 .hcs-bottom-rail-card:hover .hcs-bottom-rail-thumb {
   transform: scale(1.03);
+}
+
+.hcs-editorial-featured--world:hover .hcs-editorial-image,
+.hcs-side-card:hover .hcs-world-news-side-thumb {
+  transform: none;
+}
+
+.hcs-side-thumb.hcs-world-news-side-thumb {
+  object-fit: contain;
+  object-position: center;
+  height: 72px;
+  background: transparent;
 }
 
 .hcs-thumb-fallback {

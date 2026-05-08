@@ -35,6 +35,7 @@ const CommingSoon = lazy(() => import("./pages/ComingSoon"));
 const ArticleDetails = lazy(() => import("./pages/ArticleDetails"));
 const SixtySecondsPage = lazy(() => import("./pages/Sixtysecondspage"));
 const CategoryPage = lazy(() => import("./pages/Categorypage"));
+const MoreArticlesPage = lazy(() => import("./pages/MoreArticlesPage"));
 const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
 const TagPage = lazy(() => import("./pages/TagPage"));
 const AuthorPage = lazy(() => import("./pages/AuthorPage"));
@@ -167,6 +168,7 @@ const NON_CATEGORY_TOP_LEVEL_PATHS = new Set([
   "news",
   "article",
   "category",
+  "more-articles",
   "tag",
   "author",
   "60-seconds",
@@ -254,6 +256,7 @@ function Layout() {
             <Route path="/CommingSoon" element={<CommingSoon />} />
             <Route path="/category/bharats-startups" element={<Navigate to="/category/bharat-startups" replace />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/more-articles" element={<MoreArticlesPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
             {/* <Route path="/weather" element={<WeatherPage />} />

@@ -1163,6 +1163,50 @@ grammarly-button,
 </div>
 
 
+<!-- FAQ SCHEMA PANEL -->
+<div class="faq-schema-panel">
+  <div class="faq-schema-header">
+    <div>
+      <div class="faq-schema-title">FAQ Schema</div>
+      <div class="faq-schema-sub">Question-answer pairs yahan fill honge aur save hoke article API ke structured data me `FAQPage` schema banenge.</div>
+    </div>
+    <label class="seo-toggle faq-schema-toggle">
+      <input type="checkbox" id="ui_faq_schema_enabled" {% if original.faq_schema_enabled %}checked{% endif %} onchange="syncFaqSchemaPayload()">
+      <span class="seo-toggle-track"><span class="seo-toggle-thumb"></span></span>
+    </label>
+  </div>
+  <div class="faq-schema-grid">
+    <div>
+      <div class="seo-field">
+        <div class="seo-field-label">FAQ Schema Title</div>
+        <input type="text" class="seo-inp" id="ui_faq_schema_title" placeholder="Frequently Asked Questions" value="{{ original.faq_schema_title|default:'' }}">
+      </div>
+      <div class="seo-field">
+        <div class="seo-field-label">FAQ Schema Description</div>
+        <textarea class="seo-inp seo-meta-textarea" id="ui_faq_schema_description" rows="3" placeholder="Describe what these FAQs cover">{{ original.faq_schema_description|default:'' }}</textarea>
+      </div>
+      <input type="hidden" id="ui_faq_schema_items" value="">
+      {{ original.faq_schema_items|json_script:"faq_schema_seed" }}
+      <div class="seo-field">
+        <div class="seo-field-label">Questions &amp; Answers</div>
+        <div class="faq-schema-list" id="faq_schema_list"></div>
+        <div class="faq-schema-actions">
+          <button type="button" class="faq-schema-add-btn" onclick="addFaqSchemaItem()">+ Add FAQ</button>
+        </div>
+      </div>
+    </div>
+    <div class="faq-schema-side">
+      <div class="schema-type-row">
+        <span class="schema-type-chip">FAQPage</span>
+        <span class="schema-type-chip">Question</span>
+        <span class="schema-type-chip">Answer</span>
+      </div>
+      <div class="faq-schema-side-note">Har item me ek clean question aur ek complete answer rakho. Empty item save nahi hoga.</div>
+      <div class="faq-schema-side-note">Toggle on hoga to ye values API `structured_data` me jayengi aur frontend/source injection ke liye ready rahengi.</div>
+    </div>
+  </div>
+</div>
+
 <!-- EDITOR PANEL -->
 <div class="editor-panel">
   <div class="editor-panel-header">
@@ -1723,6 +1767,10 @@ function _asSecondaryKwsValue(){
 function _asArticleTagsValue(){
   return Array.isArray(window.articleTags) ? window.articleTags.join(',') : '';
 }
+function _faqSchemaValue(){
+  var hidden=document.getElementById('ui_faq_schema_items');
+  return hidden ? hidden.value : '[]';
+}
 function _asGetHash(){
   return _asHashString(
     (document.getElementById('ui_title')?document.getElementById('ui_title').value:'') +
@@ -1746,6 +1794,10 @@ function _asGetHash(){
     (document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'') +
     (document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'') +
     (document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'') +
+    (document.getElementById('ui_faq_schema_enabled')&&document.getElementById('ui_faq_schema_enabled').checked?'1':'0') +
+    (document.getElementById('ui_faq_schema_title')?document.getElementById('ui_faq_schema_title').value:'') +
+    (document.getElementById('ui_faq_schema_description')?document.getElementById('ui_faq_schema_description').value:'') +
+    _faqSchemaValue() +
     _asSecondaryKwsValue() +
     _asArticleTagsValue()
   );
@@ -1797,6 +1849,10 @@ function _asSaveToLocalStorage(){
       schema_date_published:document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'',
       schema_date_modified:document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'',
       schema_custom_jsonld:document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'',
+      faq_schema_enabled:document.getElementById('ui_faq_schema_enabled')&&document.getElementById('ui_faq_schema_enabled').checked,
+      faq_schema_title:document.getElementById('ui_faq_schema_title')?document.getElementById('ui_faq_schema_title').value:'',
+      faq_schema_description:document.getElementById('ui_faq_schema_description')?document.getElementById('ui_faq_schema_description').value:'',
+      faq_schema_items:_faqSchemaValue(),
       sec_kws:_asSecondaryKwsValue(),
       tags:_asArticleTagsValue(),
       ts:new Date().toISOString()
@@ -1828,6 +1884,17 @@ function _asApplyLocalDraft(data){
   if(document.getElementById('ui_schema_date_published'))document.getElementById('ui_schema_date_published').value=data.schema_date_published||'';
   if(document.getElementById('ui_schema_date_modified'))document.getElementById('ui_schema_date_modified').value=data.schema_date_modified||'';
   if(document.getElementById('ui_schema_custom_jsonld'))document.getElementById('ui_schema_custom_jsonld').value=data.schema_custom_jsonld||'';
+  if(document.getElementById('ui_faq_schema_enabled'))document.getElementById('ui_faq_schema_enabled').checked=!!data.faq_schema_enabled;
+  if(document.getElementById('ui_faq_schema_title'))document.getElementById('ui_faq_schema_title').value=data.faq_schema_title||'';
+  if(document.getElementById('ui_faq_schema_description'))document.getElementById('ui_faq_schema_description').value=data.faq_schema_description||'';
+  if(data.faq_schema_items!==undefined){
+    try{
+      window.faqSchemaItems=JSON.parse(data.faq_schema_items||'[]');
+    }catch(e){
+      window.faqSchemaItems=[];
+    }
+    if(typeof renderFaqSchemaItems==='function')renderFaqSchemaItems();
+  }
   if(data.sec_kws!==undefined){
     secondaryKws=String(data.sec_kws||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
     if(typeof renderSecKws==='function')renderSecKws();
@@ -1873,6 +1940,10 @@ function _asRestoreLocalDraftIfNeeded(){
       (data.schema_date_published||'')+
       (data.schema_date_modified||'')+
       (data.schema_custom_jsonld||'')+
+      (data.faq_schema_enabled?'1':'0')+
+      (data.faq_schema_title||'')+
+      (data.faq_schema_description||'')+
+      (data.faq_schema_items||'')+
       (data.sec_kws||'')+
       (data.tags||'')
     );
@@ -1925,6 +1996,10 @@ async function _asAutoSave(){
     formData.append('schema_date_published',document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'');
     formData.append('schema_date_modified',document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'');
     formData.append('schema_custom_jsonld',document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'');
+    formData.append('faq_schema_enabled',document.getElementById('ui_faq_schema_enabled')&&document.getElementById('ui_faq_schema_enabled').checked?'true':'false');
+    formData.append('faq_schema_title',document.getElementById('ui_faq_schema_title')?document.getElementById('ui_faq_schema_title').value:'');
+    formData.append('faq_schema_description',document.getElementById('ui_faq_schema_description')?document.getElementById('ui_faq_schema_description').value:'');
+    formData.append('faq_schema_items',_faqSchemaValue());
 
     var url = _asArticleId ? ('/api/articles/' + _asArticleId + '/') : '/api/articles/';
     var method = _asArticleId ? 'PUT' : 'POST';
@@ -4279,6 +4354,10 @@ async function submitArticle(forceStatus){
   formData.append('schema_date_published',document.getElementById('ui_schema_date_published')?document.getElementById('ui_schema_date_published').value:'');
   formData.append('schema_date_modified',document.getElementById('ui_schema_date_modified')?document.getElementById('ui_schema_date_modified').value:'');
   formData.append('schema_custom_jsonld',document.getElementById('ui_schema_custom_jsonld')?document.getElementById('ui_schema_custom_jsonld').value:'');
+  formData.append('faq_schema_enabled',document.getElementById('ui_faq_schema_enabled')&&document.getElementById('ui_faq_schema_enabled').checked?'true':'false');
+  formData.append('faq_schema_title',document.getElementById('ui_faq_schema_title')?document.getElementById('ui_faq_schema_title').value:'');
+  formData.append('faq_schema_description',document.getElementById('ui_faq_schema_description')?document.getElementById('ui_faq_schema_description').value:'');
+  formData.append('faq_schema_items',_faqSchemaValue());
 
   const schedEl=document.getElementById('ui_scheduled_at');
   if(schedEl&&schedEl.value)formData.append('scheduled_at',schedEl.value);
@@ -4695,6 +4774,85 @@ updateSubtitleCount();
 /* ══════════════════════════════════════════════
    SECONDARY ACTION DEFAULT
 ══════════════════════════════════════════════ */
+window.faqSchemaItems = [];
+
+function syncFaqSchemaPayload(){
+  var hidden=document.getElementById('ui_faq_schema_items');
+  if(!hidden)return;
+  hidden.value=JSON.stringify((window.faqSchemaItems||[]).map(function(item){
+    return {
+      question:(item&&item.question?String(item.question):'').trim(),
+      answer:(item&&item.answer?String(item.answer):'').trim()
+    };
+  }).filter(function(item){
+    return item.question || item.answer;
+  }));
+}
+
+function updateFaqSchemaItem(index, field, value){
+  if(!Array.isArray(window.faqSchemaItems))window.faqSchemaItems=[];
+  if(!window.faqSchemaItems[index])window.faqSchemaItems[index]={question:'',answer:''};
+  window.faqSchemaItems[index][field]=value;
+  syncFaqSchemaPayload();
+}
+
+function removeFaqSchemaItem(index){
+  if(!Array.isArray(window.faqSchemaItems))window.faqSchemaItems=[];
+  window.faqSchemaItems.splice(index,1);
+  renderFaqSchemaItems();
+}
+
+function addFaqSchemaItem(){
+  if(!Array.isArray(window.faqSchemaItems))window.faqSchemaItems=[];
+  window.faqSchemaItems.push({question:'',answer:''});
+  renderFaqSchemaItems();
+}
+
+function renderFaqSchemaItems(){
+  var list=document.getElementById('faq_schema_list');
+  if(!list)return;
+  if(!Array.isArray(window.faqSchemaItems))window.faqSchemaItems=[];
+  syncFaqSchemaPayload();
+  if(!window.faqSchemaItems.length){
+    list.innerHTML='<div class="faq-schema-empty">Abhi koi FAQ item add nahi hua. "+ Add FAQ" se question-answer pair banao.</div>';
+    return;
+  }
+  list.innerHTML=window.faqSchemaItems.map(function(item,index){
+    var question=(item&&item.question?String(item.question):'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    var answer=(item&&item.answer?String(item.answer):'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return ''+
+      '<div class="faq-schema-card">'+
+        '<div class="faq-schema-card-head">'+
+          '<span class="faq-schema-chip">FAQ '+(index+1)+'</span>'+
+          '<button type="button" class="faq-schema-remove" onclick="removeFaqSchemaItem('+index+')">Remove</button>'+
+        '</div>'+
+        '<div class="seo-field">'+
+          '<div class="seo-field-label">Question</div>'+
+          '<input type="text" class="seo-inp" placeholder="What is this article about?" value="'+question+'" oninput="updateFaqSchemaItem('+index+', \'question\', this.value)">'+
+        '</div>'+
+        '<div class="seo-field faq-schema-field-last">'+
+          '<div class="seo-field-label">Answer</div>'+
+          '<textarea class="seo-inp seo-meta-textarea" rows="4" placeholder="Write the answer that should appear inside FAQ schema" oninput="updateFaqSchemaItem('+index+', \'answer\', this.value)">'+answer+'</textarea>'+
+        '</div>'+
+      '</div>';
+  }).join('');
+}
+
+(function initFaqSchemaSection(){
+  var seedEl=document.getElementById('faq_schema_seed');
+  if(seedEl){
+    try{
+      var parsed=JSON.parse(seedEl.textContent||'[]');
+      window.faqSchemaItems=Array.isArray(parsed)?parsed:[];
+    }catch(e){
+      window.faqSchemaItems=[];
+    }
+  }
+  renderFaqSchemaItems();
+})();
+
 function handleSecondaryAction(){
   submitArticle('draft');
 }

@@ -70,6 +70,37 @@ def _parse_ist_datetime(raw_value):
     return parsed_value.astimezone(IST)
 
 
+def _normalize_faq_schema_items(raw_value):
+    if isinstance(raw_value, str):
+        raw_value = raw_value.strip()
+        if not raw_value:
+            items = []
+        else:
+            try:
+                parsed = json.loads(raw_value)
+                items = parsed if isinstance(parsed, list) else []
+            except (TypeError, ValueError):
+                items = []
+    elif isinstance(raw_value, list):
+        items = raw_value
+    else:
+        items = []
+
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question = ' '.join(str(item.get('question', '') or '').strip().split())
+        answer = str(item.get('answer', '') or '').strip()
+        if not question or not answer:
+            continue
+        normalized.append({
+            'question': question[:500],
+            'answer': answer,
+        })
+    return normalized
+
+
 def _unique_article_image_name(article, original_filename, extension):
     base_name = os.path.splitext(os.path.basename(original_filename or 'article-image'))[0]
     safe_base = slugify(base_name)[:45] or 'article-image'
@@ -728,6 +759,10 @@ def _save_article_from_request(request, article=None):
     article.schema_publisher_logo_url = data.get('schema_publisher_logo_url', '').strip()
     article.schema_organization_type = data.get('schema_organization_type', '').strip()
     article.schema_custom_jsonld = data.get('schema_custom_jsonld', '').strip()
+    article.faq_schema_enabled = data.get('faq_schema_enabled', 'false').lower() in ('true', '1', 'on')
+    article.faq_schema_title = data.get('faq_schema_title', '').strip()
+    article.faq_schema_description = data.get('faq_schema_description', '').strip()
+    article.faq_schema_items = _normalize_faq_schema_items(data.get('faq_schema_items', '[]'))
 
     schema_sameas_raw = data.get('schema_organization_sameas', '[]')
     try:

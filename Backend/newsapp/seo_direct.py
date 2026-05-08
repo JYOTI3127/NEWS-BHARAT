@@ -133,14 +133,54 @@ def _parse_custom_schema_blob(raw_value):
     return []
 
 
+def _faq_schema_items(value) -> list[dict]:
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            items = []
+        else:
+            try:
+                parsed = json.loads(raw)
+                items = parsed if isinstance(parsed, list) else []
+            except Exception:
+                items = []
+    elif isinstance(value, list):
+        items = value
+    else:
+        items = []
+
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question = _strip(item.get("question", ""), 500)
+        answer_raw = str(item.get("answer", "") or "").strip()
+        if not question or not answer_raw:
+            continue
+        answer = bleach.clean(
+            answer_raw,
+            tags=["p", "br", "strong", "em", "b", "i", "ul", "ol", "li", "a"],
+            attributes={"a": ["href", "title", "target", "rel"]},
+            strip=True,
+        ).strip()
+        if not answer:
+            continue
+        normalized.append({"question": question, "answer": answer})
+    return normalized
+
+
 def article_schema_payloads(article) -> list[dict]:
-    return [
+    schemas = [
         SchemaEngine.news_article(article),
         SchemaEngine.breadcrumb(article),
         SchemaEngine.organization(article),
         SchemaEngine.website(article),
-        *_parse_custom_schema_blob(getattr(article, "schema_custom_jsonld", "")),
     ]
+    faq_schema = SchemaEngine.faq_page(article)
+    if faq_schema:
+        schemas.append(faq_schema)
+    schemas.extend(_parse_custom_schema_blob(getattr(article, "schema_custom_jsonld", "")))
+    return schemas
 
 
 def _extract_article_image_entries(article, base: str = None) -> list[dict]:
@@ -701,6 +741,43 @@ class SchemaEngine:
         if kw_parts:
             schema["keywords"] = ", ".join(dict.fromkeys(filter(None, kw_parts)))
 
+        return schema
+
+    @staticmethod
+    def faq_page(article) -> dict:
+        if not getattr(article, "faq_schema_enabled", False):
+            return {}
+
+        faq_items = _faq_schema_items(getattr(article, "faq_schema_items", []))
+        if not faq_items:
+            return {}
+
+        base = SEO["SITE_URL"]
+        url = article_url(article, base)
+        title = _strip(getattr(article, "faq_schema_title", ""), 255)
+        description = _strip(getattr(article, "faq_schema_description", ""), 500)
+
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "@id": f"{url}#faq",
+            "url": url,
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": item["question"],
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": item["answer"],
+                    },
+                }
+                for item in faq_items
+            ],
+        }
+        if title:
+            schema["name"] = title
+        if description:
+            schema["description"] = description
         return schema
 
     @staticmethod

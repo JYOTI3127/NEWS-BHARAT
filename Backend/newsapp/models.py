@@ -140,6 +140,10 @@ class Article(models.Model):
     schema_date_published = models.DateTimeField(null=True, blank=True)
     schema_date_modified = models.DateTimeField(null=True, blank=True)
     schema_custom_jsonld = models.TextField(blank=True, default='')
+    faq_schema_enabled = models.BooleanField(default=False)
+    faq_schema_title = models.CharField(max_length=255, blank=True, default='')
+    faq_schema_description = models.TextField(blank=True, default='')
+    faq_schema_items = models.JSONField(default=list, blank=True)
 
     # ── Tags (comma-separated string stored, exposed as list via serializer) ──
     tags = models.CharField(max_length=500, blank=True, default='')

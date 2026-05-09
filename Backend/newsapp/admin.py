@@ -269,6 +269,73 @@ class ArticleVersionInline(admin.TabularInline):
     can_delete      = False
 
 
+class ArticleVersionAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/newsapp/articleversion/change_list.html'
+    list_display = ('article', 'version_number', 'edited_by', 'created_at')
+    search_fields = ('article__title', 'title', 'subtitle', 'edited_by__username')
+    list_select_related = ('article', 'edited_by')
+    readonly_fields = ('article', 'version_number', 'title', 'subtitle', 'content', 'edited_by', 'created_at')
+    fields = ('article', 'version_number', 'title', 'subtitle', 'content', 'edited_by', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def changelist_view(self, request, extra_context=None):
+        original_get = request.GET.copy()
+        query = (original_get.get('q') or '').strip()
+        article_filter = (original_get.get('article') or '').strip()
+
+        versions_qs = self.get_queryset(request).select_related('article', 'edited_by')
+
+        if query:
+            versions_qs = versions_qs.filter(
+                Q(article__title__icontains=query) |
+                Q(title__icontains=query) |
+                Q(subtitle__icontains=query) |
+                Q(edited_by__username__icontains=query)
+            )
+
+        if article_filter:
+            versions_qs = versions_qs.filter(article_id=article_filter)
+
+        versions_qs = versions_qs.order_by('-created_at', '-id')
+        paginator = Paginator(versions_qs, 20)
+        page_obj = paginator.get_page(original_get.get('page', 1))
+
+        page_query_dict = original_get.copy()
+        if 'page' in page_query_dict:
+            del page_query_dict['page']
+
+        article_choices = (
+            Article.objects
+            .filter(versions__isnull=False)
+            .distinct()
+            .order_by('title')
+            .values('id', 'title')
+        )
+
+        custom_context = {
+            'version_rows': page_obj.object_list,
+            'version_page_obj': page_obj,
+            'version_paginator': paginator,
+            'page_query': page_query_dict.urlencode(),
+            'version_total': versions_qs.count(),
+            'version_articles_total': versions_qs.values('article_id').distinct().count(),
+            'latest_version_at': versions_qs.first().created_at if versions_qs.exists() else None,
+            'article_choices': article_choices,
+            'article_version_query': query,
+            'article_version_article_filter': article_filter,
+        }
+
+        response = super().changelist_view(request, extra_context=custom_context)
+        if hasattr(response, 'context_data') and response.context_data is not None:
+            response.context_data.update(custom_context)
+        return response
+
+
 class WorkflowLogInline(admin.TabularInline):
     model           = ArticleWorkflowLog
     extra           = 0
@@ -1782,7 +1849,7 @@ admin_site.register(UserProfile)
 admin_site.register(LoginAttemptLog,            LoginAttemptLogAdmin)
 admin_site.register(Article,                    ArticleAdmin)
 admin_site.register(ArticleAssignment)
-admin_site.register(ArticleVersion)
+admin_site.register(ArticleVersion,             ArticleVersionAdmin)
 admin_site.register(ArticleWorkflowLog)
 admin_site.register(FactCheck,                  FactCheckAdmin)
 admin_site.register(HomepageSlot,               HomepageSlotAdmin)

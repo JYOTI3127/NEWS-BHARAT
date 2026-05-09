@@ -1,13 +1,16 @@
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import PermissionDenied
+from django.core.management import call_command
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.test.client import RequestFactory
+from django.utils import timezone
 from rest_framework.test import APIClient
+from io import StringIO
 from unittest.mock import patch
 
-from .models import Article, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .models import Article, ArticleVersion, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .views import custom_permission_denied_view, send_push_to_all
 
 
@@ -253,6 +256,260 @@ class ArticleWorkflowNotificationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('Article Approved', mail.outbox[0].subject)
         self.assertIn('Approve me', mail.outbox[0].body)
+
+
+class ArticlePublishPushTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='publisher',
+            password='testpass123',
+        )
+
+    @patch('newsapp.views.send_push_to_all')
+    def test_new_published_article_with_preset_published_at_still_triggers_push(self, mock_send_push):
+        preset_time = timezone.now()
+        with self.captureOnCommitCallbacks(execute=True):
+            Article.objects.create(
+                author=self.author,
+                title='Fresh publish',
+                content='Body',
+                status='published',
+                published_at=preset_time,
+            )
+
+        mock_send_push.assert_called_once()
+        payload = mock_send_push.call_args.kwargs
+        self.assertEqual(payload['title'], 'Fresh publish')
+        self.assertIn('https://news4bharat.com/', payload['url'])
+
+    @patch('newsapp.views.send_push_to_all')
+    def test_status_transition_to_published_with_preset_published_at_still_triggers_push(self, mock_send_push):
+        article = Article.objects.create(
+            author=self.author,
+            title='Transition publish',
+            content='Body',
+            status='draft',
+        )
+        article.status = 'published'
+        article.published_at = timezone.now()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            article.save()
+
+        mock_send_push.assert_called_once()
+        payload = mock_send_push.call_args.kwargs
+        self.assertEqual(payload['title'], 'Transition publish')
+        self.assertIn('https://news4bharat.com/', payload['url'])
+
+
+class ArticleVersioningTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='versioner',
+            password='testpass123',
+        )
+
+    def test_whitespace_only_content_change_does_not_create_version(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Version story',
+            subtitle='Short deck',
+            content='<p>Hello world</p>',
+            status='draft',
+        )
+
+        article.content = '<p>Hello world</p>   \n'
+        article.save()
+
+        self.assertEqual(article.versions.count(), 0)
+
+    def test_initial_publish_creates_v1_snapshot(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Original title',
+            subtitle='Deck',
+            content='<p>Original body</p>',
+            status='review',
+        )
+
+        article.status = 'published'
+        article.save()
+
+        versions = list(article.versions.order_by('version_number').values_list('version_number', 'title', 'content'))
+        self.assertEqual(versions, [(1, 'Original title', '<p>Original body</p>')])
+
+    def test_first_published_edit_reuses_initial_snapshot_without_duplicate(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Original title',
+            subtitle='Deck',
+            content='<p>Original body</p>',
+            status='published',
+        )
+
+        self.assertEqual(article.versions.count(), 1)
+        article.title = 'Updated title'
+        article.content = '<p>Updated body</p>'
+        article.save()
+        self.assertEqual(article.versions.count(), 1)
+
+        version = article.versions.get(version_number=1)
+        self.assertEqual(version.title, 'Original title')
+        self.assertEqual(version.content, '<p>Original body</p>')
+
+    def test_second_published_edit_creates_next_version_from_previous_published_state(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Original title',
+            subtitle='Deck',
+            content='<p>Original body</p>',
+            status='published',
+        )
+
+        article.title = 'Updated title'
+        article.content = '<p>Updated body</p>'
+        article.save()
+
+        article.refresh_from_db()
+        article.title = 'Original title'
+        article.content = '<p>Original body</p>'
+        article.save()
+        self.assertEqual(article.versions.count(), 2)
+
+        versions = list(article.versions.order_by('-version_number').values_list('version_number', 'title'))
+        self.assertEqual(versions, [(2, 'Updated title'), (1, 'Original title')])
+
+    def test_pre_publish_edits_do_not_create_versions(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Swiggy draft',
+            subtitle='Deck',
+            content='<p>Draft body</p>',
+            status='review',
+        )
+
+        article.content = '<p>Draft body updated once</p>'
+        article.save()
+        article.refresh_from_db()
+        article.content = '<p>Draft body updated twice</p>'
+        article.save()
+
+        self.assertEqual(article.versions.count(), 0)
+
+        article.status = 'published'
+        article.save()
+        self.assertEqual(article.versions.count(), 1)
+
+    def test_cleanup_article_versions_command_removes_consecutive_duplicates_and_renumbers(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Cleanup story',
+            subtitle='Deck',
+            content='<p>Current</p>',
+            status='draft',
+        )
+
+        ArticleVersion.objects.bulk_create([
+            ArticleVersion(article=article, version_number=1, title='A', subtitle='Deck', content='<p>One</p>', edited_by=self.author),
+            ArticleVersion(article=article, version_number=2, title='A', subtitle='Deck', content='<p>One</p>  ', edited_by=self.author),
+            ArticleVersion(article=article, version_number=3, title='B', subtitle='Deck', content='<p>Two</p>', edited_by=self.author),
+            ArticleVersion(article=article, version_number=4, title='B', subtitle='Deck', content='<p>Two</p>', edited_by=self.author),
+            ArticleVersion(article=article, version_number=5, title='A', subtitle='Deck', content='<p>One</p>', edited_by=self.author),
+        ])
+
+        out = StringIO()
+        call_command('cleanup_article_versions', article_id=article.id, stdout=out)
+
+        versions = list(
+            ArticleVersion.objects.filter(article=article)
+            .order_by('version_number')
+            .values_list('version_number', 'title', 'content')
+        )
+        self.assertEqual(
+            versions,
+            [
+                (1, 'A', '<p>One</p>'),
+                (2, 'B', '<p>Two</p>'),
+                (3, 'A', '<p>One</p>'),
+            ],
+        )
+        self.assertIn('Deleted 2 duplicate row(s)', out.getvalue())
+
+    def test_cleanup_article_versions_command_removes_prepublish_versions_only_when_flag_is_set(self):
+        review_article = Article.objects.create(
+            author=self.author,
+            title='Review article',
+            subtitle='Deck',
+            content='<p>Review</p>',
+            status='review',
+        )
+        published_article = Article.objects.create(
+            author=self.author,
+            title='Published article',
+            subtitle='Deck',
+            content='<p>Published</p>',
+            status='published',
+        )
+
+        ArticleVersion.objects.bulk_create([
+            ArticleVersion(article=review_article, version_number=1, title='Review v1', subtitle='Deck', content='<p>Review one</p>', edited_by=self.author),
+            ArticleVersion(article=review_article, version_number=2, title='Review v2', subtitle='Deck', content='<p>Review two</p>', edited_by=self.author),
+            ArticleVersion(article=published_article, version_number=1, title='Published v1', subtitle='Deck', content='<p>Published one</p>', edited_by=self.author),
+        ])
+
+        out = StringIO()
+        call_command('cleanup_article_versions', remove_prepublish=True, stdout=out)
+
+        self.assertEqual(ArticleVersion.objects.filter(article=review_article).count(), 0)
+        self.assertEqual(ArticleVersion.objects.filter(article=published_article).count(), 1)
+        self.assertIn('Deleted 2 pre-publish row(s)', out.getvalue())
+
+
+class ArticleContentCleaningTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='cleaner',
+            password='testpass123',
+        )
+
+    def test_article_save_strips_chatgpt_wrapper_html(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Cleaner story',
+            content_raw='<section class="text-token x" data-start="1" data-end="2"><p>Hello</p></section>',
+            content='<section class="text-token x" data-start="1" data-end="2"><p>Hello</p></section>',
+            status='draft',
+        )
+
+        self.assertNotIn('text-token', article.content)
+        self.assertNotIn('data-start', article.content)
+        self.assertEqual(article.content.strip(), '<p>Hello</p>')
+        self.assertEqual(article.content_clean.strip(), '<p>Hello</p>')
+
+    def test_fix_chatgpt_article_html_command_updates_existing_articles(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Legacy dirty story',
+            content_raw='<p>Clean start</p>',
+            content='<p>Clean start</p>',
+            status='draft',
+        )
+        Article.objects.filter(pk=article.pk).update(
+            content_raw='<section class="text-token abc" data-start="10" data-end="20"><p>Legacy dirty</p></section>',
+            content_clean='',
+            content='<section class="text-token abc" data-start="10" data-end="20"><p>Legacy dirty</p></section>',
+            clean_version=0,
+        )
+
+        out = StringIO()
+        call_command('fix_chatgpt_article_html', article_id=article.id, stdout=out)
+
+        article.refresh_from_db()
+        self.assertEqual(article.content, '<p>Legacy dirty</p>')
+        self.assertEqual(article.content_clean, '<p>Legacy dirty</p>')
+        self.assertNotIn('text-token', article.content_raw)
+        self.assertNotIn('data-start', article.content_raw)
+        self.assertIn('Updated 1 article(s).', out.getvalue())
 
 
 class AccessDeniedViewTests(TestCase):

@@ -1,0 +1,178 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block title %}Article Version History{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+{% block search %}{% endblock %}
+{% block result_list %}{% endblock %}
+{% block pagination %}{% endblock %}
+
+{% block content %}
+<div class="av-page">
+  <div class="av-hero">
+    <div class="av-hero__left">
+      <div class="av-hero__icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3v5h5"></path>
+          <path d="M3.05 13A9 9 0 1 0 6 6.3L3 8"></path>
+          <path d="M12 7v5l4 2"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="av-hero__title">Article Version History</div>
+        <div class="av-hero__sub">Clean audit trail for article edits, previous snapshots, and restore-ready history.</div>
+      </div>
+    </div>
+    <a href="/admin/newsapp/article/" class="av-hero__cta">Open Articles</a>
+  </div>
+
+  <div class="av-stats">
+    <div class="av-stat-card">
+      <span class="av-stat-card__label">Visible Versions</span>
+      <strong class="av-stat-card__value">{{ version_total|default:"0" }}</strong>
+    </div>
+    <div class="av-stat-card">
+      <span class="av-stat-card__label">Tracked Articles</span>
+      <strong class="av-stat-card__value">{{ version_articles_total|default:"0" }}</strong>
+    </div>
+    <div class="av-stat-card">
+      <span class="av-stat-card__label">Latest Version</span>
+      <strong class="av-stat-card__value av-stat-card__value--small">
+        {% if latest_version_at %}{{ latest_version_at|date:"d M Y, h:i A" }}{% else %}No history yet{% endif %}
+      </strong>
+    </div>
+  </div>
+
+  <form method="get" class="av-toolbar">
+    <div class="av-search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" name="q" value="{{ article_version_query }}" placeholder="Search article title, version title, or editor...">
+    </div>
+    <select name="article" class="av-select">
+      <option value="">All Articles</option>
+      {% for item in article_choices %}
+        <option value="{{ item.id }}" {% if article_version_article_filter == item.id|stringformat:"s" %}selected{% endif %}>{{ item.title|truncatechars:80 }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="av-filter-btn">Filter</button>
+    <a href="/admin/newsapp/articleversion/" class="av-reset-btn">Reset</a>
+  </form>
+
+  <div class="av-table-wrap">
+    <div class="av-table-scroll">
+      <table class="av-table">
+        <thead>
+          <tr>
+            <th style="width:34%;">Article</th>
+            <th style="width:10%;">Version</th>
+            <th style="width:18%;">Editor</th>
+            <th style="width:16%;">Saved At</th>
+            <th style="width:14%;">Snapshot</th>
+            <th style="width:8%;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for version in version_rows %}
+            <tr>
+              <td>
+                <div class="av-article-cell">
+                  <a href="/admin/newsapp/article/{{ version.article_id }}/change/" class="av-article-title">
+                    {{ version.article.title|truncatechars:95 }}
+                  </a>
+                  <div class="av-article-meta">
+                    Stored title: {{ version.title|default:"Untitled"|truncatechars:80 }}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="av-version-chip">v{{ version.version_number }}</span>
+              </td>
+              <td>
+                <div class="av-editor">
+                  <div class="av-editor__avatar">
+                    {% if version.edited_by %}{{ version.edited_by.username|first|upper }}{% else %}?{% endif %}
+                  </div>
+                  <div>
+                    <div class="av-editor__name">{% if version.edited_by %}{{ version.edited_by.username }}{% else %}Unknown{% endif %}</div>
+                    <div class="av-editor__meta">{% if version.edited_by %}Snapshot owner{% else %}No linked editor{% endif %}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="av-time">{{ version.created_at|date:"d M Y" }}</div>
+                <div class="av-time-sub">{{ version.created_at|date:"h:i A" }}</div>
+              </td>
+              <td>
+                <div class="av-snapshot">
+                  {% if version.subtitle %}
+                    <div class="av-snapshot__subtitle">{{ version.subtitle|truncatechars:55 }}</div>
+                  {% endif %}
+                  <div class="av-snapshot__content">{{ version.content|striptags|truncatechars:95 }}</div>
+                </div>
+              </td>
+              <td>
+                <div class="av-actions">
+                  <a href="/admin/newsapp/articleversion/{{ version.id }}/change/" class="av-action-btn" title="Open version">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="av-empty">
+                <div class="av-empty__title">No article versions found</div>
+                <div class="av-empty__copy">Try a different search or open Articles to create and edit content first.</div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if version_page_obj and version_page_obj.paginator.count > 0 %}
+    <div class="av-pagination">
+      <div class="av-pagination__info">
+        Showing {{ version_page_obj.start_index }}-{{ version_page_obj.end_index }} of {{ version_page_obj.paginator.count }} versions
+        &middot; Page {{ version_page_obj.number }} of {{ version_page_obj.paginator.num_pages }}
+      </div>
+      <div class="av-pagination__links">
+        {% if version_page_obj.has_previous %}
+          <a class="av-page-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ version_page_obj.previous_page_number }}">&lsaquo;</a>
+        {% else %}
+          <span class="av-page-btn is-disabled">&lsaquo;</span>
+        {% endif %}
+        {% for num in version_page_obj.paginator.page_range %}
+          {% if num == version_page_obj.number %}
+            <span class="av-page-btn is-active">{{ num }}</span>
+          {% elif num == 1 or num == version_page_obj.paginator.num_pages %}
+            <a class="av-page-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+          {% elif num >= version_page_obj.number|add:'-2' and num <= version_page_obj.number|add:'2' %}
+            <a class="av-page-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+          {% elif num == version_page_obj.number|add:'-3' or num == version_page_obj.number|add:'3' %}
+            <span class="av-page-btn is-ellipsis">...</span>
+          {% endif %}
+        {% endfor %}
+        {% if version_page_obj.has_next %}
+          <a class="av-page-btn" href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ version_page_obj.next_page_number }}">&rsaquo;</a>
+        {% else %}
+          <span class="av-page-btn is-disabled">&rsaquo;</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

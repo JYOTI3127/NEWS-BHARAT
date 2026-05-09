@@ -6,6 +6,7 @@ from django.utils import timezone
 from .workflow import ALLOWED_TRANSITIONS
 from django.core.exceptions import ValidationError
 from django.core.files.images import get_image_dimensions
+import re
 import uuid
 
 
@@ -25,6 +26,38 @@ class Permission(models.Model):
         return self.code
 
 from django.utils.text import slugify
+
+
+def _normalize_version_text(value):
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def _normalize_version_html(value):
+    text = str(value or "").strip()
+    text = re.sub(r">\s+<", "><", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+_CHATGPT_SECTION_RE = re.compile(
+    r'<section\b(?=[^>]*\bclass\s*=\s*["\'][^"\']*\btext-token\b[^"\']*["\'])[^>]*>(?P<inner>.*?)</section>',
+    flags=re.IGNORECASE | re.DOTALL,
+)
+_CHATGPT_DATA_ATTR_RE = re.compile(
+    r'\sdata-(?:start|end|is-last-node|node-id|sourcepos|testid)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)',
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+
+def clean_chatgpt_artifacts(value):
+    cleaned = str(value or '')
+    previous = None
+    while cleaned != previous:
+        previous = cleaned
+        cleaned = _CHATGPT_SECTION_RE.sub(lambda match: match.group('inner'), cleaned)
+    cleaned = _CHATGPT_DATA_ATTR_RE.sub('', cleaned)
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    return cleaned.strip()
 
 class Category(models.Model):
     name           = models.CharField(max_length=100)
@@ -178,16 +211,32 @@ class Article(models.Model):
  
 
     def save(self, *args, **kwargs):
+        from .utils import ARTICLE_CLEAN_VERSION, sanitize_article_html
+
         is_update = self.pk is not None
         update_fields = kwargs.get('update_fields')
         should_ping_sitemap = False
         push_payload = None
+        create_initial_published_version = False
+
+        self.content_raw = clean_chatgpt_artifacts(self.content_raw)
+        self.content_clean = clean_chatgpt_artifacts(self.content_clean)
+        self.content = clean_chatgpt_artifacts(self.content)
+
+        source_html = self.content_raw or self.content_clean or self.content
+        normalized_clean = sanitize_article_html(source_html)
+        self.content_clean = normalized_clean
+        self.content = normalized_clean
+        self.clean_version = ARTICLE_CLEAN_VERSION
+
         if update_fields:
             update_fields = set(update_fields)
             if 'updated_at' not in update_fields:
                 self.updated_at = timezone.now()
                 update_fields.add('updated_at')
                 kwargs['update_fields'] = update_fields
+            update_fields.update({'content_raw', 'content_clean', 'content', 'clean_version'})
+            kwargs['update_fields'] = update_fields
     
         # ✅ SLUG AUTO GENERATE
         if not self.slug:
@@ -206,22 +255,32 @@ class Article(models.Model):
             )
      
             # Versioning Logic (Content Change)
-            if (
-                old_article.title    != self.title or
-                old_article.subtitle != self.subtitle or
-                old_article.content  != self.content
-            ):
+            title_changed = _normalize_version_text(old_article.title) != _normalize_version_text(self.title)
+            subtitle_changed = _normalize_version_text(old_article.subtitle) != _normalize_version_text(self.subtitle)
+            content_changed = _normalize_version_html(old_article.content) != _normalize_version_html(self.content)
+
+            should_capture_version = old_article.status == "published"
+
+            if should_capture_version and (title_changed or subtitle_changed or content_changed):
                 last_version = self.versions.order_by('-version_number').first()
-                next_version_number = 1 if not last_version else last_version.version_number + 1
-    
-                ArticleVersion.objects.create(
-                    article=self,
-                    title=old_article.title,
-                    subtitle=old_article.subtitle,
-                    content=old_article.content,
-                    edited_by=self.author,
-                    version_number=next_version_number
+                is_duplicate_snapshot = (
+                    last_version
+                    and _normalize_version_text(last_version.title) == _normalize_version_text(old_article.title)
+                    and _normalize_version_text(last_version.subtitle) == _normalize_version_text(old_article.subtitle)
+                    and _normalize_version_html(last_version.content) == _normalize_version_html(old_article.content)
                 )
+
+                if not is_duplicate_snapshot:
+                    next_version_number = 1 if not last_version else last_version.version_number + 1
+
+                    ArticleVersion.objects.create(
+                        article=self,
+                        title=old_article.title,
+                        subtitle=old_article.subtitle,
+                        content=old_article.content,
+                        edited_by=self.author,
+                        version_number=next_version_number
+                    )
     
             if old_article.status != self.status:
                 ArticleWorkflowLog.objects.create(
@@ -233,12 +292,14 @@ class Article(models.Model):
                 )
     
                 # ✅ ENSURE published_at set
-                if self.status == "published" and not self.published_at:
-                    self.published_at = timezone.now()
-                    if update_fields is not None:
-                        update_fields.add('published_at')
-                        kwargs['update_fields'] = update_fields
-
+                if self.status == "published":
+                    if not self.published_at:
+                        self.published_at = timezone.now()
+                        if update_fields is not None:
+                            update_fields.add('published_at')
+                            kwargs['update_fields'] = update_fields
+                    if not self.versions.exists():
+                        create_initial_published_version = True
                     should_ping_sitemap = True
                     push_payload = {
                         "title": self.title[:60],
@@ -260,12 +321,13 @@ class Article(models.Model):
     
         else:
             # ✅ NEW OBJECT CASE
-            if self.status == "published" and not self.published_at:
-                self.published_at = timezone.now()
-                if update_fields is not None:
-                    update_fields.add('published_at')
-                    kwargs['update_fields'] = update_fields
-
+            if self.status == "published":
+                if not self.published_at:
+                    self.published_at = timezone.now()
+                    if update_fields is not None:
+                        update_fields.add('published_at')
+                        kwargs['update_fields'] = update_fields
+                create_initial_published_version = True
                 should_ping_sitemap = True
                 push_payload = {
                     "title": self.title[:60],
@@ -275,6 +337,16 @@ class Article(models.Model):
     
         self.full_clean()
         super().save(*args, **kwargs)
+
+        if create_initial_published_version and not self.versions.exists():
+            ArticleVersion.objects.create(
+                article=self,
+                title=self.title,
+                subtitle=self.subtitle,
+                content=self.content,
+                edited_by=self.author,
+                version_number=1,
+            )
 
         if should_ping_sitemap:
             from newsapp.signals import ping_google_sitemap

@@ -279,9 +279,17 @@ const escapeHtml = (value) =>
 
 const stripHtml = (value) =>
   String(value || '')
+    .replace(/&nbsp;|&#160;|&#xa0;/gi, ' ')
+    .replace(/\u00a0/g, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
+const removeEmptyHeadings = (value) =>
+  String(value || '').replace(
+    /<h([1-6])\b[^>]*>(?:\s|&nbsp;|&#160;|&#xa0;|<br\s*\/?>|<\/?span\b[^>]*>)*<\/h\1>/gi,
+    ''
+  )
 
 const normalizeKeywordPhrase = (value) =>
   String(value || '')
@@ -329,7 +337,10 @@ const sanitizeArticleBodyHtml = (value) => {
   const raw = String(value || '').trim()
   if (!raw) return ''
 
-  return raw
+  return removeEmptyHeadings(
+    raw
+      .replace(/&nbsp;|&#160;|&#xa0;/gi, ' ')
+      .replace(/\u00a0/g, ' ')
     .replace(/<\s*\/?\s*(html|head|body)\b[^>]*>/gi, '')
     .replace(/<\s*(script|style|noscript|meta|link|base)\b[^>]*>[\s\S]*?<\s*\/\s*\1>/gi, '')
     .replace(/<\s*(script|style|noscript|meta|link|base)\b[^>]*\/?>/gi, '')
@@ -339,6 +350,7 @@ const sanitizeArticleBodyHtml = (value) => {
     .replace(/\sstyle='[^']*'/gi, '')
     .replace(/\s(href|src)=["']\s*javascript:[^"']*["']/gi, '')
     .trim()
+  )
 }
 
 const buildArticleFallbackHtml = (article, route, meta) => {
@@ -674,6 +686,35 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   }
 }
 
+function buildHrefLangTags(canonicalUrl) {
+  const canonical = String(canonicalUrl || '').trim()
+  if (!canonical) return ''
+
+  return `
+  <link rel="alternate" hreflang="en-IN" href="${canonical}">
+  <link rel="alternate" hreflang="en-US" href="${canonical}">
+  <link rel="alternate" hreflang="x-default" href="${canonical}">`
+}
+
+function buildWebsiteSchemaTag() {
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: `${BASE_URL}/`,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${BASE_URL}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
+  return `<script type="application/ld+json">${JSON.stringify(websiteSchema)}</script>`
+}
+
 // Remove old tags and inject fresh tags from API data.
 function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) {
   const meta = buildMetaForRoute(route, articleMap, categoryMap, siteData)
@@ -704,6 +745,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     .replace(/<meta[^>]+name=["']secondary_keywords["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']robots["'][^>]*>\s*/gi, '')
     .replace(/<link[^>]+rel=["']canonical["'][^>]*>\s*/gi, '')
+    .replace(/<link[^>]+rel=["']alternate["'][^>]+hreflang=["'][^"']+["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+property=["']og:[^"']*["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']twitter:[^"']*["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+property=["']twitter:[^"']*["'][^>]*>\s*/gi, '')
@@ -719,6 +761,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   ${safeSecondaryKeywords ? `<meta name="secondary_keywords" content="${safeSecondaryKeywords}">` : ''}
   <meta name="robots" content="${safeRobots}">
   <link rel="canonical" href="${meta.canonical}">
+  ${buildHrefLangTags(meta.canonical)}
   <meta property="og:type" content="${meta.ogType}">
   <meta property="og:title" content="${safeTitle}">
   <meta property="og:description" content="${safeDesc}">
@@ -748,6 +791,11 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       : ''
 
   cleaned = cleaned.replace('</head>', `${preloadTags}${injectedTags}\n</head>`)
+
+  const hasWebSiteSchema = /"@type"\s*:\s*"WebSite"/i.test(cleaned)
+  if (!hasWebSiteSchema) {
+    cleaned = cleaned.replace('</head>', `\n${buildWebsiteSchemaTag()}\n</head>`)
+  }
 
   if (isArticlePath(route)) {
     const article = articleMap.get(route)

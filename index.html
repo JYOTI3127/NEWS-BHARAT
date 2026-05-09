@@ -123,9 +123,7 @@
   <meta name="twitter:url" content="https://news4bharat.com/" />
   <meta name="twitter:image" content="https://news4bharat.com/news4bharat-share.png" />
 
-  <!--
-    Canonical is injected by the prerender script so each route gets the correct URL.
-  -->
+  <!-- Canonical and hreflang are injected by prerender per route -->
 
   <script>
     (function () {
@@ -178,6 +176,24 @@
       "https://x.com/news4_bharat",
       "https://news4bharat.com/about-us"
     ]
+  }
+  </script>
+
+  <!-- WebSite + SearchAction Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "News4Bharat",
+    "url": "https://news4bharat.com/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://news4bharat.com/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
 

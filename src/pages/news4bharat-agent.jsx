@@ -85,7 +85,7 @@ function buildHTML(articles, meta) {
         <td valign="top">
           <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:${cc(a.category)};margin-bottom:3px;">${esc(a.category)}</div>
           <div style="font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.45;margin-bottom:3px;">${esc(a.title)}</div>
-          <div style="font-size:9px;color:#6b6b6b;">${esc(a.date)} &nbsp;·&nbsp; ${esc(a.readTime)}</div>
+          <div style="font-size:9px;color:#6b6b6b;">${esc(a.date)} · ${esc(a.readTime)}</div>
         </td>
       </tr></table>
     </td></tr>`).join("");
@@ -238,7 +238,7 @@ function buildHTML(articles, meta) {
       <tr><td><div style="height:1px;background:#e5e3de;margin:0 0 16px;"></div></td></tr>
       <tr><td align="center" style="font-size:9px;color:#bbb;line-height:1.8;">
         © ${new Date().getFullYear()} News4Bharat Media Pvt. Ltd. All rights reserved.<br/>
-        <a href="#" style="color:#aaa;">news4bharat.com</a> &nbsp;·&nbsp; <a href="#" style="color:#aaa;">Unsubscribe</a>
+        <a href="#" style="color:#aaa;">news4bharat.com</a> · <a href="#" style="color:#aaa;">Unsubscribe</a>
       </td></tr>
     </table>
   </td></tr>

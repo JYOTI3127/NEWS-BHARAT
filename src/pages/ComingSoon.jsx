@@ -454,7 +454,7 @@ export default function ComingSoon() {
             <div className="ticker-inner">
               <span className="ticker-text">
                Follow us for updates and be among the first to experience News4Bharat – News That Connects India.
-               &nbsp;&nbsp;| &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;
+               |
                Follow us for updates and be among the first to experience News4Bharat – News That Connects India.
         
               </span>

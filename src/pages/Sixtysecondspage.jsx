@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Twitter, Facebook, Link2, ArrowLeft, Clock, User } from "lucide-react";
 import { API_BASE } from "../lib/api";
@@ -7,6 +7,28 @@ const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", {
     day: "numeric", month: "long", year: "numeric",
   }) : "";
+
+const normalizeRichHtml = (html) => {
+  if (typeof html !== "string" || !html.trim()) return "";
+  let normalized = html
+    .replace(/&nbsp;|&#160;|&#xa0;/gi, " ")
+    .replace(/\u00a0/g, " ");
+
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return normalized;
+  }
+
+  const doc = new DOMParser().parseFromString(normalized, "text/html");
+  Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
+    const text = String(heading.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) heading.remove();
+  });
+
+  return doc.body.innerHTML;
+};
 
 // ── Static fallback — jab API se article na mile ──────────────
 const STATIC_ARTICLE = {
@@ -94,6 +116,7 @@ export default function SixtySecondsPage() {
 
   const date    = article.published_at || article.created_at;
   const catName = article.category_details?.[0]?.name || "60 Seconds";
+  const normalizedContent = useMemo(() => normalizeRichHtml(article?.content || ""), [article?.content]);
 
   return (
     <div style={{
@@ -184,7 +207,7 @@ export default function SixtySecondsPage() {
           {/* Content — HTML as-is */}
           <div
             className="sixty-content"
-            dangerouslySetInnerHTML={{ __html: article.content || "" }}
+            dangerouslySetInnerHTML={{ __html: normalizedContent }}
             suppressHydrationWarning={true}
           />
 

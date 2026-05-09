@@ -495,7 +495,7 @@ const CategorySection = memo(({ section, articles }) => {
 // ─────────────────────────────────────────────
 // ✅ Main Component
 // ─────────────────────────────────────────────
-export default function HomeCategorySections({ articles: passedArticles = null }) {
+export default function HomeCategorySections({ articles: passedArticles = null, onReady = null }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading]   = useState(true);
   const is4K = useIs4K();
@@ -548,14 +548,14 @@ export default function HomeCategorySections({ articles: passedArticles = null }
       } finally {
         if (!ignore) {
           setLoading(false);
-          document.dispatchEvent(new Event("prerender-ready"));
+          if (typeof onReady === "function") onReady();
         }
       }
     }
 
     loadSections();
     return () => { ignore = true; };
-  }, [passedArticles]);
+  }, [passedArticles, onReady]);
 
   if (loading) {
     return <div className={`hcs-root${is4K ? " hcs-root-4k" : ""}`}>Loading categories...</div>;

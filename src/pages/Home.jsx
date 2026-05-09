@@ -106,7 +106,17 @@ function DeferredSection({
 }
 
 const Home = () => {
+  const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
+  const [homeCategoriesReady, setHomeCategoriesReady] = React.useState(() => !isPrerender);
+  const [moreStoriesReady, setMoreStoriesReady] = React.useState(() => !isPrerender);
+  const prerenderReadyEmittedRef = React.useRef(false);
+  const handleHomeCategoriesReady = React.useCallback(() => {
+    setHomeCategoriesReady(true);
+  }, []);
+  const handleMoreStoriesReady = React.useCallback(() => {
+    setMoreStoriesReady(true);
+  }, []);
   const [cachedSideArticles, setCachedSideArticles] = React.useState(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -143,7 +153,7 @@ const Home = () => {
 
   // ─── FreshPopularShowcase: /homepage/latest_news/current/ ─────────────────
   // Backend display_count + articles control karta hai — frontend kuch nahi
-  const { data: freshPopularData } = useQuery({
+  const { data: freshPopularData, isLoading: freshPopularLoading } = useQuery({
     queryKey: ['fresh-popular-showcase'],
     queryFn: fetchFreshPopularShowcase,
     staleTime: 2 * 60 * 1000,
@@ -180,7 +190,7 @@ const Home = () => {
 
   const sidePanelsLoading = articlesLoading && sideArticlesForShowcase.length === 0;
 
-  const { data: q4ArticlesData } = useQuery({
+  const { data: q4ArticlesData, isLoading: q4Loading } = useQuery({
     queryKey: ['q4-results-home'],
     queryFn: async () => {
       const settled = await Promise.allSettled(
@@ -256,6 +266,33 @@ const Home = () => {
   );
 
   const bannerLoading = heroLoading || (shouldUseFallbackBanner && bannerArticlesLoading);
+
+  const homeApiReady =
+    !articlesLoading &&
+    !heroLoading &&
+    !freshPopularLoading &&
+    !q4Loading &&
+    !bannerLoading;
+
+  useEffect(() => {
+    if (!isPrerender) return;
+    if (typeof window !== 'undefined') {
+      window.prerenderReady = false;
+    }
+    prerenderReadyEmittedRef.current = false;
+  }, [isPrerender]);
+
+  useEffect(() => {
+    if (!isPrerender) return;
+    if (prerenderReadyEmittedRef.current) return;
+    if (!homeApiReady || !homeCategoriesReady || !moreStoriesReady) return;
+
+    if (typeof window !== 'undefined') {
+      window.prerenderReady = true;
+    }
+    document.dispatchEvent(new Event('prerender-ready'));
+    prerenderReadyEmittedRef.current = true;
+  }, [isPrerender, homeApiReady, homeCategoriesReady, moreStoriesReady]);
 
   return (
     <div className="home-page-shell">
@@ -358,11 +395,17 @@ const Home = () => {
         </DeferredSection>
 
         <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash} className="home-section-align">
-          <HomeCategorySections articles={allArticles} />
+          <HomeCategorySections
+            articles={allArticles}
+            onReady={handleHomeCategoriesReady}
+          />
         </DeferredSection>
 
         <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
-          <MoreStoriesSection articles={allArticles} />
+          <MoreStoriesSection
+            articles={allArticles}
+            onReady={handleMoreStoriesReady}
+          />
         </DeferredSection>
 
         <div className="home-section-align mb-2 mt-2 px-4 sm:mt-3 sm:mb-4">

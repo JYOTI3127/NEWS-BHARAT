@@ -4,6 +4,19 @@ import App from './App.jsx'
 import { HelmetProvider } from "react-helmet-async";
 import { fetchArticles, fetchCategories } from './lib/api.js';
 
+const isPrerenderContext = () => {
+  if (typeof window === "undefined") return false;
+  const userAgent = window.navigator?.userAgent || "";
+  return /HeadlessChrome|prerender/i.test(userAgent);
+};
+
+if (typeof window !== "undefined" && isPrerenderContext()) {
+  window.prerenderReady = false;
+  document.addEventListener("prerender-ready", () => {
+    window.prerenderReady = true;
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

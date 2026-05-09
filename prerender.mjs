@@ -269,6 +269,7 @@ const stripLazyChunkPreloads = (html) =>
 
 const BASE_URL = 'https://news4bharat.com'
 const SITE_NAME = 'News4Bharat'
+const ENABLE_ARTICLE_BODY_FALLBACK = String(process.env.PRERENDER_ARTICLE_BODY_FALLBACK || '').trim() === '1'
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -810,7 +811,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       /"@type"\s*:\s*\[\s*"NewsArticle"/i.test(cleaned)
     const hasBreadcrumbSchema = /"@type"\s*:\s*"BreadcrumbList"/i.test(cleaned)
 
-    if (article && !hasArticleBodyMarkup) {
+    if (ENABLE_ARTICLE_BODY_FALLBACK && article && !hasArticleBodyMarkup) {
       const fallbackArticleHtml = buildArticleFallbackHtml(article, route, meta)
       if (fallbackArticleHtml) {
         cleaned = cleaned.replace(/<body([^>]*)>/i, `<body$1>\n${fallbackArticleHtml}`)

@@ -197,6 +197,7 @@ export default function CategoryPage() {
       }
 
       setLoading(false);
+      window.prerenderReady = true;
       document.dispatchEvent(new Event('prerender-ready'))
     };
     fetchData();

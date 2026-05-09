@@ -1437,7 +1437,10 @@ export default function ArticleDetails() {
     if (!articleSlug) return;
     if (!article && !notFound && !loadError) return;
     let intervalId = 0, timeoutId = 0, rafId = 0;
-    const emitReady = () => document.dispatchEvent(new Event("prerender-ready"));
+    const emitReady = () => {
+      window.prerenderReady = true;
+      document.dispatchEvent(new Event("prerender-ready"));
+    };
     const isArticleRenderReady = () => {
       if (!article || !isPrerenderRequest) return true;
       const bodyText = articleContentRef.current?.textContent?.trim() || "";

@@ -12,6 +12,7 @@ export default function PageSeo({ title, description, keywords = "", path = "/" 
     if (typeof document === "undefined") return undefined;
 
     const readyTimer = window.setTimeout(() => {
+      window.prerenderReady = true;
       document.dispatchEvent(new Event("prerender-ready"));
     }, 100);
 

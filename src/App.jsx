@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState, Profiler } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { apiUrl } from "./lib/api";
-import { getArticlePath, isArticlePath } from "./lib/articleUrl";
+import { getArticlePath } from "./lib/articleUrl";
 
 // Seedhe load honge — har page pe zaroori hain
 import Navbar from "./components/Navbar";
@@ -213,17 +213,6 @@ function Layout() {
       }
       window.clearTimeout(timeoutId);
     };
-  }, [hideLayout, location.pathname]);
-
-  useEffect(() => {
-    if (hideLayout) return;
-    if (isArticlePath(location.pathname)) return;
-
-    const rafId = window.requestAnimationFrame(() => {
-      document.dispatchEvent(new Event("prerender-ready"));
-    });
-
-    return () => window.cancelAnimationFrame(rafId);
   }, [hideLayout, location.pathname]);
 
   return (

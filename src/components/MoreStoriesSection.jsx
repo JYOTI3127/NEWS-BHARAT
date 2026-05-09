@@ -220,7 +220,7 @@ function StoryCard({ article }) {
   );
 }
 
-export default function MoreStoriesSection({ articles: passedArticles = [] }) {
+export default function MoreStoriesSection({ articles: passedArticles = [], onReady = null }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const is4K = useIs4K();
@@ -247,6 +247,7 @@ export default function MoreStoriesSection({ articles: passedArticles = [] }) {
       } finally {
         if (!ignore) {
           setLoading(false);
+          if (typeof onReady === "function") onReady();
         }
       }
     }
@@ -256,7 +257,7 @@ export default function MoreStoriesSection({ articles: passedArticles = [] }) {
     return () => {
       ignore = true;
     };
-  }, [passedArticles]);
+  }, [passedArticles, onReady]);
 
   if (loading) {
     return (

@@ -195,7 +195,11 @@ export default function BottomNav() {
     return sessionStorage.getItem("breakingClosed") !== "true";
   });
 
-  const shouldReserveBreakingSpace = showBreaking;
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  const isLikelyArticleRoute =
+    pathSegments.length >= 2 && pathSegments[0]?.toLowerCase() !== "category";
+  const shouldShowBreakingStrip = showBreaking && !isLikelyArticleRoute;
+  const shouldReserveBreakingSpace = shouldShowBreakingStrip;
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth < 768);
@@ -210,7 +214,7 @@ export default function BottomNav() {
   }, []);
 
   useEffect(() => {
-    if (!isMobileView || !showBreaking) return;
+    if (!isMobileView || !shouldShowBreakingStrip) return;
 
     const fetchBreakingNews = async () => {
       try {
@@ -232,7 +236,7 @@ export default function BottomNav() {
 
     fetchBreakingNews();
     return undefined;
-  }, [isMobileView, showBreaking]);
+  }, [isMobileView, shouldShowBreakingStrip]);
 
   useEffect(() => {
     if (!searchOpen) return undefined;
@@ -439,7 +443,7 @@ export default function BottomNav() {
       )}
 
       <div className="fixed bottom-0 left-0 right-0 z-50 font-sans block md:hidden">
-        {showBreaking && (
+        {shouldShowBreakingStrip && (
           <div className="bg-red-800 px-2 py-2 xs:px-3 xs:py-2.5 min-h-[109px] xs:min-h-[115px]">
             <div className="flex justify-between items-center mb-1.5 xs:mb-2">
               <div className="bg-red-900 px-2 py-0.5 xs:px-3.5 xs:py-1 rounded text-yellow-300 font-black text-[10px] xs:text-sm italic uppercase tracking-wide">
@@ -487,18 +491,7 @@ export default function BottomNav() {
                     </li>
                   );
                 })
-              ) : (
-                <>
-                  <li className="text-white/85 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
-                    <span className="text-white text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
-                    <span>Loading breaking news...</span>
-                  </li>
-                  <li className="text-white/60 text-[11px] xs:text-sm font-bold leading-[1.8] flex items-baseline gap-1 xs:gap-1.5">
-                    <span className="text-white/80 text-base xs:text-lg leading-none flex-shrink-0">&bull;</span>
-                    <span>Latest updates will appear here shortly.</span>
-                  </li>
-                </>
-              )}
+              ) : null}
             </ul>
           </div>
         )}

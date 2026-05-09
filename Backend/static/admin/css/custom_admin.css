@@ -135,7 +135,7 @@ body.sidebar-collapsed .admin-main {
   align-items: center;
   justify-content: space-between;
   padding: 18px 18px 14px;
-  border-bottom: 1px solid #0f172a;
+  /* border-bottom: 1px solid #0f172a; */
   flex-shrink: 0;
 }
 
@@ -228,7 +228,7 @@ body.sidebar-collapsed .admin-main {
   flex-direction: column;
   padding: 3px 12px;
   gap: 2px;
-  border-bottom: 1px solid #0f172a;
+  /* border-bottom: 1px solid #0f172a; */
   flex-shrink: 0;
 }
 
@@ -473,7 +473,7 @@ body.sidebar-collapsed .admin-main {
    PANEL FOOTER
 ───────────────────────────────────────────── */
 .panel-footer {
-  border-top: 1px solid #0f172a;
+  /* border-top: 1px solid #0f172a; */
   padding: 6px 12px;
   flex-shrink: 0;
 }

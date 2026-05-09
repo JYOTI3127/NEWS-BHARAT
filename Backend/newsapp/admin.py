@@ -17,11 +17,13 @@ import json
 from datetime import timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, strip_tags
 from django.urls import path
+from urllib.parse import quote
 from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
 from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
+from .seo_direct import article_url
 
 
 def _format_duration(total_seconds):
@@ -1643,6 +1645,48 @@ class ArticleAdmin(admin.ModelAdmin):
     class Media:
         js = ('newsapp/custom_admin.js',)
 
+    def _public_site_base(self):
+        return "https://news4bharat.com"
+
+    def _public_asset_url(self, raw_url):
+        value = str(raw_url or '').strip()
+        if not value:
+            return ''
+        if value.startswith(('http://', 'https://')):
+            return value
+        if value.startswith('//'):
+            return f"https:{value}"
+        if not value.startswith('/'):
+            value = '/' + value
+        return f"{self._public_site_base()}{value}"
+
+    def _share_description(self, article):
+        text = str(article.meta_description or strip_tags(article.content or '')).strip()
+        text = ' '.join(text.split())
+        if len(text) <= 140:
+            return text
+        trimmed = text[:137].rsplit(' ', 1)[0].strip()
+        return f"{trimmed}..."
+
+    def _attach_share_metadata(self, articles):
+        for article in articles:
+            public_url = article_url(article, self._public_site_base())
+            share_description = self._share_description(article)
+            image_candidate = article.image.url if getattr(article, 'image', None) else article.image_url
+            share_image_url = self._public_asset_url(image_candidate)
+            share_parts = [article.title]
+            if share_description:
+                share_parts.append(share_description)
+            share_parts.append(public_url)
+            share_text = '\n\n'.join(share_parts)
+
+            article.public_share_url = public_url
+            article.public_share_description = share_description
+            article.public_share_image_url = share_image_url
+            article.whatsapp_share_url = f"https://wa.me/?text={quote(share_text)}"
+            article.facebook_share_url = f"https://www.facebook.com/sharer/sharer.php?u={quote(public_url, safe='')}"
+            article.instagram_share_text = share_text
+
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
         original_get = request.GET.copy()
@@ -1659,6 +1703,9 @@ class ArticleAdmin(admin.ModelAdmin):
 
         article_paginator = Paginator(articles_qs, 10)
         article_page_obj = article_paginator.get_page(original_get.get('article_page', 1))
+        articles = list(article_page_obj.object_list)
+        self._attach_share_metadata(articles)
+        article_page_obj.object_list = articles
 
         page_query_dict = original_get.copy()
         if 'article_page' in page_query_dict:
@@ -1677,7 +1724,7 @@ class ArticleAdmin(admin.ModelAdmin):
         ).order_by('-changed_at')[:15]
 
         extra_context.update({
-            'articles':             article_page_obj.object_list,
+            'articles':             articles,
             'article_page_obj':     article_page_obj,
             'article_paginator':    article_paginator,
             'page_query':           page_query,

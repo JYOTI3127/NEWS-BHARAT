@@ -3368,6 +3368,50 @@ text-decoration: none;
   gap: 4px;
 }
 
+.art-share-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.art-share-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  background: #fff;
+  padding: 0;
+}
+
+.art-share-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.art-share-btn--whatsapp {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.18);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.art-share-btn--facebook {
+  color: #1877f2;
+  border-color: rgba(24, 119, 242, 0.18);
+  background: rgba(24, 119, 242, 0.08);
+}
+
+.art-share-btn--instagram {
+  color: #c13584;
+  border-color: rgba(193, 53, 132, 0.2);
+  background: rgba(193, 53, 132, 0.08);
+}
+
 .art-action-btn {
   width: 28px;
   height: 28px;

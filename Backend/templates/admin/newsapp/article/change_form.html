@@ -24,6 +24,103 @@ label.image-drop {
 .dz-fmt-hint { font-size: 10px; color: #94a3b8; margin-top: 6px; pointer-events: none; }
 .subtitle-char-badge { font-size: 10px; font-weight: 500; color: #94a3b8; background: #f1f5f9; padding: 1px 7px; border-radius: 10px; transition: color 0.2s; }
 
+.readability-panel {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid #dbe3f0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
+}
+.readability-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.readability-panel__title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #162c6b;
+}
+.readability-panel__note {
+  font-size: 11px;
+  color: #64748b;
+}
+.readability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.readability-stat {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+.readability-stat__label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.readability-stat__value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+.readability-stat__sub {
+  margin-top: 7px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+.readability-analysis {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+.readability-analysis__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+.readability-analysis__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.readability-analysis__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  padding: 4px 0;
+}
+.readability-analysis__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex: 0 0 9px;
+  background: #cbd5e1;
+}
+.readability-analysis__item.is-good .readability-analysis__dot { background: #22c55e; }
+.readability-analysis__item.is-ok .readability-analysis__dot { background: #f59e0b; }
+.readability-analysis__item.is-bad .readability-analysis__dot { background: #ef4444; }
+@media (max-width: 860px) {
+  .readability-grid { grid-template-columns: 1fr; }
+}
+
 .nb-font-select { padding: 3px 6px; border: 1.5px solid #e2e8f0; border-radius: 6px; background: #fff; font-size: 12px; color: #374151; cursor: pointer; outline: none; max-width: 130px; transition: border-color 0.15s; font-family: inherit; }
 .nb-font-select:hover, .nb-font-select:focus { border-color: #162c6b; }
 
@@ -746,6 +843,38 @@ grammarly-button,
     </div>
     <div class="comments-list" id="comments_list">
       <div style="font-size:12px;color:var(--muted);padding:8px 0;">No comments yet.</div>
+    </div>
+    <div class="readability-panel" id="readability_panel">
+      <div class="readability-panel__head">
+        <div class="readability-panel__title">Article Readability</div>
+        <div class="readability-panel__note">Live content metrics based on the editor text only</div>
+      </div>
+      <div class="readability-grid">
+        <div class="readability-stat">
+          <div class="readability-stat__label">Readability Score</div>
+          <div class="readability-stat__value" id="readability_score_value">0</div>
+          <div class="readability-stat__sub" id="readability_score_note">Start writing to calculate readability.</div>
+        </div>
+        <div class="readability-stat">
+          <div class="readability-stat__label">Reading Time</div>
+          <div class="readability-stat__value" id="readability_time_value">0 min</div>
+          <div class="readability-stat__sub" id="readability_time_note">Estimated at 200 words per minute.</div>
+        </div>
+        <div class="readability-stat">
+          <div class="readability-stat__label">Word Count</div>
+          <div class="readability-stat__value" id="readability_word_count_value">0</div>
+          <div class="readability-stat__sub" id="readability_word_count_note">Words found in the current article body.</div>
+        </div>
+      </div>
+      <div class="readability-analysis">
+        <div class="readability-analysis__title">Content Analysis</div>
+        <div class="readability-analysis__list" id="readability_analysis_list">
+          <div class="readability-analysis__item">
+            <span class="readability-analysis__dot"></span>
+            <span>Start writing to view analysis.</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3372,6 +3501,152 @@ function renderComments(){
     return '<div class="comment-item"><div class="c-author">You · '+c.time+'</div>'+c.text+'</div>';
   }).join('');
 }
+function _readabilityTextFromEditor(){
+  var editor=document.getElementById('ui_content');
+  if(!editor)return '';
+  return String(editor.innerText||editor.textContent||'')
+    .replace(/\u00a0/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function _readabilityWordList(text){
+  return (text.match(/[A-Za-z0-9']+/g)||[]).filter(Boolean);
+}
+function _readabilitySentenceCount(text){
+  var cleaned=String(text||'').replace(/\s+/g,' ').trim();
+  if(!cleaned)return 0;
+  var parts=cleaned.split(/[.!?]+/).map(function(item){ return item.trim(); }).filter(Boolean);
+  return parts.length||1;
+}
+function _readabilitySyllables(word){
+  var cleaned=String(word||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(!cleaned)return 0;
+  if(cleaned.length<=3)return 1;
+  cleaned=cleaned.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'');
+  cleaned=cleaned.replace(/^y/,'');
+  var groups=cleaned.match(/[aeiouy]{1,2}/g);
+  return Math.max(1, groups?groups.length:1);
+}
+function _readabilityScoreLabel(score){
+  if(score>=80)return 'Very easy to read.';
+  if(score>=65)return 'Easy to read for most readers.';
+  if(score>=50)return 'Moderately easy. Some sentences may feel dense.';
+  if(score>=35)return 'A bit complex. Shorter sentences would help.';
+  return 'Hard to read. Simplify wording and sentence length.';
+}
+function _analysisItem(status, text){
+  return '<div class="readability-analysis__item is-'+status+'"><span class="readability-analysis__dot"></span><span>'+text+'</span></div>';
+}
+function _escapeHtml(text){
+  return String(text||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function updateReadabilityAnalysis(metrics){
+  var listEl=document.getElementById('readability_analysis_list');
+  if(!listEl)return;
+  var text=metrics.text||'';
+  var wordCount=metrics.wordCount||0;
+  var sentenceCount=metrics.sentenceCount||0;
+  var score=metrics.score||0;
+  var title=(document.getElementById('ui_title')?document.getElementById('ui_title').value:'').trim();
+  var metaTitle=(document.getElementById('ui_meta_title')?document.getElementById('ui_meta_title').value:'').trim();
+  var metaDescription=(document.getElementById('ui_meta_desc')?document.getElementById('ui_meta_desc').value:'').trim();
+  var focusKeyword=(document.getElementById('ui_focus_kw')?document.getElementById('ui_focus_kw').value:'').trim().toLowerCase();
+  var normalizedText=text.toLowerCase();
+  var firstHundredWords=metrics.words.slice(0,100).join(' ').toLowerCase();
+  var avgSentenceLength=sentenceCount?Math.round(wordCount/sentenceCount):0;
+  var items=[];
+
+  items.push(wordCount>=300
+    ? _analysisItem('good','Content length is solid with '+wordCount+' words.')
+    : wordCount>=150
+      ? _analysisItem('ok','Content has '+wordCount+' words. Try reaching at least 300 words.')
+      : _analysisItem('bad','Content is too short right now. Add more detail and context.'));
+
+  items.push(score>=60
+    ? _analysisItem('good','Readability score is healthy at '+score+'.')
+    : score>=40
+      ? _analysisItem('ok','Readability score is '+score+'. A few shorter sentences would help.')
+      : _analysisItem('bad','Readability score is low at '+score+'. Simplify wording and sentence length.'));
+
+  items.push(avgSentenceLength && avgSentenceLength<=20
+    ? _analysisItem('good','Average sentence length is under control at about '+avgSentenceLength+' words.')
+    : avgSentenceLength && avgSentenceLength<=28
+      ? _analysisItem('ok','Average sentence length is about '+avgSentenceLength+' words. Slightly shorter is better.')
+      : _analysisItem('bad','Sentences are long on average. Break them into smaller lines.'));
+
+  if(focusKeyword){
+    items.push(title.toLowerCase().indexOf(focusKeyword)!==-1
+      ? _analysisItem('good','Focus keyword appears in the headline.')
+      : _analysisItem('bad','Add the focus keyword to the headline.'));
+    items.push(metaDescription.toLowerCase().indexOf(focusKeyword)!==-1
+      ? _analysisItem('good','Focus keyword appears in the meta description.')
+      : _analysisItem('ok','Consider using the focus keyword in the meta description.'));
+    items.push(firstHundredWords.indexOf(focusKeyword)!==-1
+      ? _analysisItem('good','Focus keyword appears in the first 100 words.')
+      : _analysisItem('ok','Try using the focus keyword in the opening section.'));
+    var matches=(normalizedText.match(new RegExp(focusKeyword.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length;
+    items.push(matches>=2
+      ? _analysisItem('good','Focus keyword is used naturally in the article body.')
+      : _analysisItem('ok','Use the focus keyword a bit more naturally in the body.'));
+  }else{
+    items.push(_analysisItem('ok','Add a focus keyword to unlock keyword-based checks.'));
+  }
+
+  items.push(metaTitle.length>=50&&metaTitle.length<=70
+    ? _analysisItem('good','Meta title length looks good.')
+    : metaTitle.length
+      ? _analysisItem('ok','Meta title should ideally stay between 50 and 70 characters.')
+      : _analysisItem('bad','Add a meta title for stronger search presentation.'));
+
+  items.push(metaDescription.length>=120&&metaDescription.length<=160
+    ? _analysisItem('good','Meta description length looks good.')
+    : metaDescription.length
+      ? _analysisItem('ok','Meta description should ideally stay between 120 and 160 characters.')
+      : _analysisItem('bad','Add a meta description for stronger search presentation.'));
+
+  listEl.innerHTML=items.join('');
+}
+function updateReadabilityStats(){
+  var text=_readabilityTextFromEditor();
+  var words=_readabilityWordList(text);
+  var wordCount=words.length;
+  var sentenceCount=_readabilitySentenceCount(text);
+  var syllableCount=words.reduce(function(total, word){
+    return total+_readabilitySyllables(word);
+  }, 0);
+  var score=0;
+  if(wordCount>0&&sentenceCount>0){
+    score=206.835-(1.015*(wordCount/sentenceCount))-(84.6*(syllableCount/wordCount));
+    score=Math.max(0,Math.min(100,Math.round(score)));
+  }
+  var readingMinutes=wordCount>0?Math.max(1,Math.ceil(wordCount/200)):0;
+
+  var scoreEl=document.getElementById('readability_score_value');
+  var scoreNoteEl=document.getElementById('readability_score_note');
+  var timeEl=document.getElementById('readability_time_value');
+  var timeNoteEl=document.getElementById('readability_time_note');
+  var wordEl=document.getElementById('readability_word_count_value');
+  var wordNoteEl=document.getElementById('readability_word_count_note');
+
+  if(scoreEl)scoreEl.textContent=String(score);
+  if(scoreNoteEl)scoreNoteEl.textContent=wordCount?_readabilityScoreLabel(score):'Start writing to calculate readability.';
+  if(timeEl)timeEl.textContent=readingMinutes?(readingMinutes+' min'):'0 min';
+  if(timeNoteEl)timeNoteEl.textContent=wordCount?('Based on '+wordCount+' words at 200 wpm.'):'Estimated at 200 words per minute.';
+  if(wordEl)wordEl.textContent=String(wordCount);
+  if(wordNoteEl)wordNoteEl.textContent=wordCount?(sentenceCount+' sentence'+(sentenceCount===1?'':'s')+' detected.'):'Words found in the current article body.';
+  updateReadabilityAnalysis({
+    text:text,
+    words:words,
+    wordCount:wordCount,
+    sentenceCount:sentenceCount,
+    score:score
+  });
+}
 function jumpToField(fieldId){
   const el=document.getElementById(fieldId);
   if(!el)return;
@@ -4645,12 +4920,18 @@ function switchPreviewTab(btn,tab){
   const el=document.getElementById(id);
   if(el)el.addEventListener('input',updateEditorPreview);
 });
+['ui_title','ui_meta_title','ui_meta_desc','ui_focus_kw'].forEach(function(id){
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('input',updateReadabilityStats);
+});
 if(document.getElementById('ui_content'))document.getElementById('ui_content').addEventListener('input',updateEditorPreview);
+if(document.getElementById('ui_content'))document.getElementById('ui_content').addEventListener('input',updateReadabilityStats);
 document.querySelectorAll('.cat-item').forEach(function(el){
   el.addEventListener('click',function(){setTimeout(updateEditorPreview,50);});
 });
 renderEditorList();
 updateEditorPreview();
+updateReadabilityStats();
 updateBioCount();
 updateSubtitleCount();
 (function(){

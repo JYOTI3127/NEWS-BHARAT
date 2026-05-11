@@ -785,6 +785,7 @@ const normalizeArticleContent = (html, options = {}) => {
   }
 
   if (typeof window === "undefined" || typeof DOMParser === "undefined") return normalized;
+  const sourcePlainText = getPlainText(normalized);
   const doc = new DOMParser().parseFromString(normalized, "text/html");
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
   normalizeHeadingStructure(doc);
@@ -830,6 +831,8 @@ const normalizeArticleContent = (html, options = {}) => {
   );
 
   if (!isPreSanitized && isChatExportLike && !hasGoogleSheetsMarkup) {
+    const snapshotHtmlBeforeChatCleanup = doc.body.innerHTML;
+    const snapshotPlainBeforeChatCleanup = getPlainText(doc.body.textContent || "");
     const topLevelBlockTags = new Set([
       "H2", "H3", "H4", "H5", "H6", "P", "UL", "OL", "TABLE", "BLOCKQUOTE", "DIV", "GOOGLE-SHEETS-HTML-ORIGIN",
     ]);
@@ -914,6 +917,15 @@ const normalizeArticleContent = (html, options = {}) => {
     if (extracted.length > 0) {
       doc.body.innerHTML = "";
       extracted.forEach((node) => doc.body.appendChild(node));
+    }
+
+    // Safety: if chat-cleanup removes a large chunk of article text, revert it.
+    const snapshotPlainAfterChatCleanup = getPlainText(doc.body.textContent || "");
+    if (
+      snapshotPlainBeforeChatCleanup.length > 800 &&
+      snapshotPlainAfterChatCleanup.length < snapshotPlainBeforeChatCleanup.length * 0.75
+    ) {
+      doc.body.innerHTML = snapshotHtmlBeforeChatCleanup;
     }
   }
 
@@ -1173,7 +1185,15 @@ const normalizeArticleContent = (html, options = {}) => {
     }
     if (descriptor) element.replaceWith(createEmbedNode(doc, descriptor));
   });
-  return doc.body.innerHTML;
+  const finalHtml = doc.body.innerHTML;
+  const finalPlainText = getPlainText(finalHtml);
+
+  // Final guardrail: never ship a heavily truncated body after normalization.
+  if (sourcePlainText.length > 800 && finalPlainText.length < sourcePlainText.length * 0.65) {
+    return normalized;
+  }
+
+  return finalHtml;
 };
 
 const ArticleBody = ({ html, className, style, contentRef }) => {
@@ -1433,30 +1453,65 @@ export default function ArticleDetails() {
     return () => controller.abort();
   }, [article, categorySlug]);
 
-  useEffect(() => {
-    if (!articleSlug) return;
-    if (!article && !notFound && !loadError) return;
-    let intervalId = 0, timeoutId = 0, rafId = 0;
-    const emitReady = () => {
-      window.prerenderReady = true;
-      document.dispatchEvent(new Event("prerender-ready"));
-    };
-    const isArticleRenderReady = () => {
-      if (!article || !isPrerenderRequest) return true;
-      const bodyText = articleContentRef.current?.textContent?.trim() || "";
-      const hasBodyContent = bodyText.length >= 120;
-      const jsonLdScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-      const hasStructuredData = jsonLdScripts.length > 0;
-      return hasBodyContent && hasStructuredData;
-    };
-    if (!isPrerenderRequest || !article) { rafId = window.requestAnimationFrame(emitReady); return () => window.cancelAnimationFrame(rafId); }
-    const checkAndEmit = () => { if (isArticleRenderReady()) { window.clearInterval(intervalId); window.clearTimeout(timeoutId); emitReady(); } };
-    rafId = window.requestAnimationFrame(checkAndEmit);
-    intervalId = window.setInterval(checkAndEmit, 120);
-    timeoutId = window.setTimeout(() => { window.clearInterval(intervalId); emitReady(); }, 12000);
-    return () => { window.cancelAnimationFrame(rafId); window.clearInterval(intervalId); window.clearTimeout(timeoutId); };
-  }, [article, articleSlug, isPrerenderRequest, loadError, notFound]);
+useEffect(() => {
+  if (!articleSlug) return;
+  if (!article && !notFound && !loadError) return;
 
+  let intervalId = 0, timeoutId = 0, rafId = 0;
+  let emitted = false;
+
+  const emitReady = () => {
+    if (emitted) return;
+    emitted = true;
+    window.prerenderReady = true;
+    document.dispatchEvent(new Event("prerender-ready"));
+  };
+
+  // Non-prerender: turant emit karo
+  if (!isPrerenderRequest || !article) {
+    rafId = window.requestAnimationFrame(emitReady);
+    return () => window.cancelAnimationFrame(rafId);
+  }
+
+  const isArticleRenderReady = () => {
+    // JSON-LD schema check — ye hamesha hota hai
+    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+    const hasStructuredData = jsonLdScripts.length > 0;
+
+    // Body content check — RELAXED: 50 chars sufficient hai
+    const bodyText = articleContentRef.current?.textContent?.trim() || "";
+    const hasBodyContent = bodyText.length >= 50;
+
+    // Agar content field hi empty hai API se, to schema ke baad emit karo
+    const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
+    if (articleHasNoContent) return hasStructuredData;
+
+    return hasBodyContent && hasStructuredData;
+  };
+
+  const checkAndEmit = () => {
+    if (isArticleRenderReady()) {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+      emitReady();
+    }
+  };
+
+  rafId = window.requestAnimationFrame(checkAndEmit);
+  intervalId = window.setInterval(checkAndEmit, 150);
+
+  // Hard timeout — 15 seconds ke baad guaranteed emit
+  timeoutId = window.setTimeout(() => {
+    window.clearInterval(intervalId);
+    emitReady();
+  }, 15000);
+
+  return () => {
+    window.cancelAnimationFrame(rafId);
+    window.clearInterval(intervalId);
+    window.clearTimeout(timeoutId);
+  };
+}, [article, articleSlug, isPrerenderRequest, loadError, notFound, articleBodyHtml]);
   useEffect(() => {
     if (!article || !mainArticleRef.current || !moreInListRef.current) return;
     const updateMoreInHeight = () => {

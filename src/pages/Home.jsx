@@ -108,6 +108,7 @@ function DeferredSection({
 const Home = () => {
   const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
+  const shouldForceDeferredRender = isNewsletterHash || isPrerender;
   const [homeCategoriesReady, setHomeCategoriesReady] = React.useState(() => !isPrerender);
   const [moreStoriesReady, setMoreStoriesReady] = React.useState(() => !isPrerender);
   const prerenderReadyEmittedRef = React.useRef(false);
@@ -364,15 +365,15 @@ const Home = () => {
           </Profiler>
         </div>
 
-        <DeferredSection id="VisualStories" minHeight={400} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="VisualStories" minHeight={400} forceRender={shouldForceDeferredRender} className="home-section-align">
           <VisualStoriesWithScore articles={allArticles} />
         </DeferredSection>
 
-        <DeferredSection id="NewsPortalSection" forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="NewsPortalSection" forceRender={shouldForceDeferredRender} className="home-section-align">
           <NewsPortalSection articles={allArticles} />
         </DeferredSection>
 
-        <DeferredSection id="BharatInNumbers" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="BharatInNumbers" minHeight={260} forceRender={shouldForceDeferredRender} className="home-section-align">
           <CategoryMiniCarousel
             title="Bharat in Numbers"
             slugs={BHARAT_NUMBERS_SLUGS}
@@ -381,11 +382,11 @@ const Home = () => {
           />
         </DeferredSection>
 
-        <DeferredSection id="StateNews" minHeight={500} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="StateNews" minHeight={500} forceRender={shouldForceDeferredRender} className="home-section-align">
           <StateNews articles={allArticles} />
         </DeferredSection>
 
-        <DeferredSection id="BharatStartups" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="BharatStartups" minHeight={260} forceRender={shouldForceDeferredRender} className="home-section-align">
           <CategoryMiniCarousel
             title="Bharat of Startups"
             slugs={BHARAT_STARTUPS_SLUGS}
@@ -394,14 +395,14 @@ const Home = () => {
           />
         </DeferredSection>
 
-        <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="HomeCategorySections" minHeight={980} rootMargin="600px 0px" forceRender={shouldForceDeferredRender} className="home-section-align">
           <HomeCategorySections
             articles={allArticles}
             onReady={handleHomeCategoriesReady}
           />
         </DeferredSection>
 
-        <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="MoreStoriesSection" minHeight={760} rootMargin="800px 0px" forceRender={shouldForceDeferredRender} className="home-section-align">
           <MoreStoriesSection
             articles={allArticles}
             onReady={handleMoreStoriesReady}
@@ -420,7 +421,7 @@ const Home = () => {
           </div>
         </div>
 
-        <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={isNewsletterHash} className="home-section-align">
+        <DeferredSection id="Newsletter" anchorId="newsletter" minHeight={220} forceRender={shouldForceDeferredRender} className="home-section-align">
           <Newsletter />
         </DeferredSection>
       </main>

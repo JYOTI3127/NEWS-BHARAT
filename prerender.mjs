@@ -269,7 +269,7 @@ const stripLazyChunkPreloads = (html) =>
 
 const BASE_URL = 'https://news4bharat.com'
 const SITE_NAME = 'News4Bharat'
-const ENABLE_ARTICLE_BODY_FALLBACK = String(process.env.PRERENDER_ARTICLE_BODY_FALLBACK || '').trim() === '1'
+const ENABLE_ARTICLE_BODY_FALLBACK = true 
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -1035,7 +1035,7 @@ const prerenderer = new Prerenderer({
   staticDir: path.join(__dirname, 'build'),
   renderer: new PuppeteerRenderer({
     renderAfterDocumentEvent: 'prerender-ready',
-    timeout: 60000,
+  timeout: 90000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

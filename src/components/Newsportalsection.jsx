@@ -1,17 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
+const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
+
+const getCategorySlugsFromArticle = (article) => {
+  const details = Array.isArray(article?.category_details) ? article.category_details : [];
+  const detailSlugs = details
+    .map((item) => String(item?.slug || "").trim().toLowerCase())
+    .filter(Boolean);
+  const direct = String(article?.category || article?.category_slug || "").trim().toLowerCase();
+  return direct ? [...detailSlugs, direct] : detailSlugs;
+};
+
+const isPrerenderUserAgent = () => {
+  if (typeof window === "undefined") return false;
+  const userAgent = window.navigator?.userAgent || "";
+  return PRERENDER_UA_PATTERN.test(userAgent);
+};
+
 // ✅ Fix 1 — Category slug se seedha fetch, saare articles nahi
-function useCategoryArticles(slug) {
+function useCategoryArticles(slug, seededPool = []) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const slugKey = String(slug || "").trim().toLowerCase();
+  const seededArticles = useMemo(() => {
+    if (!slugKey || !Array.isArray(seededPool) || seededPool.length === 0) return [];
+    return seededPool
+      .filter((article) => getCategorySlugsFromArticle(article).includes(slugKey))
+      .sort(
+        (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
+      );
+  }, [seededPool, slugKey]);
 
   useEffect(() => {
+    let ignore = false;
+
+    if (seededArticles.length > 0) {
+      setArticles(seededArticles);
+      setLoading(false);
+      if (isPrerenderUserAgent()) return () => { ignore = true; };
+    }
+
     fetch(`${API_BASE}/articles/?category=${slug}&page=1&limit=10`)
       .then((r) => r.json())
       .then((data) => {
+        if (ignore) return;
         const all = Array.isArray(data) ? data : (data.results || []);
         const sorted = all.sort(
           (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
@@ -19,8 +54,15 @@ function useCategoryArticles(slug) {
         setArticles(sorted);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [slug]);
+      .catch(() => {
+        if (ignore) return;
+        setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [seededArticles, slug]);
 
   return { articles, loading };
 }
@@ -132,13 +174,19 @@ function ArticleImg({ src, alt, className, style, priority = false }) {
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────
-export function EntertainmentSection() {
+export function EntertainmentSection({ articles: passedArticles = [] }) {
   const navigate = useNavigate();
   const is4K = useIs4K();
   const is2K = useIs2K();
+  const sortedPool = useMemo(() => {
+    if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
+    return [...passedArticles].sort(
+      (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
+    );
+  }, [passedArticles]);
 
-  const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers");
-  const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-in-numbers");
+  const { articles: explainers, loading: explainersLoading } = useCategoryArticles("bharat-explainers", sortedPool);
+  const { articles: numbers, loading: numbersLoading } = useCategoryArticles("bharat-in-numbers", sortedPool);
 
   const featured = explainers[0] || null;
   const desiredRightCards = 5;

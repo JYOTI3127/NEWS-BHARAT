@@ -7,6 +7,7 @@ import {
 } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 import AdvertisementSlot from "./AdvertisementSlot";
+const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
 const getArticleImage = (article) => article?.image_url || article?.image || "";
 const getArticleTitle = (article) => article?.title || article?.headline || "Untitled";
@@ -15,6 +16,21 @@ const normalizeArticles = (data) => {
   return data
     .filter((item) => item && getArticleTitle(item))
     .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
+};
+
+const getCategorySlugsFromArticle = (article) => {
+  const details = Array.isArray(article?.category_details) ? article.category_details : [];
+  const detailSlugs = details
+    .map((item) => String(item?.slug || "").trim().toLowerCase())
+    .filter(Boolean);
+  const direct = String(article?.category || article?.category_slug || "").trim().toLowerCase();
+  return direct ? [...detailSlugs, direct] : detailSlugs;
+};
+
+const isPrerenderUserAgent = () => {
+  if (typeof window === "undefined") return false;
+  const userAgent = window.navigator?.userAgent || "";
+  return PRERENDER_UA_PATTERN.test(userAgent);
 };
 
 const useCardsPerPage = () => {
@@ -42,6 +58,7 @@ export default function CategoryMiniCarousel({
   categoryPath,
   adPlacement,
   adPage = "home",
+  articles: passedArticles = [],
 }) {
   const navigate = useNavigate();
   const cardsPerPage = useCardsPerPage();
@@ -53,13 +70,32 @@ export default function CategoryMiniCarousel({
     () => (Array.isArray(slugs) ? slugs.filter(Boolean) : [slugs].filter(Boolean)),
     [slugs]
   );
+  const seededArticles = useMemo(() => {
+    if (!Array.isArray(passedArticles) || passedArticles.length === 0 || slugList.length === 0) return [];
+    const slugSet = new Set(slugList.map((slug) => String(slug).trim().toLowerCase()));
+    return normalizeArticles(
+      passedArticles.filter((article) =>
+        getCategorySlugsFromArticle(article).some((slug) => slugSet.has(slug))
+      )
+    );
+  }, [passedArticles, slugList]);
 
   useEffect(() => {
     let ignore = false;
 
     const load = async () => {
-      setLoading(true);
-      setArticles([]);
+      if (seededArticles.length > 0) {
+        setArticles(seededArticles);
+        setLoading(false);
+        if (isPrerenderUserAgent()) return;
+      } else {
+        setLoading(true);
+        setArticles([]);
+      }
+
+      if (seededArticles.length === 0) {
+        setLoading(true);
+      }
 
       for (const slug of slugList) {
         try {
@@ -81,7 +117,7 @@ export default function CategoryMiniCarousel({
     return () => {
       ignore = true;
     };
-  }, [slugList]);
+  }, [seededArticles, slugList]);
 
   const totalPages = Math.max(1, Math.ceil(articles.length / cardsPerPage));
   const safePage = page % totalPages;

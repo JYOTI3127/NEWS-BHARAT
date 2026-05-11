@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE, formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 import { canonicalizeRegionName, normalizeRegionKey } from "../lib/stateRegion";
+const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
 // ── State List ────────────────────────────────────────────────
 const stateList = [
@@ -75,6 +76,21 @@ const getSortTimestamp = (article) => {
 
   const parsed = new Date(rawDate).getTime();
   return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const getCategorySlugsFromArticle = (article) => {
+  const details = Array.isArray(article?.category_details) ? article.category_details : [];
+  const detailSlugs = details
+    .map((item) => String(item?.slug || "").trim().toLowerCase())
+    .filter(Boolean);
+  const direct = String(article?.category || article?.category_slug || "").trim().toLowerCase();
+  return direct ? [...detailSlugs, direct] : detailSlugs;
+};
+
+const isPrerenderUserAgent = () => {
+  if (typeof window === "undefined") return false;
+  const userAgent = window.navigator?.userAgent || "";
+  return PRERENDER_UA_PATTERN.test(userAgent);
 };
 
 /* NAYA */
@@ -203,7 +219,7 @@ function ArticleImg({ src, alt, style, priority = false }) {
 }
 
 // ── Main Component ────────────────────────────────────────────
-export default function StateNews() {
+export default function StateNews({ articles: passedArticles = [] }) {
   const [activeState, setActiveState] = useState(null);
   const [stateArticles, setStateArticles] = useState([]);
   const [startupArticles, setStartupArticles] = useState([]);
@@ -221,9 +237,77 @@ export default function StateNews() {
   const isTablet = bp === "tablet";
   const is2K = bp === "laptop-l";
   const showMidCardSummary = true;
+  const isPrerender = useMemo(() => isPrerenderUserAgent(), []);
+
+  const seededStateMap = useMemo(() => {
+    if (!Array.isArray(passedArticles) || passedArticles.length === 0) return new Map();
+    const map = new Map();
+    passedArticles.forEach((article) => {
+      const stateName = getSelectedStateName(article);
+      if (!stateName) return;
+      const key = normalizeRegionKey(stateName);
+      if (!map.has(key)) map.set(key, { name: stateName, articles: [] });
+      map.get(key).articles.push(article);
+    });
+
+    map.forEach((value, key) => {
+      const seen = new Set();
+      const unique = value.articles.filter((article) => {
+        const identity = String(article?.id || article?.slug || article?.public_url || "").trim().toLowerCase();
+        if (!identity || seen.has(identity)) return false;
+        seen.add(identity);
+        return true;
+      });
+      map.set(key, {
+        name: value.name,
+        articles: unique.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)),
+      });
+    });
+    return map;
+  }, [passedArticles]);
+
+  const seededAvailableStates = useMemo(() => {
+    if (seededStateMap.size === 0) return [];
+    return Array.from(seededStateMap.values())
+      .map((entry) => canonicalizeRegionName(entry?.name))
+      .filter(Boolean);
+  }, [seededStateMap]);
+
+  const seededAllStatesArticles = useMemo(() => {
+    if (seededStateMap.size === 0) return [];
+    return Array.from(seededStateMap.values())
+      .flatMap((entry) => entry.articles)
+      .sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+  }, [seededStateMap]);
+
+  const seededStartupArticles = useMemo(() => {
+    if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
+    const startupSlugs = new Set(["bharat-startups", "bharats-startups"]);
+    return passedArticles
+      .filter((article) => getCategorySlugsFromArticle(article).some((slug) => startupSlugs.has(slug)))
+      .sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a))
+      .slice(0, 6);
+  }, [passedArticles]);
 
   useEffect(() => {
+    let ignore = false;
     setStateLoading(true);
+
+    const fallbackStateName = canonicalizeRegionName(activeState);
+    const fallbackStateKey = normalizeRegionKey(fallbackStateName);
+    const seededStateArticles = fallbackStateName
+      ? seededStateMap.get(fallbackStateKey)?.articles || []
+      : seededAllStatesArticles;
+
+    if (statePage === 1 && seededStateArticles.length > 0) {
+      if (!activeState && seededAvailableStates.length > 0) {
+        setAvailableStates(seededAvailableStates);
+      }
+      setHasMoreStates(false);
+      setStateArticles(seededStateArticles);
+      setStateLoading(false);
+      if (isPrerender) return () => { ignore = true; };
+    }
 
     const url = activeState
       ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(canonicalizeRegionName(activeState))}&page=${statePage}&limit=10`
@@ -232,6 +316,7 @@ export default function StateNews() {
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
+        if (ignore) return;
         if (activeState) {
           const { articles, hasNext, stateName } = normalizeSingleStateResponse(data, activeState);
           const sorted = [...articles].sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
@@ -255,17 +340,31 @@ export default function StateNews() {
         setStateLoading(false);
       })
       .catch(() => {
+        if (ignore) return;
         if (statePage === 1) setStateArticles([]);
         setHasMoreStates(false);
         setStateLoading(false);
       });
-  }, [activeState, statePage]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeState, isPrerender, seededAllStatesArticles, seededAvailableStates, seededStateMap, statePage]);
 
   // ✅ Fix 1 — Startups category filter se fetch
   useEffect(() => {
+    let ignore = false;
+
+    if (seededStartupArticles.length > 0) {
+      setStartupArticles(seededStartupArticles);
+      setStartupLoading(false);
+      if (isPrerender) return () => { ignore = true; };
+    }
+
     fetch(`${API_BASE}/articles/?category=bharat-startups&page=1&limit=6`)
       .then((r) => r.json())
       .then((data) => {
+        if (ignore) return;
         const all = Array.isArray(data) ? data : (data.results || []);
         const sorted = [...all].sort(
           (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
@@ -273,8 +372,15 @@ export default function StateNews() {
         setStartupArticles(sorted.slice(0, 6));
         setStartupLoading(false);
       })
-      .catch(() => setStartupLoading(false));
-  }, []);
+      .catch(() => {
+        if (ignore) return;
+        setStartupLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isPrerender, seededStartupArticles]);
 
   const featuredCard = stateArticles[0] || null;
   const desiredMidCards = isMobile ? 4 : 5;

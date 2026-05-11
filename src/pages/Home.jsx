@@ -30,13 +30,7 @@ const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
 const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
 
 const WhatsAppFloatingIcon = () => (
-  <svg
-    viewBox="0 0 448 512"
-    width="25"
-    height="25"
-    aria-hidden="true"
-    focusable="false"
-  >
+  <svg viewBox="0 0 448 512" width="25" height="25" aria-hidden="true" focusable="false">
     <path
       fill="currentColor"
       d="M380.9 97.1C339 55.1 283.2 32 223.9 32 101.2 32 1.4 131.8 1.4 254.5c0 39.2 10.2 77.5 29.6 111.3L0 480l116.9-30.7c32.7 17.8 69.5 27.2 107 27.2h.1c122.7 0 222.5-99.8 222.5-222.5 0-59.4-23.1-115.2-65.6-156.9zM224 438.9h-.1c-33.4 0-66.1-9-94.7-26l-6.8-4-69.3 18.2 18.5-67.6-4.4-6.9c-18.7-29.8-28.6-64.3-28.6-99 0-101.6 82.7-184.3 184.4-184.3 49.2 0 95.5 19.2 130.4 54.1 34.9 34.9 54.8 81.2 54.8 130.6 0 101.6-82.7 184.9-184.2 184.9zm101.1-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.5-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.5-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.7 13.2 5.7 23.5 9.1 31.5 11.7 13.2 4.2 25.3 3.6 34.8 2.2 10.6-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.4-5-3.8-10.2-6.5z"
@@ -77,7 +71,6 @@ function DeferredSection({
     if (alwaysRender || typeof IntersectionObserver === 'undefined') {
       return undefined;
     }
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -87,7 +80,6 @@ function DeferredSection({
       },
       { rootMargin }
     );
-
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [alwaysRender, rootMargin]);
@@ -109,15 +101,14 @@ const Home = () => {
   const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
   const shouldForceDeferredRender = isNewsletterHash || isPrerender;
+
   const [homeCategoriesReady, setHomeCategoriesReady] = React.useState(true);
   const [moreStoriesReady, setMoreStoriesReady] = React.useState(true);
   const prerenderReadyEmittedRef = React.useRef(false);
-  const handleHomeCategoriesReady = React.useCallback(() => {
-    setHomeCategoriesReady(true);
-  }, []);
-  const handleMoreStoriesReady = React.useCallback(() => {
-    setMoreStoriesReady(true);
-  }, []);
+
+  const handleHomeCategoriesReady = React.useCallback(() => setHomeCategoriesReady(true), []);
+  const handleMoreStoriesReady = React.useCallback(() => setMoreStoriesReady(true), []);
+
   const [cachedSideArticles, setCachedSideArticles] = React.useState(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -128,6 +119,8 @@ const Home = () => {
       return [];
     }
   });
+
+  // ── Queries ──────────────────────────────────────────────────────────────
 
   const { data: articlesData, isLoading: articlesLoading } = useQuery({
     queryKey: ['articles'],
@@ -152,8 +145,6 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
-  // ─── FreshPopularShowcase: /homepage/latest_news/current/ ─────────────────
-  // Backend display_count + articles control karta hai — frontend kuch nahi
   const { data: freshPopularData, isLoading: freshPopularLoading } = useQuery({
     queryKey: ['fresh-popular-showcase'],
     queryFn: fetchFreshPopularShowcase,
@@ -166,7 +157,6 @@ const Home = () => {
     () => getFreshPopularArticlesFromResponse(freshPopularData),
     [freshPopularData]
   );
-  // ──────────────────────────────────────────────────────────────────────────
 
   const allArticles = React.useMemo(() => {
     return Array.isArray(articlesData) ? articlesData : articlesData?.results || [];
@@ -175,12 +165,11 @@ const Home = () => {
   useEffect(() => {
     if (!Array.isArray(allArticles) || allArticles.length === 0) return;
     setCachedSideArticles(allArticles);
-
     if (typeof window === 'undefined') return;
     try {
       window.sessionStorage.setItem('fps-side-articles-cache', JSON.stringify(allArticles));
     } catch {
-      // ignore cache write failures
+      // ignore
     }
   }, [allArticles]);
 
@@ -199,29 +188,19 @@ const Home = () => {
           fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 })
         )
       );
-
       const combined = settled.flatMap((result) =>
         result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
       );
-
       const seen = new Set();
-      const deduped = combined.filter((article, index) => {
+      return combined.filter((article, index) => {
         const key = String(
-          article?.id ||
-          article?.slug ||
-          article?.public_url ||
-          article?.url ||
-          article?.title ||
-          article?.headline ||
-          index
+          article?.id || article?.slug || article?.public_url ||
+          article?.url || article?.title || article?.headline || index
         ).trim().toLowerCase();
-
         if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
       });
-
-      return deduped;
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -233,17 +212,12 @@ const Home = () => {
     [q4ArticlesData]
   );
 
-  const heroArticles = React.useMemo(
-    () => {
-      const list = getHomepageHeroArticlesFromResponse(heroData);
-      const displayCount = Number(heroData?.display_count ?? heroData?.data?.display_count);
-      if (Number.isFinite(displayCount) && displayCount > 0) {
-        return list.slice(0, displayCount);
-      }
-      return list;
-    },
-    [heroData]
-  );
+  const heroArticles = React.useMemo(() => {
+    const list = getHomepageHeroArticlesFromResponse(heroData);
+    const displayCount = Number(heroData?.display_count ?? heroData?.data?.display_count);
+    if (Number.isFinite(displayCount) && displayCount > 0) return list.slice(0, displayCount);
+    return list;
+  }, [heroData]);
 
   const shouldUseFallbackBanner = !heroLoading && heroArticles.length === 0;
 
@@ -268,45 +242,50 @@ const Home = () => {
 
   const bannerLoading = heroLoading || (shouldUseFallbackBanner && bannerArticlesLoading);
 
+  // ── homeApiReady: loading khatam + data aaya ─────────────────────────────
   const homeApiReady =
     !articlesLoading &&
     !heroLoading &&
     !freshPopularLoading &&
     !q4Loading &&
-    !bannerLoading;
+    !bannerLoading &&
+    allArticles.length > 0 &&
+    freshPopularArticles.length > 0;
 
-// PEHLA useEffect — reset + hard timeout
-useEffect(() => {
-  if (!isPrerender) return;
-  if (typeof window !== 'undefined') {
-    window.prerenderReady = false;
-  }
-  prerenderReadyEmittedRef.current = false;
+  // ── useEffect 1: Reset + hard timeout (SIRF EK BAAR) ────────────────────
+  useEffect(() => {
+    if (!isPrerender) return;
 
-  // Hard fallback — 30 seconds ke baad guaranteed emit
-  const hardTimeout = window.setTimeout(() => {
-    if (!prerenderReadyEmittedRef.current) {
-      if (typeof window !== 'undefined') window.prerenderReady = true;
-      document.dispatchEvent(new Event('prerender-ready'));
-      prerenderReadyEmittedRef.current = true;
+    if (typeof window !== 'undefined') {
+      window.prerenderReady = false;
     }
-  },25000);
+    prerenderReadyEmittedRef.current = false;
 
-  return () => window.clearTimeout(hardTimeout);
-}, [isPrerender]);
+    const hardTimeout = window.setTimeout(() => {
+      if (!prerenderReadyEmittedRef.current) {
+        if (typeof window !== 'undefined') window.prerenderReady = true;
+        document.dispatchEvent(new Event('prerender-ready'));
+        prerenderReadyEmittedRef.current = true;
+      }
+    }, 30000);
 
+    return () => window.clearTimeout(hardTimeout);
+  }, [isPrerender]);
+
+  // ── useEffect 2: Data ready hone par emit ───────────────────────────────
   useEffect(() => {
     if (!isPrerender) return;
     if (prerenderReadyEmittedRef.current) return;
-   if (!homeApiReady) return;
+    if (!homeApiReady) return;
 
     if (typeof window !== 'undefined') {
       window.prerenderReady = true;
     }
     document.dispatchEvent(new Event('prerender-ready'));
     prerenderReadyEmittedRef.current = true;
-  }, [isPrerender, homeApiReady, homeCategoriesReady, moreStoriesReady]);
+  }, [isPrerender, homeApiReady]);
 
+  // ── JSX ──────────────────────────────────────────────────────────────────
   return (
     <div className="home-page-shell">
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
@@ -355,7 +334,6 @@ useEffect(() => {
 
         <div className="home-section-align">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
-            {/* Backend /homepage/latest_news/current/ controls articles + count */}
             <FreshPopularShowcase
               articles={freshPopularArticles}
               sideArticles={sideArticlesForShowcase}
@@ -391,6 +369,7 @@ useEffect(() => {
             slugs={BHARAT_NUMBERS_SLUGS}
             categoryPath="/category/bharat-in-numbers"
             adPlacement="home_bharat_numbers_right"
+            articles={allArticles}
           />
         </DeferredSection>
 
@@ -404,6 +383,7 @@ useEffect(() => {
             slugs={BHARAT_STARTUPS_SLUGS}
             categoryPath="/category/bharat-startups"
             adPlacement="home_bharat_startups_right"
+            articles={allArticles}
           />
         </DeferredSection>
 

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
 import { API_BASE, apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 const CATEGORY_SLUG = "bharat-economy";
 const LIVE_CRICKET_API = apiUrl("/live-cricket/");
+const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
 const tabs = ["Live", "Upcoming", "Recent"];
 
@@ -57,6 +58,21 @@ const getArticleTimeValue = (article) => {
         "";
     const time = new Date(raw).getTime();
     return Number.isNaN(time) ? 0 : time;
+};
+
+const getCategorySlugsFromArticle = (article) => {
+    const details = Array.isArray(article?.category_details) ? article.category_details : [];
+    const detailSlugs = details
+        .map((item) => String(item?.slug || "").trim().toLowerCase())
+        .filter(Boolean);
+    const direct = String(article?.category || article?.category_slug || "").trim().toLowerCase();
+    return direct ? [...detailSlugs, direct] : detailSlugs;
+};
+
+const isPrerenderUserAgent = () => {
+    if (typeof window === "undefined") return false;
+    const userAgent = window.navigator?.userAgent || "";
+    return PRERENDER_UA_PATTERN.test(userAgent);
 };
 
 const getScore = (scoreArr, teamName) => {
@@ -364,7 +380,7 @@ const SkeletonCard = ({ visible, columns, isMobile }) => (
     </>
 );
 
-export default function VisualStoriesWithScore() {
+export default function VisualStoriesWithScore({ articles: passedArticles = [] }) {
     const bp = useBreakpoint();
     const navigate = useNavigate();
     const is4K = bp === "4k";
@@ -386,11 +402,29 @@ export default function VisualStoriesWithScore() {
     const [storiesLoading, setStoriesLoading] = useState(true);
     const storiesRailRef = useRef(null);
 
+    const seededStories = useMemo(() => {
+        if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
+        const slug = String(CATEGORY_SLUG).toLowerCase();
+        const filtered = passedArticles.filter((article) =>
+            getCategorySlugsFromArticle(article).includes(slug)
+        );
+        return [...filtered].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
+    }, [passedArticles]);
+
     // ✅ Fix 2 — Category filter se fetch, saare articles nahi
     useEffect(() => {
+        let ignore = false;
+
+        if (seededStories.length > 0) {
+            setStories(seededStories);
+            setStoriesLoading(false);
+            if (isPrerenderUserAgent()) return () => { ignore = true; };
+        }
+
         fetch(`${API_BASE}/articles/?category=${CATEGORY_SLUG}&page=1&limit=50`)
             .then((r) => r.json())
             .then((data) => {
+                if (ignore) return;
                 const all = Array.isArray(data)
                     ? data
                     : Array.isArray(data?.value)
@@ -400,8 +434,15 @@ export default function VisualStoriesWithScore() {
                 setStories(sorted);
                 setStoriesLoading(false);
             })
-            .catch(() => setStoriesLoading(false));
-    }, []);
+            .catch(() => {
+                if (ignore) return;
+                setStoriesLoading(false);
+            });
+
+        return () => {
+            ignore = true;
+        };
+    }, [seededStories]);
 
     useEffect(() => {
         let ignore = false;

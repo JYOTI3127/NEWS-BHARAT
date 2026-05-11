@@ -162,37 +162,40 @@
           <!-- Social Media -->
           <td>
             <div class="art-share-actions">
+
+              <!-- WhatsApp -->
               <a href="{{ article.whatsapp_share_url }}"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 class="art-share-btn art-share-btn--whatsapp"
-                 title="Share on WhatsApp">
+                target="_blank"
+                rel="noopener noreferrer"
+                class="art-share-btn art-share-btn--whatsapp"
+                title="Share on WhatsApp">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M20.52 3.48A11.8 11.8 0 0 0 12.09 0C5.56 0 .24 5.31.24 11.84c0 2.09.55 4.14 1.58 5.95L0 24l6.39-1.68a11.8 11.8 0 0 0 5.7 1.45h.01c6.53 0 11.84-5.31 11.84-11.84 0-3.16-1.23-6.13-3.42-8.45Zm-8.43 18.3h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.79 1 1.01-3.69-.23-.38a9.86 9.86 0 0 1-1.52-5.28c0-5.45 4.44-9.89 9.9-9.89 2.64 0 5.12 1.03 6.99 2.9a9.8 9.8 0 0 1 2.89 6.99c0 5.46-4.44 9.9-9.84 9.9Zm5.43-7.42c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.66.15-.2.3-.76.97-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.51-.9-.8-1.5-1.79-1.67-2.09-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.66-.51h-.57c-.2 0-.52.08-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.88 1.22 3.08c.15.2 2.09 3.19 5.07 4.48.71.31 1.26.49 1.7.63.71.23 1.35.19 1.86.11.57-.08 1.77-.72 2.02-1.42.25-.69.25-1.29.17-1.42-.07-.12-.27-.19-.57-.34Z"/>
                 </svg>
               </a>
-              <a href="{{ article.facebook_share_url }}"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 class="art-share-btn art-share-btn--facebook"
-                 title="Share on Facebook">
+
+              <!-- Twitter / X -->
+              <a href="https://twitter.com/intent/tweet?url={{ article.public_share_url|urlencode }}&text={{ article.title|urlencode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="art-share-btn art-share-btn--twitter"
+                title="Share on X (Twitter)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07c0 6.03 4.39 11.03 10.13 11.93v-8.44H7.08v-3.49h3.05V9.41c0-3.03 1.79-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.88v2.27h3.32l-.53 3.49h-2.79V24C19.61 23.1 24 18.1 24 12.07Z"/>
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </a>
-              <button type="button"
-                      class="art-share-btn art-share-btn--instagram"
-                      title="Copy Instagram caption and link"
-                      data-title="{{ article.title|escape }}"
-                      data-description="{{ article.public_share_description|default:''|escape }}"
-                      data-url="{{ article.public_share_url|escape }}"
-                      onclick="copyInstagramShare(this)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+
+              <!-- LinkedIn -->
+              <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ article.public_share_url|urlencode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="art-share-btn art-share-btn--linkedin"
+                title="Share on LinkedIn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                 </svg>
-              </button>
+              </a>
+
             </div>
           </td>
 
@@ -516,27 +519,6 @@ function fallbackCopyText(text) {
   textarea.select();
   document.execCommand('copy');
   document.body.removeChild(textarea);
-}
-
-async function copyInstagramShare(button) {
-  if (!button) return;
-  var parts = [
-    button.dataset.title || '',
-    button.dataset.description || '',
-    button.dataset.url || ''
-  ].filter(Boolean);
-  var text = parts.join('\n\n');
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      fallbackCopyText(text);
-    }
-    window.open('https://www.instagram.com/', '_blank', 'noopener');
-    alert('Instagram web does not support direct article sharing. The caption and News4Bharat.com link have been copied for you.');
-  } catch (e) {
-    alert('Could not copy the Instagram caption. Please try again.');
-  }
 }
 
 /* ESC se dono modal band */

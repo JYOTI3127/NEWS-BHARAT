@@ -21092,6 +21092,12 @@ tr.art-row td:has(.art-cat-text) {
   color: #64748b;
 }
 
+.art-share-btn--twitter { color: #000; }
+.art-share-btn--twitter:hover { background: #000; color: #fff; }
+
+.art-share-btn--linkedin { color: #0077b5; }
+.art-share-btn--linkedin:hover { background: #0077b5; color: #fff; }
+
 @media (max-width: 1200px) {
   .edcal-layout {
     grid-template-columns: 1fr;

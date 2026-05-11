@@ -1677,6 +1677,20 @@ def _serialize_homepage_ad_banner(request, banner, requested_page=''):
         _serialize_saved_ad_banner(request, saved_banner)
         for saved_banner in rotation_saved_banners
     ]
+    if getattr(banner, 'rotation_enabled', False):
+        current_banner_item = _serialize_current_homepage_ad_banner(request, banner)
+        current_image_url = (current_banner_item or {}).get('image_url', '')
+        source_saved_banner_id = getattr(banner, 'source_saved_banner_id', None)
+        duplicate_in_rotation = any(
+            (
+                source_saved_banner_id and rotation.get('id') == source_saved_banner_id
+            ) or (
+                current_image_url and rotation.get('image_url') == current_image_url
+            )
+            for rotation in rotation_banners
+        )
+        if current_banner_item and not duplicate_in_rotation:
+            rotation_banners = [current_banner_item, *rotation_banners]
     rotation_active = len(rotation_banners) > 1
     item = {
         'placement': banner.placement,
@@ -1741,6 +1755,40 @@ def _serialize_saved_ad_banner(request, banner):
         'compatible_placements': compatible_placements,
         'created_at': banner.created_at.isoformat() if banner.created_at else None,
         'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
+    }
+
+
+def _serialize_current_homepage_ad_banner(request, banner):
+    image_url = request.build_absolute_uri(banner.image.url) if banner.image else banner.image_url
+    if not image_url:
+        return None
+    target_pages = _normalize_ad_target_pages(getattr(banner, 'target_pages', []))
+    page_labels = dict(HomepageAdBanner.PAGE_CHOICES)
+    placement_labels = dict(HomepageAdBanner.PLACEMENT_CHOICES)
+    compatible_placements = _compatible_ad_placements(banner.placement)
+    return {
+        'id': f"current-{banner.pk}",
+        'name': f"{placement_labels.get(banner.placement, banner.placement)} Current Banner",
+        'bundle_key': '',
+        'bundle_name': '',
+        'placement': banner.placement,
+        'placement_label': placement_labels.get(banner.placement, banner.placement),
+        'size': banner.size,
+        'width': banner.width,
+        'height': banner.height,
+        'breakpoint': banner.breakpoint,
+        'image_url': image_url,
+        'link_url': banner.link_url or '',
+        'alt': banner.alt or 'Sponsored advertisement',
+        'target_pages': target_pages,
+        'target_page_labels': [page_labels.get(page, page) for page in target_pages],
+        'is_active': bool(banner.is_active and image_url),
+        'stored_is_active': bool(banner.is_active),
+        'compatible_placements': compatible_placements,
+        'created_at': None,
+        'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
+        'is_current_banner': True,
+        'source_saved_banner_id': getattr(banner, 'source_saved_banner_id', None),
     }
 
 

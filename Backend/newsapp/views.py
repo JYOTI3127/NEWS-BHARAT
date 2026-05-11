@@ -15,6 +15,7 @@ from .utils import (
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models import F
@@ -1692,6 +1693,15 @@ def _serialize_homepage_ad_banner(request, banner, requested_page=''):
         if current_banner_item and not duplicate_in_rotation:
             rotation_banners = [current_banner_item, *rotation_banners]
     rotation_active = len(rotation_banners) > 1
+    rotation_interval_seconds = int(getattr(banner, 'rotation_interval_seconds', 10) or 10)
+    active_rotation_item = _select_active_rotation_banner(
+        rotation_banners,
+        interval_seconds=rotation_interval_seconds,
+        anchor_dt=banner.updated_at,
+    )
+    active_image_url = (active_rotation_item or {}).get('image_url') or image_url or ''
+    active_link_url = (active_rotation_item or {}).get('link_url') or banner.link_url or ''
+    active_alt = (active_rotation_item or {}).get('alt') or banner.alt or 'Sponsored advertisement'
     item = {
         'placement': banner.placement,
         'size': banner.size,
@@ -1700,20 +1710,21 @@ def _serialize_homepage_ad_banner(request, banner, requested_page=''):
         'breakpoint': banner.breakpoint,
         'target_pages': target_pages,
         'target_page_labels': [target_page_labels.get(page, page) for page in target_pages],
-        'is_active': bool(banner.is_active and (image_url or rotation_banners)),
+        'is_active': bool(banner.is_active and (active_image_url or rotation_banners)),
         'stored_is_active': bool(banner.is_active),
-        'image_url': image_url or '',
-        'ad_image_url': image_url or '',
-        'image': image_url or '',
-        'ad_image': image_url or '',
-        'link_url': banner.link_url or '',
-        'alt': banner.alt or 'Sponsored advertisement',
+        'image_url': active_image_url,
+        'ad_image_url': active_image_url,
+        'image': active_image_url,
+        'ad_image': active_image_url,
+        'link_url': active_link_url,
+        'alt': active_alt,
         'current_source_saved_banner_id': getattr(banner, 'source_saved_banner_id', None),
         'rotation_enabled': bool(getattr(banner, 'rotation_enabled', False) or rotation_active),
-        'rotation_interval_seconds': int(getattr(banner, 'rotation_interval_seconds', 10) or 10),
+        'rotation_interval_seconds': rotation_interval_seconds,
         'rotation_banner_ids': list(getattr(banner, 'rotation_banner_ids', []) or []),
         'rotation_banners': rotation_banners,
         'rotation_count': len(rotation_banners),
+        'active_rotation_id': (active_rotation_item or {}).get('id'),
         'updated_at': banner.updated_at.isoformat() if banner.updated_at else None,
     }
     return item
@@ -1790,6 +1801,21 @@ def _serialize_current_homepage_ad_banner(request, banner):
         'is_current_banner': True,
         'source_saved_banner_id': getattr(banner, 'source_saved_banner_id', None),
     }
+
+
+def _select_active_rotation_banner(rotation_banners, *, interval_seconds=10, anchor_dt=None):
+    if not rotation_banners:
+        return None
+    interval_seconds = max(int(interval_seconds or 10), 1)
+    anchor_dt = anchor_dt or timezone.now()
+    elapsed_seconds = max(int((timezone.now() - anchor_dt).total_seconds()), 0)
+    active_index = (elapsed_seconds // interval_seconds) % len(rotation_banners)
+    return rotation_banners[active_index]
+
+
+def _rotation_anchor_from_item(item):
+    parsed = parse_datetime(str((item or {}).get('updated_at') or ''))
+    return parsed or timezone.now()
 
 
 def _serialize_saved_ad_bundle(request, bundle_key, items):
@@ -2251,13 +2277,30 @@ def homepage_ad_banner(request):
             return JsonResponse({'placement': requested_placement, 'page': requested_page, 'is_active': False})
         if not item['is_active']:
             return JsonResponse({'placement': requested_placement, 'is_active': False})
+        active_rotation = _select_active_rotation_banner(
+            item.get('rotation_banners', []),
+            interval_seconds=item.get('rotation_interval_seconds', 10),
+            anchor_dt=_rotation_anchor_from_item(item),
+        )
         first_rotation = next(
             (rotation for rotation in item.get('rotation_banners', []) if rotation.get('image_url')),
             None,
         )
-        image_url = item['image_url'] or (first_rotation.get('image_url') if first_rotation else '')
-        link_url = item['link_url'] or (first_rotation.get('link_url') if first_rotation else '')
-        alt = item['alt'] or (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
+        image_url = (
+            (active_rotation or {}).get('image_url')
+            or item['image_url']
+            or (first_rotation.get('image_url') if first_rotation else '')
+        )
+        link_url = (
+            (active_rotation or {}).get('link_url')
+            or item['link_url']
+            or (first_rotation.get('link_url') if first_rotation else '')
+        )
+        alt = (
+            (active_rotation or {}).get('alt')
+            or item['alt']
+            or (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
+        )
         return JsonResponse({
             'placement': item['placement'],
             'page': requested_page,
@@ -2273,6 +2316,7 @@ def homepage_ad_banner(request):
             'rotation_interval_seconds': item['rotation_interval_seconds'],
             'rotation_count': item['rotation_count'],
             'rotation_banners': item['rotation_banners'],
+            'active_rotation_id': (active_rotation or {}).get('id'),
         })
 
     requested_size = (request.GET.get('size') or '').strip()
@@ -2295,6 +2339,11 @@ def homepage_ad_banner(request):
             'by_placement': {item['placement']: item for item in filtered_items},
         }
     first_active = next((item for item in payload['banners'] if item['is_active']), None)
+    active_rotation = _select_active_rotation_banner(
+        first_active.get('rotation_banners', []) if first_active else [],
+        interval_seconds=(first_active or {}).get('rotation_interval_seconds', 10),
+        anchor_dt=_rotation_anchor_from_item(first_active or {}),
+    ) if first_active else None
     first_rotation = next(
         (
             rotation for rotation in (first_active.get('rotation_banners', []) if first_active else [])
@@ -2303,19 +2352,28 @@ def homepage_ad_banner(request):
         None,
     )
     image_url = (
-        first_active['image_url']
-        if first_active and first_active.get('image_url')
-        else (first_rotation.get('image_url') if first_rotation else '')
+        (active_rotation.get('image_url') if active_rotation else '')
+        or (
+            first_active['image_url']
+            if first_active and first_active.get('image_url')
+            else (first_rotation.get('image_url') if first_rotation else '')
+        )
     )
     link_url = (
-        first_active['link_url']
-        if first_active and first_active.get('link_url')
-        else (first_rotation.get('link_url') if first_rotation else '')
+        (active_rotation.get('link_url') if active_rotation else '')
+        or (
+            first_active['link_url']
+            if first_active and first_active.get('link_url')
+            else (first_rotation.get('link_url') if first_rotation else '')
+        )
     )
     alt = (
-        first_active['alt']
-        if first_active and first_active.get('alt')
-        else (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
+        (active_rotation.get('alt') if active_rotation else '')
+        or (
+            first_active['alt']
+            if first_active and first_active.get('alt')
+            else (first_rotation.get('alt') if first_rotation else 'Sponsored advertisement')
+        )
     )
 
     return JsonResponse({
@@ -2333,6 +2391,7 @@ def homepage_ad_banner(request):
         'width': first_active['width'] if first_active else None,
         'height': first_active['height'] if first_active else None,
         'alt': alt,
+        'active_rotation_id': active_rotation.get('id') if active_rotation else None,
         'banners': payload['banners'],
         'by_placement': payload['by_placement'],
         'updated_at': first_active['updated_at'] if first_active else None,

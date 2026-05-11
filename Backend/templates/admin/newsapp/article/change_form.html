@@ -3002,13 +3002,34 @@ function nbInsertHR(){
 }
 function nbInsertLink(){
   if(!nbEditor)return;
-  nbFocusEditor();
+
+  // Step 1: Selection pehle save karo, focus se pehle
   const sel=window.getSelection();
-  const selectedText=sel&&sel.toString().trim();
+  const savedRange=sel&&sel.rangeCount?sel.getRangeAt(0).cloneRange():null;
+  const selectedText=savedRange?savedRange.toString().trim():'';
+
+  // Step 2: URL prompt
   const url=prompt('Enter URL (e.g. https://example.com):');
   if(!url||!url.trim())return;
+
+  // Step 3: Editor focus karo aur selection restore karo
+  nbEditor.focus();
+  if(savedRange){
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+
+  // Step 4: Link insert karo
   if(selectedText){
-    fmt('createLink',url.trim());
+    document.execCommand('createLink',false,url.trim());
+    // Target blank set karo selected link pe
+    try{
+      const links=nbEditor.querySelectorAll('a[href="'+url.trim()+'"]');
+      links.forEach(function(a){
+        a.target='_blank';
+        a.rel='noopener noreferrer';
+      });
+    }catch(e){}
   }else{
     const displayText=prompt('Enter link display text:',url.trim())||url.trim();
     const a=document.createElement('a');
@@ -3016,18 +3037,18 @@ function nbInsertLink(){
     a.textContent=displayText;
     a.target='_blank';
     a.rel='noopener noreferrer';
-    if(sel&&sel.rangeCount){
-      const range=sel.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(a);
-      range.setStartAfter(a);
-      range.collapse(true);
+    if(savedRange){
+      savedRange.deleteContents();
+      savedRange.insertNode(a);
+      savedRange.setStartAfter(a);
+      savedRange.collapse(true);
       sel.removeAllRanges();
-      sel.addRange(range);
+      sel.addRange(savedRange);
     }else{
       nbEditor.appendChild(a);
     }
   }
+
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
@@ -5047,8 +5068,34 @@ updateSubtitleCount();
     sel.addRange(_nbItSavedRange);
   };
   window.nbInlineInsertLink=function(){
-    nbItRestoreSelection();
-    nbInsertLink();
+  nbItRestoreSelection();
+  // Selection already restore ho gayi, directly link insert karo
+  const sel=window.getSelection();
+  const savedRange=sel&&sel.rangeCount?sel.getRangeAt(0).cloneRange():null;
+  const selectedText=savedRange?savedRange.toString().trim():'';
+  const url=prompt('Enter URL (e.g. https://example.com):');
+  if(!url||!url.trim())return;
+  if(savedRange){
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+  if(selectedText){
+    document.execCommand('createLink',false,url.trim());
+  }else{
+    const displayText=prompt('Enter link display text:',url.trim())||url.trim();
+    const a=document.createElement('a');
+    a.href=url.trim();
+    a.textContent=displayText;
+    a.target='_blank';
+    a.rel='noopener noreferrer';
+    if(savedRange){
+      savedRange.deleteContents();
+      savedRange.insertNode(a);
+    }else{
+      nbEditor.appendChild(a);
+    }
+  }
+  nbSaveHistory();
   };
 })();
 

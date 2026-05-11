@@ -63,6 +63,8 @@ class Category(models.Model):
     name           = models.CharField(max_length=100)
     slug           = models.SlugField(max_length=100, unique=True, blank=True)
     description    = models.TextField(blank=True)
+    meta_title     = models.TextField(blank=True, default='')
+    meta_description = models.TextField(blank=True, default='')
     status         = models.CharField(max_length=10, default='active')
     sub_categories = models.JSONField(default=dict, blank=True)
 

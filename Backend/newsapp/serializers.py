@@ -33,7 +33,25 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Category
-        fields = ['id', 'name', 'slug', 'description', 'status', 'sub_categories', 'article_count', 'unique_total_articles', 'published_this_month']
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'description',
+            'meta_title',
+            'meta_description',
+            'status',
+            'sub_categories',
+            'article_count',
+            'unique_total_articles',
+            'published_this_month',
+        ]
+
+    def validate_meta_title(self, value):
+        return ' '.join(str(value or '').strip().split())
+
+    def validate_meta_description(self, value):
+        return str(value or '').strip()
 
     def get_article_count(self, obj):
         try:

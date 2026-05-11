@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ page_description }}">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #111827;
+      background: #ffffff;
+      line-height: 1.7;
+    }
+    .category-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 18px 56px;
+    }
+    .site-link {
+      display: inline-block;
+      margin-bottom: 24px;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.18;
+    }
+    .category-desc {
+      margin: 0 0 28px;
+      color: #4b5563;
+      font-size: 16px;
+    }
+    .article-list {
+      display: grid;
+      gap: 18px;
+    }
+    .article-card {
+      padding: 18px 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .article-card a {
+      color: #111827;
+      text-decoration: none;
+    }
+    .article-card h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.3;
+    }
+    .article-meta {
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .empty-state {
+      padding: 28px 20px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+    .pagination {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      align-items: center;
+    }
+    .pagination a {
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="category-page">
+    <a class="site-link" href="/">News4Bharat</a>
+    <section>
+      <h1>{{ category.name }}</h1>
+      {% if category.description %}
+        <p class="category-desc">{{ category.description }}</p>
+      {% endif %}
+    </section>
+
+    {% if page_obj.object_list %}
+      <section class="article-list">
+        {% for article in page_obj.object_list %}
+          <article class="article-card">
+            <a href="/{{ category.slug }}/{{ article.slug }}/">
+              <h2>{{ article.title }}</h2>
+            </a>
+            {% if article.subtitle %}
+              <p>{{ article.subtitle }}</p>
+            {% endif %}
+            <div class="article-meta">
+              {% if article.published_at %}Published {{ article.published_at|date:"M d, Y" }}{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% else %}
+      <div class="empty-state">No published articles found in this category.</div>
+    {% endif %}
+
+    {% if page_obj.has_other_pages %}
+      <nav class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -103,6 +103,14 @@
       <label class="cm-form-label">Description</label>
       <textarea class="cm-form-textarea" id="newCatDesc" placeholder="Brief description of this category…"></textarea>
     </div>
+    <div class="cm-form-group">
+      <label class="cm-form-label">Meta Title</label>
+      <input class="cm-form-input" id="newCatMetaTitle" placeholder="SEO title for the category page" />
+    </div>
+    <div class="cm-form-group">
+      <label class="cm-form-label">Meta Description</label>
+      <textarea class="cm-form-textarea" id="newCatMetaDesc" placeholder="SEO description for search snippets…" style="min-height:80px"></textarea>
+    </div>
     <hr class="cm-modal-divider" />
     <div class="cm-section-label">Sub-categories (optional)</div>
     <div class="cm-form-group">
@@ -217,6 +225,14 @@
     <div class="cm-form-group" style="margin-top:14px">
       <label class="cm-form-label">Description</label>
       <textarea class="cm-form-textarea" id="editCatDesc" placeholder="Brief description…" style="min-height:60px"></textarea>
+    </div>
+    <div class="cm-form-group">
+      <label class="cm-form-label">Meta Title</label>
+      <input class="cm-form-input" id="editCatMetaTitle" placeholder="SEO title for the category page" />
+    </div>
+    <div class="cm-form-group">
+      <label class="cm-form-label">Meta Description</label>
+      <textarea class="cm-form-textarea" id="editCatMetaDesc" placeholder="SEO description for search snippets…" style="min-height:80px"></textarea>
     </div>
     <hr class="cm-modal-divider" />
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -525,6 +541,8 @@ function openAddCatModal() {
     document.getElementById('newCatName').value = '';
     document.getElementById('newCatSlug').value = '';
     document.getElementById('newCatDesc').value = '';
+    document.getElementById('newCatMetaTitle').value = '';
+    document.getElementById('newCatMetaDesc').value = '';
     document.getElementById('addCatModal').classList.add('open');
     document.getElementById('newCatName').focus();
 }
@@ -540,6 +558,8 @@ async function saveCategory() {
         name,
         slug,
         description: document.getElementById('newCatDesc').value.trim(),
+        meta_title: document.getElementById('newCatMetaTitle').value.trim(),
+        meta_description: document.getElementById('newCatMetaDesc').value.trim(),
         sub_categories: addCatTags.length ? { default: [...addCatTags] } : {},
     });
 
@@ -584,6 +604,8 @@ async function saveSubCategories() {
         name:           cat.name,
         slug:           cat.slug,
         description:    cat.description || '',
+        meta_title:     cat.meta_title || '',
+        meta_description: cat.meta_description || '',
         sub_categories: subs,
     });
 
@@ -606,6 +628,8 @@ function openEditModal(catId) {
     document.getElementById('editCatName').value           = cat.name;
     document.getElementById('editCatSlug').value           = cat.slug;
     document.getElementById('editCatDesc').value           = cat.description || '';
+    document.getElementById('editCatMetaTitle').value      = cat.meta_title || '';
+    document.getElementById('editCatMetaDesc').value       = cat.meta_description || '';
     document.getElementById('editCatSubtitle').textContent = `Editing: ${cat.name}`;
 
     // Populate editSections from already-normalised subs dict
@@ -739,6 +763,8 @@ async function saveEdit() {
         name,
         slug,
         description:    document.getElementById('editCatDesc').value.trim(),
+        meta_title:     document.getElementById('editCatMetaTitle').value.trim(),
+        meta_description: document.getElementById('editCatMetaDesc').value.trim(),
         sub_categories: editSections,
     });
 

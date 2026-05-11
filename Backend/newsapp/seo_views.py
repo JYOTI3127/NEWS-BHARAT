@@ -157,6 +157,12 @@ def view_article_detail(request, category_slug, slug):
 
 
 @require_GET
+def view_category_detail(request, slug):
+    from newsapp.views import category_detail_page
+    return category_detail_page(request, slug)
+
+
+@require_GET
 def redirect_legacy_news_article(request, slug):
     from newsapp.models import Article
     article = get_object_or_404(Article.objects.prefetch_related("categories"), slug=slug, status="published")

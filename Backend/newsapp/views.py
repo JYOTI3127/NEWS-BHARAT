@@ -179,6 +179,7 @@ def _invalidate_article_caches(article, old_slug=None):
 def _invalidate_category_cache():
     cache.delete('categories:all:v2')
     cache.delete('categories:all:v3')
+    cache.delete('categories:all:v4')
     try:
         if hasattr(cache, 'delete_pattern'):
             cache.delete_pattern('categories:all:*')
@@ -432,7 +433,7 @@ def _is_current_article_image_url(article, url_value, request=None):
 
 @api_view(['GET'])
 def category_list(request):
-    cache_key = 'categories:all:v3'
+    cache_key = 'categories:all:v4'
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
@@ -471,6 +472,8 @@ def category_detail_page(request, slug):
     return render(request, 'articles/category_detail.html', {
         'category': category,
         'page_obj': page_obj,
+        'page_title': (category.meta_title or category.name).strip(),
+        'page_description': (category.meta_description or category.description or '').strip(),
     })
 
 

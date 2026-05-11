@@ -1207,9 +1207,10 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     );
     const firstTextBlock = hasGoogleSheetsMarkup
       ? Array.from(doc.body.querySelectorAll("p")).find((node) => getPlainText(node?.textContent || "").length > 1)
-      : Array.from(doc.body.querySelectorAll("p, div, span, blockquote, li")).find((node) => {
+      : Array.from(doc.body.querySelectorAll("p, div, span, li")).find((node) => {
         if (!node) return false;
         if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
+        if (node.closest("blockquote")) return false;
         if (node.matches("div, span") && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
         const text = getPlainText(node.textContent || "");
         return text.length > 1;
@@ -1455,7 +1456,6 @@ export default function ArticleDetails() {
 
 useEffect(() => {
   if (!articleSlug) return;
-  if (!article && !notFound && !loadError) return;
 
   let intervalId = 0, timeoutId = 0, rafId = 0;
   let emitted = false;
@@ -1467,25 +1467,31 @@ useEffect(() => {
     document.dispatchEvent(new Event("prerender-ready"));
   };
 
-  // Non-prerender: turant emit karo
-  if (!isPrerenderRequest || !article) {
+  // Normal browser — turant emit karo
+  if (!isPrerenderRequest) {
     rafId = window.requestAnimationFrame(emitReady);
     return () => window.cancelAnimationFrame(rafId);
   }
 
+  // Prerender hai — article abhi load ho raha hai, wait karo
+  if (!article && !notFound && !loadError) {
+    return;
+  }
+
+  // Prerender hai — error ya notFound — turant emit karo
+  if (!article) {
+    rafId = window.requestAnimationFrame(emitReady);
+    return () => window.cancelAnimationFrame(rafId);
+  }
+
+  // Prerender hai — article load ho gaya — content check karo
   const isArticleRenderReady = () => {
-    // JSON-LD schema check — ye hamesha hota hai
     const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
     const hasStructuredData = jsonLdScripts.length > 0;
-
-    // Body content check — RELAXED: 50 chars sufficient hai
     const bodyText = articleContentRef.current?.textContent?.trim() || "";
     const hasBodyContent = bodyText.length >= 50;
-
-    // Agar content field hi empty hai API se, to schema ke baad emit karo
     const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
     if (articleHasNoContent) return hasStructuredData;
-
     return hasBodyContent && hasStructuredData;
   };
 
@@ -1498,13 +1504,12 @@ useEffect(() => {
   };
 
   rafId = window.requestAnimationFrame(checkAndEmit);
-  intervalId = window.setInterval(checkAndEmit, 150);
+  intervalId = window.setInterval(checkAndEmit, 300);
 
-  // Hard timeout — 15 seconds ke baad guaranteed emit
   timeoutId = window.setTimeout(() => {
     window.clearInterval(intervalId);
     emitReady();
-  }, 15000);
+  }, 25000);
 
   return () => {
     window.cancelAnimationFrame(rafId);
@@ -1512,6 +1517,7 @@ useEffect(() => {
     window.clearTimeout(timeoutId);
   };
 }, [article, articleSlug, isPrerenderRequest, loadError, notFound, articleBodyHtml]);
+
   useEffect(() => {
     if (!article || !mainArticleRef.current || !moreInListRef.current) return;
     const updateMoreInHeight = () => {

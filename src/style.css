@@ -329,7 +329,7 @@ img {
   margin: 0 auto !important;
 }
 
-.article-content blockquote:not(.twitter-tweet) {
+.article-content blockquote:not(.twitter-tweet):not([style]) {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -345,11 +345,11 @@ img {
   clear: both;
 }
 
-.article-content blockquote:not(.twitter-tweet) p {
+.article-content blockquote:not(.twitter-tweet):not([style]) p {
   margin: 0;
 }
 
-.article-content blockquote:not(.twitter-tweet) + blockquote:not(.twitter-tweet) {
+.article-content blockquote:not(.twitter-tweet):not([style]) + blockquote:not(.twitter-tweet):not([style]) {
   margin-top: 0.9rem;
 }
 

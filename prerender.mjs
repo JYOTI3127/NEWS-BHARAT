@@ -1035,7 +1035,7 @@ const prerenderer = new Prerenderer({
   staticDir: path.join(__dirname, 'build'),
   renderer: new PuppeteerRenderer({
     renderAfterDocumentEvent: 'prerender-ready',
-  timeout: 90000,
+  timeout: 150000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

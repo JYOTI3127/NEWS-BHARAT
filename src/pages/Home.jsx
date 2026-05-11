@@ -109,8 +109,8 @@ const Home = () => {
   const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
   const shouldForceDeferredRender = isNewsletterHash || isPrerender;
-  const [homeCategoriesReady, setHomeCategoriesReady] = React.useState(() => !isPrerender);
-  const [moreStoriesReady, setMoreStoriesReady] = React.useState(() => !isPrerender);
+  const [homeCategoriesReady, setHomeCategoriesReady] = React.useState(true);
+  const [moreStoriesReady, setMoreStoriesReady] = React.useState(true);
   const prerenderReadyEmittedRef = React.useRef(false);
   const handleHomeCategoriesReady = React.useCallback(() => {
     setHomeCategoriesReady(true);
@@ -275,18 +275,30 @@ const Home = () => {
     !q4Loading &&
     !bannerLoading;
 
-  useEffect(() => {
-    if (!isPrerender) return;
-    if (typeof window !== 'undefined') {
-      window.prerenderReady = false;
+// PEHLA useEffect — reset + hard timeout
+useEffect(() => {
+  if (!isPrerender) return;
+  if (typeof window !== 'undefined') {
+    window.prerenderReady = false;
+  }
+  prerenderReadyEmittedRef.current = false;
+
+  // Hard fallback — 30 seconds ke baad guaranteed emit
+  const hardTimeout = window.setTimeout(() => {
+    if (!prerenderReadyEmittedRef.current) {
+      if (typeof window !== 'undefined') window.prerenderReady = true;
+      document.dispatchEvent(new Event('prerender-ready'));
+      prerenderReadyEmittedRef.current = true;
     }
-    prerenderReadyEmittedRef.current = false;
-  }, [isPrerender]);
+  },25000);
+
+  return () => window.clearTimeout(hardTimeout);
+}, [isPrerender]);
 
   useEffect(() => {
     if (!isPrerender) return;
     if (prerenderReadyEmittedRef.current) return;
-    if (!homeApiReady || !homeCategoriesReady || !moreStoriesReady) return;
+   if (!homeApiReady) return;
 
     if (typeof window !== 'undefined') {
       window.prerenderReady = true;

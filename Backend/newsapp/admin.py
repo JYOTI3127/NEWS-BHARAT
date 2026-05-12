@@ -26,6 +26,18 @@ from .attendance import get_attendance_snapshot, pause_attendance, touch_attenda
 from .seo_direct import article_url
 
 
+SLUG_EDITOR_USERNAME = "sheenu"
+SLUG_EDITOR_EMAIL = "sheenaas013@gmail.com"
+
+
+def _can_manage_slug(user):
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    username = str(getattr(user, 'username', '') or '').strip().lower()
+    email = str(getattr(user, 'email', '') or '').strip().lower()
+    return username == SLUG_EDITOR_USERNAME or email == SLUG_EDITOR_EMAIL
+
+
 def _format_duration(total_seconds):
     total_seconds = max(int(total_seconds or 0), 0)
     hours, remainder = divmod(total_seconds, 3600)
@@ -1742,6 +1754,12 @@ class ArticleAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if not _can_manage_slug(request.user) and 'slug' not in readonly_fields:
+            readonly_fields.append('slug')
+        return readonly_fields
+
     def get_queryset(self, request):
         qs = super().get_queryset(request).prefetch_related('categories').select_related('author', 'assigned_to')
         if request.user.is_superuser or self._can_edit_any_article(request.user):
@@ -1774,6 +1792,11 @@ class ArticleAdmin(admin.ModelAdmin):
             super().save_model(request, obj, form, change)
         except ValidationError as e:
             self.message_user(request, e.message, level=messages.ERROR)
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['can_edit_slug'] = _can_manage_slug(request.user)
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:
         js = ('newsapp/custom_admin.js',)
@@ -1900,6 +1923,24 @@ class PermissionAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
+class CategoryAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/newsapp/category/change_list.html'
+    search_fields = ('name', 'slug', 'description')
+    list_display = ('name', 'slug', 'status')
+    list_filter = ('status',)
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if not _can_manage_slug(request.user) and 'slug' not in readonly_fields:
+            readonly_fields.append('slug')
+        return readonly_fields
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['can_edit_category_slug'] = _can_manage_slug(request.user)
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 # ══════════════════════════════════════════════════════════════
 #  REGISTER ALL MODELS
 # ══════════════════════════════════════════════════════════════
@@ -1910,7 +1951,7 @@ admin_site.register(User,                       UserAdmin)
 admin_site.register(Group)
 admin_site.register(Role,                       RoleAdmin)
 admin_site.register(Permission)
-admin_site.register(Category)
+admin_site.register(Category,                   CategoryAdmin)
 admin_site.register(UserProfile)
 admin_site.register(LoginAttemptLog,            LoginAttemptLogAdmin)
 admin_site.register(Article,                    ArticleAdmin)

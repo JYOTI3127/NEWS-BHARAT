@@ -54,6 +54,8 @@ from .attendance import get_attendance_snapshot, pause_attendance, touch_attenda
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
+SLUG_EDITOR_USERNAME = "sheenu"
+SLUG_EDITOR_EMAIL = "sheenaas013@gmail.com"
 
 
 def _parse_ist_datetime(raw_value):
@@ -69,6 +71,14 @@ def _parse_ist_datetime(raw_value):
         return timezone.make_aware(parsed_value, IST)
 
     return parsed_value.astimezone(IST)
+
+
+def _can_manage_slug(user):
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    username = str(getattr(user, 'username', '') or '').strip().lower()
+    email = str(getattr(user, 'email', '') or '').strip().lower()
+    return username == SLUG_EDITOR_USERNAME or email == SLUG_EDITOR_EMAIL
 
 
 def _normalize_faq_schema_items(raw_value):
@@ -521,7 +531,18 @@ def job_openings_list(request):
 
 @api_view(['POST'])
 def category_create(request):
-    serializer = CategorySerializer(data=request.data)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({'error': 'Admin login required'}, status=401)
+
+    incoming_data = request.data.copy()
+    submitted_slug = str(incoming_data.get('slug', '') or '').strip()
+    default_slug = slugify(str(incoming_data.get('name', '') or '').strip())
+    if not _can_manage_slug(request.user):
+        if submitted_slug and submitted_slug != default_slug:
+            return Response({'error': 'Only the designated slug editor can set a custom category slug.'}, status=403)
+        incoming_data['slug'] = default_slug
+
+    serializer = CategorySerializer(data=incoming_data)
     if serializer.is_valid():
         serializer.save()
         _invalidate_category_cache()
@@ -532,7 +553,15 @@ def category_create(request):
 @api_view(['PUT', 'PATCH'])
 def category_update(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
-    serializer = CategorySerializer(cat, data=request.data, partial=True)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({'error': 'Admin login required'}, status=401)
+
+    incoming_data = request.data.copy()
+    submitted_slug = str(incoming_data.get('slug', cat.slug) or '').strip()
+    if not _can_manage_slug(request.user) and submitted_slug != (cat.slug or ''):
+        return Response({'error': 'Only the designated slug editor can change category slug.'}, status=403)
+
+    serializer = CategorySerializer(cat, data=incoming_data, partial=True)
     if serializer.is_valid():
         serializer.save()
         _invalidate_category_cache()
@@ -741,7 +770,15 @@ def _save_article_from_request(request, article=None):
         article.assigned_to = None
 
     raw_slug = data.get('slug', '').strip()
-    article.slug = slugify(raw_slug.strip('/').split('/')[-1])
+    normalized_slug = slugify(raw_slug.strip('/').split('/')[-1])
+    if not _can_manage_slug(request.user):
+        if is_new:
+            normalized_slug = ''
+        elif normalized_slug and normalized_slug != old_slug:
+            return None, {'error': 'Only the designated slug editor can change article slug.'}
+        else:
+            normalized_slug = old_slug
+    article.slug = normalized_slug
     article.canonical_url      = normalize_article_canonical(data.get('canonical_url', ''), article.slug)
     article.meta_title         = _normalize_meta_title(data.get('meta_title', ''))
     article.meta_description   = data.get('meta_description', '').strip()

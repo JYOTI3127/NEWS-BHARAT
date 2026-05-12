@@ -1156,13 +1156,13 @@ grammarly-button,
       </div>
       <div class="seo-field">
         <div class="seo-field-label">URL Slug
-          <span class="seo-tag {% if original.status == 'published' %}seo-tag--locked{% else %}seo-tag--editable{% endif %}" id="slug_status_tag">
-            {% if original.status == 'published' %}🔒 Locked — 301 on change{% else %}Editable{% endif %}
+          <span class="seo-tag {% if can_edit_slug %}seo-tag--editable{% else %}seo-tag--locked{% endif %}" id="slug_status_tag">
+            {% if can_edit_slug %}Editable by you{% else %}🔒 Locked for your account{% endif %}
           </span>
         </div>
         <div class="seo-slug-row">
           <span class="seo-slug-pre" id="ui_slug_prefix">/category-slug/</span>
-          <input type="text" class="seo-inp seo-slug-inp" id="ui_slug" placeholder="your-article-slug" value="{{ original.slug|default:'' }}" {% if original.status == 'published' %}readonly{% endif %}>
+          <input type="text" class="seo-inp seo-slug-inp" id="ui_slug" placeholder="your-article-slug" value="{{ original.slug|default:'' }}" {% if not can_edit_slug %}readonly{% endif %}>
           <button type="button" class="seo-slug-auto" onclick="generateSlug()" title="Auto-generate from headline">↺</button>
         </div>
       </div>

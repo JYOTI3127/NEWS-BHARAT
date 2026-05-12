@@ -11,7 +11,7 @@ from io import StringIO
 from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
-from .models import Article, ArticleVersion, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .models import Article, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .views import custom_permission_denied_view, send_push_to_all
 
 
@@ -616,3 +616,81 @@ class EditorialCalendarSeedTests(TestCase):
         self.assertIn("International Women's Day", titles)
         self.assertIn("World Environment Day", titles)
         self.assertIn("Christmas Day", titles)
+
+
+class SlugPermissionTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.slug_editor = User.objects.create_user(
+            username='sheenu',
+            email='sheenaas013@gmail.com',
+            password='testpass123',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.other_staff = User.objects.create_user(
+            username='staffer',
+            email='staffer@example.com',
+            password='testpass123',
+            is_staff=True,
+        )
+
+    def test_non_slug_editor_cannot_change_category_slug(self):
+        category = Category.objects.create(name='Business', slug='business')
+        self.client.force_authenticate(self.other_staff)
+
+        response = self.client.put(
+            f'/api/categories/{category.pk}/update/',
+            {
+                'name': 'Business',
+                'slug': 'markets',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 403, response.content)
+        category.refresh_from_db()
+        self.assertEqual(category.slug, 'business')
+
+    def test_slug_editor_can_change_category_slug(self):
+        category = Category.objects.create(name='Business', slug='business')
+        self.client.force_authenticate(self.slug_editor)
+
+        response = self.client.put(
+            f'/api/categories/{category.pk}/update/',
+            {
+                'name': 'Business',
+                'slug': 'bharat-business',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        category.refresh_from_db()
+        self.assertEqual(category.slug, 'bharat-business')
+
+    def test_non_slug_editor_cannot_change_article_slug(self):
+        article = Article.objects.create(
+            author=self.other_staff,
+            title='Slug Story',
+            content='Body copy',
+            status='draft',
+            slug='slug-story',
+        )
+        self.client.force_authenticate(self.other_staff)
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Slug Story',
+                'subtitle': '',
+                'content': 'Body copy updated',
+                'status': 'draft',
+                'slug': 'changed-slug',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        article.refresh_from_db()
+        self.assertEqual(article.slug, 'slug-story')

@@ -97,7 +97,7 @@
     </div>
     <div class="cm-form-group">
       <label class="cm-form-label">Slug (URL)</label>
-      <input class="cm-form-input" id="newCatSlug" placeholder="auto-generated from name" readonly />
+      <input class="cm-form-input" id="newCatSlug" placeholder="auto-generated from name" {% if not can_edit_category_slug %}readonly{% endif %} />
     </div>
     <div class="cm-form-group">
       <label class="cm-form-label">Description</label>
@@ -219,7 +219,7 @@
       </div>
       <div class="cm-form-group" style="margin-bottom:0">
         <label class="cm-form-label">Slug (URL)</label>
-        <input class="cm-form-input" id="editCatSlug" placeholder="category-slug" readonly />
+        <input class="cm-form-input" id="editCatSlug" placeholder="category-slug" {% if not can_edit_category_slug %}readonly{% endif %} />
       </div>
     </div>
     <div class="cm-form-group" style="margin-top:14px">
@@ -276,6 +276,8 @@ let addSubTags    = [];
 let editSections  = {};
 let uniqueArticleTotal = 0;
 let publishedThisMonth = 0;
+const CAN_EDIT_CATEGORY_SLUG = {% if can_edit_category_slug %}true{% else %}false{% endif %};
+let addCatSlugTouched = false;
 
 /* ================================================================
    API HELPER
@@ -537,6 +539,7 @@ function goAddPost(catId) {
 ================================================================ */
 function openAddCatModal() {
     addCatTags = [];
+    addCatSlugTouched = false;
     renderTagPills('addCatTagWrap', 'addCatTagInp', addCatTags);
     document.getElementById('newCatName').value = '';
     document.getElementById('newCatSlug').value = '';
@@ -757,7 +760,8 @@ async function saveEdit() {
     if (!name) { showToast('Category name cannot be empty', 'warn'); return; }
 
     const cat = CATS.find(c => c.id === editTarget);
-    const slug = cat ? cat.slug : document.getElementById('editCatSlug').value.trim();
+    const slugInput = document.getElementById('editCatSlug');
+    const slug = (slugInput ? slugInput.value.trim() : '') || (cat ? cat.slug : '');
 
     const updated = await apiFetch(`/api/categories/${editTarget}/update/`, 'PUT', {
         name,
@@ -941,8 +945,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('newCatName').addEventListener('input', e => {
         const slugEl = document.getElementById('newCatSlug');
-        slugEl.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (!slugEl) return;
+        if (!CAN_EDIT_CATEGORY_SLUG || !addCatSlugTouched || !slugEl.value.trim()) {
+            slugEl.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        }
     });
+
+    const newSlugEl = document.getElementById('newCatSlug');
+    if (newSlugEl && CAN_EDIT_CATEGORY_SLUG) {
+        newSlugEl.addEventListener('input', () => { addCatSlugTouched = true; });
+    }
 
     loadCategories();
 });

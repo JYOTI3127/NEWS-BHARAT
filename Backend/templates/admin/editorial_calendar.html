@@ -71,6 +71,7 @@
           <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--national"></span><span>National Days</span></div>
           <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--important_day"></span><span>Important Days</span></div>
           <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--occasion"></span><span>Editorial Occasions</span></div>
+          <div class="edcal-legend-item"><span class="edcal-legend-dot edcal-legend-dot--today"></span><span>Today Highlight</span></div>
         </div>
       </div>
     </aside>
@@ -120,8 +121,9 @@
     }
 
     eventList.innerHTML = monthEvents.map(function(item){
+      const isToday = today.getFullYear() === activeYear && today.getMonth() === monthIndex && today.getDate() === Number(item.day);
       return '' +
-        '<article class="edcal-event-card" data-day="' + item.day + '">' +
+        '<article class="edcal-event-card' + (isToday ? ' edcal-event-card--today' : '') + '" data-day="' + item.day + '">' +
           '<div class="edcal-event-date">' +
             '<span class="edcal-event-day">' + item.day + '</span>' +
             '<span class="edcal-event-weekday">' + item.weekday.slice(0,3) + '</span>' +
@@ -129,6 +131,7 @@
           '<div class="edcal-event-copy">' +
             '<div class="edcal-event-top">' +
               '<span class="edcal-event-tag ' + categoryClass(item.category) + '">' + item.tag + '</span>' +
+              (isToday ? '<span class="edcal-today-pill">Today</span>' : '') +
               '<span class="edcal-event-display-date">' + item.display_date + '</span>' +
             '</div>' +
             '<h3 class="edcal-event-title">' + item.title + '</h3>' +
@@ -166,7 +169,10 @@
       const isToday = today.getFullYear() === activeYear && today.getMonth() === monthIndex && today.getDate() === day;
       cell.className = 'edcal-cell' + (dayEvents.length ? ' edcal-cell--event' : '') + (isToday ? ' edcal-cell--today' : '');
       cell.innerHTML =
-        '<span class="edcal-cell-date">' + day + '</span>' +
+        '<div class="edcal-cell-head">' +
+          '<span class="edcal-cell-date">' + day + '</span>' +
+          (isToday ? '<span class="edcal-today-badge">Today</span>' : '') +
+        '</div>' +
         (dayEvents.length ? '<div class="edcal-cell-events">' + dayEvents.slice(0, 2).map(function(item){
           return '<span class="edcal-mini-pill ' + categoryClass(item.category) + '">' + item.title + '</span>';
         }).join('') + '</div>' : '<span class="edcal-cell-empty">No event</span>');

@@ -134,7 +134,7 @@ def article_status_notification(sender, instance, **kwargs):
         return
 
     article_admin_url = _article_admin_url(instance.id)
-    author_name = instance.author.get_full_name() or instance.author.username
+    author_name = instance.author.get_full_name() or instance.author.username 
     safe_title = escape(instance.title)
     safe_author_name = escape(author_name)
     safe_article_admin_url = escape(article_admin_url)

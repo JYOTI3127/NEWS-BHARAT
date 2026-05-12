@@ -20839,6 +20839,13 @@ tr.art-row td:has(.art-cat-text) {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
+.edcal-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .edcal-cell:hover {
   transform: translateY(-1px);
   border-color: #93c5fd;
@@ -20860,7 +20867,10 @@ tr.art-row td:has(.art-cat-text) {
 
 .edcal-cell--today {
   border-color: #0f766e;
-  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.22), transparent 36%),
+    linear-gradient(180deg, #fff8db 0%, #fff4c2 100%) !important;
+  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.18);
 }
 
 .edcal-cell--event {
@@ -20886,6 +20896,28 @@ tr.art-row td:has(.art-cat-text) {
   margin-top: 24px;
   font-size: 12px;
   color: #cbd5e1;
+}
+
+.edcal-today-badge,
+.edcal-today-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.edcal-today-badge {
+  padding: 5px 9px;
+}
+
+.edcal-today-pill {
+  padding: 4px 8px;
 }
 
 .edcal-cell-events {
@@ -21033,6 +21065,14 @@ tr.art-row td:has(.art-cat-text) {
   color: #64748b;
 }
 
+.edcal-event-card--today {
+  border-color: rgba(245, 158, 11, 0.5);
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 32%),
+    linear-gradient(180deg, #fffdf2 0%, #ffffff 100%);
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.12);
+}
+
 .edcal-legend-list {
   display: grid;
   gap: 10px;
@@ -21080,6 +21120,11 @@ tr.art-row td:has(.art-cat-text) {
 .edcal-legend-dot--occasion {
   background: #ede9fe;
   color: #6d28d9;
+}
+
+.edcal-legend-dot--today {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
 }
 
 .edcal-empty {

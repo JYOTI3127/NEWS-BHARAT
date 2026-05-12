@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from io import StringIO
 from unittest.mock import patch
 
+from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleVersion, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .views import custom_permission_denied_view, send_push_to_all
 
@@ -598,3 +599,20 @@ class PushSubscriptionCleanupTests(TestCase):
         self.assertTrue(PushSubscription.objects.filter(pk=inactive_sub.pk).exists())
         self.assertEqual(PushNotificationLog.objects.filter(subscription=active_ok, status='sent').count(), 1)
         self.assertEqual(PushNotificationLog.objects.filter(subscription=active_expired, status='failed').count(), 1)
+
+
+class EditorialCalendarSeedTests(TestCase):
+    def test_editorial_calendar_includes_festivals_national_and_global_days(self):
+        events = _build_editorial_calendar_events(2026)
+        titles = {item['title'] for item in events}
+        categories = {item['category'] for item in events}
+
+        self.assertGreaterEqual(len(events), 80)
+        self.assertIn('festival', categories)
+        self.assertIn('national', categories)
+        self.assertIn('important_day', categories)
+        self.assertIn("Republic Day", titles)
+        self.assertIn("Independence Day", titles)
+        self.assertIn("International Women's Day", titles)
+        self.assertIn("World Environment Day", titles)
+        self.assertIn("Christmas Day", titles)

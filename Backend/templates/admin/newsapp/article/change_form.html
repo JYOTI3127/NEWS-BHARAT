@@ -3352,7 +3352,7 @@ document.addEventListener('DOMContentLoaded', function () {
 ══════════════════════════════════════════════ */
 var _newFileSelected=false;
 function previewImage(inp){
-  if(!inp||!inp.files||!inp.files[0])return;
+  if(!inp||!inp.files||!inp.files[0])return; 
   const file=inp.files[0];
   _newFileSelected=true;
   const blobUrl=URL.createObjectURL(file);

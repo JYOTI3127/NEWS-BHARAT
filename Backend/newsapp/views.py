@@ -4277,6 +4277,35 @@ def _normalize_subscription_email(email):
     return normalized
 
 
+def _newsletter_transport_config():
+    provider = str(getattr(settings, 'NEWSLETTER_SEND_PROVIDER', 'smtp') or 'smtp').strip().lower()
+
+    if provider in {'mailercloud', 'mailercloud_smtp'}:
+        return {
+            'provider': 'mailercloud_smtp',
+            'smtp_host': getattr(settings, 'MAILERCLOUD_SMTP_HOST', '') or getattr(settings, 'NEWSLETTER_SMTP_HOST', ''),
+            'smtp_port': int(getattr(settings, 'MAILERCLOUD_SMTP_PORT', 587) or 587),
+            'smtp_use_tls': bool(getattr(settings, 'MAILERCLOUD_SMTP_USE_TLS', True)),
+            'smtp_user': getattr(settings, 'MAILERCLOUD_SMTP_USER', '') or getattr(settings, 'NEWSLETTER_SMTP_USER', ''),
+            'smtp_password': getattr(settings, 'MAILERCLOUD_SMTP_PASSWORD', '') or getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', ''),
+            'brevo_api_key': '',
+            'use_brevo_api': False,
+        }
+
+    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
+    use_brevo_api = bool(brevo_api_key) and provider not in {'smtp', 'newsletter_smtp'}
+    return {
+        'provider': 'brevo_api' if use_brevo_api else 'newsletter_smtp',
+        'smtp_host': getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', ''),
+        'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or 587),
+        'smtp_use_tls': bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True)),
+        'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', ''),
+        'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', ''),
+        'brevo_api_key': brevo_api_key,
+        'use_brevo_api': use_brevo_api,
+    }
+
+
 def _get_newsletter_subscribe_base_url():
     api_base_url = str(
         getattr(settings, 'NEWSLETTER_API_BASE_URL', '')
@@ -4487,11 +4516,10 @@ Website: https://news4bharat.com
         'X-SIB-Track-Clicks': '0',
         'X-SIB-Track-Opens': '0',
     }
-    requested_provider = getattr(settings, 'NEWSLETTER_SEND_PROVIDER', 'smtp')
-    requested_provider = str(requested_provider or 'smtp').strip().lower()
-    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
-    use_brevo_api = bool(brevo_api_key) and requested_provider not in {'smtp', 'newsletter_smtp'}
-    send_provider = 'brevo_api' if use_brevo_api else 'newsletter_smtp'
+    transport = _newsletter_transport_config()
+    brevo_api_key = transport['brevo_api_key']
+    use_brevo_api = transport['use_brevo_api']
+    send_provider = transport['provider']
     newsletter_log = None
     try:
         newsletter_log = _save_history(
@@ -4569,16 +4597,20 @@ Website: https://news4bharat.com
                 failed.append({'email': email, 'error': str(e)})
                 logger.error(f"Newsletter Brevo API exception for {email}: {e}")
     else:
-        smtp_host = getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', '')
-        smtp_port = int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or 587)
-        smtp_use_tls = bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True))
-        smtp_user = getattr(settings, 'NEWSLETTER_SMTP_USER', '')
-        smtp_password = getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '')
+        smtp_host = transport['smtp_host']
+        smtp_port = transport['smtp_port']
+        smtp_use_tls = transport['smtp_use_tls']
+        smtp_user = transport['smtp_user']
+        smtp_password = transport['smtp_password']
 
         if not smtp_host or not smtp_user or not smtp_password:
             failed = [{
                 'email': email,
-                'error': 'Newsletter SMTP is not configured. Please set NEWSLETTER_SMTP_HOST, NEWSLETTER_SMTP_USER, and NEWSLETTER_SMTP_PASSWORD.',
+                'error': (
+                    'Newsletter SMTP is not configured. '
+                    'Please set MAILERCLOUD_SMTP_HOST/USER/PASSWORD for Mailercloud '
+                    'or NEWSLETTER_SMTP_HOST/USER/PASSWORD for generic SMTP.'
+                ),
             } for email in recipients]
             logger.error("Newsletter SMTP is not configured")
         else:

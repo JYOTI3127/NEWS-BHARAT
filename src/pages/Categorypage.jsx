@@ -41,6 +41,9 @@ const STATE_ARTICLE_LIMIT = 10;
 const MORE_IN_ARTICLES_LIMIT = 17;
 const STATE_CATEGORY_SLUGS = new Set(["state-of-bharat", "states-of-bharat"]);
 const NON_NAVIGABLE_STATE_PARENT_LABELS = new Set(["states of india", "union territories"]);
+const CATEGORY_FETCH_ALIASES = {
+  business: ["business", "bharat-economy"],
+};
 
 const isStateCategorySlug = (value) =>
   STATE_CATEGORY_SLUGS.has(String(value || "").trim().toLowerCase());
@@ -49,6 +52,15 @@ const isStateParentGroupLabel = (value) =>
 
 const normalizeCategoryDisplayName = (value, fallback = "") => {
   const label = String(value || fallback || "").trim();
+  const normalizedFallback = String(fallback || "").trim().toLowerCase();
+  const normalizedLabel = label.toLowerCase();
+  if (
+    normalizedFallback === "business" ||
+    normalizedLabel === "bharat economy & business" ||
+    normalizedLabel === "bharat's economy & business"
+  ) {
+    return "Business";
+  }
   return label.toLowerCase() === "political" ? "Politics" : label;
 };
 
@@ -76,6 +88,11 @@ const getListFromArticlesResponse = (data) => {
     );
   }
   return [];
+};
+
+const getCategoryFetchSlugs = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return CATEGORY_FETCH_ALIASES[normalized] || [normalized];
 };
 
 const getPossibleStateValues = (article) => {
@@ -149,28 +166,46 @@ export default function CategoryPage() {
         : String(subFilter || "").trim();
       const shouldFetchByState = isStateCategory && stateSubFilter.length > 0;
       const requestLimit = shouldFetchByState ? STATE_ARTICLE_LIMIT : CATEGORY_ARTICLE_LIMIT;
-      const articlesUrl = shouldFetchByState
-        ? `${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`
-        : `${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=${requestLimit}`;
+      const categoryFetchSlugs = getCategoryFetchSlugs(slug);
+      const articlesUrls = shouldFetchByState
+        ? [`${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`]
+        : categoryFetchSlugs.map((categorySlug) =>
+          `${API_BASE}/articles/?category=${encodeURIComponent(categorySlug)}&page=1&limit=${requestLimit}`
+        );
 
       const [categoryResult, articlesResult] = await Promise.allSettled([
         fetch(`${API_BASE}/categories/`).then((res) => res.json()),
-        fetch(articlesUrl).then((res) => res.json()),
+        Promise.all(
+          articlesUrls.map((url) =>
+            fetch(url)
+              .then((res) => (res.ok ? res.json() : null))
+              .catch(() => null)
+          )
+        ),
       ]);
 
       if (categoryResult.status === "fulfilled") {
         const data = categoryResult.value;
-        const found = Array.isArray(data) ? data.find((c) => c.slug === slug) : null;
+        const found = Array.isArray(data)
+          ? data.find((c) => categoryFetchSlugs.includes(String(c.slug || "").trim().toLowerCase()))
+          : null;
         setCategory(found || { name: slug });
       } else {
         setCategory({ name: slug });
       }
 
       if (articlesResult.status === "fulfilled") {
-        const data = articlesResult.value;
-        const filtered = getListFromArticlesResponse(data);
+        const filtered = articlesResult.value.flatMap(getListFromArticlesResponse);
+        const seen = new Set();
+        const unique = filtered.filter((article) => {
+          const key = article?.id || article?.slug || article?.url || article?.title;
+          if (!key) return true;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
 
-        const sorted = [...filtered].sort(
+        const sorted = [...unique].sort(
           (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
         );
 

@@ -4,7 +4,7 @@ import { Clock, Newspaper } from "lucide-react";
 import { formatArticleDateTimeIST } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 
-const Q4_RESULTS_PATH = "/category/bharat-economy";
+const Q4_RESULTS_PATH = "/category/business";
 
 const getArticleTitle = (article) =>
   String(article?.title || article?.headline || "").trim();

@@ -95,7 +95,7 @@ const topics = [
   "Bharat Explainers",
   "States of Bharat",
   "Bharat in Numbers",
-  "Bharat's Economy & Business",
+  "Business",
   "Bharat's Education & Innovation",
   "Bharat's Technology & Digital Transformation",
   "Social Justice & Civic Issues",

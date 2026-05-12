@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
 import { API_BASE, apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
-const CATEGORY_SLUG = "bharat-economy";
+const CATEGORY_SLUG = "business";
+const CATEGORY_FETCH_SLUGS = ["business", "bharat-economy"];
 const LIVE_CRICKET_API = apiUrl("/live-cricket/");
 const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
@@ -404,9 +405,9 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
 
     const seededStories = useMemo(() => {
         if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
-        const slug = String(CATEGORY_SLUG).toLowerCase();
+        const slugSet = new Set(CATEGORY_FETCH_SLUGS.map((value) => value.toLowerCase()));
         const filtered = passedArticles.filter((article) =>
-            getCategorySlugsFromArticle(article).includes(slug)
+            getCategorySlugsFromArticle(article).some((slug) => slugSet.has(slug))
         );
         return [...filtered].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
     }, [passedArticles]);
@@ -421,16 +422,31 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
             if (isPrerenderUserAgent()) return () => { ignore = true; };
         }
 
-        fetch(`${API_BASE}/articles/?category=${CATEGORY_SLUG}&page=1&limit=50`)
-            .then((r) => r.json())
-            .then((data) => {
+        Promise.all(
+            CATEGORY_FETCH_SLUGS.map((slug) =>
+                fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=50`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+            )
+        )
+            .then((responses) => {
                 if (ignore) return;
-                const all = Array.isArray(data)
-                    ? data
-                    : Array.isArray(data?.value)
-                        ? data.value
-                        : (data.results || []);
-                const sorted = [...all].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
+                const seen = new Set();
+                const all = responses.flatMap((data) =>
+                    Array.isArray(data)
+                        ? data
+                        : Array.isArray(data?.value)
+                            ? data.value
+                            : (data?.results || [])
+                );
+                const unique = all.filter((article) => {
+                    const key = article?.id || article?.slug || article?.url || article?.title;
+                    if (!key) return true;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                const sorted = [...unique].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
                 setStories(sorted);
                 setStoriesLoading(false);
             })
@@ -557,13 +573,13 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                             className="font-bold text-[#111] uppercase"
                             style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px" }}
                         >
-                            Bharat Economy & Business
+                            Business
                         </span>
                     </div>
 
                     <div className="relative">
                         <button
-                            aria-label="Previous Bharat Economy stories"
+                            aria-label="Previous Business stories"
                             onClick={() => scrollStories(-1)}
                             disabled={!isMobile && !canPrev}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canPrev ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:-translate-x-0.5"
@@ -699,7 +715,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                         </div>
 
                         <button
-                            aria-label="Next Bharat Economy stories"
+                            aria-label="Next Business stories"
                             onClick={() => scrollStories(1)}
                             disabled={!isMobile && !canNext}
                             className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canNext ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:translate-x-0.5"

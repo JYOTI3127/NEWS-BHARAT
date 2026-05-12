@@ -89,7 +89,7 @@ const KEYWORD_ICON_MAP = [
 
 
 const SLUG_ICON_MAP = {
-  "bharat-economy": TrendingUp,
+  "business": TrendingUp,
   "bfsi": BarChart2,
   "bharat-opinions": PenLine,
   "bharat-startups": Zap,
@@ -199,7 +199,7 @@ const isStateParentGroupLabel = (categorySlug, subcategoryLabel) =>
 const NAV_SECTIONS = [
   {
     label: "Business",
-    slug: "bharat-economy",
+    slug: "business",
     Icon: TrendingUp,
     subcategories: [
       { label: "Macro Economy", topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"] },
@@ -220,7 +220,7 @@ const NAV_SECTIONS = [
 const navLinks = [
   { label: "Breaking News", path: "/category/breaking-news", isBreaking: true },
   { label: "World News", path: "/category/world-news" },
-  { label: "Business", path: "/category/bharat-economy" },
+  { label: "Business", path: "/category/business" },
   { label: "Technology", path: "/category/technology" },
   { label: "Sports", path: "/category/sports" },
   { label: "Entertainment", path: "/category/entertainment" },

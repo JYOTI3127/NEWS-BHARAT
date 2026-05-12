@@ -15,7 +15,7 @@ const footerLinks = {
   NEWS: [
     { name: "Breaking News", slug: "breaking-news" },
     { name: "World News", slug: "world-news" },
-    { name: "Business", slug: "bharat-economy" },
+    { name: "Business", slug: "business" },
     { name: "Technology", slug: "technology" },
     { name: "Sports", slug: "sports" },
     { name: "Entertainment", slug: "entertainment" },

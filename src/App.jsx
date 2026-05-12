@@ -137,8 +137,8 @@ function LegacyArticleRedirect() {
 }
 
 const TOP_LEVEL_CATEGORY_ALIASES = {
-  "market": "bharat-economy",
-  "markets": "bharat-economy",
+  "market": "business",
+  "markets": "business",
   "bharat-bfsi": "bfsi",
   "artificial-intelligence": "ai",
   "bharat-numbers": "bharat-in-numbers",
@@ -273,8 +273,8 @@ function Layout() {
             <Route path="/sports" element={<Navigate to="/category/sports" replace />} />
             <Route path="/world-news" element={<Navigate to="/category/world-news" replace />} />
             <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
-            <Route path="/market" element={<Navigate to="/category/bharat-economy" replace />} />
-            <Route path="/markets" element={<Navigate to="/category/bharat-economy" replace />} />
+            <Route path="/market" element={<Navigate to="/category/business" replace />} />
+            <Route path="/markets" element={<Navigate to="/category/business" replace />} />
             <Route path="/bfsi" element={<Navigate to="/category/bfsi" replace />} />
             <Route path="/bharat-bfsi" element={<Navigate to="/category/bfsi" replace />} />
             <Route path="/ai" element={<Navigate to="/category/ai" replace />} />

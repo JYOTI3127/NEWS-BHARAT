@@ -37,7 +37,7 @@ const HIDE_CATEGORY_LABEL_KEYS = new Set([
 ]);
 
 const EXCLUDED_HOME_SLUGS = new Set([
-  "60-second-read", "bharat-economy", "bharat-explainers",
+  "60-second-read", "business", "bharat-economy", "bharat-explainers",
   "bharat-opinions", "bharat-in-numbers", "bharats-startups",
   "bharat-startups", "states-of-bharat", "state-of-bharat",
 ]);

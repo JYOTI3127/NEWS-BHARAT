@@ -94,8 +94,7 @@ const normalizeCategoryKey = (value) =>
 const CATEGORY_LABEL_BY_SLUG = {
   "breaking-news": "BREAKING NEWS",
   "world-news": "WORLD NEWS",
-  "bharat-economy": "BUSINESS",
-  business: "BUSINESS",
+  "business": "BUSINESS",
   technology: "TECHNOLOGY",
   sports: "SPORTS",
   health: "HEALTH",

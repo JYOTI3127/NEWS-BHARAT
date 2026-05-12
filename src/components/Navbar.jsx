@@ -116,7 +116,6 @@ const CATEGORY_ICON_MAP = {
   "India": Flag,
   "Viral & Fact Check": AlertCircle,
   "Press Release": Newspaper,
-  "World News": Globe,
 };
 
 const normalizeCategoryLabel = (value) => {
@@ -426,7 +425,7 @@ const NAV_SECTIONS = [
   {
     label: "Business",
     Icon: TrendingUp,
-    slug: "bharat-economy",
+    slug: "business",
     subcategories: [
       { label: "Macro Economy", topics: ["GDP & Growth", "Inflation", "Fiscal & Monetary", "Employment & Labour Market"] },
       { label: "Government Policy", topics: ["Union Budget", "Economic Reforms", "PLI & Policies", "PSU"] },
@@ -445,7 +444,7 @@ const NAV_SECTIONS = [
 const navLinks = [
   { label: "Breaking News", path: "/category/breaking-news" },
   { label: "World News", path: "/category/world-news" },
-  { label: "Business", path: "/category/bharat-economy" },
+  { label: "Business", path: "/category/business" },
   { label: "Technology", path: "/category/technology" },
   { label: "Entertainment", path: "/category/entertainment" },
   { label: "Education", path: "/category/education" },

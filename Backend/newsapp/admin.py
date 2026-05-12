@@ -1756,7 +1756,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
-        if not _can_manage_slug(request.user) and 'slug' not in readonly_fields:
+        if not request.user.is_superuser and 'slug' not in readonly_fields:
             readonly_fields.append('slug')
         return readonly_fields
 
@@ -1795,7 +1795,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        extra_context['can_edit_slug'] = _can_manage_slug(request.user)
+        extra_context['can_edit_slug'] = bool(getattr(request.user, 'is_superuser', False))
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:

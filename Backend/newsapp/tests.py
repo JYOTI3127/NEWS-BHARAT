@@ -669,7 +669,7 @@ class SlugPermissionTests(TestCase):
         category.refresh_from_db()
         self.assertEqual(category.slug, 'bharat-business')
 
-    def test_non_slug_editor_cannot_change_article_slug(self):
+    def test_non_superadmin_cannot_change_article_slug(self):
         article = Article.objects.create(
             author=self.other_staff,
             title='Slug Story',
@@ -694,3 +694,29 @@ class SlugPermissionTests(TestCase):
         self.assertEqual(response.status_code, 400, response.content)
         article.refresh_from_db()
         self.assertEqual(article.slug, 'slug-story')
+
+    def test_superadmin_can_change_article_slug(self):
+        article = Article.objects.create(
+            author=self.slug_editor,
+            title='Slug Story Admin',
+            content='Body copy',
+            status='draft',
+            slug='slug-story-admin',
+        )
+        self.client.force_authenticate(self.slug_editor)
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Slug Story Admin',
+                'subtitle': '',
+                'content': 'Body copy updated',
+                'status': 'draft',
+                'slug': 'updated-admin-slug',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        article.refresh_from_db()
+        self.assertEqual(article.slug, 'updated-admin-slug')

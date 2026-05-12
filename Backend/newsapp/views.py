@@ -771,11 +771,11 @@ def _save_article_from_request(request, article=None):
 
     raw_slug = data.get('slug', '').strip()
     normalized_slug = slugify(raw_slug.strip('/').split('/')[-1])
-    if not _can_manage_slug(request.user):
+    if not getattr(request.user, 'is_superuser', False):
         if is_new:
             normalized_slug = ''
         elif normalized_slug and normalized_slug != old_slug:
-            return None, {'error': 'Only the designated slug editor can change article slug.'}
+            return None, {'error': 'Only superadmins can change article slug.'}
         else:
             normalized_slug = old_slug
     article.slug = normalized_slug

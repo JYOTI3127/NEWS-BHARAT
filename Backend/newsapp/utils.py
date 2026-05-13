@@ -23,7 +23,7 @@ from django.utils import timezone
 
 from .models import MetalRate
 
-ARTICLE_CLEAN_VERSION = 3
+ARTICLE_CLEAN_VERSION = 4
 
 _TWITTER_EMBED_RE = re.compile(
     r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
@@ -44,6 +44,15 @@ _DANGEROUS_BLOCK_RE = re.compile(
 _INLINE_EVENT_ATTR_RE = re.compile(r'\son[a-z]+\s*=\s*([\'"]).*?\1', re.IGNORECASE | re.DOTALL)
 _JS_PROTOCOL_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*javascript:[^\'"]*\2', re.IGNORECASE)
 _DATA_HTML_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*data:text\/html[^\'"]*\2', re.IGNORECASE)
+_BLOCK_TAG_RE = re.compile(
+    r'<\s*(p|div|h[1-6]|ul|ol|li|blockquote|pre|table|figure|img|hr)\b',
+    re.IGNORECASE,
+)
+_TOP_LEVEL_BLOCK_RE = re.compile(
+    r'(<(?:p|div|h[1-6]|ul|ol|blockquote|pre|table|figure)\b[\s\S]*?</(?:p|div|h[1-6]|ul|ol|blockquote|pre|table|figure)>|'
+    r'<(?:img|hr)\b[^>]*\/?>)',
+    re.IGNORECASE,
+)
 
 
 def normalize_twitter_embeds(content):
@@ -92,6 +101,73 @@ def _ensure_safe_anchor_attrs(match):
     return tag[:-1] + ' rel="noopener noreferrer">'
 
 
+def _wrap_article_text_fragment(fragment):
+    fragment = str(fragment or '').strip()
+    if not fragment:
+        return ''
+
+    also_read_marker = '%%N4B_ALSO_READ%%'
+    fragment = re.sub(r'Also Read:\s*', also_read_marker, fragment, flags=re.IGNORECASE)
+
+    parts = [
+        part.strip()
+        for part in re.split(
+            rf'\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)}',
+            fragment,
+            flags=re.IGNORECASE,
+        )
+        if part.strip()
+    ]
+    wrapped_parts = []
+    marker_seen = False
+    for raw_part in re.split(
+        rf'(\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)})',
+        fragment,
+        flags=re.IGNORECASE,
+    ):
+        part = raw_part.strip()
+        if not part:
+            continue
+        if part == also_read_marker:
+            marker_seen = True
+            continue
+        if marker_seen:
+            wrapped_parts.append(f'<p><strong>Also Read:</strong> {part}</p>')
+            marker_seen = False
+        else:
+            wrapped_parts.append(f'<p>{part}</p>')
+
+    wrapped = ''.join(wrapped_parts) if wrapped_parts else ''.join(f'<p>{part}</p>' for part in parts)
+    wrapped = re.sub(r'<p>\s*</p>', '', wrapped, flags=re.IGNORECASE)
+    wrapped = re.sub(r'</p>\s*</p>', '</p>', wrapped, flags=re.IGNORECASE)
+    wrapped = re.sub(r'<p>\s*<p>', '<p>', wrapped, flags=re.IGNORECASE)
+    return wrapped
+
+
+def _ensure_article_block_structure(content):
+    content = str(content or '').strip()
+    if not content:
+        return ''
+
+    if not _BLOCK_TAG_RE.search(content):
+        return _wrap_article_text_fragment(content)
+
+    pieces = []
+    cursor = 0
+    for match in _TOP_LEVEL_BLOCK_RE.finditer(content):
+        before = content[cursor:match.start()]
+        if before.strip():
+            pieces.append(_wrap_article_text_fragment(before))
+        pieces.append(match.group(0).strip())
+        cursor = match.end()
+
+    tail = content[cursor:]
+    if tail.strip():
+        pieces.append(_wrap_article_text_fragment(tail))
+
+    return ''.join(piece for piece in pieces if piece).strip()
+
+
 def sanitize_article_html(content):
     normalized = normalize_twitter_embeds(str(content or ''))
     cleaned = _HTML_COMMENT_RE.sub('', normalized)
@@ -100,6 +176,7 @@ def sanitize_article_html(content):
     cleaned = _JS_PROTOCOL_RE.sub('', cleaned)
     cleaned = _DATA_HTML_RE.sub('', cleaned)
     cleaned = _ANCHOR_TAG_RE.sub(_ensure_safe_anchor_attrs, cleaned)
+    cleaned = _ensure_article_block_structure(cleaned)
     cleaned = re.sub(r'<p>\s*</p>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'<div>\s*</div>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'(?:<br\s*/?>\s*){3,}', '<br><br>', cleaned, flags=re.IGNORECASE)

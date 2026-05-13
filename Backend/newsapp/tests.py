@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .utils import sanitize_article_html
 from .views import custom_permission_denied_view, send_push_to_all
 
 
@@ -511,6 +512,22 @@ class ArticleContentCleaningTests(TestCase):
         self.assertNotIn('text-token', article.content_raw)
         self.assertNotIn('data-start', article.content_raw)
         self.assertIn('Updated 1 article(s).', out.getvalue())
+
+    def test_sanitize_article_html_wraps_unstructured_text_in_paragraphs(self):
+        cleaned = sanitize_article_html(
+            "This is sentence one.\n\n"
+            "Also Read: <a href=\"https://news4bharat.com/story\">Story</a>\n\n"
+            "This is sentence three."
+        )
+
+        self.assertIn('<p>This is sentence one.</p>', cleaned)
+        self.assertIn('<p><strong>Also Read:</strong> <a href="https://news4bharat.com/story">Story</a></p>', cleaned)
+        self.assertIn('<p>This is sentence three.</p>', cleaned)
+
+    def test_sanitize_article_html_preserves_existing_block_html(self):
+        cleaned = sanitize_article_html('<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
+
+        self.assertEqual(cleaned, '<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
 
 
 class AccessDeniedViewTests(TestCase):

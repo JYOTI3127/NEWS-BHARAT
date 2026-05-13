@@ -131,7 +131,7 @@ export default function BreakingNewsSection({
 
     if (mode === 'q4') {
       // Q4 list already category-specific endpoint se aati hai, isliye yahan re-filter nahi karte.
-      return dedupeArticles(filtered).slice(0, 10);
+      return dedupeArticles(filtered).slice(0, 11);
     }
 
     return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
@@ -139,9 +139,12 @@ export default function BreakingNewsSection({
 
   if (sectionArticles.length === 0) return null;
 
+  const isQ4Mode = mode === 'q4';
   const featuredArticle = sectionArticles[0];
   const leftSecondaryArticle = sectionArticles[1];
-  const headlineArticles = sectionArticles.slice(2, 10);
+  const q4LeftSecondaryArticles = isQ4Mode ? sectionArticles.slice(1, 3) : [];
+  const q4LeftTertiaryArticle = isQ4Mode ? sectionArticles[3] : null;
+  const headlineArticles = sectionArticles.slice(isQ4Mode ? 4 : 2, isQ4Mode ? 11 : 10);
   const featuredImagePosition = mode === 'q4' ? 'left center' : 'center center';
 
   return (
@@ -187,10 +190,10 @@ export default function BreakingNewsSection({
           max-[1024px]:grid-cols-1
         "
       >
-        <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-4">
+        <div className={`grid ${isQ4Mode ? 'content-start gap-3' : 'h-full grid-rows-[minmax(0,1fr)_auto] gap-4'}`}>
           {featuredArticle ? (
-            <StoryCard article={featuredArticle} className="group block h-full text-inherit no-underline">
-              <div className="relative h-full min-h-[340px] overflow-hidden rounded-[12px] bg-[#111] max-[1024px]:min-h-0">
+            <StoryCard article={featuredArticle} className={`group block text-inherit no-underline ${isQ4Mode ? '' : 'h-full'}`}>
+              <div className={`relative overflow-hidden rounded-[12px] bg-[#111] max-[1024px]:min-h-0 ${isQ4Mode ? 'h-[265px] min-[1441px]:h-[315px] max-[768px]:h-auto' : 'h-full min-h-[340px]'}`}>
                 <StoryImage
                   article={featuredArticle}
                   alt={getArticleTitle(featuredArticle)}
@@ -220,7 +223,34 @@ export default function BreakingNewsSection({
             </StoryCard>
           ) : null}
 
-          {leftSecondaryArticle ? (
+          {isQ4Mode && q4LeftSecondaryArticles.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 max-[640px]:grid-cols-1">
+              {q4LeftSecondaryArticles.map((article) => (
+                <StoryCard
+                  key={article.id || article.slug || getArticleTitle(article)}
+                  article={article}
+                  className="group block overflow-hidden rounded-[10px] border border-[#e5e5e5] bg-white text-inherit no-underline"
+                >
+                  <StoryImage
+                    article={article}
+                    alt={getArticleTitle(article)}
+                    className="block aspect-[16/9] w-full object-cover bg-[#f4f4f4]"
+                    style={getImageStyle(mode, 'card')}
+                  />
+                  <div className="p-2.5">
+                    <h3 className="m-0 line-clamp-2 font-[Poppins,sans-serif] text-[0.88rem] font-semibold leading-[1.22] text-[#111] transition-colors duration-200 group-hover:text-[#D80100]">
+                      {getArticleTitle(article)}
+                    </h3>
+                    {formatArticleDate(article) ? (
+                      <p className="mt-1.5 font-[Poppins,sans-serif] text-[0.72rem] font-semibold leading-[1.35] text-[#6b7280]">
+                        {formatArticleDate(article)}
+                      </p>
+                    ) : null}
+                  </div>
+                </StoryCard>
+              ))}
+            </div>
+          ) : leftSecondaryArticle ? (
             <StoryCard
               article={leftSecondaryArticle}
               className="
@@ -251,6 +281,34 @@ export default function BreakingNewsSection({
                   </p>
                 ) : null}
               </div>
+            </StoryCard>
+          ) : null}
+
+          {isQ4Mode && q4LeftTertiaryArticle ? (
+            <StoryCard
+              article={q4LeftTertiaryArticle}
+              className="
+                group grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 rounded-[10px] border-b border-dotted border-[#9a9a9a] py-[9px] text-inherit no-underline
+                max-[640px]:grid-cols-[minmax(0,1fr)_100px] max-[640px]:gap-3
+                max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
+              "
+            >
+              <div className="min-w-0">
+                <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem]">
+                  {getArticleTitle(q4LeftTertiaryArticle)}
+                </h3>
+                {formatArticleDate(q4LeftTertiaryArticle) ? (
+                  <p className="mt-2.5 font-[Poppins,sans-serif] text-[0.82rem] font-semibold leading-[1.35] text-[#6b7280] max-[425px]:mt-1.5 max-[425px]:text-[0.72rem]">
+                    {formatArticleDate(q4LeftTertiaryArticle)}
+                  </p>
+                ) : null}
+              </div>
+              <StoryImage
+                article={q4LeftTertiaryArticle}
+                alt={getArticleTitle(q4LeftTertiaryArticle)}
+                className="block aspect-[16/9] w-full rounded-[10px] object-cover bg-[#f4f4f4]"
+                style={getImageStyle(mode, 'card')}
+              />
             </StoryCard>
           ) : null}
         </div>

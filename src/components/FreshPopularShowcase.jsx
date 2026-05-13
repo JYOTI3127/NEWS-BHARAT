@@ -705,15 +705,19 @@ export default function FreshPopularShowcase({
                     <img
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
-                      className={`block h-[180px] w-full object-cover object-center max-[375px]:h-[230px] ${mobileImageHeightClass} max-[320px]:object-cover min-[425px]:h-[155px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]`}
+                      className="fps-middle-image-only-media block h-[161px] w-full object-cover object-center"
                       style={{
+                        height: "161px",
                         objectPosition: getArticleImageFocus(article),
                       }}
                       loading="lazy"
                       decoding="async"
                     />
                   ) : (
-                    <div className={`flex h-[180px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[230px] ${mobileImageHeightClass} min-[425px]:h-[155px] min-[768px]:h-[210px] min-[1024px]:h-[185px] min-[1440px]:h-[220px] min-[1920px]:h-[240px]`}>
+                    <div
+                      className="fps-middle-image-only-media flex h-[161px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a]"
+                      style={{ height: "161px" }}
+                    >
                       No image
                     </div>
                   )}

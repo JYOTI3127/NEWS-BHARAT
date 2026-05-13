@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import {
   Clock, User,
   Newspaper, RefreshCw, BookOpen, Eye,
@@ -36,6 +37,7 @@ const formatViews = (v) => {
 };
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
+const SITE_URL = "https://news4bharat.com";
 const CATEGORY_ARTICLE_LIMIT = 100;
 const STATE_ARTICLE_LIMIT = 10;
 const MORE_IN_ARTICLES_LIMIT = 17;
@@ -90,9 +92,59 @@ const getListFromArticlesResponse = (data) => {
   return [];
 };
 
+const getListFromCategoriesResponse = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.value)) return data.value;
+  if (Array.isArray(data?.categories)) return data.categories;
+  if (Array.isArray(data?.data)) return data.data;
+  if (data?.results && typeof data.results === "object") {
+    return Object.values(data.results).flatMap((value) =>
+      Array.isArray(value) ? value : []
+    );
+  }
+  return [];
+};
+
 const getCategoryFetchSlugs = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
   return CATEGORY_FETCH_ALIASES[normalized] || [normalized];
+};
+
+const getPlainText = (value) =>
+  stripHtml(String(value || ""))
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getCategorySeoTitle = (category, displayName) => {
+  return [
+    category?.meta_title,
+    category?.metaTitle,
+    category?.seo_title,
+    category?.seoTitle,
+    category?.title,
+    category?.seo?.meta_title,
+    category?.seo?.metaTitle,
+    category?.seo?.title,
+  ]
+    .map(getPlainText)
+    .find(Boolean);
+};
+
+const getCategorySeoDescription = (category, displayName) => {
+  return [
+    category?.meta_description,
+    category?.metaDescription,
+    category?.seo_description,
+    category?.seoDescription,
+    category?.description,
+    category?.summary,
+    category?.seo?.meta_description,
+    category?.seo?.metaDescription,
+    category?.seo?.description,
+  ]
+    .map(getPlainText)
+    .find(Boolean);
 };
 
 const getPossibleStateValues = (article) => {
@@ -186,9 +238,10 @@ export default function CategoryPage() {
 
       if (categoryResult.status === "fulfilled") {
         const data = categoryResult.value;
-        const found = Array.isArray(data)
-          ? data.find((c) => categoryFetchSlugs.includes(String(c.slug || "").trim().toLowerCase()))
-          : null;
+        const categories = getListFromCategoriesResponse(data);
+        const found = categories.find((c) =>
+          categoryFetchSlugs.includes(String(c.slug || "").trim().toLowerCase())
+        );
         setCategory(found || { name: slug });
       } else {
         setCategory({ name: slug });
@@ -246,6 +299,9 @@ export default function CategoryPage() {
   const shouldClampWorldNewsHeader = isWorldNewsCategory && viewportWidth <= 1440;
   const shouldClampWorldNewsParagraph = isWorldNewsCategory && viewportWidth >= 768 && viewportWidth <= 1440;
   const categoryDisplayName = normalizeCategoryDisplayName(category?.name, slug);
+  const categorySeoTitle = getCategorySeoTitle(category, categoryDisplayName);
+  const categorySeoDescription = getCategorySeoDescription(category, categoryDisplayName);
+  const categoryCanonicalUrl = `${SITE_URL}/category/${slug}`;
   const shellStyle = {
     width: "var(--site-content-width)",
     maxWidth: "var(--site-content-width)",
@@ -284,6 +340,26 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
+      <Helmet>
+        {categorySeoTitle ? <title>{categorySeoTitle}</title> : null}
+        {categorySeoDescription ? <meta name="description" content={categorySeoDescription} /> : null}
+        <meta name="robots" content="index,follow,max-image-preview:large" />
+        <link rel="canonical" href={categoryCanonicalUrl} />
+
+        <meta property="og:type" content="website" />
+        {categorySeoTitle ? <meta property="og:title" content={categorySeoTitle} /> : null}
+        {categorySeoDescription ? <meta property="og:description" content={categorySeoDescription} /> : null}
+        <meta property="og:url" content={categoryCanonicalUrl} />
+        <meta property="og:site_name" content="News4Bharat" />
+        <meta property="og:locale" content="en_IN" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@news4_bharat" />
+        {categorySeoTitle ? <meta name="twitter:title" content={categorySeoTitle} /> : null}
+        {categorySeoDescription ? <meta name="twitter:description" content={categorySeoDescription} /> : null}
+        <meta name="twitter:url" content={categoryCanonicalUrl} />
+      </Helmet>
+
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">
         <AdvertisementSlot
           page="home"
@@ -411,7 +487,7 @@ export default function CategoryPage() {
               <p className="text-[13px] text-[#888]">Articles will be available soon!</p>
             </div>
           ) : gridArticles.length === 0 ? null : (
-            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
               {gridArticles.map((article) => (
                 <Link
                   key={article.id}
@@ -419,7 +495,7 @@ export default function CategoryPage() {
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
-                    <div className="relative h-[180px] sm:h-40 w-full overflow-hidden">
+                    <div className="relative aspect-[16/9] w-full overflow-hidden">
                       {article.image ? (
                         <img src={article.image} alt={article.title} className="w-full h-full object-cover" loading="lazy" decoding="async" width={640} height={360} />
                       ) : (

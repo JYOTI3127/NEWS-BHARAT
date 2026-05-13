@@ -15459,6 +15459,12 @@ img {
   transform: translateY(-1px) scale(1.02);
 }
 
+@media (min-width: 1024px) {
+  .fps-middle-image-only-media {
+    height: 161px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .more-articles-cta {
     animation: none;

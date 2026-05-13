@@ -104,9 +104,14 @@ const getCategoryLabel  = (a, fallback) => {
     return slug === "breaking-news" || name === "breaking news";
   });
 
-  return breakingCategory?.name || details[0]?.name || fallback;
+  const label = String(breakingCategory?.name || details[0]?.name || fallback || "").trim();
+  return label.toLowerCase() === "top story" ? "" : label;
 };
 const shouldShowCategoryLabel = (section) => !HIDE_CATEGORY_LABEL_KEYS.has(section?.key);
+const CategoryKicker = ({ article, fallback }) => {
+  const label = getCategoryLabel(article, fallback);
+  return label ? <span className="hcs-kicker">{label}</span> : null;
+};
 
 // ─────────────────────────────────────────────
 // ✅ FIX 1: useIs4K — stable hook, component ke bahar
@@ -283,7 +288,7 @@ const EditorialSection = memo(({ section, articles }) => {
           </div>
           <div className="hcs-editorial-copy">
             {shouldShowCategoryLabel(section) ? (
-              <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
+              <CategoryKicker article={featured} fallback={section.title} />
             ) : null}
             <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
@@ -300,7 +305,7 @@ const EditorialSection = memo(({ section, articles }) => {
               />
               <div className="hcs-side-copy">
                 {shouldShowCategoryLabel(section) ? (
-                  <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
+                  <CategoryKicker article={article} fallback={section.title} />
                 ) : null}
                 <h4 className={`hcs-side-title${section.key === "world-news" ? " hcs-world-news-side-title" : ""}${section.key === "ai" ? " hcs-ai-side-title" : ""}`}>{getArticleTitle(article)}</h4>
                 {(section.key === "world-news" || section.key === "ai") && getArticleSummary(article) ? (
@@ -333,7 +338,6 @@ const ScorelineSection = memo(({ section, articles }) => {
             />
           </div>
           <div className="hcs-scoreline-text">
-            <span className="hcs-kicker">Top Story</span>
             <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
@@ -367,7 +371,7 @@ const MosaicSection = memo(({ section, articles }) => {
           <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-mosaic-image" />
           <div className="hcs-mosaic-copy">
             {shouldShowCategoryLabel(section) ? (
-              <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
+              <CategoryKicker article={featured} fallback={section.title} />
             ) : null}
             <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
@@ -401,7 +405,7 @@ const CardsSection = memo(({ section, articles }) => {
             <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-card-thumb" />
             <div className="hcs-card-copy">
               {shouldShowCategoryLabel(section) ? (
-                <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
+                <CategoryKicker article={article} fallback={section.title} />
               ) : null}
               <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
               <p className="hcs-summary">{getArticleSummary(article)}</p>
@@ -431,7 +435,7 @@ const SpotlightSection = memo(({ section, articles }) => {
           />
           <div className="hcs-spotlight-main-copy">
             {shouldShowCategoryLabel(section) ? (
-              <span className="hcs-kicker">{getCategoryLabel(featured, section.title)}</span>
+              <CategoryKicker article={featured} fallback={section.title} />
             ) : null}
             <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
             <p className="hcs-summary">{getArticleSummary(featured)}</p>
@@ -448,7 +452,7 @@ const SpotlightSection = memo(({ section, articles }) => {
               />
               <div className="hcs-side-copy">
                 {shouldShowCategoryLabel(section) ? (
-                  <span className="hcs-kicker">{getCategoryLabel(article, section.title)}</span>
+                  <CategoryKicker article={article} fallback={section.title} />
                 ) : null}
                 <h4 className={`hcs-side-title${section.key === "automobile" ? " hcs-automobile-side-title" : ""}`}>{getSectionArticleTitle(article, section)}</h4>
                 {section.key === "automobile" && getArticleSummary(article) ? (

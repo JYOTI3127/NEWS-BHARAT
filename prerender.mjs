@@ -180,6 +180,20 @@ async function fetchWithRetry(url, retries = 3) {
 const getListFromApiResponse = (data) =>
   Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : data?.results || []
 
+const getListFromCategoriesResponse = (data) => {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.results)) return data.results
+  if (Array.isArray(data?.value)) return data.value
+  if (Array.isArray(data?.categories)) return data.categories
+  if (Array.isArray(data?.data)) return data.data
+  if (data?.results && typeof data.results === 'object') {
+    return Object.values(data.results).flatMap((value) =>
+      Array.isArray(value) ? value : []
+    )
+  }
+  return []
+}
+
 const normalizeNextApiUrl = (value) => {
   const raw = String(value || '').trim()
   if (!raw) return ''
@@ -524,6 +538,35 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     if (!text || text.length <= maxLength) return text
     return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`
   }
+  const getCategorySeoTitle = (category, catName) => {
+    return [
+      category?.meta_title,
+      category?.metaTitle,
+      category?.seo_title,
+      category?.seoTitle,
+      category?.title,
+      category?.seo?.meta_title,
+      category?.seo?.metaTitle,
+      category?.seo?.title,
+    ]
+      .map((value) => normalizeText(value))
+      .find(Boolean)
+  }
+  const getCategorySeoDescription = (category, catName) => {
+    return [
+      category?.meta_description,
+      category?.metaDescription,
+      category?.seo_description,
+      category?.seoDescription,
+      category?.description,
+      category?.summary,
+      category?.seo?.meta_description,
+      category?.seo?.metaDescription,
+      category?.seo?.description,
+    ]
+      .map((value) => normalizeText(value))
+      .find(Boolean)
+  }
   // Homepage
   if (route === '/') {
     return {
@@ -660,13 +703,13 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
 
   // Category page
   if (route.startsWith('/category/')) {
-    const slug = route.replace('/category/', '').trim()
+    const slug = route.replace('/category/', '').trim().toLowerCase()
     const category = categoryMap.get(slug)
     const catName = category?.name || slug.replace(/-/g, ' ')
 
     return {
-      title: `${catName} News | ${SITE_NAME}`,
-      description: `Latest ${catName} news, updates and analysis on ${SITE_NAME} - News As It Is.`,
+      title: getCategorySeoTitle(category, catName),
+      description: getCategorySeoDescription(category, catName),
       canonical: `${BASE_URL}/category/${slug}`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
@@ -720,8 +763,8 @@ function buildWebsiteSchemaTag() {
 function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) {
   const meta = buildMetaForRoute(route, articleMap, categoryMap, siteData)
 
-  const safeDesc = meta.description.replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
-  const safeTitle = meta.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const safeDesc = String(meta.description || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
+  const safeTitle = String(meta.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const safeKeywords = String(meta.keywords || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
   const safeNewsKeywords = String(meta.newsKeywords || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
   const safeFocusKeyword = String(meta.focusKeyword || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
@@ -753,8 +796,8 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     .replace(/<meta[^>]+property=["']article:[^"']*["'][^>]*>\s*/gi, '')
 
   const injectedTags = `
-  <title>${safeTitle}</title>
-  <meta name="description" content="${safeDesc}">
+  ${safeTitle ? `<title>${safeTitle}</title>` : ''}
+  ${safeDesc ? `<meta name="description" content="${safeDesc}">` : ''}
   ${safeAuthor ? `<meta name="author" content="${safeAuthor}">` : ''}
   ${safeKeywords ? `<meta name="keywords" content="${safeKeywords}">` : ''}
   ${safeNewsKeywords ? `<meta name="news_keywords" content="${safeNewsKeywords}">` : ''}
@@ -764,8 +807,8 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   <link rel="canonical" href="${meta.canonical}">
   ${buildHrefLangTags(meta.canonical)}
   <meta property="og:type" content="${meta.ogType}">
-  <meta property="og:title" content="${safeTitle}">
-  <meta property="og:description" content="${safeDesc}">
+  ${safeTitle ? `<meta property="og:title" content="${safeTitle}">` : ''}
+  ${safeDesc ? `<meta property="og:description" content="${safeDesc}">` : ''}
   <meta property="og:url" content="${meta.canonical}">
   <meta property="og:image" content="${meta.ogImage}">
   ${safeOgImageAlt ? `<meta property="og:image:alt" content="${safeOgImageAlt}">` : ''}
@@ -776,8 +819,8 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   ${safeArticleTags.map((tag) => `<meta property="article:tag" content="${tag}">`).join('\n  ')}
   <meta name="twitter:card" content="summary_large_image">
   ${safeTwitterSite ? `<meta name="twitter:site" content="${safeTwitterSite}">` : ''}
-  <meta name="twitter:title" content="${safeTitle}">
-  <meta name="twitter:description" content="${safeDesc}">
+  ${safeTitle ? `<meta name="twitter:title" content="${safeTitle}">` : ''}
+  ${safeDesc ? `<meta name="twitter:description" content="${safeDesc}">` : ''}
   <meta name="twitter:url" content="${meta.canonical}">
   <meta name="twitter:image" content="${meta.ogImage}">
   ${safeOgImageAlt ? `<meta name="twitter:image:alt" content="${safeOgImageAlt}">` : ''}
@@ -938,12 +981,12 @@ async function getRoutesAndData() {
   // Categories
   try {
     const data = await fetchWithRetry(`${API_BASE}/categories/?_=${Date.now()}`)
-    const categories = Array.isArray(data) ? data : []
+    const categories = getListFromCategoriesResponse(data)
 
     let added = 0
     categories.forEach((c) => {
       if (isValidSlug(c.slug)) {
-        const cleanSlug = c.slug.trim()
+        const cleanSlug = c.slug.trim().toLowerCase()
         routeSet.add(`/category/${cleanSlug}`)
         categoryMap.set(cleanSlug, c)
         added++

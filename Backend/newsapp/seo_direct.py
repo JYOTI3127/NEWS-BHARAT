@@ -355,16 +355,17 @@ class SitemapEngine:
 
     @classmethod
     def index(cls) -> str:
-        return _cached("seo:sitemap:index", cls._build_index, CACHE_SITEMAP)
+        return _cached("seo:sitemap:index:v2", cls._build_index, CACHE_SITEMAP)
 
     @staticmethod
     def _build_index() -> str:
         from newsapp.models import Article  # ← tera app name
         base = SEO["SITE_URL"]
         now  = datetime.utcnow().isoformat() + "Z"
+        sitemap_ns = "http://www.sitemaps.org/schemas/sitemap/0.9"
 
-        root = ET.Element("sitemapindex",
-                          xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+        ET.register_namespace("", sitemap_ns)
+        root = ET.Element(f"{{{sitemap_ns}}}sitemapindex")
 
         # Paginated article sitemaps
         total = Article.objects.filter(status="published", in_sitemap=True).count()
@@ -377,14 +378,14 @@ class SitemapEngine:
             f"{base}/sitemap-categories.xml",
             f"{base}/sitemap-static.xml",
         ]:
-            sm = ET.SubElement(root, "sitemap")
-            ET.SubElement(sm, "loc").text     = path
-            ET.SubElement(sm, "lastmod").text = now
+            sm = ET.SubElement(root, f"{{{sitemap_ns}}}sitemap")
+            ET.SubElement(sm, f"{{{sitemap_ns}}}loc").text     = path
+            ET.SubElement(sm, f"{{{sitemap_ns}}}lastmod").text = now
 
         for p in range(2, pages + 1):
-            sm = ET.SubElement(root, "sitemap")
-            ET.SubElement(sm, "loc").text     = f"{base}/sitemap-articles-{p}.xml"
-            ET.SubElement(sm, "lastmod").text = now
+            sm = ET.SubElement(root, f"{{{sitemap_ns}}}sitemap")
+            ET.SubElement(sm, f"{{{sitemap_ns}}}loc").text     = f"{base}/sitemap-articles-{p}.xml"
+            ET.SubElement(sm, f"{{{sitemap_ns}}}lastmod").text = now
 
         return _prettify(root)
 

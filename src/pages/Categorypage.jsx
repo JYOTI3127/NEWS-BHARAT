@@ -236,6 +236,42 @@ const getCategoryArticleFreshnessTime = (article) => {
   );
 };
 
+const getTimestamp = (value) => {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+};
+
+const formatCategoryArticleDateLabel = (article) => {
+  if (article?.updated_display) {
+    return String(article.updated_display).replace(/\s+at\s+/gi, " - ").trim();
+  }
+
+  const updatedValue =
+    article?.updated_at ||
+    article?.updatedAt ||
+    article?.modified_at ||
+    article?.modifiedAt ||
+    "";
+  const publishedValue =
+    article?.published_at ||
+    article?.publishedAt ||
+    article?.published_date ||
+    article?.date ||
+    article?.created_at ||
+    article?.createdAt ||
+    "";
+
+  const updatedTime = getTimestamp(updatedValue);
+  const publishedTime = getTimestamp(publishedValue);
+  const hasMeaningfulUpdate = updatedTime > 0 && (!publishedTime || updatedTime - publishedTime > 60 * 1000);
+
+  if (hasMeaningfulUpdate) {
+    return `Updated - ${formatArticleDateTimeIST(updatedValue)}`;
+  }
+
+  return formatArticleDateTimeIST(article);
+};
+
 const doesArticleMatchSubcategory = (article, subFilter) => {
   const target = String(subFilter || "").trim().toLowerCase();
   const normalizedTarget = normalizeRegionKey(subFilter);
@@ -568,7 +604,7 @@ export default function CategoryPage() {
                     </span>
                     {/* Time AM/PM ke saath */}
                     <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
-                      <Clock size={12} className="mr-1" />{formatArticleDateTimeIST(heroArticle)}
+                      <Clock size={12} className="mr-1" />{formatCategoryArticleDateLabel(heroArticle)}
                     </span>
                     {heroArticle.views && (
                       <span className="inline-flex items-center text-[11.5px] text-[#888] font-medium">
@@ -626,7 +662,7 @@ export default function CategoryPage() {
                         </span>
                         {/* AM/PM time */}
                         <span className="flex items-center gap-1 text-[11px]">
-                          <Clock size={11} />{formatArticleDateTimeIST(article)}
+                          <Clock size={11} />{formatCategoryArticleDateLabel(article)}
                         </span>
                       </div>
                       {article.views && (
@@ -700,7 +736,7 @@ export default function CategoryPage() {
                           {article.title}
                         </p>
                         <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
-                          <Clock size={10} />{formatArticleDateTimeIST(article)}
+                          <Clock size={10} />{formatCategoryArticleDateLabel(article)}
                         </span>
                       </div>
                     </div>

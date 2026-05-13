@@ -5,8 +5,81 @@
 /* ============================================================
    CSS VARIABLES
    ============================================================ */
+
+/* article-content.css */
+.article-content ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.article-content ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.article-content li {
+  display: list-item !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 0.3rem !important;
+}
+
+.article-content p {
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+  margin-bottom: 1.2rem !important;
+}
+
+.article-content h2 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  margin-top: 1.8rem !important;
+  margin-bottom: 0.8rem !important;
+  color: #111827 !important;
+}
+
+.article-content h3 {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.6rem !important;
+  color: #1f2937 !important;
+}
+
+.article-content blockquote {
+  border-left: 3px solid #D80100 !important;
+  padding: 0.75rem 1rem !important;
+  margin: 1.5rem 0 !important;
+  background: #fff5f5 !important;
+  border-radius: 0 6px 6px 0 !important;
+}
+
+.article-content blockquote p {
+  color: #4b5563 !important;
+  font-style: italic !important;
+  margin-bottom: 0 !important;
+}
+
+.article-content strong, 
+.article-content b {
+  font-weight: 700 !important;
+}
+
+.article-content a {
+  color: #001d52 !important;
+  text-decoration: underline !important;
+}
+
+.article-content img {
+  width: 100% !important;
+  border-radius: 8px !important;
+  margin: 1.5rem 0 !important;
+}
 :root {
-  --red: #D80100;
   --red-light: rgba(216, 1, 0, 0.08);
   --red-mid: rgba(216, 1, 0, 0.15);
   --dark: #111111;
@@ -309,6 +382,10 @@ img {
 
 .article-content :where(ul, ol) {
   padding-left: 1.45rem;
+}
+
+.article-content .article-auto-list {
+  margin-top: 0.25rem;
 }
 
 .article-content li {

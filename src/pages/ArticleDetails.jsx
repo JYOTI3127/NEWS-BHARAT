@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Tweet } from "react-tweet";
+import "../style.css";
 import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag, ArrowLeft,
@@ -678,6 +679,54 @@ const createEmbedNode = (doc, descriptor) => {
   return wrapper;
 };
 
+const replaceTweetUrlsWithPlaceholders = (doc) => {
+  if (!doc?.body) return;
+
+  const replaceElementWithTweet = (element, tweetData) => {
+    if (!element || !tweetData) return;
+    if (element.closest("table, thead, tbody, tfoot, tr, td, th, .react-tweet-placeholder")) return;
+    const target = element.closest("blockquote, p, div, li") || element;
+    target.replaceWith(createEmbedNode(doc, { type: "tweet", ...tweetData }));
+  };
+
+  Array.from(doc.body.querySelectorAll("a[href]")).forEach((anchor) => {
+    const tweetData = getTweetEmbedData(anchor.href || anchor.textContent);
+    if (tweetData) replaceElementWithTweet(anchor, tweetData);
+  });
+
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  textNodes.forEach((node) => {
+    const tweetData = getTweetEmbedData(node.textContent || "");
+    if (!tweetData) return;
+    const parent = node.parentElement;
+    replaceElementWithTweet(parent, tweetData);
+  });
+};
+
+const splitHtmlByTweetPlaceholders = (html) => {
+  const parts = [];
+  const placeholderRegex = /<([a-z0-9]+)\b(?=[^>]*\bclass=["'][^"']*\breact-tweet-placeholder\b[^"']*["'])(?=[^>]*\bdata-tweet-id=["'](\d+)["'])[^>]*>(?:\s*<\/\1>)?/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = placeholderRegex.exec(html))) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "html", content: html.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: "tweet", id: match[2] });
+    lastIndex = placeholderRegex.lastIndex;
+  }
+
+  if (lastIndex < html.length) {
+    parts.push({ type: "html", content: html.slice(lastIndex) });
+  }
+
+  return parts;
+};
+
 const useIs2K = () => {
   const getValue = () => typeof window !== "undefined" && window.innerWidth >= 1441 && window.innerWidth <= 2560;
   const [is2K, setIs2K] = useState(getValue);
@@ -765,6 +814,13 @@ const normalizeArticleContent = (html, options = {}) => {
   // Preserve paragraph/block formatting for raw text payloads.
   // When backend sends plain text in content_raw, convert newlines into block HTML.
   const hasHtmlMarkup = /<\/?[a-z][\s\S]*>/i.test(normalized);
+  const hasBlockTags = /<(p|h[2-6]|ul|ol|li|blockquote|div)\b/i.test(normalized);
+  if (hasHtmlMarkup && !hasBlockTags) {
+    normalized = normalized
+      .replace(/([.!?])\s{1,3}([A-Z])/g, "$1</p><p>$2")
+      .replace(/^/, "<p>")
+      .replace(/$/, "</p>");
+  }
   if (!hasHtmlMarkup) {
     const escapeHtml = (value) =>
       String(value || "")
@@ -821,6 +877,7 @@ const normalizeArticleContent = (html, options = {}) => {
     if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
   Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
+    if (node.parentElement !== doc.body) return;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
     if (node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div, img, iframe, video")) return;
     if (getPlainText(node.textContent || "").length === 0) return;
@@ -828,6 +885,50 @@ const normalizeArticleContent = (html, options = {}) => {
     Array.from(node.attributes).forEach((attribute) => paragraph.setAttribute(attribute.name, attribute.value));
     paragraph.innerHTML = node.innerHTML;
     node.replaceWith(paragraph);
+  });
+
+  // Bade paragraphs ko tod do — 400+ characters wale
+// 400 ki jagah 300 karo aur em-dash bhi handle karo
+Array.from(doc.body.querySelectorAll("p")).forEach((paragraph) => {
+  const text = getPlainText(paragraph.textContent || "");
+  if (text.length < 300) return;
+  
+  const innerHTML = paragraph.innerHTML;
+  const split = innerHTML
+    .replace(/([.!?])\s{1,4}([A-Z])/g, "$1</p><p>$2")
+    .replace(/([.!?])(<\/?(strong|b|em|i)>)\s{0,3}([A-Z])/g, "$1$2</p><p>$4");
+  
+  if (split === innerHTML) return;
+  
+  const temp = doc.createElement("div");
+  temp.innerHTML = split;
+  paragraph.replaceWith(...Array.from(temp.childNodes));
+});
+  const listHeadingPattern = /^(confirmed|still unconfirmed|what we know|what we don'?t know|key details|full story in brief|news summary)$/i;
+  Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
+    const headingText = getPlainText(heading.textContent || "");
+    if (!listHeadingPattern.test(headingText)) return;
+
+    const candidates = [];
+    let current = heading.nextElementSibling;
+    while (current && current.matches("p")) {
+      const text = getPlainText(current.textContent || "");
+      if (!text || /^also read:/i.test(text) || text.length > 140 || /[.!?]\s*$/.test(text)) break;
+      candidates.push(current);
+      current = current.nextElementSibling;
+    }
+
+    if (candidates.length < 3) return;
+
+    const ul = doc.createElement("ul");
+    ul.className = "article-auto-list";
+    candidates.forEach((paragraph) => {
+      const li = doc.createElement("li");
+      li.innerHTML = paragraph.innerHTML;
+      ul.appendChild(li);
+    });
+    candidates[0].parentNode?.insertBefore(ul, candidates[0]);
+    candidates.forEach((paragraph) => paragraph.remove());
   });
   const hasGoogleSheetsMarkup = Boolean(
     doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
@@ -1211,6 +1312,7 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     const result = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
+    replaceTweetUrlsWithPlaceholders(doc);
     const hasGoogleSheetsMarkup = Boolean(
       doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
     );
@@ -1230,19 +1332,13 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
         firstTextBlock.style.display = "block";
       }
     }
-    const children = Array.from(doc.body.childNodes);
-    let buffer = "";
-    children.forEach((node, i) => {
-      if (node.nodeType === 1 && node.classList?.contains("react-tweet-placeholder")) {
-        if (buffer) { result.push({ type: "html", content: buffer, key: `html-${i}` }); buffer = ""; }
-        result.push({ type: "tweet", id: node.getAttribute("data-tweet-id"), key: `tweet-${i}` });
-      } else {
-        const temp = document.createElement("div");
-        temp.appendChild(node.cloneNode(true));
-        buffer += temp.innerHTML;
+    splitHtmlByTweetPlaceholders(doc.body.innerHTML).forEach((part, index) => {
+      if (part.type === "tweet") {
+        result.push({ ...part, key: `tweet-${part.id}-${index}` });
+      } else if (part.content.trim()) {
+        result.push({ ...part, key: `html-${index}` });
       }
     });
-    if (buffer) result.push({ type: "html", content: buffer, key: "html-last" });
     return result;
   }, [html]);
 
@@ -1463,69 +1559,69 @@ export default function ArticleDetails() {
     return () => controller.abort();
   }, [article, categorySlug]);
 
-useEffect(() => {
-  if (!articleSlug) return;
+  useEffect(() => {
+    if (!articleSlug) return;
 
-  let intervalId = 0, timeoutId = 0, rafId = 0;
-  let emitted = false;
+    let intervalId = 0, timeoutId = 0, rafId = 0;
+    let emitted = false;
 
-  const emitReady = () => {
-    if (emitted) return;
-    emitted = true;
-    window.prerenderReady = true;
-    document.dispatchEvent(new Event("prerender-ready"));
-  };
+    const emitReady = () => {
+      if (emitted) return;
+      emitted = true;
+      window.prerenderReady = true;
+      document.dispatchEvent(new Event("prerender-ready"));
+    };
 
-  // Normal browser — turant emit karo
-  if (!isPrerenderRequest) {
-    rafId = window.requestAnimationFrame(emitReady);
-    return () => window.cancelAnimationFrame(rafId);
-  }
+    // Normal browser — turant emit karo
+    if (!isPrerenderRequest) {
+      rafId = window.requestAnimationFrame(emitReady);
+      return () => window.cancelAnimationFrame(rafId);
+    }
 
-  // Prerender hai — article abhi load ho raha hai, wait karo
-  if (!article && !notFound && !loadError) {
-    return;
-  }
+    // Prerender hai — article abhi load ho raha hai, wait karo
+    if (!article && !notFound && !loadError) {
+      return;
+    }
 
-  // Prerender hai — error ya notFound — turant emit karo
-  if (!article) {
-    rafId = window.requestAnimationFrame(emitReady);
-    return () => window.cancelAnimationFrame(rafId);
-  }
+    // Prerender hai — error ya notFound — turant emit karo
+    if (!article) {
+      rafId = window.requestAnimationFrame(emitReady);
+      return () => window.cancelAnimationFrame(rafId);
+    }
 
-  // Prerender hai — article load ho gaya — content check karo
-  const isArticleRenderReady = () => {
-    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
-    const hasStructuredData = jsonLdScripts.length > 0;
-    const bodyText = articleContentRef.current?.textContent?.trim() || "";
-    const hasBodyContent = bodyText.length >= 50;
-    const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
-    if (articleHasNoContent) return hasStructuredData;
-    return hasBodyContent && hasStructuredData;
-  };
+    // Prerender hai — article load ho gaya — content check karo
+    const isArticleRenderReady = () => {
+      const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      const hasStructuredData = jsonLdScripts.length > 0;
+      const bodyText = articleContentRef.current?.textContent?.trim() || "";
+      const hasBodyContent = bodyText.length >= 50;
+      const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
+      if (articleHasNoContent) return hasStructuredData;
+      return hasBodyContent && hasStructuredData;
+    };
 
-  const checkAndEmit = () => {
-    if (isArticleRenderReady()) {
+    const checkAndEmit = () => {
+      if (isArticleRenderReady()) {
+        window.clearInterval(intervalId);
+        window.clearTimeout(timeoutId);
+        emitReady();
+      }
+    };
+
+    rafId = window.requestAnimationFrame(checkAndEmit);
+    intervalId = window.setInterval(checkAndEmit, 300);
+
+    timeoutId = window.setTimeout(() => {
+      window.clearInterval(intervalId);
+      emitReady();
+    }, 25000);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
       window.clearInterval(intervalId);
       window.clearTimeout(timeoutId);
-      emitReady();
-    }
-  };
-
-  rafId = window.requestAnimationFrame(checkAndEmit);
-  intervalId = window.setInterval(checkAndEmit, 300);
-
-  timeoutId = window.setTimeout(() => {
-    window.clearInterval(intervalId);
-    emitReady();
-  }, 25000);
-
-  return () => {
-    window.cancelAnimationFrame(rafId);
-    window.clearInterval(intervalId);
-    window.clearTimeout(timeoutId);
-  };
-}, [article, articleSlug, isPrerenderRequest, loadError, notFound, articleBodyHtml]);
+    };
+  }, [article, articleSlug, isPrerenderRequest, loadError, notFound, articleBodyHtml]);
 
   useEffect(() => {
     if (!article || !mainArticleRef.current || !moreInListRef.current) return;
@@ -1875,21 +1971,7 @@ useEffect(() => {
           <ArticleBody
             html={normalizedContent}
             contentRef={articleContentRef}
-            className="article-content text-gray-700 text-left md:text-justify
-    [&_p]:text-[16px] [&_p]:leading-[1.7] [&_p]:mb-[1.2rem]
-    [&_h2]:text-[18px] [&_h2]:leading-[1.4] [&_h2]:mt-[0.9rem] [&_h2]:mb-[1.2rem] [&_h2]:font-bold
-    [&_h3]:text-[18px] [&_h3]:leading-[1.4] [&_h3]:mb-[1.2rem] [&_h3]:font-bold
-    [&_img]:w-full [&_img]:rounded-lg [&_img]:my-6
-    [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
-    [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-    [&_li]:text-[16px] [&_li]:leading-[1.6] [&_li]:mb-1
-    [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_table]:table-auto
-    [&_table_table]:w-full [&_table_table]:border-collapse [&_table_table]:table-auto
-  [&_td]:border [&_td]:border-gray-300 [&_td]:px-3 [&_td]:py-2 [&_td]:text-[14px] [&_td]:align-top [&_td]:whitespace-normal
-[&_th]:border [&_th]:border-gray-300 [&_th]:px-3 [&_th]:py-2 [&_th]:text-[14px] [&_th]:font-bold [&_th]:bg-gray-50 [&_th]:text-left [&_th]:align-top
-    [&_google-sheets-html-origin]:block [&_google-sheets-html-origin]:w-full [&_google-sheets-html-origin]:overflow-x-auto
-  [&_.article-table-wrapper]:overflow-x-auto [&_.article-table-wrapper]:w-full
-  [&_.article-table-wrapper]:my-6"
+            className="article-content"
             style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
           />
 

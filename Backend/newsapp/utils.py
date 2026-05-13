@@ -45,7 +45,7 @@ _INLINE_EVENT_ATTR_RE = re.compile(r'\son[a-z]+\s*=\s*([\'"]).*?\1', re.IGNORECA
 _JS_PROTOCOL_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*javascript:[^\'"]*\2', re.IGNORECASE)
 _DATA_HTML_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*data:text\/html[^\'"]*\2', re.IGNORECASE)
 _GOOGLE_DOCS_SPAN_RE = re.compile(
-    r'<span\b(?=[^>]*(?:font-variant|font-feature-settings|font-kerning|text-size-adjust|mso-))[^>]*>'
+    r'<span\b(?=[^>]*(?:docs-internal-guid|font-variant|font-feature-settings|font-kerning|text-size-adjust|mso-))[^>]*>'
     r'(?P<inner>[\s\S]*?)</span>',
     re.IGNORECASE,
 )

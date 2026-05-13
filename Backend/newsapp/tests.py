@@ -531,13 +531,15 @@ class ArticleContentCleaningTests(TestCase):
 
     def test_sanitize_article_html_unwraps_google_docs_spans_only(self):
         cleaned = sanitize_article_html(
-            '<p><span style="font-variant-alternates: normal;">Broken</span> '
+            '<p><span id="docs-internal-guid-abc" style="caret-color: rgb(0, 0, 0);">'
+            '<span style="font-variant-alternates: normal;">Broken</span> '
             '<span style="font-variant-alternates: normal;">text</span>'
-            '<b></b><strong>Bold stays</strong></p>'
+            '<b></b><strong>Bold stays</strong></span></p>'
         )
 
         self.assertEqual(cleaned, '<p>Broken text<strong>Bold stays</strong></p>')
         self.assertNotIn('font-variant', cleaned)
+        self.assertNotIn('docs-internal-guid', cleaned)
         self.assertNotIn('<span', cleaned)
 
 

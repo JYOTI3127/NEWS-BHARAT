@@ -142,9 +142,9 @@ def _wrap_article_text_fragment(fragment):
     fragment = re.sub(r'(?<=[.!?])(?=[A-Z])', ' ', fragment)
 
     parts = [
-        part.strip()
+        re.sub(r'\s*\r?\n\s*', ' ', part.strip())
         for part in re.split(
-            rf'\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)}',
+            rf'\r?\n\s*\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)}',
             fragment,
             flags=re.IGNORECASE,
         )
@@ -153,11 +153,11 @@ def _wrap_article_text_fragment(fragment):
     wrapped_parts = []
     marker_seen = False
     for raw_part in re.split(
-        rf'(\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)})',
+        rf'(\r?\n\s*\r?\n\s*|(?:<br\s*/?>\s*){{2,}}|{re.escape(also_read_marker)})',
         fragment,
         flags=re.IGNORECASE,
     ):
-        part = raw_part.strip()
+        part = re.sub(r'\s*\r?\n\s*', ' ', raw_part.strip())
         if not part:
             continue
         if part == also_read_marker:

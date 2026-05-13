@@ -529,6 +529,22 @@ class ArticleContentCleaningTests(TestCase):
 
         self.assertEqual(cleaned, '<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
 
+    def test_sanitize_article_html_keeps_single_newlines_inside_paragraph(self):
+        cleaned = sanitize_article_html(
+            "When you spend time on both sides of the table.\n"
+            "And that gap is not about creativity.\n"
+            "It is about how differently each side defines success.\n\n"
+            "Next paragraph starts here."
+        )
+
+        self.assertIn(
+            '<p>When you spend time on both sides of the table. '
+            'And that gap is not about creativity. '
+            'It is about how differently each side defines success.</p>',
+            cleaned,
+        )
+        self.assertIn('<p>Next paragraph starts here.</p>', cleaned)
+
     def test_sanitize_article_html_unwraps_google_docs_spans_only(self):
         cleaned = sanitize_article_html(
             '<p><span id="docs-internal-guid-abc" style="caret-color: rgb(0, 0, 0);">'

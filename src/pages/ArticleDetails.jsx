@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Tweet } from "react-tweet";
-import "../style.css";
 import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag, ArrowLeft,
@@ -804,7 +803,7 @@ const normalizeArticleContent = (html, options = {}) => {
   let normalized = html
     .replace(/&nbsp;?|&#160;?|&#xa0;?/gi, " ")
     .replace(/\u00a0/g, " ")
-    .replace(/<span\b[^>]*\bid="docs-internal-guid[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, "$1")
+    .replace(/<\/?font\b[^>]*>/gi, "")
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
     // Some editor payloads keep a trailing "\" before blockquote markup.
     .replace(/\\+\s*(?=<blockquote\b)/gi, "")
@@ -817,7 +816,6 @@ const normalizeArticleContent = (html, options = {}) => {
   const hasBlockTags = /<(p|h[2-6]|ul|ol|li|blockquote|div)\b/i.test(normalized);
   if (hasHtmlMarkup && !hasBlockTags) {
     normalized = normalized
-      .replace(/([.!?])\s{1,3}([A-Z])/g, "$1</p><p>$2")
       .replace(/^/, "<p>")
       .replace(/$/, "</p>");
   }
@@ -843,24 +841,6 @@ const normalizeArticleContent = (html, options = {}) => {
   if (typeof window === "undefined" || typeof DOMParser === "undefined") return normalized;
   const sourcePlainText = getPlainText(normalized);
   const doc = new DOMParser().parseFromString(normalized, "text/html");
-  // ✅ Yeh add karo — Google Docs wrapper hatao
-  const gdocsSpan = doc.body.querySelector("span[id^='docs-internal-guid']");
-  if (gdocsSpan) {
-    const fragment = doc.createDocumentFragment();
-    Array.from(gdocsSpan.childNodes).forEach((node) =>
-      fragment.appendChild(node.cloneNode(true))
-    );
-    gdocsSpan.replaceWith(fragment);
-  }
-
-  // ✅ Remaining font tags hatao
-  Array.from(doc.body.querySelectorAll("font")).forEach((font) => {
-    const fragment = doc.createDocumentFragment();
-    Array.from(font.childNodes).forEach((node) =>
-      fragment.appendChild(node.cloneNode(true))
-    );
-    font.replaceWith(fragment);
-  })
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
   normalizeHeadingStructure(doc);
   Array.from(doc.body.querySelectorAll("h1")).forEach((heading) => {
@@ -894,21 +874,42 @@ const normalizeArticleContent = (html, options = {}) => {
     if (hasMediaChild) return;
     if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
-  // Step 1: Pehle b/strong ke andar ke spans ko unwrap karo
-  Array.from(doc.body.querySelectorAll("b > span, strong > span")).forEach((span) => {
-    const parent = span.parentElement;
-    if (!parent) return;
-    const grandParent = parent.parentElement;
-    if (!grandParent) return;
-    // b/strong ka content bahar nikalo
-    const fragment = doc.createDocumentFragment();
-    Array.from(parent.childNodes).forEach((node) =>
-      fragment.appendChild(node.cloneNode(true))
-    );
-    parent.replaceWith(fragment);
-  });
 
-  // Step 2: Ab top-level div/span ko p mein convert karo
+  const inlineRootTags = new Set(["SPAN", "STRONG", "B", "I", "EM", "U", "A", "SMALL", "MARK", "SUB", "SUP", "BR"]);
+  const rebuiltRootNodes = [];
+  let inlineRootBuffer = [];
+  const flushInlineRootBuffer = () => {
+    if (inlineRootBuffer.length === 0) return;
+    const paragraph = doc.createElement("p");
+    inlineRootBuffer.forEach((node, index) => {
+      if (index > 0) paragraph.appendChild(doc.createTextNode(" "));
+      paragraph.appendChild(node);
+    });
+    rebuiltRootNodes.push(paragraph);
+    inlineRootBuffer = [];
+  };
+
+  Array.from(doc.body.childNodes).forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (String(node.textContent || "").trim()) inlineRootBuffer.push(node);
+      return;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE && inlineRootTags.has(node.tagName)) {
+      inlineRootBuffer.push(node);
+      return;
+    }
+
+    flushInlineRootBuffer();
+    rebuiltRootNodes.push(node);
+  });
+  flushInlineRootBuffer();
+
+  if (rebuiltRootNodes.length > 0) {
+    doc.body.innerHTML = "";
+    rebuiltRootNodes.forEach((node) => doc.body.appendChild(node));
+  }
+
   Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
     if (node.parentElement !== doc.body) return;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
@@ -920,23 +921,54 @@ const normalizeArticleContent = (html, options = {}) => {
     node.replaceWith(paragraph);
   });
 
-  // Bade paragraphs ko tod do — 400+ characters wale
-  // 400 ki jagah 300 karo aur em-dash bhi handle karo
-  Array.from(doc.body.querySelectorAll("p")).forEach((paragraph) => {
-    const text = getPlainText(paragraph.textContent || "");
-    if (text.length < 300) return;
+  const bulletParagraphPattern = /^\s*(?:[•●▪◦*-]|(?:\d+|[a-z])[\).])\s+/i;
+  const getParagraphListMarker = (paragraph) => {
+    const text = String(paragraph?.textContent || "").replace(/\u00a0/g, " ").trim();
+    const match = text.match(bulletParagraphPattern);
+    if (!match) return null;
+    return {
+      marker: match[0],
+      isOrdered: /^(?:\d+|[a-z])[\).]\s+/i.test(match[0].trim()),
+      text: text.slice(match[0].length).trim(),
+    };
+  };
 
-    const innerHTML = paragraph.innerHTML;
-    const split = innerHTML
-      .replace(/([.!?])\s{1,4}([A-Z])/g, "$1</p><p>$2")
-      .replace(/([.!?])(<\/?(strong|b|em|i)>)\s{0,3}([A-Z])/g, "$1$2</p><p>$4");
+  let paragraphListRun = [];
+  const flushParagraphListRun = () => {
+    if (paragraphListRun.length < 2) {
+      paragraphListRun = [];
+      return;
+    }
 
-    if (split === innerHTML) return;
+    const listTag = paragraphListRun.every(({ marker }) => marker.isOrdered) ? "ol" : "ul";
+    const list = doc.createElement(listTag);
+    const firstParagraph = paragraphListRun[0].paragraph;
+    firstParagraph.parentNode?.insertBefore(list, firstParagraph);
+    paragraphListRun.forEach(({ paragraph, marker }) => {
+      const item = doc.createElement("li");
+      item.textContent = marker.text;
+      list.appendChild(item);
+      paragraph.remove();
+    });
+    paragraphListRun = [];
+  };
 
-    const temp = doc.createElement("div");
-    temp.innerHTML = split;
-    paragraph.replaceWith(...Array.from(temp.childNodes));
+  Array.from(doc.body.children).forEach((node) => {
+    if (!node.matches?.("p")) {
+      flushParagraphListRun();
+      return;
+    }
+
+    const marker = getParagraphListMarker(node);
+    if (!marker?.text) {
+      flushParagraphListRun();
+      return;
+    }
+
+    paragraphListRun.push({ paragraph: node, marker });
   });
+  flushParagraphListRun();
+
   const listHeadingPattern = /^(confirmed|still unconfirmed|what we know|what we don'?t know|key details|full story in brief|news summary)$/i;
   Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
     const headingText = getPlainText(heading.textContent || "");

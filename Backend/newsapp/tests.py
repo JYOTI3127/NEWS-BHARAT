@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
-from .utils import sanitize_article_html
+from .utils import merge_soft_split_paragraphs, sanitize_article_html
 from .views import custom_permission_denied_view, send_push_to_all
 
 
@@ -562,6 +562,24 @@ class ArticleContentCleaningTests(TestCase):
         )
         self.assertNotIn('font-variant', cleaned)
         self.assertNotIn('docs-internal-guid', cleaned)
+
+    def test_merge_soft_split_paragraphs_keeps_question_separate(self):
+        cleaned = merge_soft_split_paragraphs(
+            '<p>You have worked across major organisations?</p>'
+            '<p>When you spend time on both sides of the table, you see a gap.</p>'
+            '<p>And that gap is not about creativity or strategy.</p>'
+            '<p>It is about how differently each side defines success.</p>'
+            '<blockquote>Quote stays separate.</blockquote>'
+        )
+
+        self.assertIn('<p>You have worked across major organisations?</p>', cleaned)
+        self.assertIn(
+            '<p>When you spend time on both sides of the table, you see a gap. '
+            'And that gap is not about creativity or strategy. '
+            'It is about how differently each side defines success.</p>',
+            cleaned,
+        )
+        self.assertIn('<blockquote>Quote stays separate.</blockquote>', cleaned)
 
 
 class AccessDeniedViewTests(TestCase):

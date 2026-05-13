@@ -64,6 +64,8 @@ _TOP_LEVEL_BLOCK_RE = re.compile(
     r'<(?:img|hr)\b[^>]*\/?>)',
     re.IGNORECASE,
 )
+_PARAGRAPH_BLOCK_RE = re.compile(r'<p\b(?P<attrs>[^>]*)>(?P<body>[\s\S]*?)</p>', re.IGNORECASE)
+_TAG_RE = re.compile(r'<[^>]+>')
 
 
 def normalize_twitter_embeds(content):
@@ -130,6 +132,73 @@ def strip_pasted_document_markup(content):
         cleaned = _EMPTY_INLINE_FORMAT_RE.sub('', cleaned)
         cleaned = _EMPTY_PARAGRAPH_RE.sub('', cleaned)
     return cleaned.strip()
+
+
+def _plain_text_from_html(value):
+    text = _TAG_RE.sub(' ', str(value or ''))
+    text = html.unescape(text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _is_mergeable_soft_paragraph(attrs, body):
+    if re.search(r'<\s*(br|img|figure|table|ul|ol|li|blockquote|h[1-6])\b', body, re.IGNORECASE):
+        return False
+    if re.search(r'\b(class|style)\s*=', attrs or '', re.IGNORECASE):
+        return False
+    text = _plain_text_from_html(body)
+    if not text:
+        return False
+    if text.endswith('?'):
+        return False
+    if re.match(r'^(also read|key takeaways|name|designation|known for|interviewed by)\s*:', text, re.IGNORECASE):
+        return False
+    return True
+
+
+def merge_soft_split_paragraphs(content):
+    content = str(content or '').strip()
+    if not content:
+        return ''
+
+    output = []
+    cursor = 0
+    pending = []
+
+    def flush_pending():
+        if not pending:
+            return
+        if len(pending) == 1:
+            output.append(pending[0]['html'])
+        else:
+            attrs = pending[0]['attrs']
+            body = ' '.join(item['body'].strip() for item in pending if item['body'].strip())
+            output.append(f'<p{attrs}>{body}</p>')
+        pending.clear()
+
+    for match in _PARAGRAPH_BLOCK_RE.finditer(content):
+        before = content[cursor:match.start()]
+        if before.strip():
+            flush_pending()
+            output.append(before)
+
+        attrs = match.group('attrs') or ''
+        body = match.group('body') or ''
+        paragraph_html = match.group(0)
+        if _is_mergeable_soft_paragraph(attrs, body):
+            pending.append({'attrs': attrs, 'body': body, 'html': paragraph_html})
+        else:
+            flush_pending()
+            output.append(paragraph_html)
+        cursor = match.end()
+
+    tail = content[cursor:]
+    if tail.strip():
+        flush_pending()
+        output.append(tail)
+    else:
+        flush_pending()
+
+    return ''.join(output).strip()
 
 
 def _wrap_article_text_fragment(fragment):

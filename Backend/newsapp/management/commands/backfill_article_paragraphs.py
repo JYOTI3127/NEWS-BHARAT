@@ -2,7 +2,12 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from newsapp.models import Article, clean_chatgpt_artifacts
-from newsapp.utils import ARTICLE_CLEAN_VERSION, sanitize_article_html, strip_pasted_document_markup
+from newsapp.utils import (
+    ARTICLE_CLEAN_VERSION,
+    merge_soft_split_paragraphs,
+    sanitize_article_html,
+    strip_pasted_document_markup,
+)
 
 
 class Command(BaseCommand):
@@ -33,10 +38,22 @@ class Command(BaseCommand):
             action="store_true",
             help="Show what would be updated without saving changes.",
         )
+        parser.add_argument(
+            "--merge-soft-paragraphs",
+            action="store_true",
+            help="Merge suspicious Google Docs soft-line paragraphs into one paragraph. Use with --slug/--article-id.",
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
         force = options["force"]
+        merge_soft_paragraphs = options["merge_soft_paragraphs"]
+
+        if merge_soft_paragraphs and not (options["slug"] or options["article_id"]):
+            self.stderr.write(
+                self.style.ERROR("--merge-soft-paragraphs ko safe rakhne ke liye --slug ya --article-id ke saath run karo.")
+            )
+            return
 
         articles = Article.objects.all().only(
             "id",
@@ -76,6 +93,8 @@ class Command(BaseCommand):
             cleaned_clean = strip_pasted_document_markup(clean_chatgpt_artifacts(article.content_clean))
             source_html = cleaned_raw or cleaned_clean or cleaned_content
             normalized_clean = sanitize_article_html(source_html)
+            if merge_soft_paragraphs:
+                normalized_clean = merge_soft_split_paragraphs(normalized_clean)
 
             if not normalized_clean:
                 unchanged += 1

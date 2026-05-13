@@ -213,7 +213,7 @@ class Article(models.Model):
  
 
     def save(self, *args, **kwargs):
-        from .utils import ARTICLE_CLEAN_VERSION, sanitize_article_html
+        from .utils import ARTICLE_CLEAN_VERSION, sanitize_article_html, strip_pasted_document_markup
 
         is_update = self.pk is not None
         update_fields = kwargs.get('update_fields')
@@ -221,9 +221,9 @@ class Article(models.Model):
         push_payload = None
         create_initial_published_version = False
 
-        self.content_raw = clean_chatgpt_artifacts(self.content_raw)
-        self.content_clean = clean_chatgpt_artifacts(self.content_clean)
-        self.content = clean_chatgpt_artifacts(self.content)
+        self.content_raw = strip_pasted_document_markup(clean_chatgpt_artifacts(self.content_raw))
+        self.content_clean = strip_pasted_document_markup(clean_chatgpt_artifacts(self.content_clean))
+        self.content = strip_pasted_document_markup(clean_chatgpt_artifacts(self.content))
 
         source_html = self.content_raw or self.content_clean or self.content
         normalized_clean = sanitize_article_html(source_html)

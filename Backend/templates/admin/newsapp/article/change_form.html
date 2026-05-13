@@ -2909,25 +2909,51 @@ function nbSetLineHeight(value){
   setTimeout(nbSaveHistory,50);
 }
 
+function nbEscapeHtml(text){
+  return String(text||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function nbInsertPlainPaste(text){
+  if(!nbEditor)return;
+  text=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  if(!text)return;
+
+  nbSaveHistory();
+  nbFocusEditor();
+
+  if(text.indexOf('\n')===-1){
+    document.execCommand('insertText',false,text);
+  }else{
+    var blocks=text
+      .split(/\n{2,}/)
+      .map(function(block){return block.replace(/\n+$/,'').replace(/^\n+/,'');})
+      .filter(function(block){return block.trim();});
+
+    if(blocks.length){
+      var html=blocks.map(function(block){
+        return '<p>'+nbEscapeHtml(block).replace(/\n/g,'<br>')+'</p>';
+      }).join('');
+      document.execCommand('insertHTML',false,html);
+    }
+  }
+
+  nbSaveSelection();
+  setTimeout(function(){
+    nbSaveHistory();
+    nbEditor.dispatchEvent(new Event('input',{bubbles:true}));
+  },50);
+}
+
 if(nbEditor){
   nbEditor.addEventListener('paste',function(e){
+    if(!e.clipboardData||!e.clipboardData.getData)return;
     e.preventDefault();
-    var html='';
-    if(e.clipboardData&&e.clipboardData.getData){
-      html=e.clipboardData.getData('text/html');
-      if(!html){
-        document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));
-        return;
-      }
-    }
-    html=html.replace(/font-family\s*:[^;}"']*(;|(?=\s*[}"']))/gi,'');
-    html=html.replace(/(<font[^>]*)\sface\s*=\s*["'][^"']*["']/gi,'$1');
-    html=html.replace(/mso-[^;]+;/gi,'');
-    html=html.replace(/(margin(?:-top|-bottom)?\s*:\s*[\d.]+[^;]*;)/gi,'');
-    html=html.replace(/line-height\s*:\s*[\d.]+[^;]*;/gi,'');
-    html=html.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>');
-    document.execCommand('insertHTML',false,html);
-    nbSaveHistory();
+    nbInsertPlainPaste(e.clipboardData.getData('text/plain'));
   });
 }
 

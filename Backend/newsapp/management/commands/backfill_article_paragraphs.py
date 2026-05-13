@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from newsapp.models import Article, clean_chatgpt_artifacts
-from newsapp.utils import ARTICLE_CLEAN_VERSION, sanitize_article_html
+from newsapp.utils import ARTICLE_CLEAN_VERSION, sanitize_article_html, strip_pasted_document_markup
 
 
 class Command(BaseCommand):
@@ -60,6 +60,9 @@ class Command(BaseCommand):
                 Q(clean_version__lt=ARTICLE_CLEAN_VERSION)
                 | Q(content__icontains="Also Read:")
                 | Q(content_clean__icontains="Also Read:")
+                | Q(content_raw__icontains="font-variant")
+                | Q(content_clean__icontains="font-variant")
+                | Q(content__icontains="font-variant")
             )
 
         scanned = 0
@@ -68,9 +71,9 @@ class Command(BaseCommand):
 
         for article in articles.iterator(chunk_size=100):
             scanned += 1
-            cleaned_raw = clean_chatgpt_artifacts(article.content_raw)
-            cleaned_content = clean_chatgpt_artifacts(article.content)
-            cleaned_clean = clean_chatgpt_artifacts(article.content_clean)
+            cleaned_raw = strip_pasted_document_markup(clean_chatgpt_artifacts(article.content_raw))
+            cleaned_content = strip_pasted_document_markup(clean_chatgpt_artifacts(article.content))
+            cleaned_clean = strip_pasted_document_markup(clean_chatgpt_artifacts(article.content_clean))
             source_html = cleaned_raw or cleaned_clean or cleaned_content
             normalized_clean = sanitize_article_html(source_html)
 

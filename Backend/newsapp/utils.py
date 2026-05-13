@@ -23,7 +23,7 @@ from django.utils import timezone
 
 from .models import MetalRate
 
-ARTICLE_CLEAN_VERSION = 4
+ARTICLE_CLEAN_VERSION = 5
 
 _TWITTER_EMBED_RE = re.compile(
     r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
@@ -44,6 +44,13 @@ _DANGEROUS_BLOCK_RE = re.compile(
 _INLINE_EVENT_ATTR_RE = re.compile(r'\son[a-z]+\s*=\s*([\'"]).*?\1', re.IGNORECASE | re.DOTALL)
 _JS_PROTOCOL_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*javascript:[^\'"]*\2', re.IGNORECASE)
 _DATA_HTML_RE = re.compile(r'(?P<attr>\s(?:href|src)\s*=\s*)([\'"])\s*data:text\/html[^\'"]*\2', re.IGNORECASE)
+_GOOGLE_DOCS_SPAN_RE = re.compile(
+    r'<span\b(?=[^>]*(?:font-variant|font-feature-settings|font-kerning|text-size-adjust|mso-))[^>]*>'
+    r'(?P<inner>[\s\S]*?)</span>',
+    re.IGNORECASE,
+)
+_EMPTY_INLINE_FORMAT_RE = re.compile(r'<(b|strong|i|em|u)\b[^>]*>\s*</\1>', re.IGNORECASE)
+_EMPTY_PARAGRAPH_RE = re.compile(r'<p\b[^>]*>(?:\s|&nbsp;|<br\s*/?>)*</p>', re.IGNORECASE)
 _BLOCK_TAG_RE = re.compile(
     r'<\s*(p|div|h[1-6]|ul|ol|li|blockquote|pre|table|figure|img|hr)\b',
     re.IGNORECASE,
@@ -99,6 +106,17 @@ def _ensure_safe_anchor_attrs(match):
                 merged.append(token)
         return _REL_ATTR_RE.sub(f' rel="{" ".join(merged)}"', tag, count=1)
     return tag[:-1] + ' rel="noopener noreferrer">'
+
+
+def strip_pasted_document_markup(content):
+    cleaned = str(content or '')
+    previous = None
+    while cleaned != previous:
+        previous = cleaned
+        cleaned = _GOOGLE_DOCS_SPAN_RE.sub(lambda match: match.group('inner'), cleaned)
+        cleaned = _EMPTY_INLINE_FORMAT_RE.sub('', cleaned)
+        cleaned = _EMPTY_PARAGRAPH_RE.sub('', cleaned)
+    return cleaned.strip()
 
 
 def _wrap_article_text_fragment(fragment):
@@ -177,6 +195,7 @@ def _ensure_article_block_structure(content):
 def sanitize_article_html(content):
     normalized = normalize_twitter_embeds(str(content or ''))
     cleaned = _HTML_COMMENT_RE.sub('', normalized)
+    cleaned = strip_pasted_document_markup(cleaned)
     cleaned = _DANGEROUS_BLOCK_RE.sub('', cleaned)
     cleaned = _INLINE_EVENT_ATTR_RE.sub('', cleaned)
     cleaned = _JS_PROTOCOL_RE.sub('', cleaned)

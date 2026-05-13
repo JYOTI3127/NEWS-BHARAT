@@ -19,6 +19,8 @@ from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html, strip_tags
 from django.urls import path
+from django.templatetags.static import static
+from django.conf import settings
 from urllib.parse import quote
 from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
@@ -1236,6 +1238,7 @@ class NewsAdminSite(AdminSite):
             'title': 'Newsletter',
             'articles_json': articles_json,
             'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
+            'newsletter_logo_url': str(getattr(settings, 'NEWSLETTER_LOGO_URL', '') or '').strip() or request.build_absolute_uri(static('images/NEWS4BHARAT_LOGO.png')),
         }
         return TemplateResponse(request, 'admin/newsletter.html', context)
 

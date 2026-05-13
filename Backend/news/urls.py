@@ -9,10 +9,12 @@ from django.conf.urls.static import static
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.sitemaps.views import sitemap
-from newsapp.sitemaps import ArticleSitemap
+from newsapp.sitemaps import ArticleSitemap, CategorySitemap, StaticSitemap
 
 sitemaps = {
     'articles': ArticleSitemap,
+    'categories': CategorySitemap,
+    'static': StaticSitemap,
 }
 
 urlpatterns = [

@@ -467,11 +467,9 @@ class SitemapEngine:
         )
 
         ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")
-        ET.register_namespace("image", "http://www.google.com/schemas/sitemap-image/1.1")
 
         root = ET.Element("urlset", {
             "xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9",
-            "xmlns:image": "http://www.google.com/schemas/sitemap-image/1.1",
         })
 
         for a in articles:
@@ -555,10 +553,14 @@ class SitemapEngine:
         today = datetime.utcnow().date().isoformat()
         pages = [
             ("/",               "1.0", "always"),
-            ("/about-us",       "0.7", "monthly"),
-            ("/contact",        "0.6", "monthly"),
-            ("/privacy-policy", "0.4", "yearly"),
-            ("/terms",          "0.4", "yearly"),
+            ("/about-us/",             "1.0", "daily"),
+            ("/contact-us",            "1.0", "daily"),
+            ("/privacy-policy/",       "1.0", "daily"),
+            ("/terms-and-conditions",  "1.0", "daily"),
+            ("/disclaimer",            "1.0", "daily"),
+            ("/editorial-policy",      "1.0", "daily"),
+            ("/founders-note",         "1.0", "daily"),
+            ("/careers",               "1.0", "daily"),
         ]
         root = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
         for path, priority, freq in pages:

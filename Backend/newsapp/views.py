@@ -39,6 +39,7 @@ import re
 from pathlib import Path
 from openai import OpenAI
 from django.urls import reverse
+from django.templatetags.static import static
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from django.core.validators import validate_email
@@ -4149,6 +4150,7 @@ def newsletter_view(request):
     return render(request, 'admin/newsletter.html', {
         'articles_json': articles_json,
         'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
+        'newsletter_logo_url': _newsletter_logo_url(request),
     })
 
 
@@ -4166,6 +4168,22 @@ logger = logging.getLogger(__name__)
 NEWSLETTER_SUBSCRIBE_SALT = 'news4bharat.newsletter.subscribe'
 NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_URL__'
 NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER = '__NEWSLETTER_SUBSCRIBE_FORM_URL__'
+
+
+def _newsletter_logo_url(request=None):
+    configured_logo_url = str(getattr(settings, 'NEWSLETTER_LOGO_URL', '') or '').strip()
+    if configured_logo_url:
+        return configured_logo_url
+    try:
+        logo_path = static('images/NEWS4BHARAT_LOGO.png')
+    except Exception:
+        logo_path = '/static/images/NEWS4BHARAT_LOGO.png'
+    if request:
+        try:
+            return request.build_absolute_uri(logo_path)
+        except Exception:
+            pass
+    return f"{_get_newsletter_site_home_url().rstrip('/')}{logo_path}"
 
 
 def _newsletter_html_debug_urls(html_content, limit=8):
@@ -4636,7 +4654,9 @@ Website: https://news4bharat.com
                         )
                         if not debug_urls['images'] and not debug_urls['links']:
                             debug_urls = _newsletter_html_debug_urls(personalized_html)
-                        personalized_html, inline_images = _embed_newsletter_images(personalized_html)
+                        inline_images = []
+                        if bool(getattr(settings, 'NEWSLETTER_EMBED_IMAGES', False)):
+                            personalized_html, inline_images = _embed_newsletter_images(personalized_html)
                         msg = EmailMultiAlternatives(
                             subject=subject,
                             body=plain_text,
@@ -4712,6 +4732,7 @@ Website: https://news4bharat.com
         'log_id': getattr(newsletter_log, 'id', None),
         'trace_id': trace_id,
         'provider': send_provider,
+        'embedded_images_enabled': bool(getattr(settings, 'NEWSLETTER_EMBED_IMAGES', False)),
         'brevo_message_ids': brevo_message_ids,
         'debug_sent_image_urls': debug_urls['images'],
         'debug_sent_link_urls': debug_urls['links'],

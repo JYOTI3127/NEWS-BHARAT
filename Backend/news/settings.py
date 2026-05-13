@@ -259,6 +259,8 @@ NEWSLETTER_MAX_RECIPIENTS = int(os.environ.get('NEWSLETTER_MAX_RECIPIENTS', '300
 NEWSLETTER_SEND_PROVIDER = os.environ.get('NEWSLETTER_SEND_PROVIDER', 'smtp').strip().lower()
 NEWSLETTER_SITE_URL = os.environ.get('NEWSLETTER_SITE_URL', SEO_SITE_URL if 'SEO_SITE_URL' in globals() else 'https://news4bharat.com')
 NEWSLETTER_MEDIA_BASE_URL = os.environ.get('NEWSLETTER_MEDIA_BASE_URL', '')
+NEWSLETTER_LOGO_URL = os.environ.get('NEWSLETTER_LOGO_URL', 'https://news4bharat.cloud/static/images/NEWS4BHARAT_LOGO.png')
+NEWSLETTER_EMBED_IMAGES = os.environ.get('NEWSLETTER_EMBED_IMAGES', 'False') == 'True'
 NEWSLETTER_SMTP_HOST = os.environ.get('NEWSLETTER_SMTP_HOST', EMAIL_HOST)
 NEWSLETTER_SMTP_PORT = int(os.environ.get('NEWSLETTER_SMTP_PORT', str(EMAIL_PORT or 587)))
 NEWSLETTER_SMTP_USE_TLS = os.environ.get('NEWSLETTER_SMTP_USE_TLS', str(EMAIL_USE_TLS)) == 'True'

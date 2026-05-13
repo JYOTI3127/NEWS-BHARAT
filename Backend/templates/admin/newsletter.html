@@ -378,7 +378,7 @@
     let staticEmails = JSON.parse(localStorage.getItem('n4b_static_emails') || '[]');
     let customEmails = JSON.parse(localStorage.getItem('n4b_custom_emails') || '[]');
     let testEmails = JSON.parse(localStorage.getItem('n4b_test_emails') || '[]');
-    const NEWS_LOGO_URL = "https://news4bharat.cloud/static/images/NEWS4BHARAT_LOGO.png";
+    const NEWS_LOGO_URL = "{{ newsletter_logo_url|default:''|escapejs }}";
     const SUBJECT_STORAGE_KEY = 'n4b_newsletter_subject';
     const CUSTOM_EMAILS_STORAGE_KEY = 'n4b_custom_emails';
     const SAVED_NEWSLETTERS_STORAGE_KEY = 'n4b_saved_newsletters';
@@ -1064,6 +1064,5 @@
 </body>
 
 </html>
-
 
 

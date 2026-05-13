@@ -67,16 +67,20 @@ class CategorySitemap(Sitemap):
 
 
 class StaticSitemap(Sitemap):
-    changefreq = "weekly"
-    priority = 0.5
+    changefreq = "daily"
+    priority = 1.0
 
     def items(self):
         return [
             '/',
-            '/about/',
-            '/contact/',
+            '/about-us/',
+            '/contact-us',
             '/privacy-policy/',
-            '/terms-conditions/',
+            '/terms-and-conditions',
+            '/disclaimer',
+            '/editorial-policy',
+            '/founders-note',
+            '/careers',
         ]
 
     def location(self, item):

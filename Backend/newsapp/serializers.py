@@ -1,10 +1,29 @@
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User
+from django.conf import settings
 from .seo_direct import article_url, normalized_canonical, article_schema_payloads
 from django.utils import timezone
 from datetime import timedelta
 from .utils import get_article_render_content
+from urllib.parse import urljoin
+
+
+def _public_newsletter_asset_url(raw_url):
+    raw_url = str(raw_url or '').strip()
+    if not raw_url:
+        return None
+    if raw_url.startswith(('http://', 'https://', 'cid:', 'data:')):
+        return raw_url
+    base_url = str(
+        getattr(settings, 'NEWSLETTER_MEDIA_BASE_URL', '')
+        or getattr(settings, 'NEWSLETTER_SITE_URL', '')
+        or getattr(settings, 'SEO_SITE_URL', '')
+        or ''
+    ).strip()
+    if not base_url:
+        return raw_url
+    return urljoin(base_url.rstrip('/') + '/', raw_url.lstrip('/'))
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -341,15 +360,17 @@ class ArticleSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                base  = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                raw_base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                base = _public_newsletter_asset_url(raw_base) or raw_base
                 mtime = obj.image.storage.get_modified_time(obj.image.name)
                 return f"{base}?v={int(mtime.timestamp())}"
             except Exception:
                 try:
-                    return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                    raw_url = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                    return _public_newsletter_asset_url(raw_url) or raw_url
                 except Exception:
                     return None
-        return obj.image_url if obj.image_url else None
+        return _public_newsletter_asset_url(obj.image_url) if obj.image_url else None
 
     def get_tags_list(self, obj):
         if not obj.tags:
@@ -461,10 +482,11 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                raw_url = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                return _public_newsletter_asset_url(raw_url) or raw_url
             except Exception:
-                return obj.image_url or None
-        return obj.image_url
+                return _public_newsletter_asset_url(obj.image_url) or None
+        return _public_newsletter_asset_url(obj.image_url)
 
     def get_primary_category(self, obj):
         cat = obj.primary_category or obj.categories.first()
@@ -508,10 +530,11 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.image:
             try:
-                return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                raw_url = request.build_absolute_uri(obj.image.url) if request else obj.image.url
+                return _public_newsletter_asset_url(raw_url) or raw_url
             except Exception:
-                return obj.image_url or None
-        return obj.image_url or None
+                return _public_newsletter_asset_url(obj.image_url) or None
+        return _public_newsletter_asset_url(obj.image_url) or None
 
     def get_category(self, obj):
         cat = obj.primary_category or obj.categories.first()

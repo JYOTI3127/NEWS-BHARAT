@@ -8,7 +8,9 @@ export const apiUrl = (path = "") => {
 };
 
 export const fetchJson = async (path) => {
-  const response = await fetch(apiUrl(path));
+ const response = await fetch(apiUrl(path), {
+  cache: "no-store",
+});
 
   if (!response.ok) {
     throw new Error(`Request failed for ${path}: ${response.status}`);
@@ -133,9 +135,12 @@ export const fetchPaginatedArticles = async ({
   let pages = 0;
 
   while (pages < maxPages) {
-    const response = await fetch(
-      nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full }))
-    );
+const response = await fetch(
+  nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full })),
+  {
+    cache: "no-store",
+  }
+);
 
     if (!response.ok) {
       throw new Error(`Request failed for articles page ${page}: ${response.status}`);

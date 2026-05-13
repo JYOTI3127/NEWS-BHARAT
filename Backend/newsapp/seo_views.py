@@ -116,6 +116,11 @@ def view_sitemap_articles(request):
 
 
 @require_GET
+def view_sitemap_bharat_opinions(request):
+    return xml_resp(SitemapEngine.bharat_opinions())
+
+
+@require_GET
 def view_sitemap_images(request):
     return xml_resp(SitemapEngine.images())
 

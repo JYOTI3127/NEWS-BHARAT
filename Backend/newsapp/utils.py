@@ -108,6 +108,7 @@ def _wrap_article_text_fragment(fragment):
 
     also_read_marker = '%%N4B_ALSO_READ%%'
     fragment = re.sub(r'Also Read:\s*', also_read_marker, fragment, flags=re.IGNORECASE)
+    fragment = re.sub(r'(?<=[.!?])(?=[A-Z])', ' ', fragment)
 
     parts = [
         part.strip()
@@ -132,7 +133,12 @@ def _wrap_article_text_fragment(fragment):
             marker_seen = True
             continue
         if marker_seen:
-            wrapped_parts.append(f'<p><strong>Also Read:</strong> {part}</p>')
+            link_tail_match = re.match(r'(?P<link><a\b[\s\S]*?</a>)(?P<tail>\S[\s\S]*)', part, flags=re.IGNORECASE)
+            if link_tail_match:
+                wrapped_parts.append(f'<p><strong>Also Read:</strong> {link_tail_match.group("link").strip()}</p>')
+                wrapped_parts.append(f'<p>{link_tail_match.group("tail").strip()}</p>')
+            else:
+                wrapped_parts.append(f'<p><strong>Also Read:</strong> {part}</p>')
             marker_seen = False
         else:
             wrapped_parts.append(f'<p>{part}</p>')

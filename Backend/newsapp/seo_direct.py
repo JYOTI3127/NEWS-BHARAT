@@ -340,6 +340,7 @@ Sitemap: {base}/sitemap.xml
 Sitemap: {base}/sitemap_index.xml
 Sitemap: {base}/sitemap-news.xml
 Sitemap: {base}/sitemap-articles.xml
+Sitemap: {base}/sitemap-bharat-opinions.xml
 Sitemap: {base}/sitemap-images.xml
 Sitemap: {base}/sitemap-categories.xml
 Sitemap: {base}/sitemap-static.xml
@@ -374,6 +375,7 @@ class SitemapEngine:
 
         for path in [
             f"{base}/sitemap-articles.xml",
+            f"{base}/sitemap-bharat-opinions.xml",
             f"{base}/sitemap-news.xml",
             f"{base}/sitemap-images.xml",
             f"{base}/sitemap-categories.xml",
@@ -480,6 +482,42 @@ class SitemapEngine:
             ET.SubElement(url_el, "lastmod").text = _iso(
                 getattr(a, "updated_at", None) or a.published_at or timezone.now()
             )
+
+        return _prettify(root)
+
+    @classmethod
+    def bharat_opinions(cls) -> str:
+        return _cached(
+            "seo:sitemap:bharat-opinions:v1",
+            lambda: cls._build_category_articles("bharat-opinions"),
+            CACHE_SITEMAP,
+        )
+
+    @staticmethod
+    def _build_category_articles(category_slug: str) -> str:
+        from newsapp.models import Article
+        base = SEO["SITE_URL"]
+
+        articles = (
+            Article.objects
+            .filter(status="published", in_sitemap=True, categories__slug=category_slug)
+            .distinct()
+            .order_by("-published_at", "-updated_at")[:1000]
+        )
+
+        ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")
+        root = ET.Element("urlset", {
+            "xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9",
+        })
+
+        for article in articles:
+            url_el = ET.SubElement(root, "url")
+            ET.SubElement(url_el, "loc").text = article_url(article, base, category_slug=category_slug)
+            ET.SubElement(url_el, "lastmod").text = _iso(
+                getattr(article, "updated_at", None) or article.published_at or timezone.now()
+            )
+            ET.SubElement(url_el, "changefreq").text = "daily"
+            ET.SubElement(url_el, "priority").text = "1.0"
 
         return _prettify(root)
 
@@ -1160,8 +1198,9 @@ def submit_article_everywhere(article) -> dict:
     pings    = ping_search_engines()
 
     # Sitemap cache invalidate
-    for key in ["seo:sitemap:news", "seo:sitemap:index",
-                 "seo:sitemap:images", "seo:sitemap:articles:1", f"seo:rss:all"]:
+    for key in ["seo:sitemap:news", "seo:sitemap:index", "seo:sitemap:index:v2",
+                 "seo:sitemap:images", "seo:sitemap:articles:1",
+                 "seo:sitemap:bharat-opinions:v1", f"seo:rss:all"]:
         cache.delete(key)
 
     logger.info(f"[SEO] Submitted '{slug}' | google={google} | indexnow={indexnow}")

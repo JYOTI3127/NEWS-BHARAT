@@ -534,13 +534,18 @@ class ArticleContentCleaningTests(TestCase):
             '<p><span id="docs-internal-guid-abc" style="caret-color: rgb(0, 0, 0);">'
             '<span style="font-variant-alternates: normal;">Broken</span> '
             '<span style="font-variant-alternates: normal;">text</span>'
-            '<b></b><strong>Bold stays</strong></span></p>'
+            '<span dir="ltr">plain wrapper</span>'
+            '<b></b><strong>Bold stays</strong></span>'
+            '<span style="color: #123456;">Color stays</span></p>'
         )
 
-        self.assertEqual(cleaned, '<p>Broken text<strong>Bold stays</strong></p>')
+        self.assertEqual(
+            cleaned,
+            '<p>Broken textplain wrapper<strong>Bold stays</strong>'
+            '<span style="color: #123456;">Color stays</span></p>',
+        )
         self.assertNotIn('font-variant', cleaned)
         self.assertNotIn('docs-internal-guid', cleaned)
-        self.assertNotIn('<span', cleaned)
 
 
 class AccessDeniedViewTests(TestCase):

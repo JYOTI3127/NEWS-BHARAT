@@ -49,6 +49,10 @@ _GOOGLE_DOCS_SPAN_RE = re.compile(
     r'(?P<inner>[\s\S]*?)</span>',
     re.IGNORECASE,
 )
+_PLAIN_SPAN_RE = re.compile(
+    r'<span\b(?P<attrs>[^>]*)>(?P<inner>[\s\S]*?)</span>',
+    re.IGNORECASE,
+)
 _EMPTY_INLINE_FORMAT_RE = re.compile(r'<(b|strong|i|em|u)\b[^>]*>\s*</\1>', re.IGNORECASE)
 _EMPTY_PARAGRAPH_RE = re.compile(r'<p\b[^>]*>(?:\s|&nbsp;|<br\s*/?>)*</p>', re.IGNORECASE)
 _BLOCK_TAG_RE = re.compile(
@@ -109,11 +113,20 @@ def _ensure_safe_anchor_attrs(match):
 
 
 def strip_pasted_document_markup(content):
+    def unwrap_plain_span(match):
+        attrs = match.group('attrs') or ''
+        if re.search(r'(?:color|background|font-weight|font-style|text-decoration)\s*:', attrs, re.IGNORECASE):
+            return match.group(0)
+        if re.search(r'\bclass\s*=\s*["\'][^"\']*(?:article-|twitter-|nb-)[^"\']*["\']', attrs, re.IGNORECASE):
+            return match.group(0)
+        return match.group('inner')
+
     cleaned = str(content or '')
     previous = None
     while cleaned != previous:
         previous = cleaned
         cleaned = _GOOGLE_DOCS_SPAN_RE.sub(lambda match: match.group('inner'), cleaned)
+        cleaned = _PLAIN_SPAN_RE.sub(unwrap_plain_span, cleaned)
         cleaned = _EMPTY_INLINE_FORMAT_RE.sub('', cleaned)
         cleaned = _EMPTY_PARAGRAPH_RE.sub('', cleaned)
     return cleaned.strip()

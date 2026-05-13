@@ -3,20 +3,12 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import path, include
 from newsapp import views
+from newsapp import seo_views
 from newsapp.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.sitemaps.views import sitemap
-from newsapp.sitemaps import ArticleSitemap, CategorySitemap, StaticSitemap
-
-sitemaps = {
-    'articles': ArticleSitemap,
-    'categories': CategorySitemap,
-    'static': StaticSitemap,
-}
-
 urlpatterns = [
     path('', lambda request: redirect('admin/'), name='home'),
 
@@ -38,12 +30,7 @@ urlpatterns = [
     # ✅ SEO URLs — SABSE LAST ME ADD KARO
     path('', include('newsapp.seo_urls')),
 
-    path(
-    'sitemap.xml',
-    sitemap,
-    {'sitemaps': sitemaps},
-    name='django.contrib.sitemaps.views.sitemap'
-    ),
+    path('sitemap.xml', seo_views.view_sitemap_index, name='seo_sitemap_xml'),
 ]
 
 if settings.DEBUG:

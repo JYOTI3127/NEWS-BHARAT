@@ -336,6 +336,7 @@ Disallow: /
 User-agent: AhrefsBot
 Disallow: /
 
+Sitemap: {base}/sitemap.xml
 Sitemap: {base}/sitemap_index.xml
 Sitemap: {base}/sitemap-news.xml
 Sitemap: {base}/sitemap-articles.xml

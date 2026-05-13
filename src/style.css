@@ -79,6 +79,57 @@
   border-radius: 8px !important;
   margin: 1.5rem 0 !important;
 }
+
+/* Tailwind reset override — nested div ke andar bhi kaam kare */
+.article-content > div > p,
+.article-content > div > div > p {
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+  margin-bottom: 1.2rem !important;
+}
+
+/* Saare p tags globally under article-content */
+.article-content p:not(:last-child) {
+  margin-bottom: 1.2rem !important;
+}
+
+.article-content span {
+  display: inline;
+  line-height: 1.8 !important;
+}
+
+/* Har top-level span ko block banao */
+.article-content > div > span,
+.article-content > div > b > span {
+  display: block !important;
+  margin-bottom: 1.2rem !important;
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+}
+
+/* Tailwind reset ko force override karo */
+div.article-content p,
+div.article-content > div > p {
+  margin-top: 0 !important;
+  margin-bottom: 1.4rem !important;
+  line-height: 1.8 !important;
+  font-size: 16px !important;
+}
+
+/* Span wala content — block banao */
+div.article-content span[style] {
+  display: block !important;
+  margin-bottom: 0.8rem !important;
+  line-height: 1.8 !important;
+  font-size: 16px !important;
+}
+
+/* Empty spans hide karo */
+div.article-content span[style]:empty,
+div.article-content span:empty {
+  display: none !important;
+}
+
 :root {
   --red-light: rgba(216, 1, 0, 0.08);
   --red-mid: rgba(216, 1, 0, 0.15);

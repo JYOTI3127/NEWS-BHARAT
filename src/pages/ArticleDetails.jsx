@@ -804,7 +804,7 @@ const normalizeArticleContent = (html, options = {}) => {
   let normalized = html
     .replace(/&nbsp;?|&#160;?|&#xa0;?/gi, " ")
     .replace(/\u00a0/g, " ")
-    .replace(/<\/?font\b[^>]*>/gi, "")
+    .replace(/<span\b[^>]*\bid="docs-internal-guid[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, "$1")
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
     // Some editor payloads keep a trailing "\" before blockquote markup.
     .replace(/\\+\s*(?=<blockquote\b)/gi, "")
@@ -843,6 +843,24 @@ const normalizeArticleContent = (html, options = {}) => {
   if (typeof window === "undefined" || typeof DOMParser === "undefined") return normalized;
   const sourcePlainText = getPlainText(normalized);
   const doc = new DOMParser().parseFromString(normalized, "text/html");
+  // ✅ Yeh add karo — Google Docs wrapper hatao
+  const gdocsSpan = doc.body.querySelector("span[id^='docs-internal-guid']");
+  if (gdocsSpan) {
+    const fragment = doc.createDocumentFragment();
+    Array.from(gdocsSpan.childNodes).forEach((node) =>
+      fragment.appendChild(node.cloneNode(true))
+    );
+    gdocsSpan.replaceWith(fragment);
+  }
+
+  // ✅ Remaining font tags hatao
+  Array.from(doc.body.querySelectorAll("font")).forEach((font) => {
+    const fragment = doc.createDocumentFragment();
+    Array.from(font.childNodes).forEach((node) =>
+      fragment.appendChild(node.cloneNode(true))
+    );
+    font.replaceWith(fragment);
+  })
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
   normalizeHeadingStructure(doc);
   Array.from(doc.body.querySelectorAll("h1")).forEach((heading) => {
@@ -876,6 +894,21 @@ const normalizeArticleContent = (html, options = {}) => {
     if (hasMediaChild) return;
     if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
+  // Step 1: Pehle b/strong ke andar ke spans ko unwrap karo
+  Array.from(doc.body.querySelectorAll("b > span, strong > span")).forEach((span) => {
+    const parent = span.parentElement;
+    if (!parent) return;
+    const grandParent = parent.parentElement;
+    if (!grandParent) return;
+    // b/strong ka content bahar nikalo
+    const fragment = doc.createDocumentFragment();
+    Array.from(parent.childNodes).forEach((node) =>
+      fragment.appendChild(node.cloneNode(true))
+    );
+    parent.replaceWith(fragment);
+  });
+
+  // Step 2: Ab top-level div/span ko p mein convert karo
   Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
     if (node.parentElement !== doc.body) return;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
@@ -888,22 +921,22 @@ const normalizeArticleContent = (html, options = {}) => {
   });
 
   // Bade paragraphs ko tod do — 400+ characters wale
-// 400 ki jagah 300 karo aur em-dash bhi handle karo
-Array.from(doc.body.querySelectorAll("p")).forEach((paragraph) => {
-  const text = getPlainText(paragraph.textContent || "");
-  if (text.length < 300) return;
-  
-  const innerHTML = paragraph.innerHTML;
-  const split = innerHTML
-    .replace(/([.!?])\s{1,4}([A-Z])/g, "$1</p><p>$2")
-    .replace(/([.!?])(<\/?(strong|b|em|i)>)\s{0,3}([A-Z])/g, "$1$2</p><p>$4");
-  
-  if (split === innerHTML) return;
-  
-  const temp = doc.createElement("div");
-  temp.innerHTML = split;
-  paragraph.replaceWith(...Array.from(temp.childNodes));
-});
+  // 400 ki jagah 300 karo aur em-dash bhi handle karo
+  Array.from(doc.body.querySelectorAll("p")).forEach((paragraph) => {
+    const text = getPlainText(paragraph.textContent || "");
+    if (text.length < 300) return;
+
+    const innerHTML = paragraph.innerHTML;
+    const split = innerHTML
+      .replace(/([.!?])\s{1,4}([A-Z])/g, "$1</p><p>$2")
+      .replace(/([.!?])(<\/?(strong|b|em|i)>)\s{0,3}([A-Z])/g, "$1$2</p><p>$4");
+
+    if (split === innerHTML) return;
+
+    const temp = doc.createElement("div");
+    temp.innerHTML = split;
+    paragraph.replaceWith(...Array.from(temp.childNodes));
+  });
   const listHeadingPattern = /^(confirmed|still unconfirmed|what we know|what we don'?t know|key details|full story in brief|news summary)$/i;
   Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
     const headingText = getPlainText(heading.textContent || "");

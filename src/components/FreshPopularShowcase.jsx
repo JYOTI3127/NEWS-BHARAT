@@ -656,7 +656,7 @@ export default function FreshPopularShowcase({
                   <img
                     src={getArticleImage(hero)}
                     alt={getArticleTitle(hero)}
-                    className={`absolute left-0 right-0 top-0 h-[65%] w-full ${
+                    className={`absolute left-0 right-0 top-0 h-[82%] w-full ${
                       is375Viewport ? "object-cover object-center" : "object-cover object-center"
                     } max-[320px]:object-cover max-[320px]:object-top`}
                     style={{

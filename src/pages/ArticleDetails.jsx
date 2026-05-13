@@ -820,6 +820,15 @@ const normalizeArticleContent = (html, options = {}) => {
     if (hasMediaChild) return;
     if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
+  Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
+    if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+    if (node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div, img, iframe, video")) return;
+    if (getPlainText(node.textContent || "").length === 0) return;
+    const paragraph = doc.createElement("p");
+    Array.from(node.attributes).forEach((attribute) => paragraph.setAttribute(attribute.name, attribute.value));
+    paragraph.innerHTML = node.innerHTML;
+    node.replaceWith(paragraph);
+  });
   const hasGoogleSheetsMarkup = Boolean(
     doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
   );

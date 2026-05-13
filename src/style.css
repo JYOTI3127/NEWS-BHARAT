@@ -292,6 +292,38 @@ img {
   word-break: normal;
 }
 
+.article-content :where(p, ul, ol, blockquote, .article-table-wrapper, .article-media-frame, figure) {
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+}
+
+.article-content :where(h2, h3, h4, h5, h6) {
+  clear: both;
+  margin-top: 1.8rem;
+  margin-bottom: 0.85rem;
+}
+
+.article-content :where(h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+
+.article-content :where(ul, ol) {
+  padding-left: 1.45rem;
+}
+
+.article-content li {
+  margin-bottom: 0.45rem;
+}
+
+.article-content li > :where(p, div) {
+  margin-bottom: 0.35rem;
+}
+
+.article-content > div > div:not(:has(h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, img, iframe, video)):not(:empty) {
+  margin-bottom: 1.2rem;
+  line-height: 1.7;
+}
+
 .article-content table,
 .article-content .article-table-wrapper table {
   width: 100%;

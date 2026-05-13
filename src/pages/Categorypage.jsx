@@ -111,6 +111,57 @@ const getCategoryFetchSlugs = (value) => {
   return CATEGORY_FETCH_ALIASES[normalized] || [normalized];
 };
 
+const getPrerenderData = () => {
+  if (typeof window === "undefined") return {};
+  return window.__N4B_PRERENDER_DATA__ || {};
+};
+
+const normalizeCategoryToken = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const getArticleCategorySlugs = (article) => {
+  const values = [
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.category?.slug,
+  ];
+
+  const details = Array.isArray(article?.category_details)
+    ? article.category_details
+    : article?.category_details
+      ? [article.category_details]
+      : [];
+
+  details.forEach((item) => {
+    values.push(item?.slug, item?.category_slug, item?.name);
+  });
+
+  return values
+    .map(normalizeCategoryToken)
+    .filter(Boolean);
+};
+
+const getArticlesFromPrerenderData = (categorySlugs) => {
+  const prerenderData = getPrerenderData();
+  const articles = Array.isArray(prerenderData.articles) ? prerenderData.articles : [];
+  const targetSlugs = new Set(categorySlugs.map(normalizeCategoryToken));
+
+  return articles.filter((article) =>
+    getArticleCategorySlugs(article).some((articleSlug) => targetSlugs.has(articleSlug))
+  );
+};
+
+const getCategoriesFromPrerenderData = () => {
+  const prerenderData = getPrerenderData();
+  return Array.isArray(prerenderData.categories) ? prerenderData.categories : [];
+};
+
 const getPlainText = (value) =>
   stripHtml(String(value || ""))
     .replace(/\s+/g, " ")
@@ -159,6 +210,30 @@ const getPossibleStateValues = (article) => {
   return values
     .map((value) => String(value || "").trim())
     .filter(Boolean);
+};
+
+const getCategoryArticleFreshnessTime = (article) => {
+  const dates = [
+    article?.updated_at,
+    article?.updatedAt,
+    article?.modified_at,
+    article?.modifiedAt,
+    article?.published_at,
+    article?.publishedAt,
+    article?.published_date,
+    article?.date,
+    article?.created_at,
+    article?.createdAt,
+    getArticleDateValue(article),
+  ];
+
+  return Math.max(
+    0,
+    ...dates.map((value) => {
+      const time = new Date(value || 0).getTime();
+      return Number.isFinite(time) ? time : 0;
+    })
+  );
 };
 
 const doesArticleMatchSubcategory = (article, subFilter) => {
@@ -219,6 +294,39 @@ export default function CategoryPage() {
       const shouldFetchByState = isStateCategory && stateSubFilter.length > 0;
       const requestLimit = shouldFetchByState ? STATE_ARTICLE_LIMIT : CATEGORY_ARTICLE_LIMIT;
       const categoryFetchSlugs = getCategoryFetchSlugs(slug);
+      const prerenderCategories = getCategoriesFromPrerenderData();
+      const prerenderCategory = prerenderCategories.find((c) =>
+        categoryFetchSlugs.includes(String(c.slug || "").trim().toLowerCase())
+      );
+      const prerenderArticles = getArticlesFromPrerenderData(categoryFetchSlugs);
+
+      if (prerenderCategory || prerenderArticles.length > 0) {
+        setCategory(prerenderCategory || { name: slug });
+        const sorted = [...prerenderArticles].sort(
+          (a, b) => getCategoryArticleFreshnessTime(b) - getCategoryArticleFreshnessTime(a)
+        );
+        const finalArticles = subFilter
+          ? sorted.filter((a) => doesArticleMatchSubcategory(a, subFilter))
+          : sorted;
+        const normalized = finalArticles.map((a) => ({
+          ...a,
+          image: a.image_url || a.image || null,
+          author: "News4Bharat",
+          description: a.subtitle || (a.content ? stripHtml(a.content).slice(0, 150) : ""),
+        }));
+
+        setArticles(normalized);
+        setLoading(false);
+
+        if (typeof window !== "undefined" && /HeadlessChrome|prerender/i.test(window.navigator?.userAgent || "")) {
+          window.requestAnimationFrame(() => {
+            window.prerenderReady = true;
+            document.dispatchEvent(new Event("prerender-ready"));
+          });
+          return;
+        }
+      }
+
       const articlesUrls = shouldFetchByState
         ? [`${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`]
         : categoryFetchSlugs.map((categorySlug) =>
@@ -259,7 +367,7 @@ export default function CategoryPage() {
         });
 
         const sorted = [...unique].sort(
-          (a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0)
+          (a, b) => getCategoryArticleFreshnessTime(b) - getCategoryArticleFreshnessTime(a)
         );
 
         // When data is already fetched from by-state endpoint, avoid filtering it again on client.

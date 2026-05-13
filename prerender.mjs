@@ -903,6 +903,8 @@ async function getRoutesAndData() {
   const dispatchPayload = getGithubDispatchPayload()
   const siteData = {
     homepageHeroImage: '',
+    articles: [],
+    categories: [],
   }
 
   Object.keys(STATIC_PAGE_META).forEach((route) => routeSet.add(route))
@@ -915,6 +917,7 @@ async function getRoutesAndData() {
       (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
     )
     const homepageHeroArticle = sortedArticles.find((article) => article?.image_url || article?.image)
+    siteData.articles = sortedArticles
 
     siteData.homepageHeroImage =
       homepageHeroArticle?.image_url ||
@@ -982,6 +985,7 @@ async function getRoutesAndData() {
   try {
     const data = await fetchWithRetry(`${API_BASE}/categories/?_=${Date.now()}`)
     const categories = getListFromCategoriesResponse(data)
+    siteData.categories = categories
 
     let added = 0
     categories.forEach((c) => {
@@ -998,6 +1002,30 @@ async function getRoutesAndData() {
   }
 
   return { routes: [...routeSet], articleMap, categoryMap, siteData }
+}
+
+function installPrerenderDataScript(siteData) {
+  const shellPath = path.join(__dirname, 'build', 'index.html')
+  if (!fs.existsSync(shellPath)) {
+    console.log('Prerender data script skipped because build/index.html was not found')
+    return
+  }
+
+  const payload = {
+    articles: Array.isArray(siteData?.articles) ? siteData.articles : [],
+    categories: Array.isArray(siteData?.categories) ? siteData.categories : [],
+    homepageHeroImage: siteData?.homepageHeroImage || '',
+  }
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c')
+  const dataScript = `<script>window.__N4B_PRERENDER_DATA__=${json};</script>`
+  let html = fs.readFileSync(shellPath, 'utf8')
+
+  html = html
+    .replace(/<script>window\.__N4B_PRERENDER_DATA__=[\s\S]*?<\/script>\s*/g, '')
+    .replace(/<script\b[^>]*type=["']module["'][^>]*>/i, `${dataScript}\n$&`)
+
+  fs.writeFileSync(shellPath, html, 'utf8')
+  console.log(`Injected React prerender data (${payload.articles.length} articles, ${payload.categories.length} categories)`)
 }
 
 async function renderInBatches(prerenderer, routes, articleMap, categoryMap, siteData, batchSize = 3) {
@@ -1073,6 +1101,7 @@ function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
 console.log('Fetching routes and API data...')
 const { routes, articleMap, categoryMap, siteData } = await getRoutesAndData()
 console.log(`\nTotal ${routes.length} routes will be prerendered\n`)
+installPrerenderDataScript(siteData)
 
 const prerenderer = new Prerenderer({
   staticDir: path.join(__dirname, 'build'),

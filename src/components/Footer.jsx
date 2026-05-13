@@ -126,6 +126,20 @@ const PlayStoreIcon = () => (
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const handleHomeLogoClick = (event) => {
+    if (typeof window === "undefined") return;
+
+    if (window.location.pathname === "/") {
+      event.preventDefault();
+      if (window.location.hash) {
+        window.history.pushState(null, "", "/");
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      return;
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  };
 
   return (
     <footer className="ft-root">
@@ -143,7 +157,7 @@ export default function Footer() {
         {/* LEFT: Brand */}
         <div className="ft-brand">
 
-          <Link to="/" aria-label="Go to homepage">
+          <Link to="/" aria-label="Go to homepage" onClick={handleHomeLogoClick}>
             <img src={logo} alt="News4Bharat" className="ft-logo" width="384" height="58" loading="lazy" decoding="async" />
           </Link>
 

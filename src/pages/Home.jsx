@@ -29,6 +29,51 @@ const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
 const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
 const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
 
+const getPrerenderData = () => {
+  if (typeof window === 'undefined') return {};
+  return window.__N4B_PRERENDER_DATA__ || {};
+};
+
+const normalizeCategoryToken = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const getArticleCategorySlugs = (article) => {
+  const values = [
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.category?.slug,
+  ];
+
+  const details = Array.isArray(article?.category_details)
+    ? article.category_details
+    : article?.category_details
+      ? [article.category_details]
+      : [];
+
+  details.forEach((item) => {
+    values.push(item?.slug, item?.category_slug, item?.name);
+  });
+
+  return values
+    .map(normalizeCategoryToken)
+    .filter(Boolean);
+};
+
+const getSeedArticlesForSlugs = (articles, slugs, limit = 12) => {
+  const targetSlugs = new Set(slugs.map(normalizeCategoryToken));
+  return (Array.isArray(articles) ? articles : [])
+    .filter((article) =>
+      getArticleCategorySlugs(article).some((slug) => targetSlugs.has(slug))
+    )
+    .slice(0, limit);
+};
+
 const WhatsAppFloatingIcon = () => (
   <svg viewBox="0 0 448 512" width="25" height="25" aria-hidden="true" focusable="false">
     <path
@@ -99,6 +144,15 @@ function DeferredSection({
 
 const Home = () => {
   const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
+  const prerenderData = React.useMemo(() => getPrerenderData(), []);
+  const prerenderArticles = React.useMemo(
+    () => (Array.isArray(prerenderData.articles) ? prerenderData.articles : []),
+    [prerenderData]
+  );
+  const prerenderCategories = React.useMemo(
+    () => (Array.isArray(prerenderData.categories) ? prerenderData.categories : []),
+    [prerenderData]
+  );
   const isNewsletterHash = typeof window !== 'undefined' && window.location.hash === '#newsletter';
   const shouldForceDeferredRender = isNewsletterHash || isPrerender;
 
@@ -125,6 +179,7 @@ const Home = () => {
   const { data: articlesData, isLoading: articlesLoading } = useQuery({
     queryKey: ['articles'],
     queryFn: () => fetchPaginatedArticles({ limit: 100, maxPages: 5, full: true }),
+    initialData: prerenderArticles.length > 0 ? prerenderArticles : undefined,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -133,6 +188,7 @@ const Home = () => {
   const { data: _categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
+    initialData: prerenderCategories.length > 0 ? prerenderCategories : undefined,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -140,6 +196,9 @@ const Home = () => {
   const { data: heroData, isLoading: heroLoading } = useQuery({
     queryKey: ['homepage-hero-current'],
     queryFn: fetchHomepageHeroCurrent,
+    initialData: prerenderArticles.length > 0
+      ? { articles: prerenderArticles.slice(0, 5), display_count: 5 }
+      : undefined,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -148,6 +207,9 @@ const Home = () => {
   const { data: freshPopularData, isLoading: freshPopularLoading } = useQuery({
     queryKey: ['fresh-popular-showcase'],
     queryFn: fetchFreshPopularShowcase,
+    initialData: prerenderArticles.length > 0
+      ? { articles: prerenderArticles.slice(0, 12), display_count: 12 }
+      : undefined,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -205,6 +267,9 @@ const Home = () => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    initialData: prerenderArticles.length > 0
+      ? getSeedArticlesForSlugs(prerenderArticles, Q4_CATEGORY_SLUGS, 30)
+      : undefined,
   });
 
   const q4Articles = React.useMemo(

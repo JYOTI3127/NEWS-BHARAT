@@ -1,4 +1,4 @@
-from django.contrib import admin, messages
+﻿from django.contrib import admin, messages
 from django import forms
 from newsapp.forms import CustomUserCreationForm
 from .models import *
@@ -1796,9 +1796,62 @@ class ArticleAdmin(admin.ModelAdmin):
         except ValidationError as e:
             self.message_user(request, e.message, level=messages.ERROR)
 
+    def _format_admin_datetime(self, value):
+        if not value:
+            return ''
+        return timezone.localtime(value).strftime('%d %b %Y, %I:%M %p IST')
+
+    def _build_publish_history(self, article):
+        if not article:
+            return []
+
+        history = []
+        seen_keys = set()
+
+        def add_entry(dt, label, *, is_original=False):
+            if not dt:
+                return
+            local_dt = timezone.localtime(dt)
+            key = local_dt.strftime('%Y-%m-%d %H:%M')
+            if key in seen_keys:
+                return
+            seen_keys.add(key)
+            history.append({
+                'label': label,
+                'display': local_dt.strftime('%d %b %Y, %I:%M %p IST'),
+                'sort_value': local_dt.isoformat(),
+                'is_original': is_original,
+            })
+
+        versions = list(
+            article.versions.order_by('version_number', 'created_at').only('version_number', 'created_at')
+        )
+
+        if versions:
+            add_entry(versions[0].created_at, 'Original publish date', is_original=True)
+            for version in versions[1:]:
+                add_entry(version.created_at, f'Updated / republished around v{version.version_number}')
+        elif article.published_at:
+            add_entry(article.published_at, 'Original publish date', is_original=True)
+
+        add_entry(article.published_at, 'Current visible publish date', is_original=not history)
+        history.sort(key=lambda item: item['sort_value'])
+        return history
+
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
         extra_context['can_edit_slug'] = bool(getattr(request.user, 'is_superuser', False))
+        article = None
+        publish_history = []
+        if object_id:
+            article = self.get_queryset(request).filter(pk=object_id).first()
+            if article:
+                publish_history = self._build_publish_history(article)
+        extra_context['article_publish_history'] = publish_history
+        extra_context['article_original_publish_date'] = next(
+            (item['display'] for item in publish_history if item.get('is_original')),
+            ''
+        )
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:

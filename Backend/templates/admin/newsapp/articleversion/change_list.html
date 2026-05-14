@@ -85,11 +85,11 @@
             <tr>
               <td>
                 <div class="av-article-cell">
-                  <a href="/admin/newsapp/article/{{ version.article_id }}/change/" class="av-article-title">
-                    {{ version.article.title|truncatechars:95 }}
+                  <a href="/admin/newsapp/articleversion/{{ version.id }}/change/" class="av-article-title">
+                    {{ version.title|default:version.article.title|truncatechars:95 }}
                   </a>
                   <div class="av-article-meta">
-                    Stored title: {{ version.title|default:"Untitled"|truncatechars:80 }}
+                    Current article: {{ version.article.title|truncatechars:80 }}
                   </div>
                 </div>
               </td>
@@ -121,7 +121,7 @@
               </td>
               <td>
                 <div class="av-actions">
-                  <a href="/admin/newsapp/articleversion/{{ version.id }}/change/" class="av-action-btn" title="Open version">
+                  <a href="/admin/newsapp/articleversion/{{ version.id }}/change/" class="av-action-btn" title="Open saved version">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>

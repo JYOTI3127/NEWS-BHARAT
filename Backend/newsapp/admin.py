@@ -1,4 +1,4 @@
-﻿from django.contrib import admin, messages
+from django.contrib import admin, messages
 from django import forms
 from newsapp.forms import CustomUserCreationForm
 from .models import *
@@ -362,6 +362,50 @@ class ArticleVersionAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        version = self.get_queryset(request).filter(pk=object_id).select_related('article').first()
+        if version and version.article_id:
+            return redirect(f'/admin/newsapp/article/{version.article_id}/change/?version_preview={version.id}')
+        return redirect('/admin/newsapp/articleversion/')
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:object_id>/restore/',
+                self.admin_site.admin_view(self.restore_view),
+                name='newsapp_articleversion_restore',
+            ),
+        ]
+        return custom_urls + urls
+
+    def restore_view(self, request, object_id):
+        version = get_object_or_404(
+            self.get_queryset(request).select_related('article'),
+            pk=object_id,
+        )
+        article = version.article
+
+        if request.method != 'POST':
+            return redirect(f'/admin/newsapp/article/{article.pk}/change/?version_preview={version.id}')
+
+        if not request.user.is_superuser and not (
+            has_permission(request.user, 'publish_article') or has_permission(request.user, 'edit_any_article')
+        ):
+            raise PermissionDenied
+
+        article.title = version.title
+        article.subtitle = version.subtitle
+        article.content = version.content
+        article.status = 'published'
+        article.save()
+        self.message_user(
+            request,
+            f'Article restored to version v{version.version_number} and published.',
+            level=messages.SUCCESS,
+        )
+        return redirect(f'/admin/newsapp/article/{article.pk}/change/')
 
     def changelist_view(self, request, extra_context=None):
         original_get = request.GET.copy()
@@ -1838,20 +1882,44 @@ class ArticleAdmin(admin.ModelAdmin):
         history.sort(key=lambda item: item['sort_value'])
         return history
 
+    def _can_restore_version(self, request, obj=None):
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        return has_permission(user, 'publish_article') or has_permission(user, 'edit_any_article')
+
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
         extra_context['can_edit_slug'] = bool(getattr(request.user, 'is_superuser', False))
         article = None
         publish_history = []
+        version_preview = None
         if object_id:
             article = self.get_queryset(request).filter(pk=object_id).first()
             if article:
                 publish_history = self._build_publish_history(article)
+                version_preview_id = (request.GET.get('version_preview') or '').strip()
+                if version_preview_id.isdigit():
+                    version_preview = (
+                        ArticleVersion.objects
+                        .filter(pk=int(version_preview_id), article_id=article.pk)
+                        .select_related('edited_by')
+                        .first()
+                    )
         extra_context['article_publish_history'] = publish_history
         extra_context['article_original_publish_date'] = next(
             (item['display'] for item in publish_history if item.get('is_original')),
             ''
         )
+        extra_context['article_version_preview'] = version_preview
+        extra_context['can_restore_preview_version'] = bool(version_preview and self._can_restore_version(request, article))
+        extra_context['article_version_restore_url'] = (
+            f'/admin/newsapp/articleversion/{version_preview.id}/restore/'
+            if version_preview else ''
+        )
+        extra_context['article_version_history_url'] = '/admin/newsapp/articleversion/'
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:

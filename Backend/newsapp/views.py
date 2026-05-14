@@ -1030,6 +1030,12 @@ def _save_article_from_request(request, article=None):
 
     # Cache invalidate
     _invalidate_article_caches(article, old_slug=old_slug)
+    try:
+        hero_slot = HomepageSlot.objects.filter(slot_name='hero').first()
+        if hero_slot and hero_slot.mode == 'auto':
+            _sync_hero_slot_legacy_fields(hero_slot, save=True)
+    except Exception:
+        pass
     return article, None
 
 @api_view(['GET', 'POST'])
@@ -1681,6 +1687,29 @@ def _hero_slot_queryset(slot):
     )
 
 
+def _sync_hero_slot_legacy_fields(slot, save=True):
+    if not slot or getattr(slot, 'slot_name', '') != 'hero':
+        return slot
+
+    articles = list(_hero_slot_queryset(slot)[:5])
+    slot.article = articles[0] if len(articles) > 0 else None
+    slot.overlay_article_1 = articles[1] if len(articles) > 1 else None
+    slot.overlay_article_2 = articles[2] if len(articles) > 2 else None
+    slot.overlay_article_3 = articles[3] if len(articles) > 3 else None
+    slot.overlay_article_4 = articles[4] if len(articles) > 4 else None
+
+    if save:
+        slot.save(update_fields=[
+            'article',
+            'overlay_article_1',
+            'overlay_article_2',
+            'overlay_article_3',
+            'overlay_article_4',
+            'updated_at',
+        ])
+    return slot
+
+
 def _normalize_ad_target_pages(raw_pages):
     allowed_pages = {page for page, _label in HomepageAdBanner.PAGE_CHOICES}
     if isinstance(raw_pages, str):
@@ -1717,11 +1746,6 @@ def update_hero_slot(request):
     slot.auto_rule = 'latest'
     manual_ids = _normalize_latest_manual_ids(data.get('manual_ids', []), slot.display_count)
     slot.manual_order = manual_ids if mode == 'manual' else []
-    slot.article = None
-    slot.overlay_article_1 = None
-    slot.overlay_article_2 = None
-    slot.overlay_article_3 = None
-    slot.overlay_article_4 = None
     slot.save()
 
     if mode == 'manual':
@@ -1730,6 +1754,8 @@ def update_hero_slot(request):
         )
     else:
         slot.manual_articles.clear()
+
+    _sync_hero_slot_legacy_fields(slot, save=True)
 
     return JsonResponse({'status': 'saved', 'slot': 'hero'})
 
@@ -1745,6 +1771,8 @@ def homepage_hero_current(request):
         slot = _get_or_create_slot('hero')
     if not slot.display_count:
         slot.display_count = 9
+
+    _sync_hero_slot_legacy_fields(slot, save=True)
 
     articles = _hero_slot_queryset(slot)
     serializer = ArticleHomepageSerializer(articles, many=True, context={'request': request})

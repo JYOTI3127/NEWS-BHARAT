@@ -376,6 +376,30 @@ label.image-drop {
   margin: 0 !important;
 }
 .nb-content-area br + br { display: none; }
+.nb-content-area a[href]{
+  position: relative;
+}
+.nb-editor-link-tooltip{
+  position: fixed;
+  z-index: 9999;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.96);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+  pointer-events: none;
+  word-break: break-word;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.nb-editor-link-tooltip.is-visible{
+  opacity: 1;
+  transform: translateY(0);
+}
 
 .nb-inline-img {
   max-width: 100%; height: auto; display: block; margin: 8px 0;
@@ -1180,6 +1204,7 @@ grammarly-button,
       </div>
 
       <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article..." data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">{% if original %}{{ original.content_raw|default:original.content|default:''|safe }}{% endif %}</div>
+      <div class="nb-editor-link-tooltip" id="nb_editor_link_tooltip" aria-hidden="true"></div>
         <div class="ai-status" id="ai_status"></div>
         <div class="sentence-suggest-modal" id="sentence_suggest_modal">
           <div class="sentence-suggest-panel">
@@ -3487,12 +3512,15 @@ function nbRestoreCursor(){
 
 let nbHistTimer;
 if(nbEditor){
+  try{document.execCommand('styleWithCSS',false,false);}catch(e){}
+  try{document.execCommand('useCSS',false,false);}catch(e){}
   nbEditor.setAttribute('data-gramm','false');
   nbEditor.setAttribute('data-gramm_editor','false');
   nbEditor.setAttribute('data-enable-grammarly','false');
   nbEditor.setAttribute('spellcheck','false');
   nbEditor.addEventListener('input',function(){
     clearTimeout(nbHistTimer);
+    syncEditorLinkMetadata(nbEditor);
     nbHistTimer=setTimeout(nbSaveHistory,400);
   });
   ['mouseup','keyup','focus','blur'].forEach(function(evt){
@@ -3501,6 +3529,8 @@ if(nbEditor){
     });
   });
   nbSaveHistory();
+  syncEditorLinkMetadata(nbEditor);
+  initEditorLinkHover();
 
   ['#nb_toolbar button','#nb_inline_toolbar button'].forEach(function(selector){
     document.querySelectorAll(selector).forEach(function(el){
@@ -3631,6 +3661,78 @@ function nbEscapeHtml(text){
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
+}
+
+function syncEditorLinkMetadata(scope){
+  var root=scope&&scope.querySelectorAll?scope:nbEditor;
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('a[href]').forEach(function(link){
+    var href=(link.getAttribute('href')||'').trim();
+    if(!href)return;
+    link.setAttribute('title',href);
+    link.setAttribute('data-link-url',href);
+  });
+}
+
+function initEditorLinkHover(){
+  if(!nbEditor)return;
+  var tooltip=document.getElementById('nb_editor_link_tooltip');
+  if(!tooltip)return;
+  var activeLink=null;
+
+  function hideTooltip(){
+    activeLink=null;
+    tooltip.classList.remove('is-visible');
+    tooltip.setAttribute('aria-hidden','true');
+  }
+
+  function positionTooltip(evt){
+    if(!activeLink)return;
+    var padding=14;
+    var rect=tooltip.getBoundingClientRect();
+    var x=evt.clientX+16;
+    var y=evt.clientY+18;
+    if(x+rect.width+padding>window.innerWidth){
+      x=Math.max(padding,window.innerWidth-rect.width-padding);
+    }
+    if(y+rect.height+padding>window.innerHeight){
+      y=Math.max(padding,evt.clientY-rect.height-18);
+    }
+    tooltip.style.left=x+'px';
+    tooltip.style.top=y+'px';
+  }
+
+  nbEditor.addEventListener('mouseover',function(evt){
+    var link=evt.target&&evt.target.closest?evt.target.closest('a[href]'):null;
+    if(!link||!nbEditor.contains(link)){
+      hideTooltip();
+      return;
+    }
+    activeLink=link;
+    var href=link.getAttribute('data-link-url')||link.getAttribute('href')||'';
+    if(!href){
+      hideTooltip();
+      return;
+    }
+    tooltip.textContent=href;
+    tooltip.classList.add('is-visible');
+    tooltip.setAttribute('aria-hidden','false');
+    positionTooltip(evt);
+  });
+
+  nbEditor.addEventListener('mousemove',function(evt){
+    if(activeLink)positionTooltip(evt);
+  });
+  nbEditor.addEventListener('mouseout',function(evt){
+    if(!activeLink)return;
+    var related=evt.relatedTarget;
+    if(related&&activeLink.contains(related))return;
+    if(related&&nbEditor.contains(related)&&related.closest&&related.closest('a[href]')===activeLink)return;
+    hideTooltip();
+  });
+  nbEditor.addEventListener('focusout',hideTooltip);
+  nbEditor.addEventListener('scroll',hideTooltip);
+  window.addEventListener('scroll',hideTooltip,true);
 }
 
 function nbInsertPlainPaste(text){
@@ -3769,6 +3871,8 @@ function nbInsertLink(){
       links.forEach(function(a){
         a.target='_blank';
         a.rel='noopener noreferrer';
+        a.title=url.trim();
+        a.setAttribute('data-link-url',url.trim());
       });
     }catch(e){}
   }else{
@@ -3778,6 +3882,8 @@ function nbInsertLink(){
     a.textContent=displayText;
     a.target='_blank';
     a.rel='noopener noreferrer';
+    a.title=url.trim();
+    a.setAttribute('data-link-url',url.trim());
     if(savedRange){
       savedRange.deleteContents();
       savedRange.insertNode(a);
@@ -3791,6 +3897,7 @@ function nbInsertLink(){
   }
 
   nbSaveSelection();
+  syncEditorLinkMetadata(nbEditor);
   setTimeout(nbSaveHistory,50);
 }
 
@@ -3928,7 +4035,75 @@ async function nbInsertInlineImage(){
   inp.click();
 }
 function insertTag(tag){ nbInsertTag(tag); }
+function normalizeEditorSemanticMarkup(html){
+  var wrap=document.createElement('div');
+  wrap.innerHTML=html||'';
+
+  function replaceTag(node,newTag){
+    var replacement=document.createElement(newTag);
+    Array.from(node.attributes||[]).forEach(function(attr){
+      if(attr&&attr.name&&attr.name.toLowerCase()!=='style'){
+        replacement.setAttribute(attr.name,attr.value);
+      }
+    });
+    while(node.firstChild)replacement.appendChild(node.firstChild);
+    node.replaceWith(replacement);
+    return replacement;
+  }
+
+  function unwrap(node){
+    if(!node||!node.parentNode)return;
+    while(node.firstChild){
+      node.parentNode.insertBefore(node.firstChild,node);
+    }
+    node.remove();
+  }
+
+  function wrapChildrenWithTags(node,tags){
+    if(!node||!tags.length)return;
+    var inner=document.createDocumentFragment();
+    while(node.firstChild)inner.appendChild(node.firstChild);
+    var wrapped=inner;
+    tags.forEach(function(tag){
+      var el=document.createElement(tag);
+      el.appendChild(wrapped);
+      wrapped=el;
+    });
+    node.appendChild(wrapped);
+  }
+
+  wrap.querySelectorAll('b').forEach(function(node){ replaceTag(node,'strong'); });
+  wrap.querySelectorAll('i').forEach(function(node){ replaceTag(node,'em'); });
+
+  wrap.querySelectorAll('span[style]').forEach(function(node){
+    var style=(node.getAttribute('style')||'').toLowerCase();
+    var tags=[];
+    if(/font-weight\s*:\s*(bold|[6-9]00)/i.test(style))tags.push('strong');
+    if(/font-style\s*:\s*italic/i.test(style))tags.push('em');
+    if(/text-decoration(?:-line)?\s*:[^;]*underline/i.test(style))tags.push('u');
+    if(tags.length){
+      wrapChildrenWithTags(node,tags);
+      style=style
+        .replace(/font-weight\s*:\s*(bold|[1-9]00)\s*;?/gi,'')
+        .replace(/font-style\s*:\s*italic\s*;?/gi,'')
+        .replace(/text-decoration(?:-line)?\s*:[^;]*underline[^;]*;?/gi,'')
+        .replace(/\s*;\s*$/,'')
+        .trim();
+      if(style){
+        node.setAttribute('style',style);
+      }else{
+        node.removeAttribute('style');
+      }
+    }
+    if(!node.getAttribute('style')&&!node.attributes.length){
+      unwrap(node);
+    }
+  });
+
+  return wrap.innerHTML;
+}
 function cleanContentBeforeSubmit(html){
+  html=normalizeEditorSemanticMarkup(html);
   html=normalizeTwitterEmbedsForSubmit(html);
   // Empty paragraphs hatao
   html=html.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi,'');
@@ -4092,9 +4267,36 @@ document.addEventListener('DOMContentLoaded', function () {
    FEATURED IMAGE
 ══════════════════════════════════════════════ */
 var _newFileSelected=false;
+var _featuredImageValidationState={checked:false,ok:true,issues:[],message:''};
+function resetFeaturedImageValidationState(){
+  _featuredImageValidationState={checked:false,ok:true,issues:[],message:''};
+}
+function setFeaturedImageValidationState(ok,issues){
+  var normalized=(issues||[]).filter(Boolean);
+  _featuredImageValidationState={
+    checked:true,
+    ok:!!ok,
+    issues:normalized,
+    message:normalized.length
+      ?('Image did not meet the requirements: '+normalized.join(', ')+'. Please choose a valid JPG image.')
+      :''
+  };
+}
+function getFriendlyArticleSaveError(err){
+  if(err&&typeof err.error==='string'){
+    var raw=String(err.error||'');
+    var lower=raw.toLowerCase();
+    if(lower.indexOf('image')!==-1||lower.indexOf('pillow')!==-1||lower.indexOf('cannot identify image file')!==-1){
+      return 'Image did not meet the requirements or could not be processed. Please use a valid JPG image under 1 MB, ideally 1200 x 675 in 16:9 ratio.';
+    }
+    return raw;
+  }
+  return 'Could not save the article. Please check the image and other fields, then try again.';
+}
 function previewImage(inp){
   if(!inp||!inp.files||!inp.files[0])return; 
   const file=inp.files[0];
+  resetFeaturedImageValidationState();
   _newFileSelected=true;
   const blobUrl=URL.createObjectURL(file);
   const prev=document.getElementById('img_preview');
@@ -4138,6 +4340,7 @@ function previewImage(inp){
           okRatio=Math.abs(ratio-(16/9))<0.08;
     const okFmt=['image/jpeg'].includes(file.type);
     if(okSize&&okW&&okH&&okRatio&&okFmt){
+      setFeaturedImageValidationState(true,[]);
       status.textContent='✓ Image meets all specifications';
       status.className='img-fi-status ok';
     }else{
@@ -4147,13 +4350,16 @@ function previewImage(inp){
       if(!okH)issues.push('height > 675px');
       if(!okRatio)issues.push('not 16:9');
       if(!okFmt)issues.push('not JPG');
+      setFeaturedImageValidationState(false,issues);
       status.textContent='⚠ Issues: '+issues.join(' · ');
       status.className='img-fi-status warn';
+      alert(_featuredImageValidationState.message);
     }
   };
   imgEl.src=blobUrl;
 }
 function previewUrl(url){
+  resetFeaturedImageValidationState();
   const prev=document.getElementById('img_preview');
   if(!prev)return;
   if(url&&!url.startsWith('blob:')){
@@ -4169,6 +4375,7 @@ function previewUrl(url){
 }
 function previewImageFile(file){
   if(!file)return;
+  resetFeaturedImageValidationState();
   var blobUrl=URL.createObjectURL(file);
   var prev=document.getElementById('img_preview');
   if(prev){
@@ -5296,6 +5503,10 @@ async function submitArticle(forceStatus){
   if(!title){alert('Please enter a headline.');return;}
   if(!content){alert('Content cannot be empty.');return;}
   if(!categoryVal){alert('Please select at least one category.');return;}
+  if(_newFileSelected&&_featuredImageValidationState.checked&&!_featuredImageValidationState.ok){
+    alert(_featuredImageValidationState.message||'Image did not meet the requirements. Please choose a valid image before publishing.');
+    return;
+  }
 
   const statusEl=document.getElementById('ui_status');
   const effectiveStatus=forceStatus||(statusEl?statusEl.value:'draft');
@@ -5444,8 +5655,8 @@ async function submitArticle(forceStatus){
       }
       window.location.href='/admin/newsapp/article/';
     }else{
-      const err=await res.json();
-      alert('Error: '+JSON.stringify(err));
+      const err=await res.json().catch(function(){return {};});
+      alert(getFriendlyArticleSaveError(err));
     }
   }catch(e){
     alert('Server error. Please try again.');

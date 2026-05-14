@@ -529,6 +529,13 @@ class ArticleContentCleaningTests(TestCase):
 
         self.assertEqual(cleaned, '<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
 
+    def test_sanitize_article_html_normalizes_basic_inline_formatting(self):
+        cleaned = sanitize_article_html('<p><b>Bold</b> and <i>italic</i> under <h3>Subhead</h3></p>')
+
+        self.assertIn('<strong>Bold</strong>', cleaned)
+        self.assertIn('<em>italic</em>', cleaned)
+        self.assertIn('<h3>Subhead</h3>', cleaned)
+
     def test_sanitize_article_html_keeps_single_newlines_inside_paragraph(self):
         cleaned = sanitize_article_html(
             "When you spend time on both sides of the table.\n"

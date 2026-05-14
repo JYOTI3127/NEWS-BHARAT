@@ -277,6 +277,10 @@ def _ensure_article_block_structure(content):
 def sanitize_article_html(content):
     normalized = normalize_twitter_embeds(str(content or ''))
     cleaned = _HTML_COMMENT_RE.sub('', normalized)
+    cleaned = re.sub(r'<\s*b(\b[^>]*)>', r'<strong\1>', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'<\s*/\s*b\s*>', '</strong>', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'<\s*i(\b[^>]*)>', r'<em\1>', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'<\s*/\s*i\s*>', '</em>', cleaned, flags=re.IGNORECASE)
     cleaned = strip_pasted_document_markup(cleaned)
     cleaned = _DANGEROUS_BLOCK_RE.sub('', cleaned)
     cleaned = _INLINE_EVENT_ATTR_RE.sub('', cleaned)

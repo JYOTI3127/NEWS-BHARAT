@@ -500,12 +500,14 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         return article_url(obj)
 
 class ArticleHomepageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
     image_url    = serializers.SerializerMethodField()
     category     = serializers.SerializerMethodField()
     primary_category = serializers.SerializerMethodField()
     canonical_url = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     published_at = serializers.SerializerMethodField()
+    date = serializers.SerializerMethodField()
     author_name  = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
@@ -516,15 +518,18 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         model  = Article
         fields = [
             'id', 'title', 'slug', 'subtitle',                 
-            'image_url', 'image_alt',
+            'image', 'image_url', 'image_alt',
             'category', 'primary_category', 'categories',
-            'published_at', 'created_at', 'updated_at',
+            'published_at', 'created_at', 'updated_at', 'date',
             'is_updated', 'updated_display',
             'canonical_url', 'public_url', 'meta_title', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
             'selected_subcategories',
         ]
+
+    def get_image(self, obj):
+        return self.get_image_url(obj)
 
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -557,6 +562,12 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     def get_published_at(self, obj):
         published_at = self.get_effective_published_at(obj)
         return published_at.isoformat() if published_at else None
+
+    def get_date(self, obj):
+        published_at = self.get_effective_published_at(obj)
+        if not published_at:
+            return ''
+        return timezone.localtime(published_at).strftime('%b %d, %Y')
 
     def get_author_name(self, obj):
         if obj.author_display_name and obj.author_display_name.strip():

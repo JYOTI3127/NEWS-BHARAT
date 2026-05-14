@@ -198,6 +198,141 @@ label.image-drop {
 .nb-resize-handle[data-pos="e"]  { cursor: e-resize; }
 .nb-resize-handle[data-pos="w"]  { cursor: w-resize; }
 
+#nb_crop_modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.72);
+  z-index: 12000;
+  padding: 24px;
+}
+#nb_crop_modal.visible { display: flex; }
+.nb-crop-dialog {
+  width: min(920px, 94vw);
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.nb-crop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.nb-crop-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.nb-crop-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+.nb-crop-close {
+  border: none;
+  background: #eff6ff;
+  color: #1d4ed8;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.nb-crop-body {
+  padding: 20px 22px;
+  overflow: auto;
+}
+.nb-crop-stage {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  user-select: none;
+}
+.nb-crop-stage img {
+  display: block;
+  max-width: min(860px, 100%);
+  max-height: 62vh;
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+}
+.nb-crop-rect {
+  position: absolute;
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.38);
+  cursor: move;
+}
+.nb-crop-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.7) 1px, transparent 1px);
+  background-size: 33.333% 100%, 100% 33.333%;
+  pointer-events: none;
+}
+.nb-crop-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #1d4ed8;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.28);
+}
+.nb-crop-handle[data-pos="nw"] { left: -8px; top: -8px; cursor: nw-resize; }
+.nb-crop-handle[data-pos="n"] { left: calc(50% - 7px); top: -8px; cursor: n-resize; }
+.nb-crop-handle[data-pos="ne"] { right: -8px; top: -8px; cursor: ne-resize; }
+.nb-crop-handle[data-pos="e"] { right: -8px; top: calc(50% - 7px); cursor: e-resize; }
+.nb-crop-handle[data-pos="se"] { right: -8px; bottom: -8px; cursor: se-resize; }
+.nb-crop-handle[data-pos="s"] { left: calc(50% - 7px); bottom: -8px; cursor: s-resize; }
+.nb-crop-handle[data-pos="sw"] { left: -8px; bottom: -8px; cursor: sw-resize; }
+.nb-crop-handle[data-pos="w"] { left: -8px; top: calc(50% - 7px); cursor: w-resize; }
+.nb-crop-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid #e2e8f0;
+}
+.nb-crop-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+.nb-crop-actions {
+  display: flex;
+  gap: 10px;
+}
+.nb-crop-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nb-crop-btn--ghost {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.nb-crop-btn--primary {
+  background: #1d4ed8;
+  color: #fff;
+}
+
 #nb_img_toolbar {
   position: fixed; z-index: 9999;
   background: #1e293b; border-radius: 8px; padding: 4px 6px;
@@ -1518,6 +1653,41 @@ grammarly-button,
   <span class="autosave-timer-text" id="nb_as_timer"></span>
 </div>
 
+<div id="nb_crop_modal" aria-hidden="true">
+  <div class="nb-crop-dialog">
+    <div class="nb-crop-head">
+      <div>
+        <div class="nb-crop-title">Crop Image</div>
+        <div class="nb-crop-sub">Drag the crop frame or pull its handles to keep only the area you want.</div>
+      </div>
+      <button type="button" class="nb-crop-close" onclick="nbCloseCropModal()" aria-label="Close crop dialog">&times;</button>
+    </div>
+    <div class="nb-crop-body">
+      <div class="nb-crop-stage" id="nb_crop_stage">
+        <img id="nb_crop_image" alt="Crop preview">
+        <div class="nb-crop-rect" id="nb_crop_rect">
+          <div class="nb-crop-grid"></div>
+          <span class="nb-crop-handle" data-pos="nw"></span>
+          <span class="nb-crop-handle" data-pos="n"></span>
+          <span class="nb-crop-handle" data-pos="ne"></span>
+          <span class="nb-crop-handle" data-pos="e"></span>
+          <span class="nb-crop-handle" data-pos="se"></span>
+          <span class="nb-crop-handle" data-pos="s"></span>
+          <span class="nb-crop-handle" data-pos="sw"></span>
+          <span class="nb-crop-handle" data-pos="w"></span>
+        </div>
+      </div>
+    </div>
+    <div class="nb-crop-foot">
+      <div class="nb-crop-meta" id="nb_crop_meta">100% width × 100% height selected</div>
+      <div class="nb-crop-actions">
+        <button type="button" class="nb-crop-btn nb-crop-btn--ghost" onclick="nbCloseCropModal()">Cancel</button>
+        <button type="button" class="nb-crop-btn nb-crop-btn--primary" onclick="nbApplyCrop()">Apply Crop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <canvas id="nb_crop_canvas" style="display:none;"></canvas>
 
 <script>
@@ -1608,6 +1778,7 @@ function showDropZone(){
    INLINE IMAGE TOOLBAR + DRAG RESIZE
 ══════════════════════════════════════════════ */
 var _nbActiveImg=null,_nbHandles=[];
+var _nbCropState=null;
 var HANDLE_POSITIONS=['nw','n','ne','e','se','s','sw','w'];
 
 function nbCreateHandles(){
@@ -1775,6 +1946,273 @@ function nbImgCrop(){
   };
   tempImg.src=src;
 }
+async function nbResolveCropSource(src){
+  if(!src)return src;
+  if(src.indexOf('data:')===0||src.indexOf('blob:')===0)return src;
+  try{
+    var currentOrigin=window.location.origin;
+    var parsed=new URL(src,window.location.href);
+    if(parsed.origin===currentOrigin)return parsed.href;
+  }catch(e){}
+  try{
+    var res=await fetch(src,{mode:'cors',credentials:'omit'});
+    if(!res.ok)throw new Error('Image fetch failed');
+    var blob=await res.blob();
+    return URL.createObjectURL(blob);
+  }catch(err){
+    return src;
+  }
+}
+async function nbOpenCropModal(){
+  if(!_nbActiveImg)return;
+  var modal=document.getElementById('nb_crop_modal');
+  var cropImg=document.getElementById('nb_crop_image');
+  var stage=document.getElementById('nb_crop_stage');
+  if(!modal||!cropImg||!stage)return;
+  _nbCropState={
+    target:_nbActiveImg,
+    x:0,
+    y:0,
+    width:0,
+    height:0,
+    stageWidth:0,
+    stageHeight:0,
+    dragging:false,
+    mode:'',
+    startX:0,
+    startY:0,
+    startRect:null,
+    sourceUrl:'',
+    objectUrl:''
+  };
+  function initCropStage(){
+    var naturalW=cropImg.naturalWidth||_nbActiveImg.naturalWidth||_nbActiveImg.offsetWidth||1;
+    var naturalH=cropImg.naturalHeight||_nbActiveImg.naturalHeight||_nbActiveImg.offsetHeight||1;
+    var maxW=Math.min(window.innerWidth*0.78,860);
+    var maxH=Math.min(window.innerHeight*0.62,560);
+    var scale=Math.min(maxW/naturalW,maxH/naturalH,1);
+    var renderW=Math.max(120,Math.round(naturalW*scale));
+    var renderH=Math.max(120,Math.round(naturalH*scale));
+
+    cropImg.style.width=renderW+'px';
+    cropImg.style.height=renderH+'px';
+    stage.style.width=renderW+'px';
+    stage.style.height=renderH+'px';
+
+    _nbCropState.stageWidth=renderW;
+    _nbCropState.stageHeight=renderH;
+    _nbCropState.x=0;
+    _nbCropState.y=0;
+    _nbCropState.width=renderW;
+    _nbCropState.height=renderH;
+    nbRenderCropRect();
+    nbBindCropInteractions();
+  }
+
+  modal.classList.add('visible');
+  modal.setAttribute('aria-hidden','false');
+  cropImg.onload=function(){ initCropStage(); };
+  var resolvedSrc=await nbResolveCropSource(_nbActiveImg.src);
+  _nbCropState.sourceUrl=resolvedSrc;
+  if(resolvedSrc.indexOf('blob:')===0)_nbCropState.objectUrl=resolvedSrc;
+  cropImg.src=resolvedSrc;
+  if(cropImg.complete && cropImg.naturalWidth){
+    initCropStage();
+  }
+}
+function nbCloseCropModal(){
+  var modal=document.getElementById('nb_crop_modal');
+  if(modal){
+    modal.classList.remove('visible');
+    modal.setAttribute('aria-hidden','true');
+  }
+  if(_nbCropState&&_nbCropState.objectUrl){
+    try{ URL.revokeObjectURL(_nbCropState.objectUrl); }catch(e){}
+  }
+  _nbCropState=null;
+}
+function nbRenderCropRect(){
+  if(!_nbCropState)return;
+  var rect=document.getElementById('nb_crop_rect');
+  var meta=document.getElementById('nb_crop_meta');
+  if(!rect)return;
+  rect.style.left=_nbCropState.x+'px';
+  rect.style.top=_nbCropState.y+'px';
+  rect.style.width=_nbCropState.width+'px';
+  rect.style.height=_nbCropState.height+'px';
+  if(meta&&_nbCropState.stageWidth&&_nbCropState.stageHeight){
+    var widthPct=Math.round((_nbCropState.width/_nbCropState.stageWidth)*100);
+    var heightPct=Math.round((_nbCropState.height/_nbCropState.stageHeight)*100);
+    meta.textContent=widthPct+'% width x '+heightPct+'% height selected';
+  }
+}
+function nbBindCropInteractions(){
+  var rect=document.getElementById('nb_crop_rect');
+  if(!rect||rect.dataset.bound==='1')return;
+  rect.dataset.bound='1';
+  rect.addEventListener('mousedown',function(e){
+    if(!_nbCropState)return;
+    if(e.target&&e.target.classList&&e.target.classList.contains('nb-crop-handle'))return;
+    e.preventDefault();
+    nbStartCropDrag(e,'move');
+  });
+  rect.querySelectorAll('.nb-crop-handle').forEach(function(handle){
+    handle.addEventListener('mousedown',function(e){
+      if(!_nbCropState)return;
+      e.preventDefault();
+      e.stopPropagation();
+      nbStartCropDrag(e,handle.getAttribute('data-pos'));
+    });
+  });
+}
+function nbStartCropDrag(e,mode){
+  if(!_nbCropState)return;
+  _nbCropState.dragging=true;
+  _nbCropState.mode=mode;
+  _nbCropState.startX=e.clientX;
+  _nbCropState.startY=e.clientY;
+  _nbCropState.startRect={
+    x:_nbCropState.x,
+    y:_nbCropState.y,
+    width:_nbCropState.width,
+    height:_nbCropState.height
+  };
+  document.addEventListener('mousemove',nbOnCropDrag);
+  document.addEventListener('mouseup',nbStopCropDrag);
+}
+function nbOnCropDrag(e){
+  if(!_nbCropState||!_nbCropState.dragging)return;
+  var dx=e.clientX-_nbCropState.startX;
+  var dy=e.clientY-_nbCropState.startY;
+  var minSize=40;
+  var next={
+    x:_nbCropState.startRect.x,
+    y:_nbCropState.startRect.y,
+    width:_nbCropState.startRect.width,
+    height:_nbCropState.startRect.height
+  };
+  var mode=_nbCropState.mode;
+  if(mode==='move'){
+    next.x=_nbCropState.startRect.x+dx;
+    next.y=_nbCropState.startRect.y+dy;
+  }else{
+    if(mode.indexOf('e')!==-1)next.width=_nbCropState.startRect.width+dx;
+    if(mode.indexOf('s')!==-1)next.height=_nbCropState.startRect.height+dy;
+    if(mode.indexOf('w')!==-1){
+      next.x=_nbCropState.startRect.x+dx;
+      next.width=_nbCropState.startRect.width-dx;
+    }
+    if(mode.indexOf('n')!==-1){
+      next.y=_nbCropState.startRect.y+dy;
+      next.height=_nbCropState.startRect.height-dy;
+    }
+  }
+  if(next.width<minSize){
+    if(mode.indexOf('w')!==-1)next.x+=next.width-minSize;
+    next.width=minSize;
+  }
+  if(next.height<minSize){
+    if(mode.indexOf('n')!==-1)next.y+=next.height-minSize;
+    next.height=minSize;
+  }
+  if(next.x<0){
+    if(mode==='move')next.x=0;
+    else{
+      next.width+=next.x;
+      next.x=0;
+    }
+  }
+  if(next.y<0){
+    if(mode==='move')next.y=0;
+    else{
+      next.height+=next.y;
+      next.y=0;
+    }
+  }
+  if(next.x+next.width>_nbCropState.stageWidth){
+    if(mode==='move')next.x=_nbCropState.stageWidth-next.width;
+    else next.width=_nbCropState.stageWidth-next.x;
+  }
+  if(next.y+next.height>_nbCropState.stageHeight){
+    if(mode==='move')next.y=_nbCropState.stageHeight-next.height;
+    else next.height=_nbCropState.stageHeight-next.y;
+  }
+  _nbCropState.x=Math.max(0,Math.round(next.x));
+  _nbCropState.y=Math.max(0,Math.round(next.y));
+  _nbCropState.width=Math.max(minSize,Math.round(next.width));
+  _nbCropState.height=Math.max(minSize,Math.round(next.height));
+  nbRenderCropRect();
+}
+function nbStopCropDrag(){
+  document.removeEventListener('mousemove',nbOnCropDrag);
+  document.removeEventListener('mouseup',nbStopCropDrag);
+  if(_nbCropState)_nbCropState.dragging=false;
+}
+async function nbApplyCrop(){
+  if(!_nbCropState||!_nbCropState.target)return;
+  var canvas=document.getElementById('nb_crop_canvas');
+  var cropImg=document.getElementById('nb_crop_image');
+  if(!canvas||!cropImg)return;
+  var naturalW=cropImg.naturalWidth||_nbCropState.stageWidth;
+  var naturalH=cropImg.naturalHeight||_nbCropState.stageHeight;
+  var scaleX=naturalW/_nbCropState.stageWidth;
+  var scaleY=naturalH/_nbCropState.stageHeight;
+  var srcX=Math.round(_nbCropState.x*scaleX);
+  var srcY=Math.round(_nbCropState.y*scaleY);
+  var srcW=Math.round(_nbCropState.width*scaleX);
+  var srcH=Math.round(_nbCropState.height*scaleY);
+  var sourceForServer=_nbCropState.sourceUrl||_nbCropState.target.src||cropImg.src;
+  if(sourceForServer && !/^data:image\//i.test(sourceForServer) && !/^blob:/i.test(sourceForServer)){
+    try{
+      var res=await fetch('/api/media/crop-image/',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken':getCsrf()
+        },
+        body:JSON.stringify({
+          source_url: sourceForServer,
+          x: srcX,
+          y: srcY,
+          width: srcW,
+          height: srcH
+        })
+      });
+      var raw=await res.text();
+      var data={};
+      try{ data=raw?JSON.parse(raw):{}; }catch(parseErr){ data={error:raw||'Crop failed.'}; }
+      if(!res.ok){
+        alert(data&&data.error?data.error:'Crop failed.');
+        return;
+      }
+      _nbCropState.target.src=data.data_url;
+    }catch(err){
+      alert('Server-side crop failed: '+(err&&err.message?err.message:'Please try again.'));
+      return;
+    }
+  }else{
+    canvas.width=srcW;
+    canvas.height=srcH;
+    var ctx=canvas.getContext('2d');
+    try{
+      ctx.clearRect(0,0,srcW,srcH);
+      ctx.drawImage(cropImg,srcX,srcY,srcW,srcH,0,0,srcW,srcH);
+      _nbCropState.target.src=canvas.toDataURL('image/jpeg',0.92);
+    }catch(err){
+      alert('Crop failed for this image source.');
+      return;
+    }
+  }
+  nbCloseCropModal();
+  setTimeout(function(){
+    if(_nbActiveImg){
+      nbPositionHandles(_nbActiveImg);
+      nbRepositionToolbar(_nbActiveImg);
+    }
+    nbSaveHistory();
+  },20);
+}
+nbImgCrop=nbOpenCropModal;
 function nbImgAltEdit(){
   if(!_nbActiveImg)return;
   var newAlt=prompt('Edit alt text for this image:',_nbActiveImg.alt||'');
@@ -4744,7 +5182,7 @@ const editorData = [
   {
     id: {{ u.pk }},
     name: "{{ u.get_full_name|default:u.username|escapejs }}",
-    position: "{{ u.profile.position|default:'Reporter'|escapejs }}",
+    position: "{{ u.profile.roles.all|first|default:u.reporter.designation|default:u.profile.position|default:'Reporter'|escapejs }}",
     bio: "{{ u.profile.bio|default:''|escapejs }}",
     photo: "{{ u.profile.photo|default:''|escapejs }}",
     twitter: "{{ u.profile.twitter|default:''|escapejs }}",

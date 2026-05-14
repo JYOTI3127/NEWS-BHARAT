@@ -1378,7 +1378,7 @@ html {
 .quick-add,
 button,
 .btn-primary {
-  background: #162c6b !important;
+  /* background: #162c6b !important; */
   color: #ffffff !important;
   border-color: #162c6b !important;
 }
@@ -1391,7 +1391,6 @@ button,
 
 .topbar-add-btn:hover,
 .quick-add:hover,
-button:hover,
 .btn-primary:hover {
   background: #0f1f3d !important;
   color: #ffffff !important;

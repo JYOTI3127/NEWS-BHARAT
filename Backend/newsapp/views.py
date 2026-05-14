@@ -13,6 +13,8 @@ from .utils import (
     sanitize_article_html,
 )
 import json
+import io
+import base64
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -37,6 +39,7 @@ import os
 import uuid
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 from openai import OpenAI
 from django.urls import reverse
 from django.templatetags.static import static
@@ -229,6 +232,117 @@ def inline_image_upload(request):
         "name": stored_name,
         "content_type": response_content_type,
     }, status=201)
+
+
+def _load_crop_source_image(source_url, request):
+    from PIL import Image as PILImage
+
+    source_url = str(source_url or '').strip()
+    if not source_url:
+        raise ValidationError('Image source is required.')
+
+    parsed = urlparse(source_url)
+    current_origin = request.build_absolute_uri('/').rstrip('/')
+    media_url = str(getattr(settings, 'MEDIA_URL', '') or '/media/')
+
+    if source_url.startswith('data:image/'):
+        header, encoded = source_url.split(',', 1)
+        return PILImage.open(io.BytesIO(base64.b64decode(encoded)))
+
+    if source_url.startswith('/'):
+        relative_path = source_url
+        if media_url and relative_path.startswith(media_url):
+            relative_name = relative_path[len(media_url):].lstrip('/')
+            if default_storage.exists(relative_name):
+                with default_storage.open(relative_name, 'rb') as handle:
+                    return PILImage.open(io.BytesIO(handle.read()))
+        source_url = request.build_absolute_uri(relative_path)
+        parsed = urlparse(source_url)
+
+    if parsed.scheme in ('http', 'https'):
+        if source_url.startswith(current_origin + media_url):
+            relative_name = source_url[len(current_origin + media_url):].lstrip('/')
+            if default_storage.exists(relative_name):
+                with default_storage.open(relative_name, 'rb') as handle:
+                    return PILImage.open(io.BytesIO(handle.read()))
+        origin = f"{parsed.scheme}://{parsed.netloc}/"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': origin,
+        }
+        last_error = None
+        for verify_ssl in (True, False):
+            try:
+                response = requests.get(
+                    source_url,
+                    timeout=20,
+                    headers=headers,
+                    allow_redirects=True,
+                    verify=verify_ssl,
+                )
+                response.raise_for_status()
+                return PILImage.open(io.BytesIO(response.content))
+            except Exception as exc:
+                last_error = exc
+        raise ValidationError(f'Remote image fetch failed: {last_error}')
+
+    raise ValidationError('Unsupported image source.')
+
+
+@api_view(['POST'])
+def crop_image_api(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({'error': 'Admin login required'}, status=401)
+
+    source_url = str(request.data.get('source_url', '') or '').strip()
+    try:
+        x = int(float(request.data.get('x', 0)))
+        y = int(float(request.data.get('y', 0)))
+        width = int(float(request.data.get('width', 0)))
+        height = int(float(request.data.get('height', 0)))
+    except (TypeError, ValueError):
+        return Response({'error': 'Invalid crop coordinates.'}, status=400)
+
+    if width <= 0 or height <= 0:
+        return Response({'error': 'Crop width and height must be greater than zero.'}, status=400)
+
+    try:
+        img = _load_crop_source_image(source_url, request)
+        img.load()
+    except Exception as exc:
+        return Response({'error': f'Could not load image for cropping: {exc}'}, status=400)
+
+    img_w, img_h = img.size
+    x = max(0, min(x, img_w - 1))
+    y = max(0, min(y, img_h - 1))
+    width = min(width, img_w - x)
+    height = min(height, img_h - y)
+
+    if width <= 0 or height <= 0:
+        return Response({'error': 'Crop area is outside the image bounds.'}, status=400)
+
+    cropped = img.crop((x, y, x + width, y + height))
+    has_alpha = cropped.mode in ('RGBA', 'LA') or (cropped.mode == 'P' and 'transparency' in cropped.info)
+    output = io.BytesIO()
+
+    if has_alpha:
+        cropped.save(output, format='PNG', optimize=True)
+        mime = 'image/png'
+    else:
+        if cropped.mode not in ('RGB', 'L'):
+            cropped = cropped.convert('RGB')
+        cropped.save(output, format='JPEG', quality=92, optimize=True)
+        mime = 'image/jpeg'
+
+    encoded = base64.b64encode(output.getvalue()).decode('ascii')
+    return Response({
+        'data_url': f'data:{mime};base64,{encoded}',
+        'width': cropped.width,
+        'height': cropped.height,
+        'mime': mime,
+    }, status=200)
 
 
 def _normalize_meta_title(value):

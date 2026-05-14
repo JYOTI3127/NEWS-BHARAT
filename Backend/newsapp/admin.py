@@ -1,4 +1,4 @@
-from django.contrib import admin, messages
+﻿from django.contrib import admin, messages
 from django import forms
 from newsapp.forms import CustomUserCreationForm
 from .models import *

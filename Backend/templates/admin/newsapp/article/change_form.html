@@ -192,6 +192,22 @@ label.image-drop {
   background: #fff;
   border: 1px solid #e2e8f0;
 }
+.publish-history-item--linked {
+  padding: 0;
+  overflow: hidden;
+}
+.publish-history-item__link {
+  display: block;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.publish-history-item__link:hover,
+.publish-history-item__link:focus-visible {
+  background: #eff6ff;
+  outline: none;
+}
 .publish-history-item__label {
   display: block;
   font-size: 10px;
@@ -237,6 +253,17 @@ label.image-drop {
   font-size: 12px;
   line-height: 1.5;
   color: #475569;
+}
+.publish-date-history-box__link {
+  display: inline-block;
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: none;
+}
+.publish-date-history-box__link:hover,
+.publish-date-history-box__link:focus-visible {
+  text-decoration: underline;
+  outline: none;
 }
 
 .nb-version-banner {
@@ -1252,9 +1279,16 @@ grammarly-button,
           <summary>Show all publish dates</summary>
           <ul class="publish-history-list">
             {% for item in article_publish_history %}
-            <li class="publish-history-item">
-              <span class="publish-history-item__label">{{ item.label }}</span>
-              <span class="publish-history-item__date">{{ item.display }}</span>
+            <li class="publish-history-item{% if item.url %} publish-history-item--linked{% endif %}">
+              {% if item.url %}
+                <a href="{{ item.url }}" class="publish-history-item__link">
+                  <span class="publish-history-item__label">{{ item.label }}</span>
+                  <span class="publish-history-item__date">{{ item.display }}</span>
+                </a>
+              {% else %}
+                <span class="publish-history-item__label">{{ item.label }}</span>
+                <span class="publish-history-item__date">{{ item.display }}</span>
+              {% endif %}
             </li>
             {% endfor %}
           </ul>
@@ -1838,7 +1872,14 @@ grammarly-button,
       </div>
       <ol class="publish-date-history-box__list" id="publish_date_history_list">
         {% for item in article_publish_history %}
-        <li><strong>{{ item.label }}:</strong> {{ item.display }}</li>
+        <li>
+          <strong>{{ item.label }}:</strong>
+          {% if item.url %}
+            <a href="{{ item.url }}" class="publish-date-history-box__link">{{ item.display }}</a>
+          {% else %}
+            {{ item.display }}
+          {% endif %}
+        </li>
         {% endfor %}
       </ol>
     </div>

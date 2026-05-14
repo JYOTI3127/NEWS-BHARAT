@@ -1932,6 +1932,21 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'status')
     list_filter = ('status',)
 
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_view_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_add_permission(self, request):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_change_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if not _can_manage_slug(request.user) and 'slug' not in readonly_fields:
@@ -1941,6 +1956,7 @@ class CategoryAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
         extra_context['can_edit_category_slug'] = _can_manage_slug(request.user)
+        extra_context['can_manage_categories'] = bool(getattr(request.user, 'is_superuser', False))
         return super().changelist_view(request, extra_context=extra_context)
 
 

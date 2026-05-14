@@ -22,10 +22,12 @@
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export
       </button>
+      {% if can_manage_categories %}
       <button class="cm-btn cm-btn--primary" onclick="openAddCatModal()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Category
       </button>
+      {% endif %}
     </div>
   </div>
 
@@ -187,11 +189,13 @@
       <div class="cm-panel__eyebrow">Category Posts</div>
       <h3 id="panelTitle">—</h3>
     </div>
+    {% if can_manage_categories %}
     <button class="cm-btn cm-btn--primary" style="font-size:12px;padding:7px 14px"
       onclick="closePanel(); goAddPost()">
       <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Post
     </button>
+    {% endif %}
     <button class="cm-close-btn" onclick="closePanel()">×</button>
   </div>
   <div class="cm-panel__body" id="panelBody"></div>
@@ -277,6 +281,7 @@ let editSections  = {};
 let uniqueArticleTotal = 0;
 let publishedThisMonth = 0;
 const CAN_EDIT_CATEGORY_SLUG = {% if can_edit_category_slug %}true{% else %}false{% endif %};
+const CAN_MANAGE_CATEGORIES = {% if can_manage_categories %}true{% else %}false{% endif %};
 let addCatSlugTouched = false;
 
 /* ================================================================
@@ -455,7 +460,7 @@ function render() {
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         View Posts
                     </button>
-                    ${!isArc ? `
+                    ${CAN_MANAGE_CATEGORIES ? (!isArc ? `
                     <button class="cm-btn cm-btn--addpost" onclick="goAddPost(${cat.id})">
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add Post
@@ -479,7 +484,7 @@ function render() {
                     <button class="cm-btn cm-btn--restore" onclick="doRestore(${cat.id})">
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
                         Restore
-                    </button>`}
+                    </button>`) : ''}
                 </div>
             </td>`;
         tbody.appendChild(tr);
@@ -529,6 +534,7 @@ function setFilter(el, f) {
    ADD POST
 ================================================================ */
 function goAddPost(catId) {
+    if (!CAN_MANAGE_CATEGORIES) return;
     const cat = catId ? CATS.find(c => c.id === catId) : CATS.find(c => c.id === panelCatId);
     const url = cat ? `${ADD_ARTICLE_URL}?category=${encodeURIComponent(cat.slug)}` : ADD_ARTICLE_URL;
     window.location.href = url;
@@ -538,6 +544,7 @@ function goAddPost(catId) {
    ADD CATEGORY
 ================================================================ */
 function openAddCatModal() {
+    if (!CAN_MANAGE_CATEGORIES) return;
     addCatTags = [];
     addCatSlugTouched = false;
     renderTagPills('addCatTagWrap', 'addCatTagInp', addCatTags);
@@ -551,6 +558,7 @@ function openAddCatModal() {
 }
 
 async function saveCategory() {
+    if (!CAN_MANAGE_CATEGORIES) return;
     const name = document.getElementById('newCatName').value.trim();
     if (!name) { showToast('Please enter a category name', 'warn'); return; }
 
@@ -578,6 +586,7 @@ async function saveCategory() {
    ADD SUB-CATEGORY
 ================================================================ */
 function openAddSubModal(catId) {
+    if (!CAN_MANAGE_CATEGORIES) return;
     addSubTarget = catId;
     addSubTags   = [];
     const cat = CATS.find(c => c.id === catId);
@@ -588,6 +597,7 @@ function openAddSubModal(catId) {
 }
 
 async function saveSubCategories() {
+    if (!CAN_MANAGE_CATEGORIES) return;
     if (!addSubTags.length) { showToast('Add at least one sub-category', 'warn'); return; }
 
     const cat  = CATS.find(c => c.id === addSubTarget);
@@ -625,6 +635,7 @@ async function saveSubCategories() {
    EDIT CATEGORY
 ================================================================ */
 function openEditModal(catId) {
+    if (!CAN_MANAGE_CATEGORIES) return;
     editTarget = catId;
     const cat  = CATS.find(c => c.id === catId);
 
@@ -756,6 +767,7 @@ function editAddSection() {
 }
 
 async function saveEdit() {
+    if (!CAN_MANAGE_CATEGORIES) return;
     const name = document.getElementById('editCatName').value.trim();
     if (!name) { showToast('Category name cannot be empty', 'warn'); return; }
 
@@ -785,6 +797,7 @@ async function saveEdit() {
    ARCHIVE / RESTORE
 ================================================================ */
 function openArchiveModal(catId) {
+    if (!CAN_MANAGE_CATEGORIES) return;
     archiveTarget = catId;
     const cat = CATS.find(c => c.id === catId);
     document.getElementById('archiveCatLabel').textContent = cat.name;
@@ -792,6 +805,7 @@ function openArchiveModal(catId) {
 }
 
 async function doArchive() {
+    if (!CAN_MANAGE_CATEGORIES) return;
     const cat = CATS.find(c => c.id === archiveTarget);
     if (!cat) return;
     const res = await apiFetch(`/api/categories/${archiveTarget}/archive/`, 'POST');
@@ -803,6 +817,7 @@ async function doArchive() {
 }
 
 async function doRestore(catId) {
+    if (!CAN_MANAGE_CATEGORIES) return;
     const cat = CATS.find(c => c.id === catId);
     if (!cat) return;
     const res = await apiFetch(`/api/categories/${catId}/restore/`, 'POST');
@@ -833,7 +848,7 @@ async function openPanel(catId) {
             <div class="cm-empty">
                 <div class="cm-empty__icon">📭</div>
                 <p>No articles yet</p>
-                <span>Click "Add Post" to publish the first article in this category</span>
+                <span>${CAN_MANAGE_CATEGORIES ? 'Click "Add Post" to publish the first article in this category' : 'No published articles are available in this category yet'}</span>
             </div>`;
     } else {
         body.innerHTML = posts.map((p) => {

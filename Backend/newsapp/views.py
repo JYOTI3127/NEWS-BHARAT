@@ -590,6 +590,14 @@ def category_list(request):
     return Response(serializer.data)
 
 
+def _ensure_category_manager(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return Response({'error': 'Admin login required'}, status=401)
+    if not request.user.is_superuser:
+        return Response({'error': 'You have view-only access to categories.'}, status=403)
+    return None
+
+
 def category_detail_page(request, slug):
     category = get_object_or_404(Category, slug=slug)
     articles = category.articles.filter(status='published').order_by('-created_at')
@@ -646,8 +654,9 @@ def job_openings_list(request):
 
 @api_view(['POST'])
 def category_create(request):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return Response({'error': 'Admin login required'}, status=401)
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
 
     incoming_data = request.data.copy()
     submitted_slug = str(incoming_data.get('slug', '') or '').strip()
@@ -668,8 +677,9 @@ def category_create(request):
 @api_view(['PUT', 'PATCH'])
 def category_update(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return Response({'error': 'Admin login required'}, status=401)
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
 
     incoming_data = request.data.copy()
     submitted_slug = str(incoming_data.get('slug', cat.slug) or '').strip()
@@ -686,6 +696,10 @@ def category_update(request, cat_id):
 
 @api_view(['POST'])
 def category_archive(request, cat_id):
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
+
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'archived'
     cat.save(update_fields=['status'])
@@ -695,6 +709,10 @@ def category_archive(request, cat_id):
 
 @api_view(['POST'])
 def category_restore(request, cat_id):
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
+
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'active'
     cat.save(update_fields=['status'])

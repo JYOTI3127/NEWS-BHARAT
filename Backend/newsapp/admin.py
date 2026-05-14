@@ -1851,8 +1851,9 @@ class ArticleAdmin(admin.ModelAdmin):
 
         history = []
         seen_keys = set()
+        article_change_url = f'/admin/newsapp/article/{article.pk}/change/'
 
-        def add_entry(dt, label, *, is_original=False):
+        def add_entry(dt, label, *, is_original=False, url=''):
             if not dt:
                 return
             local_dt = timezone.localtime(dt)
@@ -1865,20 +1866,48 @@ class ArticleAdmin(admin.ModelAdmin):
                 'display': local_dt.strftime('%d %b %Y, %I:%M %p IST'),
                 'sort_value': local_dt.isoformat(),
                 'is_original': is_original,
+                'url': url,
             })
 
         versions = list(
-            article.versions.order_by('version_number', 'created_at').only('version_number', 'created_at')
+            article.versions.order_by('version_number', 'created_at').only('id', 'version_number', 'created_at')
+        )
+        publish_logs = list(
+            article.workflow_logs
+            .filter(new_status='published')
+            .order_by('changed_at')
+            .only('changed_at')
         )
 
+        original_candidates = []
+        if article.published_at:
+            original_candidates.append(article.published_at)
         if versions:
-            add_entry(versions[0].created_at, 'Original publish date', is_original=True)
-            for version in versions[1:]:
-                add_entry(version.created_at, f'Updated / republished around v{version.version_number}')
-        elif article.published_at:
-            add_entry(article.published_at, 'Original publish date', is_original=True)
+            original_candidates.append(versions[0].created_at)
+        if publish_logs:
+            original_candidates.append(publish_logs[0].changed_at)
 
-        add_entry(article.published_at, 'Current visible publish date', is_original=not history)
+        original_dt = min(original_candidates) if original_candidates else None
+        original_url = article_change_url
+        for version in versions:
+            if original_dt and timezone.localtime(version.created_at).strftime('%Y-%m-%d %H:%M') == timezone.localtime(original_dt).strftime('%Y-%m-%d %H:%M'):
+                original_url = f'{article_change_url}?version_preview={version.id}'
+                break
+
+        if original_dt:
+            add_entry(original_dt, 'Original publish date', is_original=True, url=original_url)
+
+        for version in versions:
+            add_entry(
+                version.created_at,
+                f'Updated / republished around v{version.version_number}',
+                url=f'{article_change_url}?version_preview={version.id}',
+            )
+
+        for log in publish_logs:
+            add_entry(log.changed_at, 'Republished live')
+
+        add_entry(article.published_at, 'Current visible publish date', is_original=not history, url=article_change_url)
         history.sort(key=lambda item: item['sort_value'])
         return history
 

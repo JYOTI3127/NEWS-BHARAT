@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { apiUrl } from "../lib/api";
+import "../style.css";
 
 const SLOT_SIZES = {
   leaderboard: { width: 728, height: 90 },
@@ -200,7 +201,7 @@ const getViewportSnapshot = (query) => {
 };
 
 const subscribeViewport = (query, callback) => {
-  if (!query || typeof window === "undefined" || !window.matchMedia) return () => {};
+  if (!query || typeof window === "undefined" || !window.matchMedia) return () => { };
 
   const mediaQuery = window.matchMedia(query);
   mediaQuery.addEventListener?.("change", callback);
@@ -219,6 +220,8 @@ const useViewportMatch = (query) =>
     () => true
   );
 
+const LABEL_HIDDEN_VARIANTS = ["sideRail"];
+
 function AdvertisementSlot({
   page,
   placement,
@@ -230,12 +233,14 @@ function AdvertisementSlot({
   minWidth,
   maxWidth,
 }) {
+
   const [adSlotState, setAdSlotState] = useState(null);
   const [activeRotationIndex, setActiveRotationIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const size = SLOT_SIZES[variant] || SLOT_SIZES.leaderboard;
+  const isSideRail = variant === "sideRail";
   const candidateUrls = useMemo(
     () => buildCandidateUrls({ page, placement, size: requestedSize }),
     [page, placement, requestedSize]
@@ -319,9 +324,9 @@ function AdvertisementSlot({
       title={adAltText}
       loading="lazy"
       decoding="async"
-      width={size.width}
-      height={size.height}
-      className="home-ad-image"
+      width={isSideRail ? undefined : size.width}
+      height={isSideRail ? undefined : size.height}
+      className={`home-ad-image${isSideRail ? " home-ad-image--sideRail" : ""}`}
       style={{ opacity: isFading ? 0 : 1, transition: `opacity ${ROTATION_FADE_MS}ms ease` }}
     />
   );
@@ -335,8 +340,12 @@ function AdvertisementSlot({
         "--ad-height": `${size.height}px`,
         "--ad-ratio-width": `${size.width}`,
         "--ad-ratio-height": `${size.height}`,
+        position: "relative",
       }}
     >
+      {!LABEL_HIDDEN_VARIANTS.includes(variant) && (
+        <div className="home-ad-label">Advertisement</div>
+      )}
       {dismissible && (
         <button
           type="button"
@@ -347,8 +356,14 @@ function AdvertisementSlot({
             event.stopPropagation();
             setDismissed(true);
           }}
+          style={{
+            position: "absolute",
+            top: "65px",
+            right: "4px",
+            zIndex: 10,
+          }}
         >
-          x
+          ✕
         </button>
       )}
       {adLinkUrl ? (

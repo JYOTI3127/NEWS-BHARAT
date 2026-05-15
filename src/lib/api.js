@@ -29,11 +29,11 @@ export const getListFromResponse = (data) =>
         : [];
 
 export const getArticleDateValue = (article) =>
-  article?.published_date ||
-  article?.date ||
   article?.published_at ||
   article?.created_at ||
   article?.updated_at ||
+  article?.published_date ||
+  article?.date ||
   "";
 
 export const getDate = (article) => {

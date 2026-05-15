@@ -332,13 +332,6 @@ const getArticleImage = (article) => {
   return candidates.find((value) => typeof value === "string" && value.trim().length > 0) || null;
 };
 
-const CLEAN_ARTICLE_BODY_FIELDS = new Set([
-  "content_clean",
-  "clean_content",
-  "sanitized_content_html",
-  "normalized_content_html",
-]);
-
 const getFormattingSignalScore = (value) => {
   if (typeof value !== "string" || !value.trim()) return 0;
   const text = value;
@@ -424,8 +417,6 @@ const getArticleBodyPayload = (article) => {
 };
 
 const getArticleBodyHtml = (article) => getArticleBodyPayload(article).html;
-
-const isCleanArticleBodySource = (source) => CLEAN_ARTICLE_BODY_FIELDS.has(String(source || ""));
 
 const hasRenderableArticleBody = (article) => Boolean(getArticleBodyHtml(article));
 
@@ -813,8 +804,7 @@ const normalizeHeadingStructure = (doc) => {
   });
 };
 
-const normalizeArticleContent = (html, options = {}) => {
-  const { isPreSanitized = false } = options;
+const normalizeArticleContent = (html) => {
   if (typeof html !== "string" || !html.trim()) return "";
   const entityDecodedHtml = /&lt;\/?(?:h[1-6]|p|div|ul|ol|li|blockquote|table|strong|b|em|i|a|br)\b/i.test(html)
     ? decodeHtmlEntities(html)
@@ -1024,7 +1014,7 @@ const normalizeArticleContent = (html, options = {}) => {
     )
   );
 
-  if (!isPreSanitized && isChatExportLike && !hasGoogleSheetsMarkup) {
+  if (isChatExportLike && !hasGoogleSheetsMarkup) {
     const snapshotHtmlBeforeChatCleanup = doc.body.innerHTML;
     const snapshotPlainBeforeChatCleanup = getPlainText(doc.body.textContent || "");
     const topLevelBlockTags = new Set([
@@ -1123,21 +1113,19 @@ const normalizeArticleContent = (html, options = {}) => {
     }
   }
 
-  if (!isPreSanitized) {
-    // Incoming CMS/editor HTML may carry utility classes (e.g. flex/w-fit) that can break layout.
-    // Keep only internal placeholders; drop all other classes before style normalization.
-    Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
-      const classAttr = element.getAttribute("class");
-      if (!classAttr) return;
-      const keep = classAttr
-        .split(/\s+/)
-        .map((name) => name.trim())
-        .filter(Boolean)
-        .filter((name) => name === "react-tweet-placeholder");
-      if (keep.length > 0) element.setAttribute("class", keep.join(" "));
-      else element.removeAttribute("class");
-    });
-  }
+  // Incoming CMS/editor HTML may carry utility classes (e.g. flex/w-fit) that can break layout.
+  // Keep only internal placeholders; drop all other classes before style normalization.
+  Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
+    const classAttr = element.getAttribute("class");
+    if (!classAttr) return;
+    const keep = classAttr
+      .split(/\s+/)
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .filter((name) => name === "react-tweet-placeholder");
+    if (keep.length > 0) element.setAttribute("class", keep.join(" "));
+    else element.removeAttribute("class");
+  });
 
   const elements = doc.body.querySelectorAll("*");
   elements.forEach((element) => {
@@ -1467,10 +1455,9 @@ export default function ArticleDetails() {
   const moreInListRef = useRef(null);
   const articleBodyPayload = getArticleBodyPayload(article);
   const articleBodyHtml = articleBodyPayload.html;
-  const articleBodySource = articleBodyPayload.source;
   const normalizedContent = useMemo(
-    () => normalizeArticleContent(articleBodyHtml, { isPreSanitized: isCleanArticleBodySource(articleBodySource) }),
-    [articleBodyHtml, articleBodySource]
+    () => normalizeArticleContent(articleBodyHtml),
+    [articleBodyHtml]
   );
   const plainArticleContent = useMemo(() => getPlainText(articleBodyHtml), [articleBodyHtml]);
 

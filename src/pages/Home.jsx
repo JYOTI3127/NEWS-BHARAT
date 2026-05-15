@@ -196,9 +196,6 @@ const Home = () => {
   const { data: heroData, isLoading: heroLoading } = useQuery({
     queryKey: ['homepage-hero-current'],
     queryFn: fetchHomepageHeroCurrent,
-    initialData: prerenderArticles.length > 0
-      ? { articles: prerenderArticles.slice(0, 5), display_count: 5 }
-      : undefined,
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,

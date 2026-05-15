@@ -177,13 +177,13 @@ class CareerApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'status', 'created_at']
 
     def validate_resume(self, value):
-        max_size = 5 * 1024 * 1024
+        max_size = 10 * 1024 * 1024
         allowed_extensions = ('.pdf', '.doc', '.docx')
         name = (value.name or '').lower()
         if not name.endswith(allowed_extensions):
             raise serializers.ValidationError('Resume must be a PDF, DOC, or DOCX file.')
         if value.size > max_size:
-            raise serializers.ValidationError('Resume file size cannot exceed 5 MB.')
+            raise serializers.ValidationError('Resume file size cannot exceed 10 MB.')
         return value
 
     def validate_cover_note(self, value):

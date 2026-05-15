@@ -60,8 +60,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -183,6 +183,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 CORS_PREFLIGHT_MAX_AGE = 3600
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 METAL_API_KEY = os.environ.get("METAL_API_KEY", "")

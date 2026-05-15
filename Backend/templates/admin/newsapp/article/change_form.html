@@ -483,6 +483,57 @@ label.image-drop {
 .nb-content-area a[href]{
   position: relative;
 }
+.nb-content-area .nb-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.nb-content-area table.nb-generated-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.nb-content-area table.nb-generated-table th,
+.nb-content-area table.nb-generated-table td {
+  border: 1px solid #cbd5e1;
+  padding: 10px 12px;
+  min-width: 120px;
+  vertical-align: top;
+  text-align: left;
+}
+.nb-content-area table.nb-generated-table th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+.nb-content-area table.nb-generated-table td:empty::before,
+.nb-content-area table.nb-generated-table th:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+}
+.nb-table-resize-handle {
+  position: fixed;
+  z-index: 10001;
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+  border-radius: 999px;
+}
+.nb-table-resize-handle[data-axis="col"] {
+  width: 12px;
+  height: 36px;
+  cursor: col-resize;
+}
+.nb-table-resize-handle[data-axis="row"] {
+  width: 36px;
+  height: 12px;
+  cursor: row-resize;
+}
 .nb-editor-link-tooltip{
   position: fixed;
   z-index: 9999;
@@ -1280,6 +1331,22 @@ grammarly-button,
         <button onclick="nbInsertTag('h3')" title="Heading 3">H3</button>
         <button onclick="nbInsertBlockquote()" title="Blockquote">&#10077;</button>
         <button onclick="nbInsertHR()" title="Horizontal Line">&mdash;</button>
+        <button onclick="nbInsertTable()" title="Insert Table" style="font-size:12px;">Table</button>
+        <button onclick="nbAddTableRow()" title="Add Table Row" style="font-size:12px;">+Row</button>
+        <button onclick="nbAddTableColumn()" title="Add Table Column" style="font-size:12px;">+Col</button>
+        <button onclick="nbDeleteTableRow()" title="Delete Table Row" style="font-size:12px;">-Row</button>
+        <button onclick="nbDeleteTableColumn()" title="Delete Table Column" style="font-size:12px;">-Col</button>
+        <button onclick="nbToggleTableCellWrap()" title="Toggle Wrap Text" style="font-size:12px;">Wrap</button>
+        <button onclick="nbToggleTableHeaderRow()" title="Toggle Header Row" style="font-size:12px;">Head</button>
+        <button onclick="nbSetTableCellAlign('left')" title="Align Cell Left" style="font-size:12px;">L</button>
+        <button onclick="nbSetTableCellAlign('center')" title="Align Cell Center" style="font-size:12px;">C</button>
+        <button onclick="nbSetTableCellAlign('right')" title="Align Cell Right" style="font-size:12px;">R</button>
+        <button class="nb-color-btn" title="Cell Background Color" onclick="document.getElementById('nb_tableCellBgColorPicker').click()" style="margin-left:3px;">
+          <span style="font-size:11px;pointer-events:none;">Cell</span>
+          <span class="nb-color-swatch" id="nb_tableCellBgColorSwatch" style="background:#eff6ff;"></span>
+          <input type="color" id="nb_tableCellBgColorPicker" value="#eff6ff" oninput="nbApplyTableCellBgColor(this.value)" onchange="nbApplyTableCellBgColor(this.value)" onclick="event.stopPropagation()">
+        </button>
+        <button onclick="nbClearTableCellFormatting()" title="Clear Cell Formatting" style="font-size:12px;">Clear</button>
         <div class="sep"></div>
         <button onclick="nbInsertLink()" title="Insert Link" style="font-size:13px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;pointer-events:none;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -2125,7 +2192,11 @@ grammarly-button,
     'toggleCat','toggleSelectAllCats',
     'nbUndo','nbRedo','fmt','nbSetFontFamily','nbSetFontSize','nbSetLineHeight',
     'nbApplyTextColor','nbApplyBgColor','nbStoreColorSelection',
-    'nbInsertTag','nbInsertBlockquote','nbInsertHR','nbInsertLink','nbInsertInlineImage',
+    'nbInsertTag','nbInsertBlockquote','nbInsertHR','nbInsertTable','nbAddTableRow',
+    'nbAddTableColumn','nbDeleteTableRow','nbDeleteTableColumn','nbToggleTableCellWrap',
+    'nbToggleTableHeaderRow','nbSetTableCellAlign','nbSetTableColumnWidth','nbSetTableRowHeight',
+    'nbResetTableCellSize','nbApplyTableCellBgColor',
+    'nbClearTableCellFormatting','nbInsertLink','nbInsertInlineImage',
     'runPlagiarismCheck','nbClosePlagModal','addComment','jumpToField',
     'updateTagPermStatus','saveTagPerm',
     'generateSlug','updateCanonicalFromSlug','updateRobots','syncNoindex','updateSeoScore',
@@ -2200,6 +2271,7 @@ function showDropZone(){
 var _nbActiveImg=null,_nbHandles=[];
 var _nbCropState=null;
 var HANDLE_POSITIONS=['nw','n','ne','e','se','s','sw','w'];
+var _nbActiveTableCell=null,_nbTableHandles={col:null,row:null};
 
 function nbCreateHandles(){
   nbRemoveHandles();
@@ -2303,18 +2375,102 @@ function nbHideImgToolbar(){
     _nbActiveImg=null;
   }
 }
+function nbCreateTableResizeHandles(){
+  nbRemoveTableResizeHandles();
+  ['col','row'].forEach(function(axis){
+    var handle=document.createElement('div');
+    handle.className='nb-table-resize-handle';
+    handle.setAttribute('data-axis',axis);
+    document.body.appendChild(handle);
+    _nbTableHandles[axis]=handle;
+    nbWireTableResizeHandle(handle,axis);
+  });
+}
+function nbRemoveTableResizeHandles(){
+  ['col','row'].forEach(function(axis){
+    var handle=_nbTableHandles[axis];
+    if(handle&&handle.parentNode)handle.parentNode.removeChild(handle);
+    _nbTableHandles[axis]=null;
+  });
+}
+function nbPositionTableResizeHandles(cell){
+  if(!cell||!_nbTableHandles.col||!_nbTableHandles.row)return;
+  var rect=cell.getBoundingClientRect();
+  _nbTableHandles.col.style.left=(rect.right-6)+'px';
+  _nbTableHandles.col.style.top=(rect.top+(rect.height/2)-18)+'px';
+  _nbTableHandles.row.style.left=(rect.left+(rect.width/2)-18)+'px';
+  _nbTableHandles.row.style.top=(rect.bottom-6)+'px';
+}
+function nbShowTableResizeHandles(cell){
+  if(!cell)return;
+  _nbActiveTableCell=cell;
+  if(!_nbTableHandles.col||!_nbTableHandles.row)nbCreateTableResizeHandles();
+  nbPositionTableResizeHandles(cell);
+}
+function nbHideTableResizeHandles(){
+  nbRemoveTableResizeHandles();
+  _nbActiveTableCell=null;
+}
+function nbWireTableResizeHandle(handle,axis){
+  handle.addEventListener('mousedown',function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    if(!_nbActiveTableCell)return;
+    var startX=e.clientX;
+    var startY=e.clientY;
+    var cell=_nbActiveTableCell;
+    var row=cell.parentElement;
+    var table=cell.closest('table');
+    if(!row||!table)return;
+    var columnIndex=cell.cellIndex;
+    var startWidth=cell.offsetWidth;
+    var startHeight=row.offsetHeight;
+    nbSaveHistory();
+    function onMove(moveEvent){
+      if(axis==='col'){
+        var width=Math.max(60,startWidth+(moveEvent.clientX-startX));
+        Array.from(table.rows).forEach(function(currentRow){
+          if(currentRow.cells[columnIndex]){
+            currentRow.cells[columnIndex].style.width=width+'px';
+            currentRow.cells[columnIndex].style.minWidth=width+'px';
+          }
+        });
+      }else{
+        var height=Math.max(32,startHeight+(moveEvent.clientY-startY));
+        Array.from(row.cells).forEach(function(currentCell){
+          currentCell.style.height=height+'px';
+        });
+      }
+      nbPositionTableResizeHandles(_nbActiveTableCell);
+    }
+    function onUp(){
+      document.removeEventListener('mousemove',onMove);
+      document.removeEventListener('mouseup',onUp);
+      nbSyncEditorAfterTableChange();
+    }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  });
+}
 document.addEventListener('click',function(e){
   var tb=document.getElementById('nb_img_toolbar');
   var isHandle=e.target.classList&&e.target.classList.contains('nb-resize-handle');
   var isImg=e.target.classList&&e.target.classList.contains('nb-inline-img');
   var inTb=tb&&tb.contains(e.target);
   if(!isHandle&&!isImg&&!inTb)nbHideImgToolbar();
+  var isTableHandle=e.target.classList&&e.target.classList.contains('nb-table-resize-handle');
+  var inTableCell=e.target.closest&&e.target.closest('#ui_content td, #ui_content th');
+  if(!isTableHandle&&!inTableCell)nbHideTableResizeHandles();
 });
 window.addEventListener('scroll',function(){
   if(_nbActiveImg){
     nbPositionHandles(_nbActiveImg);
     nbRepositionToolbar(_nbActiveImg);
   }
+  if(_nbActiveTableCell)nbPositionTableResizeHandles(_nbActiveTableCell);
+},{passive:true});
+window.addEventListener('resize',function(){
+  if(_nbActiveTableCell)nbPositionTableResizeHandles(_nbActiveTableCell);
 },{passive:true});
 function nbImgAlign(dir){
   if(!_nbActiveImg)return;
@@ -3640,11 +3796,27 @@ if(nbEditor){
     clearTimeout(nbHistTimer);
     syncEditorLinkMetadata(nbEditor);
     nbHistTimer=setTimeout(nbSaveHistory,400);
+    if(_nbActiveTableCell&&document.body.contains(_nbActiveTableCell)){
+      setTimeout(function(){nbPositionTableResizeHandles(_nbActiveTableCell);},0);
+    }
   });
   ['mouseup','keyup','focus','blur'].forEach(function(evt){
     nbEditor.addEventListener(evt,function(){
-      setTimeout(nbSaveSelection,0);
+      setTimeout(function(){
+        nbSaveSelection();
+        nbRefreshTableResizeHandlesFromSelection();
+      },0);
     });
+  });
+  nbEditor.addEventListener('click',function(e){
+    var cell=e.target&&e.target.closest?e.target.closest('td,th'):null;
+    if(cell&&nbEditor.contains(cell)){
+      _nbActiveTableCell=cell;
+      setTimeout(function(){nbShowTableResizeHandles(cell);},0);
+    }
+  });
+  nbEditor.addEventListener('scroll',function(){
+    if(_nbActiveTableCell)nbPositionTableResizeHandles(_nbActiveTableCell);
   });
   nbSaveHistory();
   syncEditorLinkMetadata(nbEditor);
@@ -3960,6 +4132,329 @@ function nbInsertHR(){
   document.execCommand('insertHorizontalRule',false,null);
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
+}
+function nbGetActiveTableCell(){
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return null;
+  let node=sel.anchorNode||sel.focusNode;
+  if(node&&node.nodeType===3)node=node.parentNode;
+  return node&&node.closest?node.closest('td,th'):null;
+}
+function nbGetActiveTableRow(){
+  const cell=nbGetActiveTableCell();
+  return cell?cell.parentElement:null;
+}
+function nbRefreshTableResizeHandlesFromSelection(){
+  if(!nbEditor)return;
+  const cell=nbGetActiveTableCell();
+  if(cell&&nbEditor.contains(cell))nbShowTableResizeHandles(cell);
+  else nbHideTableResizeHandles();
+}
+function nbSyncEditorAfterTableChange(){
+  nbSaveSelection();
+  nbSaveHistory();
+  if(nbEditor)nbEditor.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function nbInsertTable(){
+  if(!nbEditor)return;
+  const rowsInput=prompt('How many rows do you want?','3');
+  if(rowsInput===null)return;
+  const colsInput=prompt('How many columns do you want?','3');
+  if(colsInput===null)return;
+  const rows=Math.max(2,Math.min(12,parseInt(rowsInput,10)||3));
+  const cols=Math.max(2,Math.min(8,parseInt(colsInput,10)||3));
+  const includeHeader=confirm('Add a header row to the table?');
+  let html='<div class="nb-table-wrap"><table class="nb-generated-table"><tbody>';
+  for(let rowIndex=0;rowIndex<rows;rowIndex++){
+    html+='<tr>';
+    for(let colIndex=0;colIndex<cols;colIndex++){
+      const isHeader=includeHeader&&rowIndex===0;
+      const tag=isHeader?'th':'td';
+      const placeholder=isHeader?('Heading '+(colIndex+1)):('Data '+rowIndex+'.'+(colIndex+1));
+      html+='<'+tag+' data-placeholder="'+placeholder+'">'+placeholder+'</'+tag+'>';
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div><p><br></p>';
+  nbSaveHistory();
+  nbFocusEditor();
+  document.execCommand('insertHTML',false,html);
+  nbSyncEditorAfterTableChange();
+}
+function nbAddTableRow(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const row=cell.parentElement;
+  if(!row)return;
+  const newRow=document.createElement('tr');
+  Array.from(row.cells).forEach(function(sourceCell,cellIndex){
+    const tagName=sourceCell.tagName.toLowerCase()==='th'?'th':'td';
+    const nextCell=document.createElement(tagName);
+    nextCell.textContent=tagName==='th'?('Heading '+(cellIndex+1)):('Data');
+    nextCell.setAttribute('data-placeholder',tagName==='th'?('Heading '+(cellIndex+1)):'Data');
+    newRow.appendChild(nextCell);
+  });
+  nbSaveHistory();
+  row.insertAdjacentElement('afterend',newRow);
+  const sel=window.getSelection();
+  const range=document.createRange();
+  range.selectNodeContents(newRow.cells[0]);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  nbSyncEditorAfterTableChange();
+}
+function nbAddTableColumn(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const table=cell.closest('table');
+  if(!table)return;
+  const insertAt=cell.cellIndex+1;
+  nbSaveHistory();
+  Array.from(table.rows).forEach(function(row){
+    const refCell=row.cells[insertAt]||null;
+    const sourceCell=row.cells[Math.max(0,insertAt-1)];
+    const tagName=sourceCell&&sourceCell.tagName&&sourceCell.tagName.toLowerCase()==='th'?'th':'td';
+    const nextCell=document.createElement(tagName);
+    nextCell.textContent=tagName==='th'?('Heading '+(insertAt+1)):'Data';
+    nextCell.setAttribute('data-placeholder',tagName==='th'?('Heading '+(insertAt+1)):'Data');
+    if(refCell)row.insertBefore(nextCell,refCell);
+    else row.appendChild(nextCell);
+  });
+  const targetRow=cell.parentElement;
+  const targetCell=targetRow&&targetRow.cells[insertAt]?targetRow.cells[insertAt]:null;
+  if(targetCell){
+    const sel=window.getSelection();
+    const range=document.createRange();
+    range.selectNodeContents(targetCell);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  nbSyncEditorAfterTableChange();
+}
+function nbDeleteTableRow(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const row=cell.parentElement;
+  const table=cell.closest('table');
+  if(!row||!table)return;
+  if(table.rows.length<=1){
+    alert('The table must keep at least one row.');
+    return;
+  }
+  const fallbackRow=row.previousElementSibling||row.nextElementSibling;
+  nbSaveHistory();
+  row.remove();
+  if(fallbackRow&&fallbackRow.cells&&fallbackRow.cells.length){
+    const sel=window.getSelection();
+    const range=document.createRange();
+    range.selectNodeContents(fallbackRow.cells[Math.min(cell.cellIndex,fallbackRow.cells.length-1)]);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  nbSyncEditorAfterTableChange();
+}
+function nbDeleteTableColumn(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const table=cell.closest('table');
+  if(!table)return;
+  const columnIndex=cell.cellIndex;
+  if(!table.rows.length||table.rows[0].cells.length<=1){
+    alert('The table must keep at least one column.');
+    return;
+  }
+  nbSaveHistory();
+  Array.from(table.rows).forEach(function(row){
+    if(row.cells[columnIndex])row.cells[columnIndex].remove();
+  });
+  const targetRow=cell.parentElement;
+  const fallbackCell=targetRow&&(targetRow.cells[columnIndex]||targetRow.cells[columnIndex-1])? (targetRow.cells[columnIndex]||targetRow.cells[columnIndex-1]) : null;
+  if(fallbackCell){
+    const sel=window.getSelection();
+    const range=document.createRange();
+    range.selectNodeContents(fallbackCell);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  nbSyncEditorAfterTableChange();
+}
+function nbToggleTableCellWrap(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  nbSaveHistory();
+  const currentWhiteSpace=(cell.style.whiteSpace||window.getComputedStyle(cell).whiteSpace||'normal').toLowerCase();
+  if(currentWhiteSpace==='nowrap'){
+    cell.style.whiteSpace='normal';
+    cell.style.wordBreak='break-word';
+    cell.style.overflowWrap='anywhere';
+  }else{
+    cell.style.whiteSpace='nowrap';
+    cell.style.wordBreak='normal';
+    cell.style.overflowWrap='normal';
+  }
+  nbSyncEditorAfterTableChange();
+}
+function nbToggleTableHeaderRow(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const row=nbGetActiveTableRow();
+  if(!row){
+    alert('Place the cursor inside a table row first.');
+    return;
+  }
+  nbSaveHistory();
+  const useHeader=!Array.from(row.cells).every(function(cell){return cell.tagName.toLowerCase()==='th';});
+  const newCells=Array.from(row.cells).map(function(cell,cellIndex){
+    const nextCell=document.createElement(useHeader?'th':'td');
+    nextCell.innerHTML=cell.innerHTML;
+    nextCell.style.cssText=cell.style.cssText;
+    nextCell.setAttribute('data-placeholder',useHeader?('Heading '+(cellIndex+1)):'Data');
+    return nextCell;
+  });
+  row.innerHTML='';
+  newCells.forEach(function(cell){ row.appendChild(cell); });
+  nbSyncEditorAfterTableChange();
+}
+function nbSetTableCellAlign(alignment){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  nbSaveHistory();
+  cell.style.textAlign=alignment;
+  nbSyncEditorAfterTableChange();
+}
+function nbSetTableColumnWidth(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const input=prompt('Enter column width in pixels (example: 180):', String(cell.offsetWidth || 180));
+  if(input===null)return;
+  const width=Math.max(60, Math.min(1200, parseInt(input,10) || 0));
+  if(!width){
+    alert('Please enter a valid width.');
+    return;
+  }
+  const table=cell.closest('table');
+  if(!table)return;
+  const columnIndex=cell.cellIndex;
+  nbSaveHistory();
+  Array.from(table.rows).forEach(function(row){
+    if(row.cells[columnIndex]){
+      row.cells[columnIndex].style.width=width+'px';
+      row.cells[columnIndex].style.minWidth=width+'px';
+    }
+  });
+  nbSyncEditorAfterTableChange();
+}
+function nbSetTableRowHeight(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const row=nbGetActiveTableRow();
+  if(!row){
+    alert('Place the cursor inside a table row first.');
+    return;
+  }
+  const firstCell=row.cells&&row.cells[0]?row.cells[0]:null;
+  const input=prompt('Enter row height in pixels (example: 56):', String((firstCell&&firstCell.offsetHeight) || row.offsetHeight || 56));
+  if(input===null)return;
+  const height=Math.max(32, Math.min(600, parseInt(input,10) || 0));
+  if(!height){
+    alert('Please enter a valid height.');
+    return;
+  }
+  nbSaveHistory();
+  Array.from(row.cells).forEach(function(cell){
+    cell.style.height=height+'px';
+  });
+  nbSyncEditorAfterTableChange();
+}
+function nbResetTableCellSize(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  const table=cell.closest('table');
+  const row=cell.parentElement;
+  if(!table||!row)return;
+  const columnIndex=cell.cellIndex;
+  nbSaveHistory();
+  Array.from(table.rows).forEach(function(currentRow){
+    if(currentRow.cells[columnIndex]){
+      currentRow.cells[columnIndex].style.width='';
+      currentRow.cells[columnIndex].style.minWidth='';
+    }
+  });
+  Array.from(row.cells).forEach(function(currentCell){
+    currentCell.style.height='';
+  });
+  nbSyncEditorAfterTableChange();
+}
+function nbApplyTableCellBgColor(color){
+  const sw=document.getElementById('nb_tableCellBgColorSwatch');
+  if(sw)sw.style.background=color;
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell)return;
+  nbSaveHistory();
+  cell.style.backgroundColor=color;
+  nbSyncEditorAfterTableChange();
+}
+function nbClearTableCellFormatting(){
+  if(!nbEditor)return;
+  nbFocusEditor();
+  const cell=nbGetActiveTableCell();
+  if(!cell){
+    alert('Place the cursor inside a table cell first.');
+    return;
+  }
+  nbSaveHistory();
+  cell.style.whiteSpace='';
+  cell.style.wordBreak='';
+  cell.style.overflowWrap='';
+  cell.style.textAlign='';
+  cell.style.backgroundColor='';
+  nbSyncEditorAfterTableChange();
 }
 function nbInsertLink(){
   if(!nbEditor)return;
@@ -6417,6 +6912,19 @@ window.nbStoreColorSelection=nbStoreColorSelection;
 window.nbInsertTag=nbInsertTag;
 window.nbInsertBlockquote=nbInsertBlockquote;
 window.nbInsertHR=nbInsertHR;
+window.nbInsertTable=nbInsertTable;
+window.nbAddTableRow=nbAddTableRow;
+window.nbAddTableColumn=nbAddTableColumn;
+window.nbDeleteTableRow=nbDeleteTableRow;
+window.nbDeleteTableColumn=nbDeleteTableColumn;
+window.nbToggleTableCellWrap=nbToggleTableCellWrap;
+window.nbToggleTableHeaderRow=nbToggleTableHeaderRow;
+window.nbSetTableCellAlign=nbSetTableCellAlign;
+window.nbSetTableColumnWidth=nbSetTableColumnWidth;
+window.nbSetTableRowHeight=nbSetTableRowHeight;
+window.nbResetTableCellSize=nbResetTableCellSize;
+window.nbApplyTableCellBgColor=nbApplyTableCellBgColor;
+window.nbClearTableCellFormatting=nbClearTableCellFormatting;
 window.nbInsertLink=nbInsertLink;
 window.nbInsertInlineImage=nbInsertInlineImage;
 window.insertTag=insertTag;

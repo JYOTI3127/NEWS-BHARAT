@@ -297,13 +297,13 @@ img {
   margin-bottom: 1.2rem;
 }
 
-.article-content :where(h2, h3, h4, h5, h6) {
+.article-content :where(h1, h2, h3, h4, h5, h6) {
   clear: both;
   margin-top: 1.8rem;
   margin-bottom: 0.85rem;
 }
 
-.article-content :where(h2, h3, h4, h5, h6):first-child {
+.article-content :where(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 0;
 }
 
@@ -332,7 +332,7 @@ img {
   margin-bottom: 0.35rem;
 }
 
-.article-content > div > div:not(:has(h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, img, iframe, video)):not(:empty) {
+.article-content > div > div:not(:has(h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, img, iframe, video)):not(:empty) {
   margin-bottom: 1.2rem;
   line-height: 1.7;
 }

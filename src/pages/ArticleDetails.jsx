@@ -239,6 +239,22 @@ const getPlainText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const decodeHtmlEntities = (value) => {
+  const text = String(value || "");
+  if (!text) return "";
+  if (typeof document !== "undefined") {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+  return text
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&");
+};
+
 const formatArticleDateTimeForDisplay = (articleOrDate) =>
   String(formatArticleDateTimeIST(articleOrDate) || "")
     .replace(/\s+at\s+/gi, " - ")
@@ -337,14 +353,14 @@ const getFormattingSignalScore = (value) => {
 
 const getArticleBodyPayload = (article) => {
   const candidates = [
-    ["content_clean", article?.content_clean],
-    ["clean_content", article?.clean_content],
-    ["sanitized_content_html", article?.sanitized_content_html],
-    ["normalized_content_html", article?.normalized_content_html],
     ["content_html", article?.content_html],
     ["content_raw", article?.content_raw],
     ["article_content_raw", article?.article_content_raw],
     ["content", article?.content],
+    ["content_clean", article?.content_clean],
+    ["clean_content", article?.clean_content],
+    ["sanitized_content_html", article?.sanitized_content_html],
+    ["normalized_content_html", article?.normalized_content_html],
     ["article_content_html", article?.article_content_html],
     ["article_content", article?.article_content],
     ["body_html", article?.body_html],
@@ -800,7 +816,10 @@ const normalizeHeadingStructure = (doc) => {
 const normalizeArticleContent = (html, options = {}) => {
   const { isPreSanitized = false } = options;
   if (typeof html !== "string" || !html.trim()) return "";
-  let normalized = html
+  const entityDecodedHtml = /&lt;\/?(?:h[1-6]|p|div|ul|ol|li|blockquote|table|strong|b|em|i|a|br)\b/i.test(html)
+    ? decodeHtmlEntities(html)
+    : html;
+  let normalized = entityDecodedHtml
     .replace(/&nbsp;?|&#160;?|&#xa0;?/gi, " ")
     .replace(/\u00a0/g, " ")
     .replace(/<\/?font\b[^>]*>/gi, "")

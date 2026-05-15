@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getArticlePath } from "../lib/articleUrl";
-import { formatArticleDateTimeIST, getArticleDateValue } from "../lib/api";
+import { formatArticleDateTimeIST } from "../lib/api";
 
 const getCategoryLabel = (article) => {
   if (article?.primary_category?.name) return article.primary_category.name;
@@ -118,16 +118,9 @@ export default function NewsBanner({ articles = [], loading = false }) {
 
   const slides = useMemo(() => {
     const all = Array.isArray(articles) ? articles : articles?.results || [];
-    const sorted = [...all]
-      .filter((item) => {
-        const status = String(item?.status || "").toLowerCase();
-        return status === "published" || Boolean(getBannerImage(item));
-      })
-      .sort((a, b) => new Date(getArticleDateValue(b) || 0) - new Date(getArticleDateValue(a) || 0));
-
     const items = [];
 
-    for (const article of sorted) {
+    for (const article of all) {
       const image = getBannerImage(article);
       if (!image) continue;
 
@@ -150,21 +143,6 @@ export default function NewsBanner({ articles = [], loading = false }) {
         categories: article.categories,
         canonical_url: article.canonical_url,
       });
-
-      if (items.length >= 5) break;
-    }
-
-    if (items.length > 0 && items.length < 5) {
-      const base = [...items];
-      let duplicateIndex = 0;
-      while (items.length < 5) {
-        const source = base[duplicateIndex % base.length];
-        items.push({
-          ...source,
-          _cardKey: `${source._cardKey}-dup-${duplicateIndex}`,
-        });
-        duplicateIndex += 1;
-      }
     }
 
     return items;

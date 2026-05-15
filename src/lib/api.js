@@ -211,6 +211,9 @@ export const fetchHomepageHeroCurrent = () =>
   fetchJson("/homepage/hero/current/");
 
 export const getHomepageHeroArticlesFromResponse = (data) => {
+  if (Array.isArray(data?.articles)) return data.articles;
+  if (Array.isArray(data?.data?.articles)) return data.data.articles;
+
   const isArticleLike = (item) =>
     item &&
     typeof item === "object" &&

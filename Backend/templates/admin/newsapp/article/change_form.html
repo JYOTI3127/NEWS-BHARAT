@@ -232,6 +232,19 @@ label.image-drop {
   display: grid;
   gap: 8px;
   margin-top: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.reporter-picker::-webkit-scrollbar {
+  width: 8px;
+}
+.reporter-picker::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.reporter-picker::-webkit-scrollbar-track {
+  background: transparent;
 }
 .reporter-picker__item {
   display: flex;

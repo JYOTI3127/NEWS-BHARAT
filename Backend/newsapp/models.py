@@ -404,9 +404,14 @@ class ArticleAssignment(models.Model):
 
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='assignments')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    role_type = models.CharField(max_length=20, choices=ROLE_TYPES)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+    role_type = models.CharField(max_length=20, choices=ROLE_TYPES)
+    assignment_message = models.TextField(blank=True, default='')
+    deadline = models.DateTimeField(null=True, blank=True)
     assigned_at = models.DateTimeField(auto_now_add=True)
     assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_articles')
+
+    class Meta:
+        unique_together = ('article', 'user', 'role_type')
 
     def __str__(self):
         return f"{self.article.title} → {self.user.username} ({self.role_type})"

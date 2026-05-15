@@ -7,11 +7,12 @@ from django.test.utils import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 from rest_framework.test import APIClient
+import json
 from io import StringIO
 from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
-from .models import Article, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .models import Article, ArticleAssignment, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .utils import merge_soft_split_paragraphs, sanitize_article_html
 from .views import custom_permission_denied_view, send_push_to_all
 
@@ -135,6 +136,86 @@ class ArticleStatusFlowTests(TestCase):
 
         self.assertEqual(article.published_at, original_published_at)
         self.assertGreaterEqual(article.updated_at, original_updated_at)
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    DEFAULT_FROM_EMAIL='noreply@example.com',
+)
+class ArticleReporterAssignmentTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.editor = User.objects.create_user(
+            username='assigner',
+            password='testpass123',
+            email='assigner@example.com',
+        )
+        self.reporter_one = User.objects.create_user(
+            username='reporter-one',
+            password='testpass123',
+            email='reporter1@example.com',
+            first_name='Reporter',
+            last_name='One',
+            is_staff=True,
+        )
+        self.reporter_two = User.objects.create_user(
+            username='reporter-two',
+            password='testpass123',
+            email='reporter2@example.com',
+            first_name='Reporter',
+            last_name='Two',
+            is_staff=True,
+        )
+        self.client.force_authenticate(self.editor)
+
+    def test_article_can_assign_multiple_reporters_with_message_and_individual_deadlines(self):
+        mail.outbox = []
+
+        response = self.client.post(
+            '/api/articles/',
+            {
+                'title': 'Assignment story',
+                'subtitle': '',
+                'content': 'Assignment body',
+                'status': 'draft',
+                'slug': 'assignment-story',
+                'assignment_message': 'Please cover from your assigned beat.',
+                'reporter_assignments': json.dumps([
+                    {
+                        'user_id': self.reporter_one.id,
+                        'deadline': '2026-05-20T10:30',
+                        'assignment_message': 'Politics angle focus karo.',
+                    },
+                    {
+                        'user_id': self.reporter_two.id,
+                        'deadline': '2026-05-21T12:45',
+                        'assignment_message': 'Business impact bhi include karo.',
+                    },
+                ]),
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        article = Article.objects.get(slug='assignment-story')
+        assignments = ArticleAssignment.objects.filter(article=article, role_type='reporter').order_by('user_id')
+
+        self.assertEqual(assignments.count(), 2)
+        self.assertEqual(article.assigned_to_id, self.reporter_one.id)
+        self.assertEqual(
+            assignments.first().assignment_message,
+            'Politics angle focus karo.',
+        )
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn('Assignment note:', mail.outbox[0].body)
+        self.assertIn('Business impact bhi include karo.', mail.outbox[0].body)
+        self.assertNotIn('Assignment summary:', mail.outbox[0].body)
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.reporter_two,
+                title='New Assignment',
+            ).exists()
+        )
 
 
 class ArticleAdminPermissionTests(TestCase):

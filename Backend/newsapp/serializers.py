@@ -236,6 +236,7 @@ class ArticleSerializer(serializers.ModelSerializer):
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
+    reporter_assignments = serializers.SerializerMethodField()
 
     # Audit trail - read only
     author             = UserSerializer(read_only=True)
@@ -381,6 +382,23 @@ class ArticleSerializer(serializers.ModelSerializer):
         if not obj.secondary_keywords:
             return []
         return [k.strip() for k in obj.secondary_keywords.split(',') if k.strip()]
+
+    def get_reporter_assignments(self, obj):
+        assignments = (
+            obj.assignments
+            .filter(role_type='reporter')
+            .select_related('user')
+            .order_by('assigned_at', 'id')
+        )
+        return [
+            {
+                'user_id': item.user_id,
+                'name': item.user.get_full_name() or item.user.username,
+                'deadline': item.deadline.isoformat() if item.deadline else None,
+                'assignment_message': item.assignment_message or '',
+            }
+            for item in assignments
+        ]
 
     def create(self, validated_data):
         display_name      = validated_data.pop('editor_name', '')

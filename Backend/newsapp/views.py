@@ -22,6 +22,7 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models import F
 from django.db.models import Case, When, IntegerField
+from django.db import transaction
 from datetime import datetime, timedelta
 import requests
 from django.conf import settings
@@ -31,7 +32,7 @@ from .serializers import *
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.contrib import messages
 from .models import UserProfile, LoginAttemptLog
 from .workflow import ALLOWED_TRANSITIONS
@@ -83,6 +84,181 @@ def _can_manage_slug(user):
     username = str(getattr(user, 'username', '') or '').strip().lower()
     email = str(getattr(user, 'email', '') or '').strip().lower()
     return username == SLUG_EDITOR_USERNAME or email == SLUG_EDITOR_EMAIL
+
+
+def _format_assignment_deadline(deadline):
+    if not deadline:
+        return 'No deadline'
+    return timezone.localtime(deadline).strftime('%d %b %Y, %I:%M %p IST')
+
+
+def _normalize_reporter_assignments(raw_value):
+    if raw_value in (None, ''):
+        return []
+    if isinstance(raw_value, str):
+        try:
+            parsed = json.loads(raw_value)
+        except (TypeError, ValueError):
+            return []
+    else:
+        parsed = raw_value
+    if not isinstance(parsed, list):
+        return []
+    normalized = []
+    seen = set()
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        user_id = item.get('user_id', item.get('id'))
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            continue
+        if user_id in seen:
+            continue
+        seen.add(user_id)
+        normalized.append({
+            'user_id': user_id,
+            'deadline': str(item.get('deadline') or '').strip(),
+            'assignment_message': str(item.get('assignment_message') or item.get('message') or '').strip(),
+        })
+    return normalized
+
+
+def _send_assignment_email(*, article, reporter, assigned_by, assignment_message, deadline):
+    if not reporter.email:
+        return
+    assigner_name = (
+        assigned_by.get_full_name()
+        or assigned_by.username
+        or 'News4Bharat Admin'
+    ) if assigned_by else 'News4Bharat Admin'
+    reporter_name = reporter.get_full_name() or reporter.username
+    deadline_text = _format_assignment_deadline(deadline)
+    note_text = assignment_message or 'No assignment note was added.'
+    article_admin_url = f"https://news4bharat.cloud/admin/newsapp/article/{article.pk}/change/"
+    subject = f"New article assignment: {article.title}"
+    text_body = (
+        f"Hello {reporter_name},\n\n"
+        f"You have been assigned a new article on News4Bharat.\n\n"
+        f"Article: {article.title}\n"
+        f"Assigned by: {assigner_name}\n"
+        f"Deadline: {deadline_text}\n\n"
+        f"Assignment note:\n{note_text}\n\n"
+        f"Open article: {article_admin_url}\n\n"
+        f"Regards,\nNews4Bharat CMS"
+    )
+    html_body = (
+        "<div style=\"font-family:Arial,sans-serif;background:#f4f7fb;padding:24px;color:#1f2937;\">"
+        "<div style=\"max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dbe3f0;border-radius:18px;overflow:hidden;\">"
+        "<div style=\"background:linear-gradient(135deg,#17337a,#1d4ed8);padding:22px 24px;color:#ffffff;\">"
+        "<div style=\"font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.9;\">News4Bharat Editorial Desk</div>"
+        f"<h1 style=\"margin:10px 0 0;font-size:24px;line-height:1.3;\">New Article Assignment</h1>"
+        "</div>"
+        "<div style=\"padding:24px;\">"
+        f"<p style=\"margin:0 0 16px;font-size:15px;line-height:1.7;\">Hello <strong>{reporter_name}</strong>, you have been assigned a new article.</p>"
+        "<div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:18px;\">"
+        f"<p style=\"margin:0 0 10px;\"><strong>Article</strong><br>{article.title}</p>"
+        f"<p style=\"margin:0 0 10px;\"><strong>Assigned by</strong><br>{assigner_name}</p>"
+        f"<p style=\"margin:0;\"><strong>Deadline</strong><br>{deadline_text}</p>"
+        "</div>"
+        "<div style=\"margin-bottom:22px;\">"
+        "<div style=\"font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:8px;\">Assignment Note</div>"
+        f"<div style=\"background:#eff6ff;border-left:4px solid #1d4ed8;padding:14px 16px;border-radius:10px;font-size:14px;line-height:1.7;color:#0f172a;white-space:pre-wrap;\">{note_text}</div>"
+        "</div>"
+        f"<a href=\"{article_admin_url}\" style=\"display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;\">Open Article</a>"
+        "<p style=\"margin:18px 0 0;font-size:12px;line-height:1.6;color:#64748b;\">Please review the article details and begin work from the newsroom dashboard.</p>"
+        "</div></div></div>"
+    )
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', '') or None,
+        to=[reporter.email],
+    )
+    email.attach_alternative(html_body, "text/html")
+    email.send(fail_silently=True)
+
+
+def _sync_reporter_assignments(*, article, request, reporter_assignments, fallback_message='', fallback_deadline=None):
+    normalized = reporter_assignments or []
+    existing_assignments = {
+        item.user_id: item
+        for item in article.assignments.filter(role_type='reporter').select_related('user')
+    }
+    selected_ids = [item['user_id'] for item in normalized]
+    selected_users = {
+        user.id: user
+        for user in User.objects.filter(id__in=selected_ids, is_staff=True, is_active=True)
+    }
+
+    for user_id, assignment in existing_assignments.items():
+        if user_id not in selected_users:
+            assignment.delete()
+
+    stored_assignments = []
+    pending_emails = []
+    for item in normalized:
+        reporter = selected_users.get(item['user_id'])
+        if reporter is None:
+            continue
+        assignment_message = item['assignment_message'] or fallback_message
+        assignment_deadline = _parse_ist_datetime(item['deadline']) if item['deadline'] else fallback_deadline
+        assignment, created = ArticleAssignment.objects.update_or_create(
+            article=article,
+            user=reporter,
+            role_type='reporter',
+            defaults={
+                'assigned_by': request.user,
+                'assignment_message': assignment_message,
+                'deadline': assignment_deadline,
+            },
+        )
+        Notification.objects.get_or_create(
+            user=reporter,
+            notif_type='assign',
+            title='New Assignment',
+            message=f'You were assigned "{article.title}"',
+            action_url=f"/admin/newsapp/article/{article.id}/change/",
+            defaults={'icon': ''},
+        )
+
+        previous = existing_assignments.get(reporter.id)
+        should_email = created or previous is None
+        if previous is not None and not should_email:
+            prev_message = previous.assignment_message or ''
+            prev_deadline = previous.deadline.isoformat() if previous.deadline else ''
+            next_deadline = assignment.deadline.isoformat() if assignment.deadline else ''
+            should_email = prev_message != (assignment_message or '') or prev_deadline != next_deadline
+        stored_assignments.append(assignment)
+        pending_emails.append({
+            'reporter': reporter,
+            'assignment': assignment,
+            'assignment_message': assignment_message,
+            'should_email': should_email,
+        })
+
+    for item in pending_emails:
+        if item['should_email']:
+            _send_assignment_email(
+                article=article,
+                reporter=item['reporter'],
+                assigned_by=request.user,
+                assignment_message=item['assignment_message'],
+                deadline=item['assignment'].deadline,
+            )
+
+    primary_assignment = stored_assignments[0] if stored_assignments else None
+    earliest_deadline = min(
+        (item.deadline for item in stored_assignments if item.deadline),
+        default=None,
+    )
+    Article.objects.filter(pk=article.pk).update(
+        assigned_to=primary_assignment.user if primary_assignment else None,
+        deadline=earliest_deadline or fallback_deadline,
+    )
+    article.assigned_to = primary_assignment.user if primary_assignment else None
+    article.deadline = earliest_deadline or fallback_deadline
 
 
 def _normalize_faq_schema_items(raw_value):
@@ -856,10 +1032,8 @@ def _save_article_from_request(request, article=None):
     article.is_paid  = data.get('is_paid', 'false').lower() in ('true', '1', 'on')
 
     deadline_val = data.get('deadline', '')
-    if deadline_val:
-        article.deadline = _parse_ist_datetime(deadline_val)
-    else:
-        article.deadline = None
+    fallback_deadline = _parse_ist_datetime(deadline_val) if deadline_val else None
+    article.deadline = fallback_deadline
 
     scheduled_at_val = data.get('scheduled_at', '').strip()
     if article.status == 'scheduled':
@@ -893,10 +1067,19 @@ def _save_article_from_request(request, article=None):
         else:
             article.published_at = timezone.now()
 
+    reporter_assignments = _normalize_reporter_assignments(data.get('reporter_assignments', ''))
+    assignment_message = str(data.get('assignment_message', '') or '').strip()
     assigned_id = data.get('assigned_to', '')
-    if assigned_id:
+    if reporter_assignments:
+        article.assigned_to_id = reporter_assignments[0]['user_id']
+    elif assigned_id:
         try:
             article.assigned_to_id = int(assigned_id)
+            reporter_assignments = [{
+                'user_id': article.assigned_to_id,
+                'deadline': deadline_val,
+                'assignment_message': assignment_message,
+            }]
         except (ValueError, TypeError):
             article.assigned_to = None
     else:
@@ -1022,29 +1205,38 @@ def _save_article_from_request(request, article=None):
         article.selected_subcategories = {}
 
     try:
-        article.primary_category_id = primary_category_id
-        article.save()
+        with transaction.atomic():
+            article.primary_category_id = primary_category_id
+            article.save()
+
+            if restore_previous_timestamps and old_updated_at is not None:
+                Article.objects.filter(pk=article.pk).update(
+                    published_at=old_published_at,
+                    updated_at=old_updated_at,
+                )
+                article.published_at = old_published_at
+                article.updated_at = old_updated_at
+
+            if cat_ids:
+                article.categories.set(cat_ids)
+                if article.primary_category_id != primary_category_id:
+                    article.primary_category_id = primary_category_id
+                    article.save(update_fields=['primary_category'])
+            elif 'categories' in data:
+                article.categories.clear()
+                if article.primary_category_id is not None:
+                    article.primary_category = None
+                    article.save(update_fields=['primary_category'])
+
+            _sync_reporter_assignments(
+                article=article,
+                request=request,
+                reporter_assignments=reporter_assignments,
+                fallback_message=assignment_message,
+                fallback_deadline=fallback_deadline,
+            )
     except Exception as e:
         return None, {'error': str(e)}
-
-    if restore_previous_timestamps and old_updated_at is not None:
-        Article.objects.filter(pk=article.pk).update(
-            published_at=old_published_at,
-            updated_at=old_updated_at,
-        )
-        article.published_at = old_published_at
-        article.updated_at = old_updated_at
-
-    if cat_ids:
-        article.categories.set(cat_ids)
-        if article.primary_category_id != primary_category_id:
-            article.primary_category_id = primary_category_id
-            article.save(update_fields=['primary_category'])
-    elif 'categories' in data:
-        article.categories.clear()
-        if article.primary_category_id is not None:
-            article.primary_category = None
-            article.save(update_fields=['primary_category'])
 
     # Cache invalidate
     _invalidate_article_caches(article, old_slug=old_slug)
@@ -1294,9 +1486,14 @@ def dashboard_articles(request):
     else:
         profile = user.profile
         if profile.roles.filter(name="Reporter").exists():
-            articles = Article.objects.filter(
-                assigned_to=user
-            ).order_by('-created_at')[:50]
+            articles = (
+                Article.objects.filter(
+                    Q(assigned_to=user)
+                    | Q(assignments__user=user, assignments__role_type='reporter')
+                )
+                .distinct()
+                .order_by('-created_at')[:50]
+            )
         elif profile.roles.filter(name="Editor").exists():
             articles = Article.objects.all().order_by('-created_at')[:50]
         else:

@@ -1774,7 +1774,11 @@ class ArticleAdmin(admin.ModelAdmin):
             return True
         if self._can_edit_any_article(user):
             return True
-        return obj.author_id == user.id or obj.assigned_to_id == user.id
+        return (
+            obj.author_id == user.id
+            or obj.assigned_to_id == user.id
+            or obj.assignments.filter(user_id=user.id, role_type='reporter').exists()
+        )
 
     def has_module_permission(self, request):
         return self._can_view_articles(request.user)
@@ -1808,11 +1812,19 @@ class ArticleAdmin(admin.ModelAdmin):
         return readonly_fields
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request).prefetch_related('categories').select_related('author', 'assigned_to')
+        qs = (
+            super().get_queryset(request)
+            .prefetch_related('categories', 'assignments__user')
+            .select_related('author', 'assigned_to')
+        )
         if request.user.is_superuser or self._can_edit_any_article(request.user):
             return qs
         if self._can_edit_limited_articles(request.user) or has_permission(request.user, 'create_article'):
-            return qs.filter(Q(author=request.user) | Q(assigned_to=request.user)).distinct()
+            return qs.filter(
+                Q(author=request.user)
+                | Q(assigned_to=request.user)
+                | Q(assignments__user=request.user, assignments__role_type='reporter')
+            ).distinct()
         return qs.none()
 
     def save_model(self, request, obj, form, change):
@@ -1925,10 +1937,25 @@ class ArticleAdmin(admin.ModelAdmin):
         article = None
         publish_history = []
         version_preview = None
+        reporter_assignment_rows = []
         if object_id:
             article = self.get_queryset(request).filter(pk=object_id).first()
             if article:
                 publish_history = self._build_publish_history(article)
+                reporter_assignment_rows = [
+                    {
+                        'user_id': item.user_id,
+                        'deadline': timezone.localtime(item.deadline).strftime('%Y-%m-%dT%H:%M') if item.deadline else '',
+                        'assignment_message': item.assignment_message or '',
+                    }
+                    for item in article.assignments.filter(role_type='reporter').select_related('user').order_by('assigned_at', 'id')
+                ]
+                if not reporter_assignment_rows and article.assigned_to_id:
+                    reporter_assignment_rows = [{
+                        'user_id': article.assigned_to_id,
+                        'deadline': timezone.localtime(article.deadline).strftime('%Y-%m-%dT%H:%M') if article.deadline else '',
+                        'assignment_message': '',
+                    }]
                 version_preview_id = (request.GET.get('version_preview') or '').strip()
                 if version_preview_id.isdigit():
                     version_preview = (
@@ -1949,6 +1976,7 @@ class ArticleAdmin(admin.ModelAdmin):
             if version_preview else ''
         )
         extra_context['article_version_history_url'] = '/admin/newsapp/articleversion/'
+        extra_context['reporter_assignment_rows'] = reporter_assignment_rows
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:

@@ -222,6 +222,97 @@ label.image-drop {
   font-weight: 700;
   color: #0f172a;
 }
+.assigned-select--multi {
+  min-height: 120px;
+}
+.assigned-select {
+  display: none;
+}
+.reporter-picker {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.reporter-picker__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.reporter-picker__item:hover {
+  border-color: #94a3b8;
+}
+.reporter-picker__item.is-selected {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  box-shadow: 0 8px 18px rgba(29, 78, 216, 0.08);
+}
+.reporter-picker__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #1d4ed8;
+  cursor: pointer;
+}
+.reporter-picker__meta {
+  display: grid;
+  gap: 2px;
+}
+.reporter-picker__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.reporter-picker__role {
+  font-size: 11px;
+  color: #64748b;
+}
+.assignment-help {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.assignment-deadline-box {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+.assignment-deadline-box[hidden] {
+  display: none !important;
+}
+.assignment-deadline-list {
+  display: grid;
+  gap: 10px;
+}
+.assignment-deadline-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  background: #fff;
+}
+.assignment-deadline-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.assignment-deadline-note {
+  font-size: 11px;
+  color: #64748b;
+}
+.assignment-message-input {
+  width: 100%;
+  min-height: 74px;
+  resize: vertical;
+}
 .publish-date-history-box {
   margin: 14px 0 6px;
   padding: 13px 14px;
@@ -1328,16 +1419,32 @@ grammarly-button,
         <option value="6">6</option><option value="7">7</option><option value="8">8</option>
         <option value="9">9</option><option value="10">10 — Low</option>
       </select>
-      <label class="nb-label">Assigned Reporter</label>
-      <select class="assigned-select" id="ui_assigned">
+      <label class="nb-label">Assigned Reporters</label>
+      <select class="assigned-select assigned-select--multi" id="ui_assigned" multiple>
         <option value="">— Unassigned —</option>
         {% for u in adminform.form.fields.assigned_to.queryset %}
-          <option value="{{ u.pk }}" {% if original.assigned_to_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+          <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
         {% endfor %}
       </select>
-      <label class="nb-label">Deadline</label>
+      <div class="reporter-picker" id="reporter_picker">
+        {% for u in adminform.form.fields.assigned_to.queryset %}
+        <label class="reporter-picker__item" data-reporter-id="{{ u.pk }}">
+          <input type="checkbox" class="reporter-picker__checkbox" data-reporter-checkbox value="{{ u.pk }}">
+          <span class="reporter-picker__meta">
+            <span class="reporter-picker__name">{{ u.get_full_name|default:u.username }}</span>
+            <span class="reporter-picker__role">{{ u.profile.roles.all|first|default:u.reporter.designation|default:u.profile.position|default:'Reporter' }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="assignment-help">Select one or more reporters. Each selected reporter can have a separate deadline and message.</div>
+      <label class="nb-label">Default Deadline</label>
       <input type="datetime-local" class="deadline-inp" id="ui_deadline"
         value="{% if original.deadline %}{{ original.deadline|date:'Y-m-d' }}T{{ original.deadline|date:'H:i' }}{% endif %}">
+      <div class="assignment-deadline-box" id="assignment_deadline_box" hidden>
+        <label class="nb-label">Reporter Assignment Details</label>
+        <div class="assignment-deadline-list" id="assignment_deadline_list"></div>
+      </div>
       <div class="toggle-row">
         <span class="toggle-label">Paid / Premium</span>
         <label class="toggle">
@@ -5574,8 +5681,10 @@ async function submitArticle(forceStatus){
   const deadline=document.getElementById('ui_deadline')?document.getElementById('ui_deadline').value:'';
   if(deadline)formData.append('deadline',deadline);
 
-  const assignedTo=document.getElementById('ui_assigned')?document.getElementById('ui_assigned').value:'';
-  if(assignedTo)formData.append('assigned_to',assignedTo);
+  const selectedReporterIds=getSelectedReporterIds();
+  const reporterAssignments=buildReporterAssignmentsPayload(deadline);
+  if(reporterAssignments.length)formData.append('reporter_assignments',JSON.stringify(reporterAssignments));
+  if(selectedReporterIds.length)formData.append('assigned_to',selectedReporterIds[0]);
 
   formData.append('slug',document.getElementById('ui_slug')?document.getElementById('ui_slug').value:'');
   formData.append('canonical_url',document.getElementById('ui_canonical')?document.getElementById('ui_canonical').value:'');
@@ -5713,7 +5822,124 @@ const editorData = [
   }
   {% endfor %}
 ];
+const initialReporterAssignments = [
+  {% for item in reporter_assignment_rows %}
+  {
+    user_id: {{ item.user_id }},
+    deadline: "{{ item.deadline|escapejs }}",
+    assignment_message: "{{ item.assignment_message|escapejs }}"
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
 let selectedEditorId = "{{ original.editor_id|default:''|escapejs }}";
+
+function getSelectedReporterIds(){
+  const picker=document.getElementById('reporter_picker');
+  if(!picker)return[];
+  return Array.from(picker.querySelectorAll('[data-reporter-checkbox]:checked'))
+    .map(function(option){ return String(option.value||'').trim(); })
+    .filter(Boolean);
+}
+
+function findReporterInfo(id){
+  return editorData.find(function(item){ return String(item.id)===String(id); }) || null;
+}
+
+function escapeHtml(value){
+  return String(value||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function buildReporterAssignmentsPayload(defaultDeadline){
+  return getSelectedReporterIds().map(function(userId){
+    const perReporterDeadlineEl=document.getElementById('assignment_deadline_'+userId);
+    const perReporterMessageEl=document.getElementById('assignment_message_'+userId);
+    return {
+      user_id: Number(userId),
+      deadline: perReporterDeadlineEl&&perReporterDeadlineEl.value ? perReporterDeadlineEl.value : (defaultDeadline||''),
+      assignment_message: perReporterMessageEl ? perReporterMessageEl.value.trim() : ''
+    };
+  });
+}
+
+function renderReporterAssignments(){
+  const selectedIds=getSelectedReporterIds();
+  const deadlineBox=document.getElementById('assignment_deadline_box');
+  const deadlineList=document.getElementById('assignment_deadline_list');
+  const defaultDeadlineEl=document.getElementById('ui_deadline');
+  const defaultDeadline=defaultDeadlineEl?defaultDeadlineEl.value:'';
+
+  if(deadlineBox)deadlineBox.hidden=!selectedIds.length;
+  if(!deadlineList)return;
+
+  if(!selectedIds.length){
+    deadlineList.innerHTML='';
+    return;
+  }
+
+  const initialMap={};
+  initialReporterAssignments.forEach(function(item){
+    initialMap[String(item.user_id)] = item;
+  });
+
+  deadlineList.innerHTML=selectedIds.map(function(userId){
+    const reporter=findReporterInfo(userId);
+    const preset=initialMap[String(userId)];
+    const value=(preset&&preset.deadline) ? preset.deadline : defaultDeadline;
+    const messageValue=escapeHtml((preset&&preset.assignment_message) ? preset.assignment_message : '');
+    const reporterName=escapeHtml(reporter ? reporter.name : ('Reporter #' + userId));
+    return ''+
+      '<div class="assignment-deadline-item">'+
+        '<div class="assignment-deadline-name">'+reporterName+'</div>'+
+        '<input type="datetime-local" class="deadline-inp" id="assignment_deadline_'+userId+'" value="'+(value||'')+'">'+
+        '<div class="assignment-deadline-note">Set an individual deadline for this reporter.</div>'+
+        '<textarea class="seo-inp assignment-message-input" id="assignment_message_'+userId+'" placeholder="Why is this reporter assigned to this article?">'+messageValue+'</textarea>'+
+        '<div class="assignment-deadline-note">This note will be included in the assignment email and notification summary.</div>'+
+      '</div>';
+  }).join('');
+}
+
+function initReporterAssignments(){
+  const select=document.getElementById('ui_assigned');
+  const picker=document.getElementById('reporter_picker');
+  if(!select || !picker)return;
+  const selectedIds=initialReporterAssignments.length
+    ? initialReporterAssignments.map(function(item){ return String(item.user_id); })
+    : [{% if original.assigned_to_id %}"{{ original.assigned_to_id }}"{% endif %}].filter(Boolean);
+
+  Array.from(select.options||[]).forEach(function(option){
+    option.selected=selectedIds.includes(String(option.value||''));
+  });
+  Array.from(picker.querySelectorAll('[data-reporter-checkbox]')).forEach(function(checkbox){
+    checkbox.checked=selectedIds.includes(String(checkbox.value||''));
+    const item=checkbox.closest('.reporter-picker__item');
+    if(item)item.classList.toggle('is-selected', checkbox.checked);
+    checkbox.addEventListener('change', function(){
+      const row=checkbox.closest('.reporter-picker__item');
+      if(row)row.classList.toggle('is-selected', checkbox.checked);
+      Array.from(select.options||[]).forEach(function(option){
+        if(String(option.value||'')===String(checkbox.value||'')){
+          option.selected=checkbox.checked;
+        }
+      });
+      renderReporterAssignments();
+    });
+  });
+  const defaultDeadlineEl=document.getElementById('ui_deadline');
+  if(defaultDeadlineEl){
+    defaultDeadlineEl.addEventListener('change', function(){
+      getSelectedReporterIds().forEach(function(userId){
+        const input=document.getElementById('assignment_deadline_'+userId);
+        if(input && !input.value)input.value=defaultDeadlineEl.value||'';
+      });
+    });
+  }
+  renderReporterAssignments();
+}
 
 function getInitials(name){
   if(!name)return'?';
@@ -5903,6 +6129,7 @@ if(document.getElementById('ui_content'))document.getElementById('ui_content').a
 document.querySelectorAll('.cat-item').forEach(function(el){
   el.addEventListener('click',function(){setTimeout(updateEditorPreview,50);});
 });
+initReporterAssignments();
 renderEditorList();
 updateEditorPreview();
 updateReadabilityStats();

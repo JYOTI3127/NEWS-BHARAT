@@ -1336,7 +1336,7 @@ class NewsAdminSite(AdminSite):
                 Article.objects.filter(status='published')
                 .select_related('author')
                 .prefetch_related('categories')
-                .order_by('-updated_at', '-published_at', '-created_at')[:100]
+                .order_by('-published_at', '-created_at', '-id')[:100]
             )
         except Exception:
             extra_context['published_articles_for_picker'] = []

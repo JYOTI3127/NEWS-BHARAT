@@ -12,9 +12,9 @@ from io import StringIO
 from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
-from .models import Article, ArticleAssignment, ArticleVersion, Category, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Role
 from .utils import merge_soft_split_paragraphs, sanitize_article_html
-from .views import custom_permission_denied_view, send_push_to_all
+from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
 
 User = get_user_model()
@@ -217,6 +217,46 @@ class ArticleReporterAssignmentTests(TestCase):
             ).exists()
         )
 
+
+class HomepageFreshPublishOrderingTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='homepage-author',
+            password='testpass123',
+        )
+
+    def test_hero_and_latest_auto_mode_prioritize_publish_time_not_recent_update(self):
+        older_but_updated = Article.objects.create(
+            author=self.author,
+            title='Older published article',
+            content='Older body',
+            status='published',
+        )
+        recent_article = Article.objects.create(
+            author=self.author,
+            title='Recently published article',
+            content='Recent body',
+            status='published',
+        )
+
+        old_publish_time = timezone.now() - timezone.timedelta(days=20)
+        recent_publish_time = timezone.now() - timezone.timedelta(hours=2)
+        Article.objects.filter(pk=older_but_updated.pk).update(
+            published_at=old_publish_time,
+            updated_at=timezone.now(),
+        )
+        Article.objects.filter(pk=recent_article.pk).update(
+            published_at=recent_publish_time,
+            updated_at=timezone.now() - timezone.timedelta(days=1),
+        )
+        older_but_updated.refresh_from_db()
+        recent_article.refresh_from_db()
+
+        hero_slot = HomepageSlot.objects.create(slot_name='hero', mode='auto', display_count=5)
+        latest_slot = HomepageSlot.objects.create(slot_name='latest_news', mode='auto', display_count=5)
+
+        self.assertEqual(_hero_slot_queryset(hero_slot).first().pk, recent_article.pk)
+        self.assertEqual(_latest_news_queryset(latest_slot).first().pk, recent_article.pk)
 
 class ArticleAdminPermissionTests(TestCase):
     def setUp(self):

@@ -1874,6 +1874,10 @@ def _ordered_slot_manual_articles(slot):
     )
 
 
+def _order_homepage_articles_by_publish_freshness(queryset):
+    return queryset.filter(published_at__isnull=False).order_by('-published_at', '-created_at', '-id')
+
+
 def _latest_news_queryset(slot):
     count = max(1, min(int(getattr(slot, 'display_count', 4) or 4), 12))
     if slot.mode == 'manual':
@@ -1886,7 +1890,7 @@ def _latest_news_queryset(slot):
     )
     if getattr(slot, 'category_filter_id', None):
         queryset = queryset.filter(categories=slot.category_filter_id)
-    return queryset.order_by('-updated_at', '-published_at', '-created_at')[:count]
+    return _order_homepage_articles_by_publish_freshness(queryset)[:count]
 
 
 def _hero_slot_queryset(slot):
@@ -1894,12 +1898,11 @@ def _hero_slot_queryset(slot):
     if slot.mode == 'manual':
         return _ordered_slot_manual_articles(slot)[:count]
 
-    return (
+    return _order_homepage_articles_by_publish_freshness(
         Article.objects.filter(status='published')
         .select_related('author', 'primary_category')
         .prefetch_related('categories')
-        .order_by('-updated_at', '-published_at', '-created_at')[:count]
-    )
+    )[:count]
 
 
 def _sync_hero_slot_legacy_fields(slot, save=True):

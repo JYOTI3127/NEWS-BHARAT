@@ -130,6 +130,11 @@ const getArticleCategorySlugs = (article) => {
     article?.category_slug,
     article?.primary_category_slug,
     article?.category?.slug,
+    article?.category?.name,
+    article?.primary_category?.slug,
+    article?.primary_category?.category_slug,
+    article?.primary_category?.name,
+    typeof article?.category === "string" ? article.category : "",
   ];
 
   const details = Array.isArray(article?.category_details)

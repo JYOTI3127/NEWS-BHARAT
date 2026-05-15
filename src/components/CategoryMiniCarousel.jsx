@@ -23,8 +23,17 @@ const getCategorySlugsFromArticle = (article) => {
   const detailSlugs = details
     .map((item) => String(item?.slug || "").trim().toLowerCase())
     .filter(Boolean);
-  const direct = String(article?.category || article?.category_slug || "").trim().toLowerCase();
-  return direct ? [...detailSlugs, direct] : detailSlugs;
+  const slugs = [
+    ...detailSlugs,
+    article?.category,
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.primary_category?.slug,
+    article?.primary_category?.name,
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+  return [...new Set(slugs)];
 };
 
 const isPrerenderUserAgent = () => {

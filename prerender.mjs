@@ -13,6 +13,8 @@ import { STATIC_PAGE_SEO as SHARED_STATIC_PAGE_SEO } from './src/lib/staticPageS
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const API_BASE = 'https://news4bharat.cloud/api'
 const GITHUB_EVENT_PATH = process.env.GITHUB_EVENT_PATH || ''
+const PRERENDER_DATA_SCRIPT_PATTERN =
+  /<script>window\.__N4B_PRERENDER_DATA__=[\s\S]*?<\/script>\s*/g
 
 const STATIC_PAGE_META = {
   '/about-us': {
@@ -469,7 +471,7 @@ const buildArticleSchemaJson = (article, route, meta) => {
       url: BASE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${BASE_URL}/Fevicon (1).png`,
+        url: `${BASE_URL}/logo.png`,
       },
     },
     ...(imageUrl
@@ -759,6 +761,86 @@ function buildWebsiteSchemaTag() {
   return `<script type="application/ld+json">${JSON.stringify(websiteSchema)}</script>`
 }
 
+const stripCapturedAnalyticsScripts = (html) =>
+  String(html || '')
+    .replace(
+      /<script\b(?=[^>]*\bsrc=["']https:\/\/www\.googletagmanager\.com\/(?:gtm\.js|gtag\/js)\?[^"']+["'])[^>]*>\s*<\/script>\s*/gi,
+      ''
+    )
+
+const uniqueArticlesByRoute = (articles) => {
+  const seen = new Set()
+
+  return (Array.isArray(articles) ? articles : []).filter((article) => {
+    if (!article) return false
+    const key =
+      getArticlePath(article) ||
+      toArticleRouteFromUrl(article?.canonical_url) ||
+      String(article?.slug || article?.id || '').trim()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
+  const allArticles = Array.isArray(siteData?.articles) ? siteData.articles : []
+  const categories = Array.isArray(siteData?.categories) ? siteData.categories : []
+
+  if (route === '/') {
+    return {
+      articles: allArticles,
+      categories,
+      homepageHeroImage: siteData?.homepageHeroImage || '',
+    }
+  }
+
+  if (isArticlePath(route)) {
+    const currentArticle = articleMap.get(route)
+    const seedArticles = currentArticle ? [currentArticle, ...allArticles.slice(0, 24)] : allArticles.slice(0, 24)
+
+    return {
+      articles: uniqueArticlesByRoute(seedArticles),
+      categories,
+      homepageHeroImage: siteData?.homepageHeroImage || '',
+    }
+  }
+
+  if (route.startsWith('/category/')) {
+    const slug = route.replace('/category/', '').trim().toLowerCase()
+    const categoryArticles = allArticles.filter((article) =>
+      getArticleRoutes(article).some((articleRoute) =>
+        articleRoute.toLowerCase().startsWith(`/${slug}/`)
+      )
+    )
+
+    return {
+      articles: uniqueArticlesByRoute([...categoryArticles.slice(0, 80), ...allArticles.slice(0, 18)]),
+      categories,
+      homepageHeroImage: siteData?.homepageHeroImage || '',
+    }
+  }
+
+  return {
+    articles: allArticles.slice(0, 18),
+    categories,
+    homepageHeroImage: siteData?.homepageHeroImage || '',
+  }
+}
+
+const replacePrerenderDataScript = (html, route, articleMap, siteData) => {
+  const payload = buildRoutePrerenderPayload(route, articleMap, siteData)
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c')
+  const dataScript = `<script>window.__N4B_PRERENDER_DATA__=${json};</script>`
+  const cleaned = String(html || '').replace(PRERENDER_DATA_SCRIPT_PATTERN, '')
+
+  if (/<script\b[^>]*type=["']module["'][^>]*>/i.test(cleaned)) {
+    return cleaned.replace(/<script\b[^>]*type=["']module["'][^>]*>/i, `${dataScript}\n$&`)
+  }
+
+  return cleaned.replace('</head>', `${dataScript}\n</head>`)
+}
+
 // Remove old tags and inject fresh tags from API data.
 function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) {
   const meta = buildMetaForRoute(route, articleMap, categoryMap, siteData)
@@ -779,7 +861,12 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     .map((tag) => String(tag || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim())
     .filter(Boolean)
 
-  let cleaned = stripLazyChunkPreloads(html)
+  let cleaned = replacePrerenderDataScript(
+    stripCapturedAnalyticsScripts(stripLazyChunkPreloads(html)),
+    route,
+    articleMap,
+    siteData
+  )
     .replace(/<title>[\s\S]*?<\/title>/gi, '')
     .replace(/<meta[^>]+name=["']description["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+name=["']author["'][^>]*>\s*/gi, '')
@@ -1021,7 +1108,7 @@ function installPrerenderDataScript(siteData) {
   let html = fs.readFileSync(shellPath, 'utf8')
 
   html = html
-    .replace(/<script>window\.__N4B_PRERENDER_DATA__=[\s\S]*?<\/script>\s*/g, '')
+    .replace(PRERENDER_DATA_SCRIPT_PATTERN, '')
     .replace(/<script\b[^>]*type=["']module["'][^>]*>/i, `${dataScript}\n$&`)
 
   fs.writeFileSync(shellPath, html, 'utf8')

@@ -153,6 +153,19 @@ const doesArticleMatchSection = (article, section) => {
     return sectionSlugs.includes(String(article.category).toLowerCase());
   }
 
+  if (article?.category_slug && sectionSlugs.includes(String(article.category_slug).toLowerCase())) {
+    return true;
+  }
+
+  if (article?.primary_category_slug && sectionSlugs.includes(String(article.primary_category_slug).toLowerCase())) {
+    return true;
+  }
+
+  const primaryCategorySlug = String(article?.primary_category?.slug || "").trim().toLowerCase();
+  if (primaryCategorySlug && sectionSlugs.includes(primaryCategorySlug)) {
+    return true;
+  }
+
   return false;
 };
 

@@ -1840,7 +1840,7 @@ export default function ArticleDetails() {
     ...(canonicalUrl ? { url: canonicalUrl } : {}),
     ...(canonicalUrl ? { mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl } } : {}),
     author: { "@type": authorDisplayName === SITE_NAME ? "Organization" : "Person", name: authorDisplayName, url: absoluteAuthorUrl, ...(authorPosition ? { jobTitle: authorPosition } : {}), ...(authorPhotoUrl ? { image: { "@type": "ImageObject", url: authorPhotoUrl } } : {}) },
-    publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: SITE_NAME, url: SITE_URL, logo: { "@type": "ImageObject", url: `${SITE_URL}/Fevicon (1).png` } },
+    publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: SITE_NAME, url: SITE_URL, logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.png` } },
     isAccessibleForFree: !article.is_paid,
     ...(absoluteImageUrl ? { image: { "@type": "ImageObject", url: absoluteImageUrl, caption: imageAlt }, thumbnailUrl: absoluteImageUrl } : {}),
     ...(categoryName ? { articleSection: categoryName } : {}),

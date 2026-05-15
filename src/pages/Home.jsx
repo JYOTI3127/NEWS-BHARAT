@@ -48,6 +48,8 @@ const getArticleCategorySlugs = (article) => {
     article?.category_slug,
     article?.primary_category_slug,
     article?.category?.slug,
+    article?.primary_category?.slug,
+    article?.primary_category?.name,
   ];
 
   const details = Array.isArray(article?.category_details)

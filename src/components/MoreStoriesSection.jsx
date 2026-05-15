@@ -82,6 +82,10 @@ const getArticleCategorySlugs = (article) => {
     article.category_details.forEach((cat) => addSlug(cat?.slug));
   }
 
+  addSlug(article?.category_slug);
+  addSlug(article?.primary_category_slug);
+  addSlug(article?.primary_category?.slug);
+
   if (Array.isArray(article?.__mssCategorySlugs)) {
     article.__mssCategorySlugs.forEach(addSlug);
   }

@@ -23,6 +23,7 @@ def _event_type_for_reason(reason):
 def _post_frontend_hook(*, event_type, client_payload):
     hook_url = getattr(settings, "FRONTEND_BUILD_HOOK_URL", "").strip()
     if not hook_url:
+        logger.warning("Frontend build hook skipped because FRONTEND_BUILD_HOOK_URL is empty.")
         return False
 
     headers = {"Content-Type": "application/json"}
@@ -32,6 +33,9 @@ def _post_frontend_hook(*, event_type, client_payload):
 
     if _is_github_dispatch_url(hook_url):
         headers["Accept"] = "application/vnd.github+json"
+        headers["X-GitHub-Api-Version"] = "2022-11-28"
+        if token:
+            headers["Authorization"] = f"token {token}"
         payload = {
             "event_type": event_type,
             "client_payload": client_payload,
@@ -43,7 +47,15 @@ def _post_frontend_hook(*, event_type, client_payload):
 
     timeout = max(3, int(getattr(settings, "FRONTEND_BUILD_HOOK_TIMEOUT", 10) or 10))
     response = requests.post(hook_url, json=payload, headers=headers, timeout=timeout)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        body_preview = (response.text or "").strip()
+        if len(body_preview) > 500:
+            body_preview = body_preview[:500] + "..."
+        raise requests.HTTPError(
+            f"{exc}. status={response.status_code} response={body_preview}"
+        ) from exc
     return True
 
 

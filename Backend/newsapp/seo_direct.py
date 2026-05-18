@@ -133,6 +133,42 @@ def _parse_custom_schema_blob(raw_value):
     return []
 
 
+def _schema_type_values(schema_obj) -> list[str]:
+    if not isinstance(schema_obj, dict):
+        return []
+    raw_type = schema_obj.get("@type")
+    if isinstance(raw_type, list):
+        values = raw_type
+    else:
+        values = [raw_type]
+    normalized = []
+    for item in values:
+        text = str(item or "").strip()
+        if text and text not in normalized:
+            normalized.append(text)
+    return normalized
+
+
+def _dedupe_schema_payloads(schema_items: list[dict]) -> list[dict]:
+    deduped = []
+    seen_faq_page = False
+
+    for item in schema_items or []:
+        if not isinstance(item, dict) or not item:
+            continue
+
+        schema_types = _schema_type_values(item)
+        is_faq_page = "FAQPage" in schema_types
+        if is_faq_page:
+            if seen_faq_page:
+                continue
+            seen_faq_page = True
+
+        deduped.append(item)
+
+    return deduped
+
+
 def _faq_schema_items(value) -> list[dict]:
     if isinstance(value, str):
         raw = value.strip()
@@ -180,7 +216,7 @@ def article_schema_payloads(article) -> list[dict]:
     if faq_schema:
         schemas.append(faq_schema)
     schemas.extend(_parse_custom_schema_blob(getattr(article, "schema_custom_jsonld", "")))
-    return schemas
+    return _dedupe_schema_payloads(schemas)
 
 
 def _extract_article_image_entries(article, base: str = None) -> list[dict]:

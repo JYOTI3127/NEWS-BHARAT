@@ -4654,15 +4654,27 @@ def _newsletter_transport_config():
             'use_brevo_api': False,
         }
 
+    if provider in {'brevo_smtp'}:
+        return {
+            'provider': 'brevo_smtp',
+            'smtp_host': getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', ''),
+            'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or getattr(settings, 'EMAIL_PORT', 587) or 587),
+            'smtp_use_tls': bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True)),
+            'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', '') or getattr(settings, 'EMAIL_HOST_USER', ''),
+            'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '') or getattr(settings, 'EMAIL_HOST_PASSWORD', ''),
+            'brevo_api_key': '',
+            'use_brevo_api': False,
+        }
+
     brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
-    use_brevo_api = bool(brevo_api_key) and provider not in {'smtp', 'newsletter_smtp'}
+    use_brevo_api = bool(brevo_api_key) and provider in {'brevo', 'brevo_api'}
     return {
         'provider': 'brevo_api' if use_brevo_api else 'newsletter_smtp',
         'smtp_host': getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', ''),
         'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or 587),
         'smtp_use_tls': bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True)),
-        'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', ''),
-        'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', ''),
+        'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', '') or getattr(settings, 'EMAIL_HOST_USER', ''),
+        'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '') or getattr(settings, 'EMAIL_HOST_PASSWORD', ''),
         'brevo_api_key': brevo_api_key,
         'use_brevo_api': use_brevo_api,
     }
@@ -4970,8 +4982,8 @@ Website: https://news4bharat.com
                 'email': email,
                 'error': (
                     'Newsletter SMTP is not configured. '
-                    'Please set MAILERCLOUD_SMTP_HOST/USER/PASSWORD for Mailercloud '
-                    'or NEWSLETTER_SMTP_HOST/USER/PASSWORD for generic SMTP.'
+                    'Please set Brevo SMTP credentials in EMAIL_HOST/USER/PASSWORD '
+                    'or NEWSLETTER_SMTP_HOST/USER/PASSWORD.'
                 ),
             } for email in recipients]
             logger.error("Newsletter SMTP is not configured")

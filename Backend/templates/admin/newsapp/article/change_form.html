@@ -3747,6 +3747,68 @@ function nbFocusEditor(){
   return true;
 }
 
+function nbSelectionBelongsToEditor(){
+  if(!nbEditor)return false;
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return false;
+  const range=sel.getRangeAt(0);
+  const ancestor=range.commonAncestorContainer;
+  return !!(ancestor&&(nbEditor.contains(ancestor)||ancestor===nbEditor));
+}
+
+function nbExtractSelectionLinesForList(range){
+  if(!range)return [];
+  const probe=document.createElement('div');
+  try{
+    probe.appendChild(range.cloneContents());
+  }catch(e){
+    return [];
+  }
+  var lines=Array.from(probe.querySelectorAll('li')).map(function(node){
+    return String(node.innerText||node.textContent||'').trim();
+  }).filter(Boolean);
+  if(lines.length)return lines;
+  return String(probe.innerText||probe.textContent||'')
+    .replace(/\r/g,'')
+    .split('\n')
+    .map(function(line){return line.trim();})
+    .filter(Boolean);
+}
+
+function nbApplyCustomList(tagName){
+  if(!nbEditor||!nbSelectionBelongsToEditor())return false;
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount||sel.isCollapsed)return false;
+  const range=sel.getRangeAt(0);
+  const lines=nbExtractSelectionLinesForList(range);
+  if(lines.length<2)return false;
+  nbSaveHistory();
+  nbFocusEditor();
+  const liveSel=window.getSelection();
+  if(!liveSel||!liveSel.rangeCount)return false;
+  const liveRange=liveSel.getRangeAt(0);
+  try{
+    liveRange.deleteContents();
+    const list=document.createElement(tagName);
+    lines.forEach(function(line){
+      const li=document.createElement('li');
+      li.textContent=line;
+      list.appendChild(li);
+    });
+    liveRange.insertNode(list);
+    const cursorRange=document.createRange();
+    cursorRange.selectNodeContents(list);
+    cursorRange.collapse(false);
+    liveSel.removeAllRanges();
+    liveSel.addRange(cursorRange);
+    nbSaveSelection();
+    setTimeout(nbSaveHistory,50);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
 function nbSaveHistory(){
   if(!nbEditor||nbIsUndoRedo)return;
   const c=nbEditor.innerHTML;
@@ -3861,17 +3923,28 @@ function fmt(cmd,val){
   if(!nbEditor)return;
   nbSaveHistory();
   nbFocusEditor();
-  if(cmd==='insertUnorderedList'){
-    if(document.queryCommandState('insertOrderedList')){
-      document.execCommand('insertOrderedList',false,null);
+  if(cmd==='insertUnorderedList'&&nbApplyCustomList('ul'))return;
+  if(cmd==='insertOrderedList'&&nbApplyCustomList('ol'))return;
+  try{
+    if(cmd==='insertUnorderedList'){
+      try{
+        if(document.queryCommandState('insertOrderedList')){
+          document.execCommand('insertOrderedList',false,null);
+        }
+      }catch(e){}
     }
-  }
-  if(cmd==='insertOrderedList'){
-    if(document.queryCommandState('insertUnorderedList')){
-      document.execCommand('insertUnorderedList',false,null);
+    if(cmd==='insertOrderedList'){
+      try{
+        if(document.queryCommandState('insertUnorderedList')){
+          document.execCommand('insertUnorderedList',false,null);
+        }
+      }catch(e){}
     }
+    document.execCommand(cmd,false,val!==undefined?val:null);
+  }catch(e){
+    console.error('Toolbar command failed:',cmd,e);
+    return;
   }
-  document.execCommand(cmd,false,val!==undefined?val:null);
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }

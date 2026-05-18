@@ -935,6 +935,16 @@ class NewsAdminSite(AdminSite):
                 name='editorial_calendar',
             ),
             path(
+                'my-assignments/',
+                self.admin_view(self.my_assignments_view),
+                name='my_assignments',
+            ),
+            path(
+                'my-assignments/<int:assignment_id>/update/',
+                self.admin_view(self.my_assignment_update_view),
+                name='my_assignment_update',
+            ),
+            path(
                 'contact-queries/',
                 self.admin_view(self.contact_queries_view),
                 name='contact_queries',
@@ -1320,6 +1330,130 @@ class NewsAdminSite(AdminSite):
             'editorial_month_summary_json': month_summary,
         }
         return TemplateResponse(request, 'admin/editorial_calendar.html', context)
+
+    def my_assignments_view(self, request):
+        touch_attendance(request.user)
+        search = (request.GET.get('q') or '').strip()
+        status_filter = (request.GET.get('status') or '').strip()
+        role_filter = (request.GET.get('role') or '').strip()
+
+        assignments = ArticleAssignment.objects.select_related('article', 'user', 'assigned_by').order_by(
+            Case(
+                When(work_status='pending', then=0),
+                default=1,
+            ),
+            'deadline',
+            '-assigned_at',
+        )
+        if not request.user.is_superuser:
+            assignments = assignments.filter(user=request.user)
+
+        if search:
+            assignments = assignments.filter(
+                Q(article__title__icontains=search)
+                | Q(assignment_message__icontains=search)
+                | Q(completion_note__icontains=search)
+                | Q(user__username__icontains=search)
+                | Q(assigned_by__username__icontains=search)
+            )
+        if status_filter in {'pending', 'completed'}:
+            assignments = assignments.filter(work_status=status_filter)
+        if role_filter in {'reporter', 'fact_checker', 'legal'}:
+            assignments = assignments.filter(role_type=role_filter)
+
+        now = timezone.now()
+        assignment_rows = list(assignments)
+        for row in assignment_rows:
+            row.deadline_state = ''
+            if not row.deadline:
+                continue
+            if row.deadline < now:
+                row.deadline_state = 'overdue'
+            elif row.deadline <= now + timedelta(days=2):
+                row.deadline_state = 'soon'
+            else:
+                row.deadline_state = 'normal'
+
+        scope_qs = ArticleAssignment.objects.select_related('article', 'user', 'assigned_by')
+        if not request.user.is_superuser:
+            scope_qs = scope_qs.filter(user=request.user)
+
+        context = {
+            **self.each_context(request),
+            'title': 'My Assignments',
+            'assignment_rows': assignment_rows,
+            'assignment_total': scope_qs.count(),
+            'assignment_completed_total': scope_qs.filter(work_status='completed').count(),
+            'assignment_pending_total': scope_qs.filter(work_status='pending').count(),
+            'assignment_overdue_total': scope_qs.filter(
+                work_status='pending',
+                deadline__isnull=False,
+                deadline__lt=now,
+            ).count(),
+            'assignment_due_soon_total': scope_qs.filter(
+                work_status='pending',
+                deadline__isnull=False,
+                deadline__gte=now,
+                deadline__lte=now + timedelta(days=2),
+            ).count(),
+            'assignment_search_query': search,
+            'assignment_selected_status': status_filter,
+            'assignment_selected_role': role_filter,
+            'assignment_page_is_admin_view': request.user.is_superuser,
+        }
+        return TemplateResponse(request, 'admin/my_assignments.html', context)
+
+    def my_assignment_update_view(self, request, assignment_id):
+        assignment = get_object_or_404(
+            ArticleAssignment.objects.select_related('article', 'user', 'assigned_by'),
+            pk=assignment_id,
+        )
+        if not request.user.is_superuser and assignment.user_id != request.user.id:
+            raise PermissionDenied("You cannot update this assignment.")
+        if request.method != 'POST':
+            return redirect('/admin/my-assignments/')
+
+        completion_note = (request.POST.get('completion_note') or '').strip()
+        is_completed = request.POST.get('is_completed') == '1'
+        previous_status = assignment.work_status
+        previous_note = assignment.completion_note or ''
+
+        assignment.completion_note = completion_note
+        if is_completed:
+            assignment.work_status = 'completed'
+            assignment.completed_at = assignment.completed_at or timezone.now()
+        else:
+            assignment.work_status = 'pending'
+            assignment.completed_at = None
+        assignment.save(update_fields=['work_status', 'completion_note', 'completed_at'])
+
+        if assignment.assigned_by_id and assignment.assigned_by_id != request.user.id:
+            if previous_status != assignment.work_status or previous_note != completion_note:
+                actor_name = request.user.get_full_name() or request.user.username
+                article_title = assignment.article.title
+                if assignment.work_status == 'completed':
+                    title = 'Assignment completed'
+                    message = f'{actor_name} marked "{article_title}" as completed.'
+                else:
+                    title = 'Assignment updated'
+                    message = f'{actor_name} updated assignment progress for "{article_title}".'
+                Notification.objects.create(
+                    user=assignment.assigned_by,
+                    notif_type='assign',
+                    title=title,
+                    message=message,
+                    icon='',
+                    action_url=f'/admin/newsapp/articleassignment/{assignment.pk}/change/',
+                )
+
+        messages.success(
+            request,
+            'Assignment progress updated successfully.'
+            if assignment.work_status == 'completed'
+            else 'Assignment moved back to pending.',
+        )
+        next_url = request.POST.get('next') or '/admin/my-assignments/'
+        return redirect(next_url)
 
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout
@@ -2104,6 +2238,72 @@ class PermissionAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
+class ArticleAssignmentAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/newsapp/articleassignment/change_list.html'
+    list_select_related = ('article', 'user', 'assigned_by')
+    search_fields = ('article__title', 'user__username', 'assigned_by__username', 'assignment_message')
+    list_filter = ('role_type', 'assigned_at', 'deadline')
+    ordering = ('-assigned_at',)
+
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_view_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_add_permission(self, request):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_change_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def changelist_view(self, request, extra_context=None):
+        response = super().changelist_view(request, extra_context=extra_context)
+        try:
+            cl = response.context_data['cl']
+        except (AttributeError, KeyError, TypeError):
+            return response
+
+        full_qs = cl.root_queryset.select_related('article', 'user', 'assigned_by')
+        visible_qs = cl.queryset.select_related('article', 'user', 'assigned_by')
+        now = timezone.now()
+        assignment_rows = list(cl.result_list)
+
+        for row in assignment_rows:
+            deadline = getattr(row, 'deadline', None)
+            row.deadline_state = ''
+            if not deadline:
+                continue
+            if deadline < now:
+                row.deadline_state = 'overdue'
+            elif deadline <= now + timedelta(days=2):
+                row.deadline_state = 'soon'
+            else:
+                row.deadline_state = 'normal'
+
+        response.context_data.update({
+            'assignment_rows': assignment_rows,
+            'assignment_total': full_qs.count(),
+            'assignment_visible_total': visible_qs.count(),
+            'assignment_reporter_total': full_qs.filter(role_type='reporter').count(),
+            'assignment_fact_checker_total': full_qs.filter(role_type='fact_checker').count(),
+            'assignment_legal_total': full_qs.filter(role_type='legal').count(),
+            'assignment_due_soon_total': full_qs.filter(
+                deadline__isnull=False,
+                deadline__gte=now,
+                deadline__lte=now + timedelta(days=2),
+            ).count(),
+            'assignment_overdue_total': full_qs.filter(deadline__isnull=False, deadline__lt=now).count(),
+            'assignment_search_query': request.GET.get('q', '').strip(),
+            'assignment_selected_role': request.GET.get('role_type__exact', '').strip(),
+            'assignment_now': now,
+        })
+        return response
+
+
 class CategoryAdmin(admin.ModelAdmin):
     change_list_template = 'admin/newsapp/category/change_list.html'
     search_fields = ('name', 'slug', 'description')
@@ -2152,7 +2352,7 @@ admin_site.register(Category,                   CategoryAdmin)
 admin_site.register(UserProfile)
 admin_site.register(LoginAttemptLog,            LoginAttemptLogAdmin)
 admin_site.register(Article,                    ArticleAdmin)
-admin_site.register(ArticleAssignment)
+admin_site.register(ArticleAssignment,          ArticleAssignmentAdmin)
 admin_site.register(ArticleVersion,             ArticleVersionAdmin)
 admin_site.register(ArticleWorkflowLog)
 admin_site.register(FactCheck,                  FactCheckAdmin)

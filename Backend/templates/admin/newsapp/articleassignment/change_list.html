@@ -1,0 +1,883 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block title %}Article Assignment Desk{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .aa-page{
+      --aa-navy:#12204f;
+      --aa-blue:#21409a;
+      --aa-blue-soft:#edf3ff;
+      --aa-ink:#15213b;
+      --aa-muted:#667085;
+      --aa-line:#dbe4f2;
+      --aa-card:#ffffff;
+      --aa-bg:#f5f8ff;
+      --aa-green:#157f56;
+      --aa-green-soft:#e8f8ef;
+      --aa-amber:#a96407;
+      --aa-amber-soft:#fff3df;
+      --aa-red:#b42318;
+      --aa-red-soft:#feeceb;
+      --aa-shadow:0 18px 45px rgba(18,32,79,.08);
+    }
+
+    .aa-page{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      color:var(--aa-ink);
+    }
+
+    .aa-hero{
+      display:grid;
+      grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .aa-hero-card,
+    .aa-side-card,
+    .aa-stats,
+    .aa-toolbar,
+    .aa-table-wrap{
+      background:var(--aa-card);
+      border:1px solid rgba(33,64,154,.08);
+      border-radius:20px;
+      box-shadow:var(--aa-shadow);
+    }
+
+    .aa-hero-card{
+      padding:20px 22px;
+      position:relative;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at top right, rgba(254,196,64,.22), transparent 34%),
+        linear-gradient(135deg, #12204f 0%, #1c3f9d 55%, #2d62d7 100%);
+      color:#fff;
+    }
+
+    .aa-hero-card::after{
+      content:"";
+      position:absolute;
+      right:-70px;
+      top:-55px;
+      width:220px;
+      height:220px;
+      border-radius:50%;
+      background:rgba(255,255,255,.08);
+    }
+
+    .aa-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
+    .aa-kicker-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#7ff0b2;
+      box-shadow:0 0 0 6px rgba(127,240,178,.16);
+    }
+
+    .aa-title{
+      margin:14px 0 8px;
+      font-size:25px;
+      line-height:1.1;
+      font-weight:800;
+      letter-spacing:-.03em;
+    }
+
+    .aa-copy{
+      max-width:560px;
+      margin:0;
+      color:rgba(255,255,255,.82);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .aa-hero-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .aa-meta-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.12);
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .aa-side-card{
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      background:
+        linear-gradient(180deg, rgba(237,243,255,.95) 0%, rgba(255,255,255,1) 100%);
+    }
+
+    .aa-side-label{
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#47608f;
+      margin-bottom:8px;
+    }
+
+    .aa-side-big{
+      font-size:32px;
+      font-weight:800;
+      color:var(--aa-navy);
+      line-height:1;
+    }
+
+    .aa-side-copy{
+      margin:8px 0 14px;
+      color:var(--aa-muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .aa-side-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .aa-btn,
+    .aa-btn-lite{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      min-height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      border:0;
+      text-decoration:none;
+      font-weight:700;
+      font-size:12.5px;
+      cursor:pointer;
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .aa-btn:hover,
+    .aa-btn-lite:hover{
+      transform:translateY(-1px);
+    }
+
+    .aa-btn{
+      color:#fff;
+      background:linear-gradient(135deg, #1939a6, #12204f);
+      box-shadow:0 14px 30px rgba(18,32,79,.18);
+    }
+
+    .aa-btn-lite{
+      color:var(--aa-blue);
+      background:#fff;
+      border:1px solid rgba(33,64,154,.14);
+    }
+
+    .aa-stats{
+      display:grid;
+      grid-template-columns:repeat(5, minmax(0,1fr));
+      gap:12px;
+      padding:12px;
+      background:linear-gradient(180deg, #fbfdff 0%, #f5f8ff 100%);
+    }
+
+    .aa-stat{
+      border-radius:16px;
+      padding:14px 14px 13px;
+      background:#fff;
+      border:1px solid var(--aa-line);
+    }
+
+    .aa-stat--blue{ background:linear-gradient(180deg,#eef4ff 0%,#ffffff 100%); }
+    .aa-stat--green{ background:linear-gradient(180deg,#eefbf4 0%,#ffffff 100%); }
+    .aa-stat--amber{ background:linear-gradient(180deg,#fff8eb 0%,#ffffff 100%); }
+    .aa-stat--red{ background:linear-gradient(180deg,#fff1f0 0%,#ffffff 100%); }
+
+    .aa-stat-label{
+      display:block;
+      color:#5b6c8f;
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:7px;
+    }
+
+    .aa-stat-value{
+      display:block;
+      font-size:22px;
+      line-height:1;
+      font-weight:800;
+      color:var(--aa-navy);
+    }
+
+    .aa-stat-sub{
+      margin-top:6px;
+      color:var(--aa-muted);
+      font-size:11px;
+      line-height:1.4;
+    }
+
+    .aa-toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+    }
+
+    .aa-toolbar-left,
+    .aa-toolbar-right{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+    }
+
+    .aa-toolbar--filters{
+      flex-wrap:nowrap;
+      gap:14px;
+    }
+
+    .aa-toolbar--filters .aa-toolbar-left{
+      flex:1;
+      flex-wrap:nowrap;
+      min-width:0;
+    }
+
+    .aa-toolbar--filters .aa-toolbar-right{
+      flex:0 0 auto;
+      justify-content:flex-end;
+    }
+
+    .aa-field{
+      position:relative;
+      min-width:200px;
+    }
+
+    .aa-field--search{
+      flex:1 1 360px;
+      min-width:260px;
+      max-width:420px;
+    }
+
+    .aa-field svg{
+      position:absolute;
+      left:14px;
+      top:50%;
+      transform:translateY(-50%);
+      color:#7b8ab2;
+      pointer-events:none;
+    }
+
+    .aa-input,
+    .aa-select{
+      min-height:40px;
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--aa-line);
+      background:#fff;
+      color:var(--aa-ink);
+      font-size:13px;
+      outline:none;
+      transition:border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .aa-input{
+      padding:0 14px 0 40px;
+    }
+
+    .aa-select{
+      padding:0 12px;
+      min-width:170px;
+    }
+
+    .aa-select--role{
+      width:170px;
+      min-width:170px;
+      flex:0 0 170px;
+    }
+
+    .aa-input:focus,
+    .aa-select:focus{
+      border-color:#8fb2ff;
+      box-shadow:0 0 0 4px rgba(89,124,241,.12);
+    }
+
+    .aa-selected-note{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 12px;
+      border-radius:12px;
+      background:#f5f8ff;
+      border:1px dashed #c8d6f7;
+      color:#4c618f;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .aa-table-wrap{
+      overflow:hidden;
+    }
+
+    .aa-table-scroll{
+      overflow:auto;
+    }
+
+    .aa-table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:1080px;
+    }
+
+    .aa-table thead th{
+      padding:18px 16px;
+      background:#f7f9fe;
+      border-bottom:1px solid var(--aa-line);
+      color:#536481;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      text-align:left;
+      white-space:nowrap;
+    }
+
+    .aa-table tbody td{
+      padding:18px 16px;
+      border-bottom:1px solid #edf2fb;
+      vertical-align:top;
+      background:#fff;
+    }
+
+    .aa-row:hover td{
+      background:#fbfdff;
+    }
+
+    .aa-check{
+      width:18px;
+      height:18px;
+      accent-color:#21409a;
+    }
+
+    .aa-article-link{
+      display:inline-block;
+      color:var(--aa-navy);
+      font-size:15px;
+      font-weight:700;
+      line-height:1.45;
+      text-decoration:none;
+    }
+
+    .aa-article-link:hover{ color:#21409a; }
+
+    .aa-muted{
+      margin-top:6px;
+      color:var(--aa-muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .aa-person{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    }
+
+    .aa-avatar{
+      width:38px;
+      height:38px;
+      border-radius:14px;
+      background:linear-gradient(135deg,#d9e6ff,#eff4ff);
+      color:#16378f;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:13px;
+      font-weight:800;
+      flex-shrink:0;
+    }
+
+    .aa-person-name{
+      color:var(--aa-ink);
+      font-size:14px;
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .aa-person-sub{
+      margin-top:4px;
+      color:var(--aa-muted);
+      font-size:12px;
+    }
+
+    .aa-role{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius:999px;
+      padding:9px 12px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.03em;
+      white-space:nowrap;
+    }
+
+    .aa-role--reporter{
+      color:#21409a;
+      background:#edf3ff;
+    }
+
+    .aa-role--fact_checker{
+      color:var(--aa-green);
+      background:var(--aa-green-soft);
+    }
+
+    .aa-role--legal{
+      color:#8d4b0f;
+      background:var(--aa-amber-soft);
+    }
+
+    .aa-deadline{
+      display:inline-flex;
+      flex-direction:column;
+      gap:3px;
+    }
+
+    .aa-deadline-date{
+      color:var(--aa-ink);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .aa-deadline-tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      min-height:24px;
+      padding:0 9px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.03em;
+    }
+
+    .aa-deadline-tag--soon{
+      color:var(--aa-amber);
+      background:var(--aa-amber-soft);
+    }
+
+    .aa-deadline-tag--overdue{
+      color:var(--aa-red);
+      background:var(--aa-red-soft);
+    }
+
+    .aa-deadline-tag--normal{
+      color:var(--aa-green);
+      background:var(--aa-green-soft);
+    }
+
+    .aa-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .aa-icon-btn{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      border:1px solid var(--aa-line);
+      background:#fff;
+      color:#2346ab;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      transition:transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .aa-icon-btn:hover{
+      transform:translateY(-1px);
+      border-color:#9ab5f3;
+      background:#f7faff;
+    }
+
+    .aa-empty{
+      padding:56px 20px;
+      text-align:center;
+    }
+
+    .aa-empty-title{
+      margin:14px 0 8px;
+      color:var(--aa-navy);
+      font-size:20px;
+      font-weight:800;
+    }
+
+    .aa-empty-copy{
+      color:var(--aa-muted);
+      font-size:14px;
+    }
+
+    .aa-pagination{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:18px 20px 0;
+    }
+
+    .aa-pagination-copy{
+      color:var(--aa-muted);
+      font-size:13px;
+      font-weight:600;
+    }
+
+    .aa-pagination-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .aa-page-btn{
+      min-width:38px;
+      height:38px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid var(--aa-line);
+      background:#fff;
+      color:var(--aa-blue);
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .aa-page-btn.is-active{
+      background:linear-gradient(135deg, #21409a, #12204f);
+      border-color:transparent;
+      color:#fff;
+      box-shadow:0 12px 25px rgba(18,32,79,.16);
+    }
+
+    @media (max-width: 1180px){
+      .aa-hero,
+      .aa-stats{
+        grid-template-columns:1fr;
+      }
+      .aa-stat{ min-height:auto; }
+    }
+
+    @media (max-width: 768px){
+      .aa-hero-card,
+      .aa-side-card,
+      .aa-toolbar,
+      .aa-stats{
+        padding:14px;
+      }
+      .aa-title{
+        font-size:22px;
+      }
+      .aa-toolbar-left,
+      .aa-toolbar-right{
+        width:100%;
+      }
+      .aa-toolbar--filters,
+      .aa-toolbar--filters .aa-toolbar-left{
+        flex-wrap:wrap;
+      }
+      .aa-field,
+      .aa-field--search,
+      .aa-select,
+      .aa-select--role{
+        min-width:100%;
+        width:100%;
+        max-width:none;
+        flex:1 1 100%;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+{% block search %}{% endblock %}
+{% block result_list %}{% endblock %}
+{% block pagination %}{% endblock %}
+
+{% block content %}
+<div class="aa-page">
+  <section class="aa-hero">
+    <div class="aa-hero-card">
+      <div class="aa-kicker"><span class="aa-kicker-dot"></span>Assignment workflow</div>
+      <h2 class="aa-title">Article Assignment Desk</h2>
+      <p class="aa-copy">Reporters, fact-checkers aur legal reviewers ki assignments ek clean dashboard me dekh sakte ho. Search, filter aur bulk actions yahin se easy ho jayenge.</p>
+      <div class="aa-hero-meta">
+        <span class="aa-meta-pill">{{ assignment_total|default:0 }} total assignments</span>
+        <span class="aa-meta-pill">{{ assignment_visible_total|default:0 }} visible in current view</span>
+        <span class="aa-meta-pill">{{ cl.result_count|default:0 }} matching current filters</span>
+      </div>
+    </div>
+
+    <div class="aa-side-card">
+      <div>
+        <div class="aa-side-label">Quick actions</div>
+        <div class="aa-side-big">{{ assignment_due_soon_total|default:0 }}</div>
+        <p class="aa-side-copy">Assignments with near deadlines. Is panel se new assignment add karo ya current view reset karke full list dekh lo.</p>
+      </div>
+      <div class="aa-side-actions">
+        <a href="/admin/newsapp/articleassignment/add/" class="aa-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add assignment
+        </a>
+        <a href="/admin/newsapp/articleassignment/" class="aa-btn-lite">Reset view</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="aa-stats">
+    <article class="aa-stat aa-stat--blue">
+      <span class="aa-stat-label">Reporter</span>
+      <strong class="aa-stat-value">{{ assignment_reporter_total|default:0 }}</strong>
+      <div class="aa-stat-sub">Field reporting and primary drafting</div>
+    </article>
+    <article class="aa-stat aa-stat--green">
+      <span class="aa-stat-label">Fact Check</span>
+      <strong class="aa-stat-value">{{ assignment_fact_checker_total|default:0 }}</strong>
+      <div class="aa-stat-sub">Verification and source validation queue</div>
+    </article>
+    <article class="aa-stat aa-stat--amber">
+      <span class="aa-stat-label">Legal Review</span>
+      <strong class="aa-stat-value">{{ assignment_legal_total|default:0 }}</strong>
+      <div class="aa-stat-sub">Sensitive or compliance-heavy items</div>
+    </article>
+    <article class="aa-stat aa-stat--amber">
+      <span class="aa-stat-label">Due Soon</span>
+      <strong class="aa-stat-value">{{ assignment_due_soon_total|default:0 }}</strong>
+      <div class="aa-stat-sub">Within the next 48 hours</div>
+    </article>
+    <article class="aa-stat aa-stat--red">
+      <span class="aa-stat-label">Overdue</span>
+      <strong class="aa-stat-value">{{ assignment_overdue_total|default:0 }}</strong>
+      <div class="aa-stat-sub">Needs immediate follow-up</div>
+    </article>
+  </section>
+
+  <section class="aa-toolbar aa-toolbar--filters">
+    <form method="get" class="aa-toolbar-left">
+      <label class="aa-field aa-field--search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="search" name="q" value="{{ assignment_search_query }}" class="aa-input" placeholder="Search article title, assignee, notes...">
+      </label>
+      <select name="role_type__exact" class="aa-select aa-select--role">
+        <option value="">All roles</option>
+        <option value="reporter" {% if assignment_selected_role == 'reporter' %}selected{% endif %}>Reporter</option>
+        <option value="fact_checker" {% if assignment_selected_role == 'fact_checker' %}selected{% endif %}>Fact Checker</option>
+        <option value="legal" {% if assignment_selected_role == 'legal' %}selected{% endif %}>Legal Reviewer</option>
+      </select>
+      <button type="submit" class="aa-btn">Apply filters</button>
+      <a href="/admin/newsapp/articleassignment/" class="aa-btn-lite">Clear</a>
+    </form>
+
+    <div class="aa-toolbar-right">
+      <span class="aa-selected-note" id="aaSelectedCount">0 selected</span>
+    </div>
+  </section>
+
+  <section class="aa-table-wrap">
+    <form method="post" id="changelist-form">
+      {% csrf_token %}
+      <input type="hidden" name="select_across" value="0">
+
+      <div class="aa-toolbar" style="border:none;border-bottom:1px solid #edf2fb;border-radius:24px 24px 0 0;box-shadow:none;margin:0;padding:16px 18px;">
+        <div class="aa-toolbar-left">
+          {% if action_form %}
+            {{ action_form.action }}
+          {% endif %}
+          <button type="submit" name="index" value="0" class="aa-btn">Run action</button>
+        </div>
+        <div class="aa-toolbar-right">
+          <span class="aa-selected-note">{{ cl.result_count }} assignments in this view</span>
+        </div>
+      </div>
+
+      <div class="aa-table-scroll">
+        <table class="aa-table">
+          <thead>
+            <tr>
+              <th style="width:56px;"><input type="checkbox" class="aa-check" id="aaSelectAll"></th>
+              <th>Article</th>
+              <th>Assigned To</th>
+              <th>Role</th>
+              <th>Message</th>
+              <th>Deadline</th>
+              <th>Assigned By</th>
+              <th>Created</th>
+              <th style="width:110px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in assignment_rows %}
+              <tr class="aa-row">
+                <td><input type="checkbox" class="aa-check aa-row-check" name="_selected_action" value="{{ row.pk }}"></td>
+                <td>
+                  <a href="/admin/newsapp/articleassignment/{{ row.pk }}/change/" class="aa-article-link">{{ row.article.title|truncatechars:88 }}</a>
+                  <div class="aa-muted">Assignment #{{ row.pk }}{% if row.article.status %} · Article status: {{ row.article.status|title }}{% endif %}</div>
+                </td>
+                <td>
+                  <div class="aa-person">
+                    <div class="aa-avatar">{{ row.user.username|first|upper }}</div>
+                    <div>
+                      <div class="aa-person-name">{{ row.user.get_full_name|default:row.user.username }}</div>
+                      <div class="aa-person-sub">@{{ row.user.username }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="aa-role aa-role--{{ row.role_type }}">{{ row.get_role_type_display }}</span>
+                </td>
+                <td>
+                  <div class="aa-muted" style="margin-top:0;color:#44516d;font-size:13px;">{{ row.assignment_message|default:"No assignment note added yet."|truncatechars:110 }}</div>
+                </td>
+                <td>
+                  {% if row.deadline %}
+                    <div class="aa-deadline">
+                      <span class="aa-deadline-date">{{ row.deadline|date:"d M Y, h:i A" }}</span>
+                      {% if row.deadline_state == 'overdue' %}
+                        <span class="aa-deadline-tag aa-deadline-tag--overdue">Overdue</span>
+                      {% elif row.deadline_state == 'soon' %}
+                        <span class="aa-deadline-tag aa-deadline-tag--soon">Due soon</span>
+                      {% else %}
+                        <span class="aa-deadline-tag aa-deadline-tag--normal">{{ row.deadline|timeuntil }} left</span>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <span class="aa-muted" style="margin-top:0;">No deadline</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.assigned_by %}
+                    <div class="aa-person">
+                      <div class="aa-avatar">{{ row.assigned_by.username|first|upper }}</div>
+                      <div>
+                        <div class="aa-person-name">{{ row.assigned_by.get_full_name|default:row.assigned_by.username }}</div>
+                        <div class="aa-person-sub">@{{ row.assigned_by.username }}</div>
+                      </div>
+                    </div>
+                  {% else %}
+                    <span class="aa-muted" style="margin-top:0;">System / unknown</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="aa-person-name" style="font-size:13px;">{{ row.assigned_at|date:"d M Y" }}</div>
+                  <div class="aa-person-sub">{{ row.assigned_at|date:"h:i A" }}</div>
+                </td>
+                <td>
+                  <div class="aa-actions">
+                    <a href="/admin/newsapp/articleassignment/{{ row.pk }}/change/" class="aa-icon-btn" title="Edit assignment">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+                    </a>
+                    <a href="/admin/newsapp/article/{{ row.article_id }}/change/" class="aa-icon-btn" title="Open article">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path></svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" class="aa-empty">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#21409a" stroke-width="1.6"><path d="M9 11 12 14l9-9"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                  <div class="aa-empty-title">No assignments found</div>
+                  <div class="aa-empty-copy">Current filters ya search ke hisaab se koi row nahi mili. Reset view karke ya new assignment add karke start kar sakte ho.</div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
+  {% if cl.paginator and cl.result_count %}
+    <div class="aa-pagination">
+      <div class="aa-pagination-copy">
+        Showing {{ cl.result_list|length }} of {{ cl.result_count }} matching assignments
+      </div>
+      <div class="aa-pagination-actions">
+        {% for page_num in cl.paginator.page_range %}
+          {% if page_num == cl.page_num|add:1 %}
+            <span class="aa-page-btn is-active">{{ page_num }}</span>
+          {% elif page_num >= cl.page_num|add:-2 and page_num <= cl.page_num|add:4 %}
+            <a class="aa-page-btn" href="?{% for key, value in request.GET.items %}{% if key != 'p' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}p={{ page_num|add:-1 }}">{{ page_num }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  (function(){
+    const selectAll = document.getElementById('aaSelectAll');
+    const checkboxes = Array.from(document.querySelectorAll('.aa-row-check'));
+    const selectedCount = document.getElementById('aaSelectedCount');
+
+    function syncSelectedCount(){
+      const checked = checkboxes.filter((item) => item.checked).length;
+      if(selectedCount){
+        selectedCount.textContent = checked + ' selected';
+      }
+      if(selectAll){
+        selectAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
+        selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+      }
+    }
+
+    if(selectAll){
+      selectAll.addEventListener('change', function(){
+        checkboxes.forEach((item) => {
+          item.checked = selectAll.checked;
+        });
+        syncSelectedCount();
+      });
+    }
+
+    checkboxes.forEach((item) => {
+      item.addEventListener('change', syncSelectedCount);
+    });
+
+    syncSelectedCount();
+  })();
+</script>
+{% endblock %}

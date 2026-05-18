@@ -401,12 +401,19 @@ class ArticleAssignment(models.Model):
         ('fact_checker', 'Fact Checker'),
         ('legal', 'Legal Reviewer'),
     ]
+    WORK_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+    ]
 
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='assignments')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     role_type = models.CharField(max_length=20, choices=ROLE_TYPES)
     assignment_message = models.TextField(blank=True, default='')
     deadline = models.DateTimeField(null=True, blank=True)
+    work_status = models.CharField(max_length=20, choices=WORK_STATUS_CHOICES, default='pending')
+    completion_note = models.TextField(blank=True, default='')
+    completed_at = models.DateTimeField(null=True, blank=True)
     assigned_at = models.DateTimeField(auto_now_add=True)
     assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_articles')
 

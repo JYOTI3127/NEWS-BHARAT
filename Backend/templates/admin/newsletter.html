@@ -624,7 +624,7 @@
       const response = await fetch('/api/newsletters/', {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
-      });
+      }); 
       if (!response.ok) throw new Error('Could not load saved newsletters.');
       const data = await response.json();
       savedDraftsCache = (Array.isArray(data) ? data : []).map(newsletterToDraft);

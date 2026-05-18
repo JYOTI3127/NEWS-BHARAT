@@ -1,0 +1,468 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}My Assignments{% endblock %}
+{% block content_title %}My Assignments{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .mya-page{
+    --mya-navy:#12204f;
+    --mya-blue:#2346ab;
+    --mya-line:#d7e1f2;
+    --mya-bg:#f5f8ff;
+    --mya-card:#fff;
+    --mya-text:#17233d;
+    --mya-muted:#667085;
+    --mya-green:#157f56;
+    --mya-green-soft:#eaf8f0;
+    --mya-red:#b42318;
+    --mya-red-soft:#feeceb;
+    --mya-amber:#9a6700;
+    --mya-amber-soft:#fff4dd;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .mya-hero,.mya-stats,.mya-filters,.mya-list{
+    background:var(--mya-card);
+    border:1px solid rgba(35,70,171,.08);
+    border-radius:22px;
+    box-shadow:0 16px 40px rgba(18,32,79,.07);
+  }
+  .mya-hero{
+    padding:22px 24px;
+    background:
+      radial-gradient(circle at top right, rgba(255,201,71,.22), transparent 34%),
+      linear-gradient(135deg,#132456 0%,#2247ab 65%,#3568d9 100%);
+    color:#fff;
+  }
+  .mya-kicker{
+    display:inline-flex;
+    padding:6px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.12);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+  .mya-title{
+    margin:12px 0 6px;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+  .mya-copy{
+    margin:0;
+    max-width:760px;
+    color:rgba(255,255,255,.84);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .mya-stats{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    padding:12px;
+    background:linear-gradient(180deg,#fbfdff 0%,#f4f8ff 100%);
+  }
+  .mya-stat{
+    border:1px solid var(--mya-line);
+    border-radius:16px;
+    padding:14px;
+    background:#fff;
+  }
+  .mya-stat-label{
+    display:block;
+    font-size:11px;
+    font-weight:800;
+    color:#536481;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:7px;
+  }
+  .mya-stat-value{
+    font-size:24px;
+    line-height:1;
+    font-weight:800;
+    color:var(--mya-navy);
+  }
+  .mya-stat-sub{
+    margin-top:6px;
+    font-size:11px;
+    color:var(--mya-muted);
+  }
+  .mya-filters{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+  }
+  .mya-filter-form{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+  }
+  .mya-search-wrap{
+    position:relative;
+    flex:1 1 300px;
+    max-width:420px;
+  }
+  .mya-search-wrap svg{
+    position:absolute;
+    left:13px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#7a88ab;
+  }
+  .mya-input,.mya-select,.mya-btn,.mya-btn-lite,.mya-check-btn{
+    min-height:40px;
+    border-radius:12px;
+    font-size:13px;
+  }
+  .mya-input,.mya-select,textarea.mya-note{
+    border:1px solid var(--mya-line);
+    background:#fff;
+    color:var(--mya-text);
+    outline:none;
+  }
+  .mya-input{
+    width:100%;
+    padding:0 14px 0 40px;
+  }
+  .mya-select{
+    min-width:160px;
+    padding:0 12px;
+  }
+  .mya-btn,.mya-btn-lite,.mya-check-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:0 14px;
+    text-decoration:none;
+    border:0;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .mya-btn{
+    color:#fff;
+    background:linear-gradient(135deg,#21409a,#12204f);
+  }
+  .mya-btn-lite{
+    color:var(--mya-blue);
+    background:#fff;
+    border:1px solid rgba(35,70,171,.16);
+  }
+  .mya-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px dashed #c9d7f6;
+    background:#f7faff;
+    color:#446095;
+    font-size:12px;
+    font-weight:800;
+  }
+  .mya-list{
+    padding:16px;
+  }
+  .mya-cards{
+    display:grid;
+    gap:14px;
+  }
+  .mya-card{
+    border:1px solid var(--mya-line);
+    border-radius:18px;
+    padding:16px;
+    background:linear-gradient(180deg,#fff 0%,#fbfdff 100%);
+  }
+  .mya-card-top{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .mya-title-link{
+    color:var(--mya-navy);
+    text-decoration:none;
+    font-size:18px;
+    font-weight:800;
+    line-height:1.35;
+  }
+  .mya-meta{
+    margin-top:6px;
+    color:var(--mya-muted);
+    font-size:12px;
+  }
+  .mya-badges{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:flex-end;
+  }
+  .mya-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:30px;
+    padding:0 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:800;
+  }
+  .mya-badge--role{ background:#edf3ff; color:#2346ab; }
+  .mya-badge--pending{ background:var(--mya-amber-soft); color:var(--mya-amber); }
+  .mya-badge--completed{ background:var(--mya-green-soft); color:var(--mya-green); }
+  .mya-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .mya-data{
+    padding:12px;
+    border-radius:14px;
+    background:#f8fbff;
+    border:1px solid #e4ecfb;
+  }
+  .mya-data-label{
+    display:block;
+    font-size:10px;
+    font-weight:800;
+    color:#66779b;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:5px;
+  }
+  .mya-data-value{
+    color:var(--mya-text);
+    font-size:13px;
+    font-weight:700;
+    line-height:1.5;
+  }
+  .mya-deadline--overdue .mya-data-value{ color:var(--mya-red); }
+  .mya-deadline--soon .mya-data-value{ color:var(--mya-amber); }
+  .mya-note-box{
+    margin-bottom:12px;
+    padding:13px 14px;
+    border-radius:16px;
+    background:#f9fbff;
+    border:1px solid #e6eefc;
+  }
+  .mya-note-label{
+    display:block;
+    font-size:11px;
+    font-weight:800;
+    color:#5a6c91;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:6px;
+  }
+  .mya-note-copy{
+    color:#42526f;
+    font-size:13px;
+    line-height:1.6;
+    white-space:pre-wrap;
+  }
+  .mya-update-form{
+    display:grid;
+    gap:10px;
+  }
+  .mya-checkline{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .mya-check{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    color:var(--mya-text);
+    font-size:13px;
+    font-weight:700;
+  }
+  .mya-check input{
+    width:18px;
+    height:18px;
+    accent-color:#21409a;
+  }
+  textarea.mya-note{
+    width:100%;
+    min-height:96px;
+    resize:vertical;
+    padding:12px 14px;
+    border-radius:14px;
+    font-size:13px;
+    line-height:1.55;
+  }
+  .mya-helper{
+    color:var(--mya-muted);
+    font-size:12px;
+  }
+  .mya-check-btn{
+    width:max-content;
+    color:#fff;
+    background:linear-gradient(135deg,#0d7b56,#0f5c42);
+  }
+  .mya-empty{
+    text-align:center;
+    padding:48px 12px;
+    color:var(--mya-muted);
+  }
+  .mya-empty strong{
+    display:block;
+    color:var(--mya-navy);
+    font-size:20px;
+    margin-bottom:8px;
+  }
+  @media (max-width: 1100px){
+    .mya-stats,.mya-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width: 760px){
+    .mya-stats,.mya-grid{ grid-template-columns:1fr; }
+    .mya-filter-form,.mya-filters{ flex-direction:column; align-items:stretch; }
+    .mya-search-wrap,.mya-select,.mya-btn,.mya-btn-lite,.mya-pill,.mya-check-btn{ width:100%; max-width:none; }
+    .mya-card-top,.mya-badges,.mya-checkline{ justify-content:flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mya-page">
+  <section class="mya-hero">
+    <span class="mya-kicker">{% if assignment_page_is_admin_view %}Admin visible{% else %}Reporter workflow{% endif %}</span>
+    <h2 class="mya-title">{% if assignment_page_is_admin_view %}Team Assignment Updates{% else %}My Assignments{% endif %}</h2>
+    <p class="mya-copy">{% if assignment_page_is_admin_view %}Admins can review assignment progress here, including completion notes submitted by reporters and reviewers.{% else %}Use this page to review deadlines, assignment notes, and submit progress or completion updates. Once marked complete, the assigner will receive a notification.{% endif %}</p>
+  </section>
+
+  <section class="mya-stats">
+    <article class="mya-stat">
+      <span class="mya-stat-label">Total</span>
+      <div class="mya-stat-value">{{ assignment_total|default:0 }}</div>
+      <div class="mya-stat-sub">Assignments in your current scope</div>
+    </article>
+    <article class="mya-stat">
+      <span class="mya-stat-label">Pending</span>
+      <div class="mya-stat-value">{{ assignment_pending_total|default:0 }}</div>
+      <div class="mya-stat-sub">Awaiting completion</div>
+    </article>
+    <article class="mya-stat">
+      <span class="mya-stat-label">Completed</span>
+      <div class="mya-stat-value">{{ assignment_completed_total|default:0 }}</div>
+      <div class="mya-stat-sub">Completed with an update note</div>
+    </article>
+    <article class="mya-stat">
+      <span class="mya-stat-label">Urgent</span>
+      <div class="mya-stat-value">{{ assignment_overdue_total|default:0 }}</div>
+      <div class="mya-stat-sub">{{ assignment_due_soon_total|default:0 }} due soon, {{ assignment_overdue_total|default:0 }} overdue</div>
+    </article>
+  </section>
+
+  <section class="mya-filters">
+    <form method="get" class="mya-filter-form">
+      <label class="mya-search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="search" class="mya-input" name="q" value="{{ assignment_search_query }}" placeholder="Search article, note, or assigner...">
+      </label>
+      <select name="status" class="mya-select">
+        <option value="">All status</option>
+        <option value="pending" {% if assignment_selected_status == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="completed" {% if assignment_selected_status == 'completed' %}selected{% endif %}>Completed</option>
+      </select>
+      <select name="role" class="mya-select">
+        <option value="">All roles</option>
+        <option value="reporter" {% if assignment_selected_role == 'reporter' %}selected{% endif %}>Reporter</option>
+        <option value="fact_checker" {% if assignment_selected_role == 'fact_checker' %}selected{% endif %}>Fact Checker</option>
+        <option value="legal" {% if assignment_selected_role == 'legal' %}selected{% endif %}>Legal Reviewer</option>
+      </select>
+      <button type="submit" class="mya-btn">Apply</button>
+      <a href="/admin/my-assignments/" class="mya-btn-lite">Reset</a>
+    </form>
+    <span class="mya-pill">{{ assignment_rows|length }} showing</span>
+  </section>
+
+  <section class="mya-list">
+    <div class="mya-cards">
+      {% for assignment in assignment_rows %}
+        <article class="mya-card">
+          <div class="mya-card-top">
+            <div>
+              <a href="/admin/newsapp/article/{{ assignment.article_id }}/change/" class="mya-title-link">{{ assignment.article.title }}</a>
+              <div class="mya-meta">
+                {% if assignment_page_is_admin_view %}
+                  Assigned to {{ assignment.user.get_full_name|default:assignment.user.username }}
+                {% else %}
+                  Assigned by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username|default:"Admin" }}
+                {% endif %}
+                · {{ assignment.assigned_at|date:"d M Y, h:i A" }}
+              </div>
+            </div>
+            <div class="mya-badges">
+              <span class="mya-badge mya-badge--role">{{ assignment.get_role_type_display }}</span>
+              <span class="mya-badge mya-badge--{{ assignment.work_status }}">{{ assignment.get_work_status_display }}</span>
+            </div>
+          </div>
+
+          <div class="mya-grid">
+            <div class="mya-data">
+              <span class="mya-data-label">Article status</span>
+              <div class="mya-data-value">{{ assignment.article.status|title }}</div>
+            </div>
+            <div class="mya-data {% if assignment.deadline_state %}mya-deadline--{{ assignment.deadline_state }}{% endif %}">
+              <span class="mya-data-label">Deadline</span>
+              <div class="mya-data-value">{% if assignment.deadline %}{{ assignment.deadline|date:"d M Y, h:i A" }}{% else %}No deadline{% endif %}</div>
+            </div>
+            <div class="mya-data">
+              <span class="mya-data-label">Completed at</span>
+              <div class="mya-data-value">{% if assignment.completed_at %}{{ assignment.completed_at|date:"d M Y, h:i A" }}{% else %}Not completed yet{% endif %}</div>
+            </div>
+            <div class="mya-data">
+              <span class="mya-data-label">Assignment id</span>
+              <div class="mya-data-value">#{{ assignment.pk }}</div>
+            </div>
+          </div>
+
+          <div class="mya-note-box">
+            <span class="mya-note-label">Assignment note</span>
+            <div class="mya-note-copy">{{ assignment.assignment_message|default:"No assignment note has been added yet." }}</div>
+          </div>
+
+          <form method="post" action="/admin/my-assignments/{{ assignment.pk }}/update/" class="mya-update-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="mya-checkline">
+              <label class="mya-check">
+                <input type="checkbox" name="is_completed" value="1" {% if assignment.work_status == 'completed' %}checked{% endif %}>
+                Mark this assignment as complete
+              </label>
+              <a href="/admin/newsapp/article/{{ assignment.article_id }}/change/" class="mya-btn-lite">Open article</a>
+            </div>
+            <textarea name="completion_note" class="mya-note" placeholder="Add your update for the assigner. Example: draft completed, sources added, fact-check pending...">{{ assignment.completion_note }}</textarea>
+            <div class="mya-helper">This note will be visible to the assigner and admins. Reporters can use it for progress updates or final submission notes.</div>
+            <button type="submit" class="mya-check-btn">Save progress</button>
+          </form>
+        </article>
+      {% empty %}
+        <div class="mya-empty">
+          <strong>No assignments found</strong>
+          No assignments match the current filters.
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -310,6 +310,7 @@ Disallow: /editor/
 Disallow: /login
 Disallow: /register
 Disallow: /preview/
+Disallow: /category/news4bharat
 Disallow: /*?utm_*
 Disallow: /*?ref=*
 Disallow: /search?*
@@ -318,16 +319,19 @@ Crawl-delay: 1
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
+Disallow: /category/news4bharat
 Crawl-delay: 0
 
 User-agent: Google-InspectionTool
 Allow: /
 Disallow: /admin/
+Disallow: /category/news4bharat
 Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
+Disallow: /category/news4bharat
 Crawl-delay: 1
 
 User-agent: SemrushBot

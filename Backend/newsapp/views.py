@@ -2102,6 +2102,9 @@ def _serialize_homepage_ad_banner(request, banner, requested_page=''):
         'ad_image': active_image_url,
         'link_url': active_link_url,
         'alt': active_alt,
+        'stored_image_url': image_url or '',
+        'stored_link_url': banner.link_url or '',
+        'stored_alt': banner.alt or 'Sponsored advertisement',
         'current_source_saved_banner_id': getattr(banner, 'source_saved_banner_id', None),
         'rotation_enabled': bool(getattr(banner, 'rotation_enabled', False) or rotation_active),
         'rotation_interval_seconds': rotation_interval_seconds,
@@ -2257,6 +2260,9 @@ def _empty_homepage_ad_banner(placement):
         'ad_image': '',
         'link_url': '',
         'alt': 'Sponsored advertisement',
+        'stored_image_url': '',
+        'stored_link_url': '',
+        'stored_alt': 'Sponsored advertisement',
         'current_source_saved_banner_id': None,
         'rotation_enabled': False,
         'rotation_interval_seconds': 10,
@@ -2295,29 +2301,8 @@ def _get_rotation_saved_banners(banner, requested_page=''):
                 is_active=True,
             )
         }
-        if len(saved_banner_map) < 2:
-            extra_same_placement = list(
-                SavedAdBanner.objects.filter(
-                    placement=banner.placement,
-                    is_active=True,
-                )
-                .exclude(pk__in=list(saved_banner_map.keys()))
-                .order_by('-updated_at', '-created_at')
-            )
-            for extra_banner in extra_same_placement:
-                saved_banner_map[extra_banner.pk] = extra_banner
-                selected_ids.append(extra_banner.pk)
-                if len(saved_banner_map) >= 2:
-                    break
     else:
-        auto_saved_banners = list(
-            SavedAdBanner.objects.filter(
-                placement=banner.placement,
-                is_active=True,
-            ).order_by('-updated_at', '-created_at')[:10]
-        )
-        saved_banner_map = {saved_banner.pk: saved_banner for saved_banner in auto_saved_banners}
-        selected_ids = [saved_banner.pk for saved_banner in auto_saved_banners]
+        return []
     ordered = []
     for banner_id in selected_ids:
         saved_banner = saved_banner_map.get(banner_id)
@@ -2422,12 +2407,12 @@ def save_ad_banner_library_item(request):
         _apply_saved_ad_media(banner, source_banner, 'saved_homepage_ads')
         banner.source_saved_banner = source_banner
     elif image_url and not image_url.startswith('blob:'):
-        url_error = _validate_remote_ad_image_url(image_url, placement)
-        if url_error:
-            return JsonResponse({'error': url_error}, status=400)
-        banner.image = None
-        banner.image_url = image_url
-        banner.source_saved_banner = None
+        if image_url != (banner.image_url or '') or banner.image:
+        # Dimension validation skip karo URL ke liye
+            banner.image = None
+            banner.image_url = image_url
+            banner.source_saved_banner = None
+            media_changed = True
     elif existing_banner and ((existing_banner.image and existing_banner.image.name) or existing_banner.image_url):
         _apply_saved_ad_media(banner, existing_banner, 'saved_homepage_ads')
         banner.source_saved_banner = None
@@ -4466,7 +4451,6 @@ def media_library_view(request):
     return render(request, 'admin/media_library.html', {
         'mp3_categories': categories,
     })
-
 
 @staff_member_required
 def newsletter_view(request):

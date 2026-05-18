@@ -66,10 +66,6 @@ const withCacheBust = (url) => {
 const fetchFreshJson = async (url) => {
   const response = await fetch(withCacheBust(url), {
     cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
   });
 
   if (!response.ok) throw new Error(`Ad request failed: ${response.status}`);

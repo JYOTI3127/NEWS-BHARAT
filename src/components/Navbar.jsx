@@ -443,18 +443,18 @@ const NAV_SECTIONS = [
 
 const navLinks = [
   { label: "Breaking News", path: "/category/breaking-news" },
-  { label: "World News", path: "/category/world-news" },
+  { label: "Bharat Explainers", path: "/category/bharat-explainers" },
   { label: "Business", path: "/category/business" },
-  { label: "Technology", path: "/category/technology" },
-  { label: "Entertainment", path: "/category/entertainment" },
-  { label: "Education", path: "/category/education" },
-  { label: "Automobile", path: "/category/automobile" },
-  { label: "National", path: "/category/national" },
   { label: "Politics", path: "/category/politics" },
-  { label: "Trending", path: "/category/trending" },
- 
-   { label: "Sports", path: "/category/sports" },
+  { label: "Stock Market", path: "/category/stock-market" },
+  { label: "Technology", path: "/category/technology" },
+  { label: "States of Bharat", path: "/category/state-of-bharat" },
+  { label: "World News", path: "/category/world-news" },
+  { label: "Sports", path: "/category/sports" },
+  { label: "Education", path: "/category/education" },
   { label: "Health", path: "/category/health" },
+  { label: "BFSi", path: "/category/bfsi" },
+  { label: "National", path: "/category/national" },
 ];
 
 const NAV_EDGE_HOVER_DELAY_MS = 220;
@@ -798,17 +798,7 @@ const Header = () => {
   const navPointerPosRef = useRef({ x: 0, y: 0 });
   const navigate = useNavigate();
 
-  const extra2KNavLinks = [
-    { label: "AI", path: "/category/ai" },
-    { label: "Bharat Explainers", path: "/category/bharat-explainers" },
-    { label: "Bharat Numbers", path: "/category/bharat-in-numbers" },
-    { label: "Bharat Startups", path: "/category/bharat-startups" },
-    { label: "BFSI", path: "/category/bfsi" },
-    { label: "Bharat 2047", path: "/category/bharat-2047" },
-    { label: "Opinions", path: "/category/bharat-opinions" },
-    { label: "States", path: "/category/state-of-bharat" },
-    { label: "60 Sec Read", path: "/category/60-second-read" },
-  ];
+  const extra2KNavLinks = [];
   const visibleNavLinks = uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]);
   const updateNavScrollState = useCallback(() => {
     const navEl = navLinksRef.current;

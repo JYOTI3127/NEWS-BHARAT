@@ -36,7 +36,7 @@ const ArticleDetails = lazy(() => import("./pages/ArticleDetails"));
 const SixtySecondsPage = lazy(() => import("./pages/Sixtysecondspage"));
 const CategoryPage = lazy(() => import("./pages/Categorypage"));
 const MoreArticlesPage = lazy(() => import("./pages/MoreArticlesPage"));
-const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
+// const NewsletterAgent = lazy(() => import("./pages/news4bharat-agent"));
 const TagPage = lazy(() => import("./pages/TagPage"));
 const AuthorPage = lazy(() => import("./pages/AuthorPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -146,6 +146,7 @@ const TOP_LEVEL_CATEGORY_ALIASES = {
   "states-of-bharat": "state-of-bharat",
   "political": "politics",
   "bharat-by-2047": "bharat-2047",
+  "viral-fact-check": "viral-and-fact-check",
 };
 
 const NON_CATEGORY_TOP_LEVEL_PATHS = new Set([
@@ -244,6 +245,7 @@ function Layout() {
             <Route path="/newsletter" element={<NewsletterPage />} />
             <Route path="/CommingSoon" element={<CommingSoon />} />
             <Route path="/category/bharats-startups" element={<Navigate to="/category/bharat-startups" replace />} />
+            <Route path="/category/viral-fact-check" element={<Navigate to="/category/viral-and-fact-check" replace />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/more-articles" element={<MoreArticlesPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
@@ -275,6 +277,8 @@ function Layout() {
             <Route path="/entertainment" element={<Navigate to="/category/entertainment" replace />} />
             <Route path="/market" element={<Navigate to="/category/business" replace />} />
             <Route path="/markets" element={<Navigate to="/category/business" replace />} />
+            <Route path="/stock-market" element={<Navigate to="/category/stock-market" replace />} />
+            <Route path="/viral-fact-check" element={<Navigate to="/category/viral-and-fact-check" replace />} />
             <Route path="/bfsi" element={<Navigate to="/category/bfsi" replace />} />
             <Route path="/bharat-bfsi" element={<Navigate to="/category/bfsi" replace />} />
             <Route path="/ai" element={<Navigate to="/category/ai" replace />} />

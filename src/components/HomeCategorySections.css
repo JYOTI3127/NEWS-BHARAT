@@ -124,10 +124,11 @@
 }
 
 .hcs-world-news-side-title {
-  display: block;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  overflow: visible;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .hcs-world-news-side-summary {
@@ -136,9 +137,9 @@
 }
 
 .hcs-world-news-side-thumb {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
-  background: transparent;
+  background: #f3f4f6;
 }
 
 .hcs-ai-side-thumb {
@@ -150,7 +151,7 @@
 .hcs-automobile-main-image,
 .hcs-automobile-side-thumb,
 .hcs-automobile-bottom-thumb {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   background: #f3f4f6;
 }
@@ -158,7 +159,7 @@
 .hcs-spotlight-main-image.hcs-automobile-main-image,
 .hcs-side-thumb.hcs-automobile-side-thumb,
 .hcs-bottom-rail-thumb.hcs-automobile-bottom-thumb {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   background: #f3f4f6;
 }
@@ -222,6 +223,7 @@
 .hcs-card,
 .hcs-scoreline-featured,
 .hcs-scoreline-item,
+.hcs-sports-horizontal-card,
 .hcs-spotlight-main,
 .hcs-bottom-rail-card {
   text-decoration: none;
@@ -241,6 +243,8 @@
 .hcs-card:hover .hcs-kicker,
 .hcs-scoreline-item:hover .hcs-side-title,
 .hcs-scoreline-item:hover .hcs-meta,
+.hcs-sports-horizontal-card:hover .hcs-sports-horizontal-title,
+.hcs-sports-horizontal-card:hover .hcs-meta,
 .hcs-spotlight-main:hover .hcs-featured-title,
 .hcs-spotlight-main:hover .hcs-summary,
 .hcs-bottom-rail-card:hover .hcs-side-title {
@@ -331,7 +335,7 @@
   align-items: start;
   padding: 10px;
   border-radius: 16px;
-  background: #faf7f2;
+  /* background: #faf7f2; */
   border: 1px solid #eee7df;
 }
 
@@ -423,6 +427,80 @@
   color: #fff;
   font-size: 13px;
   font-weight: 700;
+}
+
+.hcs-section-sports-grid {
+  overflow: hidden;
+}
+
+.hcs-sports-horizontal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.hcs-sports-horizontal-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #e6e8ef;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hcs-sports-horizontal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(17, 24, 39, 0.1);
+}
+
+.hcs-sports-horizontal-image {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  object-position: center top;
+  background: #f3f4f6;
+  transition: transform 0.35s ease;
+}
+
+.hcs-sports-horizontal-card:hover .hcs-sports-horizontal-image {
+  transform: scale(1.04);
+}
+
+.hcs-sports-horizontal-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.hcs-sports-horizontal-title {
+  margin: 0;
+  color: #111;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.32;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hcs-sports-horizontal-summary {
+  margin: 0;
+  color: #5f6470;
+  font-size: 12px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .hcs-mosaic {
@@ -693,6 +771,17 @@
   border-radius: 0;
 }
 
+.hcs-section-automobile .hcs-side-card {
+  overflow: hidden;
+}
+
+.hcs-section-automobile .hcs-side-thumb.hcs-automobile-side-thumb {
+  height: 96px;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: center;
+}
+
 .hcs-section-automobile .hcs-bottom-rail-copy {
   padding: 12px;
   gap: 6px;
@@ -716,14 +805,14 @@
 
 .hcs-editorial-featured--world:hover .hcs-editorial-image,
 .hcs-side-card:hover .hcs-world-news-side-thumb {
-  transform: none;
+  transform: scale(1.03);
 }
 
 .hcs-side-thumb.hcs-world-news-side-thumb {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
-  height: 72px;
-  background: transparent;
+  height: 112px;
+  background: #f3f4f6;
 }
 
 .hcs-thumb-fallback {
@@ -788,15 +877,27 @@
 }
 
 @media (min-width: 768px) and (max-width: 1440px) {
+  .hcs-side-card:has(.hcs-world-news-side-thumb) {
+    grid-template-columns: 172px minmax(0, 1fr);
+    align-items: center;
+    padding: 14px;
+  }
+
   .hcs-world-news-side-title {
-    -webkit-line-clamp: unset;
-    line-clamp: unset;
-    overflow: visible;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: 18px;
+    line-height: 1.32;
   }
 
   .hcs-world-news-side-summary {
     -webkit-line-clamp: 1;
     line-clamp: 1;
+    font-size: 14px;
+  }
+
+  .hcs-side-thumb.hcs-world-news-side-thumb {
+    height: 104px;
   }
 }
 
@@ -814,6 +915,10 @@
   }
 
   .hcs-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hcs-sports-horizontal-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -995,6 +1100,14 @@
     height: 165px;
   }
 
+  .hcs-sports-horizontal-grid {
+    gap: 12px;
+  }
+
+  .hcs-sports-horizontal-image {
+    height: 150px;
+  }
+
   .hcs-mosaic-thumb {
     height: 120px;
   }
@@ -1006,6 +1119,16 @@
   .hcs-card-copy,
   .hcs-mosaic-card-copy {
     padding: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hcs-sports-horizontal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hcs-sports-horizontal-image {
+    height: 190px;
   }
 }
 
@@ -1164,5 +1287,31 @@
   .home-main-column .hcs-root {
     width: 100% !important;
     max-width: 100% !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hcs-side-card:has(.hcs-world-news-side-thumb) {
+    grid-template-columns: minmax(150px, 30%) minmax(0, 1fr);
+    min-height: 128px;
+  }
+
+  .hcs-side-card .hcs-world-news-side-thumb {
+    height: 104px;
+    border-radius: 12px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hcs-world-news-side-title {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: clamp(16px, 1.15vw, 20px);
+    line-height: 1.32;
+  }
+
+  .hcs-world-news-side-summary {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
 }

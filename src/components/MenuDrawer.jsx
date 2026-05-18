@@ -114,7 +114,7 @@ const SLUG_ICON_MAP = {
   "markets": BarChart2,
   "press-release": Newspaper,
   "60-second-read": Clock,
-  "viral-fact-check": AlertCircle,
+  "viral-and-fact-check": AlertCircle,
 };
 
 // ── Fallback icons (last resort) ──

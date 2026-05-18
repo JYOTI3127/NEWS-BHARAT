@@ -336,10 +336,10 @@ const EditorialSection = memo(({ section, articles }) => {
 
 const ScorelineSection = memo(({ section, articles }) => {
   const featured = articles[0];
-  const cards    = articles.slice(1, 5);
+  const cards = articles.slice(1, 5);
   if (!featured) return <SectionFallback title={section.title} path={section.path} />;
   return (
-    <section className="hcs-section">
+    <section className="hcs-section hcs-section-sports-grid">
       <SectionHeader title={section.title} path={section.path} />
       <div className="hcs-scoreline">
         <StoryLink article={featured} className="hcs-scoreline-featured">
@@ -368,6 +368,26 @@ const ScorelineSection = memo(({ section, articles }) => {
           ))}
         </div>
       </div>
+      {cards.length > 0 ? (
+        <div className="hcs-sports-horizontal-grid">
+          {cards.map((article) => (
+            <StoryLink key={`sports-grid-${article.id || article.slug}`} article={article} className="hcs-sports-horizontal-card">
+              <ArticleThumb
+                article={article}
+                alt={getArticleTitle(article)}
+                className="hcs-sports-horizontal-image"
+              />
+              <div className="hcs-sports-horizontal-copy">
+                <h3 className="hcs-sports-horizontal-title">{getArticleTitle(article)}</h3>
+                {getArticleSummary(article) ? (
+                  <p className="hcs-sports-horizontal-summary">{getArticleSummary(article)}</p>
+                ) : null}
+                <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
+              </div>
+            </StoryLink>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 });

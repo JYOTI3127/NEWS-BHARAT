@@ -10,7 +10,6 @@ const SLOT_SIZES = {
   sideRail: { width: 160, height: 600 },
 };
 
-const requestCache = new Map();
 const DEFAULT_ROTATION_INTERVAL_MS = 5000;
 const ROTATION_FADE_MS = 260;
 
@@ -41,21 +40,40 @@ const getListFromPayload = (payload) => {
   if (Array.isArray(payload?.ads)) return payload.ads;
   if (Array.isArray(payload?.banners)) return payload.banners;
   if (Array.isArray(payload?.data)) return payload.data;
-  return payload ? [payload] : [];
+  return [
+    payload?.current_banner,
+    payload?.active_banner,
+    payload?.primary_banner,
+    payload?.banner,
+    payload?.ad_banner,
+    payload?.ad,
+    payload?.data,
+    payload,
+  ].filter(Boolean);
 };
 
-const fetchCachedJson = (url) => {
-  if (!requestCache.has(url)) {
-    requestCache.set(
-      url,
-      fetch(url).then((response) => {
-        if (!response.ok) throw new Error(`Ad request failed: ${response.status}`);
-        return response.json();
-      })
-    );
+const withCacheBust = (url) => {
+  try {
+    const nextUrl = new URL(url, window.location.origin);
+    nextUrl.searchParams.set("_", String(Date.now()));
+    return nextUrl.toString();
+  } catch {
+    const separator = String(url).includes("?") ? "&" : "?";
+    return `${url}${separator}_=${Date.now()}`;
   }
+};
 
-  return requestCache.get(url);
+const fetchFreshJson = async (url) => {
+  const response = await fetch(withCacheBust(url), {
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
+
+  if (!response.ok) throw new Error(`Ad request failed: ${response.status}`);
+  return response.json();
 };
 
 const pickAdForPlacement = (payload, placement, allowUnmatchedPlacement) => {
@@ -220,6 +238,17 @@ const useViewportMatch = (query) =>
     () => true
   );
 
+const useViewportWidth = () =>
+  useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      window.addEventListener("resize", callback);
+      return () => window.removeEventListener("resize", callback);
+    },
+    () => (typeof window === "undefined" ? 1440 : window.innerWidth),
+    () => 1440
+  );
+
 const LABEL_HIDDEN_VARIANTS = ["sideRail"];
 
 function AdvertisementSlot({
@@ -250,16 +279,18 @@ function AdvertisementSlot({
     [maxWidth, minWidth]
   );
   const isViewportMatch = useViewportMatch(viewportQuery);
+  const viewportWidth = useViewportWidth();
+  const isSideRailBlocked = isSideRail && viewportWidth < 768;
 
   useEffect(() => {
-    if (!isViewportMatch) return undefined;
+    if (!isViewportMatch || isSideRailBlocked) return undefined;
 
     let ignore = false;
 
     async function loadAd() {
       for (const url of candidateUrls) {
         try {
-          const payload = await fetchCachedJson(url);
+          const payload = await fetchFreshJson(url);
           const picked = buildAdSlotState(payload, placement, allowUnmatchedPlacement);
 
           if (picked) {
@@ -279,7 +310,7 @@ function AdvertisementSlot({
     return () => {
       ignore = true;
     };
-  }, [allowUnmatchedPlacement, candidateUrls, isViewportMatch, placement]);
+  }, [allowUnmatchedPlacement, candidateUrls, isSideRailBlocked, isViewportMatch, placement]);
 
   useEffect(() => {
     setActiveRotationIndex(0);
@@ -287,7 +318,7 @@ function AdvertisementSlot({
   }, [adSlotState]);
 
   useEffect(() => {
-    if (!isViewportMatch || dismissed) return undefined;
+    if (!isViewportMatch || isSideRailBlocked || dismissed) return undefined;
     if (!adSlotState?.rotationEnabled || (adSlotState?.rotationAds?.length || 0) <= 1) return undefined;
 
     let fadeTimeout = null;
@@ -303,9 +334,9 @@ function AdvertisementSlot({
       clearInterval(interval);
       if (fadeTimeout) clearTimeout(fadeTimeout);
     };
-  }, [adSlotState, dismissed, isViewportMatch]);
+  }, [adSlotState, dismissed, isSideRailBlocked, isViewportMatch]);
 
-  if (!isViewportMatch || dismissed) return null;
+  if (!isViewportMatch || isSideRailBlocked || dismissed) return null;
 
   const rotationAds = adSlotState?.rotationAds || [];
   const activeAd = rotationAds.length > 0
@@ -358,8 +389,8 @@ function AdvertisementSlot({
           }}
           style={{
             position: "absolute",
-            top: "65px",
-            right: "4px",
+            top: isSideRail ? "0px" : "6px",
+            right: isSideRail ? "0px" : "6px",
             zIndex: 10,
           }}
         >

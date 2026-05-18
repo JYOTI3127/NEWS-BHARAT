@@ -293,7 +293,7 @@ const Home = () => {
 
         <DeferredSection id="BharatStartups" minHeight={260} forceRender={isNewsletterHash} className="home-section-align">
           <CategoryMiniCarousel
-            title="Bharat of Startups"
+            title="Bharat's of Startups"
             slugs={BHARAT_STARTUPS_SLUGS}
             categoryPath="/category/bharat-startups"
             adPlacement="home_bharat_startups_right"

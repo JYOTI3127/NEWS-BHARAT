@@ -266,9 +266,6 @@ const Home = () => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    initialData: prerenderArticles.length > 0
-      ? getSeedArticlesForSlugs(prerenderArticles, Q4_CATEGORY_SLUGS, 30)
-      : undefined,
   });
 
   const q4Articles = React.useMemo(
@@ -375,7 +372,7 @@ const Home = () => {
           <WhatsAppFloatingIcon />
         </a>
 
-        <div className="home-section-align">
+        <div className="w-full">
           <Profiler id="NewsBanner" onRender={onRenderCallback}>
             <NewsBanner articles={bannerArticles} loading={bannerLoading} />
           </Profiler>
@@ -386,7 +383,7 @@ const Home = () => {
           placement="home_top"
           variant="leaderboard"
           className="home-top-ad home-top-ad--desktop"
-          minWidth={769}
+          minWidth={768}
         />
         <AdvertisementSlot
           page="home"
@@ -443,7 +440,7 @@ const Home = () => {
 
         <DeferredSection id="BharatStartups" minHeight={260} forceRender={shouldForceDeferredRender} className="home-section-align">
           <CategoryMiniCarousel
-            title="Bharat of Startups"
+            title="Bharat's of Startups"
             slugs={BHARAT_STARTUPS_SLUGS}
             categoryPath="/category/bharat-startups"
             adPlacement="home_bharat_startups_right"

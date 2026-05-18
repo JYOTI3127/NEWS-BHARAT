@@ -154,13 +154,13 @@ function ApplyModal({ role, onClose }) {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.message || data?.detail || "Application submit nahi ho payi. Please try again.");
+        throw new Error(data?.message || data?.detail || "The application could not be submitted. Please try again.");
       }
 
       setSubmitResult(data);
       setSubmitted(true);
     } catch (error) {
-      setErrors({ form: error.message || "Application submit nahi ho payi. Please try again." });
+      setErrors({ form: error.message || "The application could not be submitted. Please try again." });
     } finally {
       setIsSubmitting(false);
     }

@@ -201,21 +201,21 @@ export default function NewsBanner({ articles = [], loading = false }) {
   if (loading || slides.length === 0) return null;
   const activeIndex = current % slides.length;
   const isTwoCard425Layout = viewportWidth > 375 && viewportWidth <= 425;
-  const isFourCard1024Layout = viewportWidth > 768 && viewportWidth <= 1024;
+  const isFourCard1024Layout = viewportWidth >= 768 && viewportWidth <= 1024;
   const isLaptop1440Layout = viewportWidth > 1024 && viewportWidth <= 1440;
   const is2KLayout = viewportWidth > 1440;
   const CARD_SIZE_2K_CLASSNAME = is2KLayout ? "!w-[clamp(280px,22vw,420px)]" : "";
   const is320Layout = viewportWidth <= 320;
   const is375Layout = viewportWidth > 320 && viewportWidth <= 375;
-  const isFourCard768Layout = viewportWidth > 425 && viewportWidth <= 768;
-  const isMobileViewport = viewportWidth <= 768;
-  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(192px,26vw,268px)]";
+  const isFourCard768Layout = viewportWidth > 425 && viewportWidth < 768;
+  const isMobileViewport = viewportWidth < 768;
+  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(180px,22vw,230px)]";
   const FOUR_CARD_1024_POSITION_CLASSNAMES = {
     center: "z-[5] opacity-100 [transform:translateX(0)_scale(1.02)_rotateY(0deg)]",
-    left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-168px)_scale(0.9)_rotateY(12deg)]",
-    left2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(-300px)_scale(0.82)_rotateY(20deg)]",
-    right1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(168px)_scale(0.9)_rotateY(-12deg)]",
-    right2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(300px)_scale(0.82)_rotateY(-20deg)]",
+    left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-142px)_scale(0.88)_rotateY(12deg)]",
+    left2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(-248px)_scale(0.78)_rotateY(20deg)]",
+    right1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(142px)_scale(0.88)_rotateY(-12deg)]",
+    right2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(248px)_scale(0.78)_rotateY(-20deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
   const FOUR_CARD_768_CARD_SIZE_CLASSNAME = "!w-[clamp(210px,38vw,276px)]";
@@ -227,7 +227,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
     right2: "z-[3] opacity-88 [filter:brightness(0.86)] [transform:translateX(290px)_scale(0.82)_rotateY(-18deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
-  const rootClassName = `cb-root relative isolate w-full rounded-none bg-[#18254a] bg-cover bg-center bg-no-repeat px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-8 max-[320px]:pt-1 max-[320px]:pb-6${isMobileViewport ? " overflow-x-hidden overflow-y-visible" : " overflow-visible"}${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
+  const rootClassName = `cb-root relative isolate w-full max-w-none rounded-none bg-[#18254a] px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-8 max-[320px]:pt-1 max-[320px]:pb-6${isMobileViewport ? " overflow-x-hidden overflow-y-visible" : " overflow-visible"}${isFourCard1024Layout ? " !pt-2 !pb-2" : ""}${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
   const stageClassName = "cb-stage relative z-[1] flex h-[420px] items-center justify-center overflow-visible [perspective:1200px] max-[2048px]:h-[430px] max-[1440px]:h-[392px] max-[1024px]:h-[340px] max-[768px]:h-[374px] max-[425px]:h-[386px] max-[375px]:h-[386px] max-[320px]:h-[344px] max-[425px]:items-start";
   const sectionInlineStyle =
     isLaptop1440Layout
@@ -250,7 +250,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const controlsClassName = isTwoCard425Layout
     ? "relative z-[20] mx-auto mt-4 flex items-center justify-center gap-2"
     : isFourCard1024Layout
-      ? "relative z-[20] mx-auto mt-8 flex items-center justify-center gap-3"
+      ? "relative z-[20] mx-auto mt-2 flex items-center justify-center gap-3"
     : isFourCard768Layout
       ? "relative z-[20] mx-auto mt-10 flex items-center justify-center gap-2"
     : is320Layout
@@ -320,7 +320,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
           })}
         </div>
       ) : isFourCard1024Layout ? (
-        <div className="cb-stage relative z-[1] flex h-[372px] items-center justify-center overflow-visible [perspective:1200px]">
+        <div className="cb-stage relative z-[1] flex h-[318px] items-center justify-center overflow-visible [perspective:1200px]">
           {slides.map((slide, index) => {
             const relative = getRelativeIndex(index, activeIndex, slides.length);
             let activePositionClass = FOUR_CARD_1024_POSITION_CLASSNAMES.hidden;

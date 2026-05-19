@@ -392,7 +392,7 @@ export default function StateNews({ articles: passedArticles = [] }) {
   }, [isPrerender, seededStartupArticles]);
 
   const featuredCard = stateArticles[0] || null;
-  const desiredMidCards = isMobile ? 4 : 5;
+  const desiredMidCards = isMobile ? 4 : is2K ? 7 : 5;
   const availableAfterFeatured = Math.max(0, stateArticles.length - 1);
   const leftStackCount = Math.min(2, availableAfterFeatured);
   const leftStackCards = stateArticles.slice(1, 1 + leftStackCount);

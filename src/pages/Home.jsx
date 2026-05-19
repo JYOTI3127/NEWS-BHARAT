@@ -393,7 +393,7 @@ const Home = () => {
           maxWidth={768}
         />
 
-        <div className="home-section-align">
+        <div className="home-section-align home-section-align--fresh-popular">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
             <FreshPopularShowcase
               articles={freshPopularArticles}

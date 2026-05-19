@@ -131,7 +131,7 @@ export default function BreakingNewsSection({
 
     if (mode === 'q4') {
       // Q4 list already category-specific endpoint se aati hai, isliye yahan re-filter nahi karte.
-      return dedupeArticles(filtered).slice(0, 11);
+      return dedupeArticles(filtered).slice(0, 12);
     }
 
     return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
@@ -144,7 +144,7 @@ export default function BreakingNewsSection({
   const leftSecondaryArticle = sectionArticles[1];
   const q4LeftSecondaryArticles = isQ4Mode ? sectionArticles.slice(1, 3) : [];
   const q4LeftTertiaryArticle = isQ4Mode ? sectionArticles[3] : null;
-  const headlineArticles = sectionArticles.slice(isQ4Mode ? 4 : 2, isQ4Mode ? 11 : 10);
+  const headlineArticles = sectionArticles.slice(isQ4Mode ? 4 : 2, isQ4Mode ? 12 : 10);
   const featuredImagePosition = mode === 'q4' ? 'left center' : 'center center';
 
   return (

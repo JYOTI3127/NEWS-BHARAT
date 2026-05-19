@@ -453,7 +453,7 @@ const navLinks = [
   { label: "Sports", path: "/category/sports" },
   { label: "Education", path: "/category/education" },
   { label: "Health", path: "/category/health" },
-  { label: "BFSi", path: "/category/bfsi" },
+  { label: "BFSI", path: "/category/bfsi" },
   { label: "National", path: "/category/national" },
 ];
 

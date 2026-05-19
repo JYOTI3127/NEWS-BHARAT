@@ -407,6 +407,9 @@ const MosaicSection = memo(({ section, articles }) => {
               <CategoryKicker article={featured} fallback={section.title} />
             ) : null}
             <h3 className="hcs-featured-title">{getArticleTitle(featured)}</h3>
+            {getArticleSummary(featured) ? (
+              <p className="hcs-summary">{getArticleSummary(featured)}</p>
+            ) : null}
             <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
           </div>
         </StoryLink>
@@ -416,6 +419,9 @@ const MosaicSection = memo(({ section, articles }) => {
               <ArticleThumb article={article} alt={getArticleTitle(article)} className="hcs-mosaic-thumb" />
               <div className="hcs-mosaic-card-copy">
                 <h4 className="hcs-side-title">{getArticleTitle(article)}</h4>
+                {getArticleSummary(article) ? (
+                  <p className="hcs-side-summary">{getArticleSummary(article)}</p>
+                ) : null}
                 <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
               </div>
             </StoryLink>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   fetchPaginatedArticles,
@@ -74,6 +74,8 @@ export default function CategoryMiniCarousel({
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const cardRowRef = useRef(null);
+  const [cardRowHeight, setCardRowHeight] = useState(0);
 
   const slugList = useMemo(
     () => (Array.isArray(slugs) ? slugs.filter(Boolean) : [slugs].filter(Boolean)),
@@ -139,6 +141,33 @@ export default function CategoryMiniCarousel({
   const goPrev = () => setPage((current) => (current - 1 + totalPages) % totalPages);
   const goNext = () => setPage((current) => (current + 1) % totalPages);
 
+  useEffect(() => {
+    const rowElement = cardRowRef.current;
+    if (!rowElement || typeof window === "undefined") return undefined;
+
+    const updateCardRowHeight = () => {
+      setCardRowHeight(Math.ceil(rowElement.getBoundingClientRect().height || 0));
+    };
+
+    const initialFrame = window.requestAnimationFrame(updateCardRowHeight);
+    window.addEventListener("resize", updateCardRowHeight);
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(updateCardRowHeight);
+      observer.observe(rowElement);
+      return () => {
+        window.cancelAnimationFrame(initialFrame);
+        observer.disconnect();
+        window.removeEventListener("resize", updateCardRowHeight);
+      };
+    }
+
+    return () => {
+      window.cancelAnimationFrame(initialFrame);
+      window.removeEventListener("resize", updateCardRowHeight);
+    };
+  }, [cardsPerPage, loading, visibleArticles.length]);
+
   return (
     <section className="cmc-root" aria-label={title}>
       <div className="cmc-shell">
@@ -157,7 +186,7 @@ export default function CategoryMiniCarousel({
             </button>
           </div>
 
-          <div className="cmc-card-row">
+          <div className="cmc-card-row" ref={cardRowRef}>
             {loading
               ? Array.from({ length: cardsPerPage }).map((_, index) => (
                   <div className="cmc-card cmc-card--skeleton" key={index}>
@@ -218,7 +247,11 @@ export default function CategoryMiniCarousel({
           </div>
         </div>
 
-        <div className="cmc-ad-column" aria-label={`${title} advertisement space`}>
+        <div
+          className="cmc-ad-column"
+          aria-label={`${title} advertisement space`}
+          style={cardRowHeight > 0 ? { "--cmc-card-row-height": `${cardRowHeight}px` } : undefined}
+        >
           {adPlacement ? (
             <AdvertisementSlot
               page={adPage}

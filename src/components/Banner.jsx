@@ -90,6 +90,8 @@ const CardImage = ({ src, alt, isCenter, onLoad, onError }) => (
 // ────────────────────────────────────────────────────────────────────────────
 
 const CARD_BASE_CLASSNAME = "absolute cursor-pointer overflow-hidden shadow-[0_22px_44px_rgba(0,0,0,0.8)] will-change-[transform,opacity] transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] w-[clamp(212px,23vw,344px)] aspect-[3/4] max-[1440px]:w-[clamp(200px,22vw,320px)] max-[1024px]:w-[clamp(218px,33vw,316px)] max-[768px]:w-[clamp(246px,84vw,344px)] max-[425px]:w-[clamp(214px,90vw,292px)] max-[375px]:w-[clamp(224px,94vw,304px)] max-[375px]:aspect-[3/3.95] max-[320px]:w-[clamp(206px,88vw,278px)] max-[320px]:aspect-[3/3.9]";
+const CARD_IMAGE_WRAP_CLASSNAME = "relative aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#f3f4f6]";
+const CARD_BODY_BASE_CLASSNAME = "relative min-h-0 flex-1 overflow-hidden bg-white text-[#111827]";
 
 const CARD_POSITION_CLASSNAMES = {
   "cb-pos-center":
@@ -204,18 +206,19 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const isFourCard1024Layout = viewportWidth >= 768 && viewportWidth <= 1024;
   const isLaptop1440Layout = viewportWidth > 1024 && viewportWidth <= 1440;
   const is2KLayout = viewportWidth > 1440;
+  const isExpanded2KLayout = viewportWidth >= 1920;
   const CARD_SIZE_2K_CLASSNAME = is2KLayout ? "!w-[clamp(280px,22vw,420px)]" : "";
   const is320Layout = viewportWidth <= 320;
   const is375Layout = viewportWidth > 320 && viewportWidth <= 375;
   const isFourCard768Layout = viewportWidth > 425 && viewportWidth < 768;
   const isMobileViewport = viewportWidth < 768;
-  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(180px,22vw,230px)]";
+  const FOUR_CARD_1024_CARD_SIZE_CLASSNAME = "!w-[clamp(196px,26vw,260px)]";
   const FOUR_CARD_1024_POSITION_CLASSNAMES = {
     center: "z-[5] opacity-100 [transform:translateX(0)_scale(1.02)_rotateY(0deg)]",
-    left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-142px)_scale(0.88)_rotateY(12deg)]",
-    left2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(-248px)_scale(0.78)_rotateY(20deg)]",
-    right1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(142px)_scale(0.88)_rotateY(-12deg)]",
-    right2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(248px)_scale(0.78)_rotateY(-20deg)]",
+    left1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(-166px)_scale(0.88)_rotateY(12deg)]",
+    left2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(-304px)_scale(0.78)_rotateY(20deg)]",
+    right1: "z-[4] opacity-95 [filter:brightness(0.9)] [transform:translateX(166px)_scale(0.88)_rotateY(-12deg)]",
+    right2: "z-[3] opacity-84 [filter:brightness(0.78)] [transform:translateX(304px)_scale(0.78)_rotateY(-20deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
   const FOUR_CARD_768_CARD_SIZE_CLASSNAME = "!w-[clamp(210px,38vw,276px)]";
@@ -227,16 +230,16 @@ export default function NewsBanner({ articles = [], loading = false }) {
     right2: "z-[3] opacity-88 [filter:brightness(0.86)] [transform:translateX(290px)_scale(0.82)_rotateY(-18deg)]",
     hidden: "z-[1] opacity-0 pointer-events-none [transform:scale(0.75)_translateX(0)]",
   };
-  const rootClassName = `cb-root relative isolate w-full max-w-none rounded-none bg-[#18254a] px-14 pt-6 pb-6 max-[1440px]:px-10 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:px-2 max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:px-0 max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-8 max-[320px]:pt-1 max-[320px]:pb-6${isMobileViewport ? " overflow-x-hidden overflow-y-visible" : " overflow-visible"}${isFourCard1024Layout ? " !pt-2 !pb-2" : ""}${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
+  const rootClassName = `cb-root relative isolate w-full max-w-none rounded-none bg-[#18254a] px-0 pt-6 pb-6 max-[1440px]:pt-5 max-[1440px]:pb-[22px] max-[1024px]:pt-4 max-[1024px]:pb-[18px] max-[768px]:rounded-none max-[768px]:pt-3 max-[768px]:pb-12 max-[425px]:pt-1 max-[425px]:pb-10 max-[375px]:pt-2 max-[375px]:pb-8 max-[320px]:pt-1 max-[320px]:pb-6${isMobileViewport ? " overflow-x-hidden overflow-y-visible" : " overflow-visible"}${isFourCard1024Layout ? " !pt-6 !pb-8" : ""}${isTwoCard425Layout ? " pb-5 max-[425px]:pb-5" : ""}`;
   const stageClassName = "cb-stage relative z-[1] flex h-[420px] items-center justify-center overflow-visible [perspective:1200px] max-[2048px]:h-[430px] max-[1440px]:h-[392px] max-[1024px]:h-[340px] max-[768px]:h-[374px] max-[425px]:h-[386px] max-[375px]:h-[386px] max-[320px]:h-[344px] max-[425px]:items-start";
   const sectionInlineStyle =
     isLaptop1440Layout
-      ? { paddingTop: "20px", paddingBottom: "24px" }
+      ? { paddingTop: "42px", paddingBottom: "30px", boxShadow: "0 -1px 0 #18254a" }
       : is2KLayout
         ? { paddingTop: "56px", paddingBottom: "72px" }
         : undefined;
   const stageInlineStyle = isLaptop1440Layout
-    ? { marginTop: "4px", height: "420px", alignItems: "center", paddingTop: "0px" }
+    ? { marginTop: "0px", height: "470px", alignItems: "center", paddingTop: "0px" }
     : is2KLayout
       ? { marginTop: "28px", height: "620px", alignItems: "flex-start", paddingTop: "40px" }
     : isFourCard768Layout
@@ -250,7 +253,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
   const controlsClassName = isTwoCard425Layout
     ? "relative z-[20] mx-auto mt-4 flex items-center justify-center gap-2"
     : isFourCard1024Layout
-      ? "relative z-[20] mx-auto mt-2 flex items-center justify-center gap-3"
+      ? "relative z-[20] mx-auto mt-7 flex items-center justify-center gap-3"
     : isFourCard768Layout
       ? "relative z-[20] mx-auto mt-10 flex items-center justify-center gap-2"
     : is320Layout
@@ -258,6 +261,39 @@ export default function NewsBanner({ articles = [], loading = false }) {
     : is375Layout
       ? "relative z-[20] mx-auto mt-7 flex items-center justify-center gap-2"
     : `relative z-[12] mx-auto mt-[-18px] flex items-center justify-center gap-3 max-[768px]:absolute max-[768px]:-bottom-2 max-[768px]:left-1/2 max-[768px]:z-[30] max-[768px]:mt-0 max-[768px]:-translate-x-1/2 max-[768px]:gap-2 max-[375px]:bottom-2 max-[320px]:bottom-2 max-[320px]:gap-1.5${isLaptop1440Layout ? " mt-20" : ""}${is2KLayout ? " mt-[96px]" : ""}`;
+  const expanded2KVisibleCount = Math.min(7, Math.max(5, slides.length - 2));
+  const expanded2KLeftCount = Math.floor((expanded2KVisibleCount - 1) / 2);
+  const expanded2KRightCount = expanded2KVisibleCount - 1 - expanded2KLeftCount;
+  const getExpanded2KCardStyle = (relative) => {
+    const isVisible =
+      relative >= -expanded2KLeftCount && relative <= expanded2KRightCount;
+
+    if (!isVisible) {
+      return {
+        opacity: 0,
+        pointerEvents: "none",
+        transform: "translateX(0) scale(0.7)",
+      };
+    }
+
+    const absoluteRelative = Math.abs(relative);
+    const spreadWidth = Math.min(viewportWidth * 0.46, 1220);
+    const step = expanded2KVisibleCount > 1 ? spreadWidth / Math.max(expanded2KVisibleCount - 1, 1) : 0;
+    const width = Math.max(180, Math.min(300, step * 1.22));
+    const scale = relative === 0 ? 1.1 : Math.max(0.72, 0.93 - absoluteRelative * 0.045);
+    const opacity = relative === 0 ? 1 : Math.max(0.42, 0.88 - absoluteRelative * 0.1);
+    const brightness = Math.max(0.58, 0.88 - absoluteRelative * 0.055);
+    const rotateY = relative === 0 ? 0 : relative > 0 ? -12 : 12;
+
+    return {
+      width: `${width}px`,
+      aspectRatio: "3 / 4.15",
+      zIndex: 100 - absoluteRelative,
+      opacity,
+      filter: `brightness(${brightness})`,
+      transform: `translateX(${relative * step}px) scale(${scale}) rotateY(${rotateY}deg)`,
+    };
+  };
 
   return (
     <section
@@ -289,7 +325,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
+                <div className={CARD_IMAGE_WRAP_CLASSNAME}>
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -298,7 +334,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                     onError={(event) => { event.target.style.display = "none"; }}
                   />
                 </div>
-                <div className="relative h-[50%] w-full bg-white p-[10px_10px] text-[#111827]">
+                <div className={`${CARD_BODY_BASE_CLASSNAME} p-[10px_10px]`}>
                   <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
@@ -320,7 +356,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
           })}
         </div>
       ) : isFourCard1024Layout ? (
-        <div className="cb-stage relative z-[1] flex h-[318px] items-center justify-center overflow-visible [perspective:1200px]">
+        <div className="cb-stage relative z-[1] flex h-[372px] items-center justify-center overflow-visible [perspective:1200px]">
           {slides.map((slide, index) => {
             const relative = getRelativeIndex(index, activeIndex, slides.length);
             let activePositionClass = FOUR_CARD_1024_POSITION_CLASSNAMES.hidden;
@@ -345,7 +381,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
+                <div className={CARD_IMAGE_WRAP_CLASSNAME}>
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -354,7 +390,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                     onError={(event) => { event.target.style.display = "none"; }}
                   />
                 </div>
-                <div className="relative h-[50%] w-full bg-white p-[12px_10px] text-[#111827]">
+                <div className={`${CARD_BODY_BASE_CLASSNAME} p-[12px_10px]`}>
                   <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
@@ -401,7 +437,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
+                <div className={CARD_IMAGE_WRAP_CLASSNAME}>
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -410,7 +446,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                     onError={(event) => { event.target.style.display = "none"; }}
                   />
                 </div>
-                <div className="relative h-[50%] w-full bg-white p-[12px_10px] text-[#111827]">
+                <div className={`${CARD_BODY_BASE_CLASSNAME} p-[12px_10px]`}>
                   <span className="mb-1 inline-block text-[0.68rem] font-semibold uppercase tracking-[0.03em] text-[#1d4ed8]">
                     {slide.category}
                   </span>
@@ -436,13 +472,16 @@ export default function NewsBanner({ articles = [], loading = false }) {
           {slides.map((slide, index) => {
             const relative = getRelativeIndex(index, activeIndex, slides.length);
             const positionClass = getCardPositionClass(relative, slides.length);
-            const activePositionClass = CARD_POSITION_CLASSNAMES[positionClass] || CARD_POSITION_CLASSNAMES["cb-pos-hidden"];
+            const activePositionClass = isExpanded2KLayout
+              ? ""
+              : CARD_POSITION_CLASSNAMES[positionClass] || CARD_POSITION_CLASSNAMES["cb-pos-hidden"];
             const isCenter = relative === 0;
 
             return (
               <article
                 key={slide._cardKey || slide.id || slide.slug || index}
                 className={`${CARD_BASE_CLASSNAME} ${CARD_SIZE_2K_CLASSNAME} ${activePositionClass} flex flex-col bg-white`}
+                style={isExpanded2KLayout ? getExpanded2KCardStyle(relative) : undefined}
                 onClick={() => navigateToArticle(slide)}
                 role="button"
                 tabIndex={0}
@@ -453,7 +492,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                   }
                 }}
               >
-                <div className="relative h-[50%] w-full overflow-hidden bg-[#f3f4f6]">
+                <div className={CARD_IMAGE_WRAP_CLASSNAME}>
                   <CardImage
                     src={slide.image}
                     alt={slide.image_alt || slide.title}
@@ -462,7 +501,7 @@ export default function NewsBanner({ articles = [], loading = false }) {
                     onError={(event) => { event.target.style.display = "none"; }}
                   />
                 </div>
-                <div className="relative h-[50%] w-full bg-white p-[14px_12px] text-[#111827]">
+                <div className={`${CARD_BODY_BASE_CLASSNAME} p-[14px_12px]`}>
                   <span className="mb-1.5 inline-block text-[0.7rem] font-semibold uppercase tracking-[0.04em] text-[#1d4ed8]">
                     {slide.category}
                   </span>

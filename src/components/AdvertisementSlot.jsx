@@ -290,7 +290,11 @@ function AdvertisementSlot({
           const picked = buildAdSlotState(payload, placement, allowUnmatchedPlacement);
 
           if (picked) {
-            if (!ignore) setAdSlotState(picked);
+            if (!ignore) {
+              setActiveRotationIndex(0);
+              setIsFading(false);
+              setAdSlotState(picked);
+            }
             return;
           }
         } catch {
@@ -298,7 +302,11 @@ function AdvertisementSlot({
         }
       }
 
-      if (!ignore) setAdSlotState(null);
+      if (!ignore) {
+        setActiveRotationIndex(0);
+        setIsFading(false);
+        setAdSlotState(null);
+      }
     }
 
     loadAd();
@@ -307,11 +315,6 @@ function AdvertisementSlot({
       ignore = true;
     };
   }, [allowUnmatchedPlacement, candidateUrls, isSideRailBlocked, isViewportMatch, placement]);
-
-  useEffect(() => {
-    setActiveRotationIndex(0);
-    setIsFading(false);
-  }, [adSlotState]);
 
   useEffect(() => {
     if (!isViewportMatch || isSideRailBlocked || dismissed) return undefined;

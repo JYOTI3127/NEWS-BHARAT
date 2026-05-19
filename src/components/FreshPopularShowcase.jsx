@@ -371,14 +371,6 @@ const getArticleIdentityKey = (article, index = 0) =>
 const getViewportWidth = () =>
   typeof window !== "undefined" ? window.innerWidth : 1440;
 
-const getRailVisibleCount = (width) => {
-  if (width >= 1440) return 4;
-  if (width >= 1024) return 4;
-  if (width >= 768) return 3;
-  if (width >= 425) return 2;
-  return 1;
-};
-
 // ─── Middle section: backend order, no sort, no filter ───────────────────────
 const buildBuckets = (articles) => {
   const list = Array.isArray(articles) ? articles : articles?.results || [];
@@ -429,7 +421,6 @@ export default function FreshPopularShowcase({
   sidePanelsLoading = false,
 }) {
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth);
-  const [railStart, setRailStart] = useState(0);
   const middleColumnRef = useRef(null);
   const [middleColumnHeight, setMiddleColumnHeight] = useState(0);
 
@@ -440,6 +431,7 @@ export default function FreshPopularShowcase({
 
   const isResponsiveViewport = viewportWidth < 1024;
   const is375Viewport = viewportWidth > 320 && viewportWidth <= 375;
+  const is2KViewport = viewportWidth >= 1920;
 
   const sidePanelArticles = useMemo(() => {
     if (isResponsiveViewport) return backendArticles;
@@ -456,7 +448,7 @@ export default function FreshPopularShowcase({
   }, [backendArticles]);
 
   // Middle section: backend order, no frontend filter
-  const { topRail, hero, centerCards } = useMemo(
+  const { hero, centerCards } = useMemo(
     () => buildBuckets(sourceArticles),
     [sourceArticles]
   );
@@ -484,13 +476,6 @@ export default function FreshPopularShowcase({
   const sideColumnStyle = shouldMatchMiddleHeight
     ? { height: `${middleColumnHeight}px` }
     : undefined;
-
-  const railVisibleCount = useMemo(
-    () => getRailVisibleCount(viewportWidth),
-    [viewportWidth]
-  );
-
-  const maxRailStart = Math.max(0, topRail.length - railVisibleCount);
 
   useEffect(() => {
     const onResize = () => setViewportWidth(getViewportWidth());
@@ -524,25 +509,14 @@ export default function FreshPopularShowcase({
     };
   }, [hero, centerCards.length, viewportWidth]);
 
-  useEffect(() => {
-    setRailStart((prev) => Math.max(0, Math.min(prev, maxRailStart)));
-  }, [maxRailStart]);
-
-  useEffect(() => {
-    setRailStart(0);
-  }, [topRail.length]);
-
   if (!Array.isArray(sourceArticles) || sourceArticles.length === 0) return null;
 
-  const visibleRail = topRail.slice(railStart, railStart + railVisibleCount);
-  const canPrev = railStart > 0;
-  const canNext = railStart < maxRailStart;
   const middleImageOnlyCards = centerCards.slice(0, 2);
   const middleStoryCards = centerCards.slice(2);
 
   return (
-    <section className="mx-auto mb-5 w-full font-['Poppins',sans-serif] min-[320px]:mb-5 min-[768px]:mb-6 min-[1024px]:mb-7 min-[1440px]:mb-8 min-[1920px]:mb-10">
-      <div className="rounded-lg  p-2.5 min-[320px]:p-2.5 min-[375px]:p-3 min-[425px]:p-3.5 min-[768px]:p-3 min-[1024px]:p-3.5 min-[1440px]:p-4 min-[1920px]:p-5">
+    <section className="fps-root mx-auto mb-5 w-full font-['Poppins',sans-serif] min-[320px]:mb-5 min-[768px]:mb-6 min-[1024px]:mb-7 min-[1440px]:mb-8 min-[1920px]:mb-10">
+      <div className="fps-shell rounded-lg p-2.5 min-[320px]:p-2.5 min-[375px]:p-3 min-[425px]:p-3.5 min-[768px]:p-3 min-[1024px]:p-3.5 min-[1440px]:p-4 min-[1920px]:p-5">
         {/* <div className="mb-2.5 flex items-center gap-2 min-[768px]:mb-3">
           <button
             type="button"
@@ -596,7 +570,7 @@ export default function FreshPopularShowcase({
           </button>
         </div> */}
 
-        <div className="grid items-start gap-2.5 min-[425px]:gap-3 min-[768px]:grid-cols-[200px_minmax(0,1fr)] min-[1024px]:grid-cols-[180px_minmax(0,1fr)_180px] min-[1440px]:grid-cols-[220px_minmax(0,1fr)_220px] min-[1920px]:grid-cols-[270px_minmax(0,1fr)_270px]">
+        <div className="fps-layout grid items-start gap-2.5 min-[425px]:gap-3 min-[768px]:grid-cols-[200px_minmax(0,1fr)] min-[1024px]:grid-cols-[180px_minmax(0,1fr)_180px] min-[1440px]:grid-cols-[220px_minmax(0,1fr)_220px] min-[1920px]:grid-cols-[270px_minmax(0,1fr)_270px]">
           <aside
             className="flex flex-col border border-[#dfdfdf] bg-[#fafafa] px-1.5 py-2 min-[375px]:px-2 min-[375px]:py-2.5 min-[1440px]:px-2.5 min-[1440px]:py-3"
             style={sideColumnStyle}
@@ -656,7 +630,7 @@ export default function FreshPopularShowcase({
                   <img
                     src={getArticleImage(hero)}
                     alt={getArticleTitle(hero)}
-                    className={`absolute left-0 right-0 top-0 h-[82%] w-full ${
+                    className={`fps-hero-media absolute left-0 right-0 top-0 h-[82%] w-full ${
                       is375Viewport ? "object-cover object-center" : "object-cover object-center"
                     } max-[320px]:object-cover max-[320px]:object-top`}
                     style={{
@@ -692,9 +666,6 @@ export default function FreshPopularShowcase({
             <div className="grid grid-cols-1 gap-2 min-[425px]:grid-cols-2">
               {middleImageOnlyCards.map((article, idx) => (
                 (() => {
-                  const mobileImageHeightClass =
-                    idx === 1 ? "max-[320px]:h-[176px]" : "max-[320px]:h-[165px]";
-
                   return (
                 <StoryLink
                   key={`${article?.id || article?.slug || idx}-image-only`}
@@ -707,7 +678,7 @@ export default function FreshPopularShowcase({
                       alt={getArticleTitle(article)}
                       className="fps-middle-image-only-media block h-[161px] w-full object-cover object-center"
                       style={{
-                        height: "161px",
+                        height: is2KViewport ? "auto" : "161px",
                         objectPosition: getArticleImageFocus(article),
                       }}
                       loading="lazy"
@@ -716,7 +687,7 @@ export default function FreshPopularShowcase({
                   ) : (
                     <div
                       className="fps-middle-image-only-media flex h-[161px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a]"
-                      style={{ height: "161px" }}
+                      style={{ height: is2KViewport ? "auto" : "161px" }}
                     >
                       No image
                     </div>
@@ -756,7 +727,7 @@ export default function FreshPopularShowcase({
                     <img
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
-                      className={`block h-[96px] w-full object-cover object-center max-[375px]:h-[230px] max-[375px]:object-cover ${mobileStoryHeightClass} max-[320px]:object-cover min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}
+                      className={`fps-card-media block h-[96px] w-full object-cover object-center max-[375px]:h-[230px] max-[375px]:object-cover ${mobileStoryHeightClass} max-[320px]:object-cover min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}
                       style={{
                         objectPosition: getArticleImageFocus(article),
                       }}

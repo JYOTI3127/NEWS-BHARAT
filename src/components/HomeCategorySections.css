@@ -864,6 +864,60 @@
   .hcs-editorial-copy .hcs-summary {
     font-size: 13px;
   }
+
+  .hcs-editorial-featured {
+    display: block;
+    min-height: 0;
+  }
+
+  .hcs-editorial-image-wrap {
+    position: relative;
+    inset: auto;
+    width: 100%;
+  }
+
+  .hcs-editorial-image,
+  .hcs-editorial-featured--world .hcs-editorial-image,
+  .hcs-editorial-featured--ai .hcs-editorial-image,
+  .hcs-mosaic-image,
+  .hcs-mosaic-thumb,
+  .hcs-card-thumb,
+  .hcs-spotlight-main-image,
+  .hcs-bottom-rail-thumb,
+  .hcs-section-automobile .hcs-bottom-rail-thumb,
+  .hcs-side-thumb,
+  .hcs-side-thumb.hcs-world-news-side-thumb,
+  .hcs-section-automobile .hcs-side-thumb.hcs-automobile-side-thumb {
+    height: auto;
+    min-height: 0;
+    object-fit: fill;
+    object-position: center center;
+    background: transparent;
+  }
+
+  .hcs-editorial-overlay,
+  .hcs-editorial-copy {
+    position: absolute;
+    left: 0;
+    right: 0;
+  }
+
+  .hcs-editorial-overlay {
+    inset: 0;
+  }
+
+  .hcs-editorial-copy {
+    bottom: 0;
+  }
+
+  .hcs-side-card,
+  .hcs-bottom-rail-card {
+    align-items: start;
+  }
+
+  .hcs-spotlight-main {
+    align-items: start;
+  }
 }
 
 @media (max-width: 1440px) {

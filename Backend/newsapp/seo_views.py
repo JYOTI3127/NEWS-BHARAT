@@ -248,7 +248,6 @@ def api_seo_submit(request):
             return JsonResponse(result)
         except Article.DoesNotExist:
             return JsonResponse({"error": "Article not found"}, status=404)
-
     if urls:
         google   = [GoogleIndexingAPI.submit(u) for u in urls]
         indexnow = IndexNow.submit(urls)

@@ -997,7 +997,7 @@
         const r = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
         if (r.ok && d.sent > 0) {
-          showStatus(`${d.provider === 'brevo_api' ? 'Brevo accepted' : 'SMTP accepted'} ${d.sent} test email${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''}.`);
+          showStatus(`${providerStatusLabel(d.provider)} ${d.sent} test email${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''}.`);
           if (d.failed) alert('Some test emails failed:\n' + JSON.stringify(d.failed_emails, null, 2));
           loadNewsletterLogs();
         }
@@ -1019,7 +1019,7 @@
         const r = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json();
         if (r.ok && d.sent > 0) {
-          showStatus(`${d.provider === 'brevo_api' ? 'Brevo accepted' : 'SMTP accepted'} ${d.sent} recipient${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''} (saved subscribers included).`);
+          showStatus(`${providerStatusLabel(d.provider)} ${d.sent} recipient${d.sent === 1 ? '' : 's'} at ${d.sent_at_ist || 'now'}${d.failed ? `, ${d.failed} failed` : ''} (saved subscribers included).`);
           if (d.failed) alert('Some emails failed:\n' + JSON.stringify(d.failed_emails, null, 2));
           loadNewsletterLogs();
         }
@@ -1032,6 +1032,13 @@
       const el = document.getElementById('status-bar');
       el.textContent = msg; el.classList.add('show');
       setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function providerStatusLabel(provider) {
+      if (provider === 'brevo_api') return 'Brevo API accepted';
+      if (provider === 'brevo_smtp+brevo_api') return 'Brevo SMTP -> API accepted';
+      if (provider === 'brevo_smtp') return 'Brevo SMTP accepted';
+      return 'SMTP accepted';
     }
 
     function buildFinalHTML() {
@@ -1064,5 +1071,4 @@
 </body>
 
 </html>
-
 

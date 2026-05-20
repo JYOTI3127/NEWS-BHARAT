@@ -32,6 +32,7 @@ urlpatterns = [
     path('ai/sentence-suggestions/', views.ai_sentence_suggestions, name='ai_sentence_suggestions'),
     path('ai/plagiarism-check/', views.ai_plagiarism_check,  name='ai_plagiarism_check'),
     path('ai/seo-keywords/',     views.ai_seo_keywords,      name='ai_seo_keywords'),
+    path('ai/translate/',        views.ai_translate,         name='ai_translate'),
 
     path('categories/create/',                 category_create,  name='api_category_create'),
     path('categories/<int:cat_id>/update/',    category_update,  name='api_category_update'),

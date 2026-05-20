@@ -39,6 +39,7 @@ from .workflow import ALLOWED_TRANSITIONS
 import os
 import uuid
 import re
+import hashlib
 from pathlib import Path
 from urllib.parse import urlparse
 from openai import OpenAI
@@ -3404,6 +3405,135 @@ def _openai_error_response(e):
     return JsonResponse({"error": f"OpenAI error: {str(e)}"}, status=503)
 
 
+def _get_request_ip(request):
+    forwarded = str(request.META.get("HTTP_X_FORWARDED_FOR", "") or "").strip()
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return str(request.META.get("REMOTE_ADDR", "") or "").strip() or "unknown"
+
+
+def _normalize_language_name(raw_value):
+    value = str(raw_value or "").strip()
+    if not value:
+        return ""
+    allowed = {
+        "hindi": "Hindi",
+        "english": "English",
+        "marathi": "Marathi",
+        "bengali": "Bengali",
+        "tamil": "Tamil",
+        "telugu": "Telugu",
+        "kannada": "Kannada",
+        "malayalam": "Malayalam",
+        "gujarati": "Gujarati",
+        "punjabi": "Punjabi",
+        "urdu": "Urdu",
+        "odia": "Odia",
+        "assamese": "Assamese",
+    }
+    key = value.lower()
+    if key in allowed:
+        return allowed[key]
+    return value[:40]
+
+
+def _translate_content_with_openai(content, *, target_language, source_language="", preserve_html=False):
+    instruction = (
+        f"Translate the user's content into {target_language}. "
+        "Keep the meaning, names, numbers, dates, and links accurate. "
+        "Do not summarize. Do not add explanations."
+    )
+    if source_language:
+        instruction += f" The source language is {source_language}."
+    if preserve_html:
+        instruction += (
+            " The input may contain HTML. Preserve all HTML tags, attributes, links, and structure exactly. "
+            "Translate only the visible text content."
+        )
+    else:
+        instruction += " Return only the translated plain text."
+
+    prompt = (
+        f"{instruction}\n\n"
+        "Return only the translated result with no markdown fences.\n\n"
+        f"Content:\n{content}"
+    )
+    return _generate_ai_text(prompt, max_output_tokens=2600)
+
+
+@csrf_exempt
+@require_POST
+def ai_translate(request):
+    """Translate frontend page content using OpenAI."""
+    try:
+        data = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    content = str(data.get("content") or "").strip()
+    target_language = _normalize_language_name(data.get("target_language"))
+    source_language = _normalize_language_name(data.get("source_language"))
+    preserve_html = bool(data.get("preserve_html", False))
+
+    if not content:
+        return JsonResponse({"error": "No content provided"}, status=400)
+    if not target_language:
+        return JsonResponse({"error": "Target language is required"}, status=400)
+    if len(content) > 12000:
+        return JsonResponse(
+            {"error": "Content too long. Please send 12000 characters or fewer per request."},
+            status=400,
+        )
+
+    client_ip = _get_request_ip(request)
+    rate_key = f"ai_translate_rate:{client_ip}"
+    current_count = int(cache.get(rate_key, 0) or 0)
+    if current_count >= 30:
+        return JsonResponse(
+            {"error": "Too many translation requests. Please wait a minute and try again."},
+            status=429,
+        )
+    cache.set(rate_key, current_count + 1, timeout=60)
+
+    cache_payload = json.dumps(
+        {
+            "content": content,
+            "target_language": target_language,
+            "source_language": source_language,
+            "preserve_html": preserve_html,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    cache_key = "ai_translate:" + hashlib.sha256(cache_payload.encode("utf-8")).hexdigest()
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse({**cached, "cached": True})
+
+    try:
+        translated = _translate_content_with_openai(
+            content,
+            target_language=target_language,
+            source_language=source_language,
+            preserve_html=preserve_html,
+        )
+    except ValueError as e:
+        return JsonResponse({"error": str(e)}, status=503)
+    except Exception as e:
+        return _openai_error_response(e)
+
+    response_payload = {
+        "ok": True,
+        "translated": translated.strip(),
+        "target_language": target_language,
+        "source_language": source_language or "auto",
+        "preserve_html": preserve_html,
+        "cached": False,
+    }
+    cache.set(cache_key, response_payload, timeout=60 * 60 * 24)
+    return JsonResponse(response_payload)
+
+
 _SENTENCE_RE = re.compile(r"[^.!?\n]+(?:[.!?]+|$)")
 _WORD_RE = re.compile(r"[A-Za-z']+")
 _AI_GENERIC_PHRASES = [
@@ -5151,9 +5281,57 @@ Website: https://news4bharat.com
                         failed.append({'email': email, 'error': error_text})
                         logger.error(f"Newsletter failed for {email}: {e}")
             except Exception as e:
-                if not success and not failed:
-                    failed = [{'email': email, 'error': str(e)} for email in recipients]
-                logger.error(f"Newsletter SMTP connection failed: {e}")
+                error_text = str(e)
+                should_retry_via_api = (
+                    send_provider == 'brevo_smtp'
+                    and bool(brevo_api_key)
+                    and 'maximum sending limit exceeded' in error_text.lower()
+                )
+                if should_retry_via_api:
+                    using_brevo_api_fallback = True
+                    effective_provider = 'brevo_smtp+brevo_api'
+                    logger.warning(
+                        'Newsletter SMTP connection limit hit before send loop; '
+                        'switching recipients to Brevo API fallback.'
+                    )
+                    for email in recipients:
+                        try:
+                            personalized_html = html_content.replace(
+                                NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                                _build_subscribe_url(request, email),
+                            )
+                            personalized_html = personalized_html.replace(
+                                NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                                _get_newsletter_subscribe_base_url(),
+                            )
+                            accepted, error_payload, message_id = _send_newsletter_via_brevo_api(
+                                email=email,
+                                subject=subject,
+                                sender_email=sender_email,
+                                plain_text=plain_text,
+                                personalized_html=personalized_html,
+                                brevo_api_key=brevo_api_key,
+                                newsletter_log=newsletter_log,
+                                trace_id=trace_id,
+                                is_test=is_test,
+                                brevo_no_tracking_headers=brevo_no_tracking_headers,
+                            )
+                            if accepted:
+                                success.append(email)
+                                brevo_message_ids.append({'email': email, 'message_id': message_id})
+                                logger.info(f"Newsletter Brevo API accepted for {email}: {message_id}")
+                            else:
+                                failed.append(error_payload)
+                                logger.error(f"Newsletter Brevo API failed for {email}: {error_payload}")
+                        except Exception as fallback_error:
+                            failed.append({'email': email, 'error': str(fallback_error)})
+                            logger.error(
+                                f"Newsletter Brevo API exception for {email}: {fallback_error}"
+                            )
+                else:
+                    if not success and not failed:
+                        failed = [{'email': email, 'error': error_text} for email in recipients]
+                    logger.error(f"Newsletter SMTP connection failed: {e}")
             finally:
                 try:
                     connection.close()

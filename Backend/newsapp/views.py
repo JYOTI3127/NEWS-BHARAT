@@ -182,6 +182,8 @@ def _send_assignment_email(*, article, reporter, assigned_by, assignment_message
 
 
 def _sync_reporter_assignments(*, article, request, reporter_assignments, fallback_message='', fallback_deadline=None):
+    from newsapp.signals import _create_or_refresh_notification
+
     normalized = reporter_assignments or []
     existing_assignments = {
         item.user_id: item
@@ -215,13 +217,13 @@ def _sync_reporter_assignments(*, article, request, reporter_assignments, fallba
                 'deadline': assignment_deadline,
             },
         )
-        Notification.objects.get_or_create(
+        _create_or_refresh_notification(
             user=reporter,
             notif_type='assign',
             title='New Assignment',
             message=f'You were assigned "{article.title}"',
             action_url=f"/admin/newsapp/article/{article.id}/change/",
-            defaults={'icon': ''},
+            icon='',
         )
 
         previous = existing_assignments.get(reporter.id)
@@ -574,7 +576,7 @@ def _validate_article_status_change(*, user, previous_status, requested_status):
     requested_status = (requested_status or '').strip()
     previous_status = (previous_status or '').strip()
 
-    if requested_status == 'published':
+    if requested_status == 'published' and not has_permission(user, 'publish_article'):
         return 'Only admin can publish articles.'
 
     if previous_status and requested_status and previous_status != requested_status:
@@ -1538,7 +1540,7 @@ def dashboard_stats_api(request):
 
 
 def update_article_status(request, article):
-    if not request.user.is_superuser:
+    if not request.user.is_superuser and not has_permission(request.user, 'publish_article'):
         raise PermissionDenied("Only admin can publish articles.")
     article.status = "published"
     article.published_at = timezone.now()

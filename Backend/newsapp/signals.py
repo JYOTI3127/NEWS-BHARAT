@@ -34,6 +34,51 @@ def _send_rich_email(*, subject, text_body, html_body, recipient_list):
     email.attach_alternative(html_body, "text/html")
     email.send(fail_silently=True)
 
+
+def _create_or_refresh_notification(*, user, notif_type, title, message, action_url='', icon=''):
+    """
+    Keep one active notification per user/type/title/action_url and refresh it
+    instead of creating duplicates every time a status flips back and forth.
+    """
+    existing = list(
+        Notification.objects.filter(
+            user=user,
+            notif_type=notif_type,
+            title=title,
+            action_url=action_url,
+        ).order_by('-created_at', '-id')
+    )
+    if existing:
+        primary = existing[0]
+        changed_fields = []
+        if primary.message != message:
+            primary.message = message
+            changed_fields.append('message')
+        if (primary.icon or '') != (icon or ''):
+            primary.icon = icon or ''
+            changed_fields.append('icon')
+        if primary.is_archived:
+            primary.is_archived = False
+            changed_fields.append('is_archived')
+        if primary.is_read:
+            primary.is_read = False
+            changed_fields.append('is_read')
+        if changed_fields:
+            primary.save(update_fields=changed_fields)
+        duplicate_ids = [item.id for item in existing[1:]]
+        if duplicate_ids:
+            Notification.objects.filter(id__in=duplicate_ids).delete()
+        return primary
+
+    return Notification.objects.create(
+        user=user,
+        notif_type=notif_type,
+        title=title,
+        message=message,
+        icon=icon or '',
+        action_url=action_url,
+    )
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and not getattr(instance, '_disable_signals', False):
@@ -116,7 +161,7 @@ def article_assigned(sender, instance, created, **kwargs):
         return
     old_assigned = getattr(instance, '_old_assigned_to', None)
     if created or (old_assigned != instance.assigned_to):
-        Notification.objects.create(
+        _create_or_refresh_notification(
             user=instance.assigned_to,
             notif_type="assign",
             title="New Assignment",
@@ -146,7 +191,7 @@ def article_status_notification(sender, instance, **kwargs):
         ).exclude(email__exact="")
 
         for admin_user in super_admins:
-            Notification.objects.create(
+            _create_or_refresh_notification(
                 user=admin_user,
                 notif_type="article",
                 title="Article Sent For Review",
@@ -190,7 +235,7 @@ def article_status_notification(sender, instance, **kwargs):
                 pass
 
     if instance.status == "approved":
-        Notification.objects.create(
+        _create_or_refresh_notification(
             user=instance.author,
             notif_type="article",
             title="Article Approved",
@@ -228,7 +273,7 @@ def article_status_notification(sender, instance, **kwargs):
                 pass
 
     if instance.status == "published":
-        Notification.objects.create(
+        _create_or_refresh_notification(
             user=instance.author,
             notif_type="article",
             title="Article Published",
@@ -248,7 +293,7 @@ def role_change_notification(sender, instance, action, pk_set, **kwargs):
         for role_id in pk_set:
             try:
                 role = Role.objects.get(pk=role_id)
-                Notification.objects.create(
+                _create_or_refresh_notification(
                     user=instance.user,
                     notif_type="role",
                     title="Role Updated",
@@ -266,7 +311,7 @@ def category_assignment_notification(sender, instance, action, pk_set, **kwargs)
         for cat_id in pk_set:
             try:
                 category = Category.objects.get(pk=cat_id)
-                Notification.objects.create(
+                _create_or_refresh_notification(
                     user=instance.user,
                     notif_type="category",
                     title="New Category Assigned",
@@ -286,7 +331,7 @@ def category_assignment_notification(sender, instance, action, pk_set, **kwargs)
 def new_user_notification(sender, instance, created, **kwargs):
     if created:
         try:
-            Notification.objects.create(
+            _create_or_refresh_notification(
                 user=instance,
                 notif_type="message",
                 title="Welcome!",

@@ -1973,7 +1973,10 @@ class ArticleAdmin(admin.ModelAdmin):
         if change:
             old_status = form.initial.get('status')
             if old_status and obj.status != old_status:
-                if obj.status == 'published' and not request.user.is_superuser:
+                if obj.status == 'published' and not (
+                    request.user.is_superuser
+                    or has_permission(request.user, 'publish_article')
+                ):
                     raise PermissionDenied("Only admin can publish articles.")
                 if not request.user.is_superuser:
                     allowed = ALLOWED_TRANSITIONS.get(old_status, [])

@@ -446,6 +446,7 @@ const navLinks = [
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },
   { label: "Business", path: "/category/business" },
   { label: "Politics", path: "/category/politics" },
+  
   { label: "Stock Market", path: "/category/stock-market" },
   { label: "Technology", path: "/category/technology" },
   { label: "States of Bharat", path: "/category/state-of-bharat" },
@@ -676,9 +677,15 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = PUSH_REQUEST_TIME
   }
 };
 
-const jumpToTop = () => {
+const reloadHomeFromLogo = (event) => {
   if (typeof window === "undefined") return;
-  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  event?.preventDefault();
+  const isHome = window.location.pathname === "/" || window.location.pathname === "";
+  if (isHome) {
+    window.location.reload();
+    return;
+  }
+  window.location.assign("/");
 };
 
 // ─────────────────────────────────────────────
@@ -686,7 +693,7 @@ const jumpToTop = () => {
 // ─────────────────────────────────────────────
 const LogoFull = memo(() => (
   <div className="logo-full">
-    <Link to="/" className="logo-full-link" onClick={jumpToTop}>
+    <Link to="/" className="logo-full-link" onClick={reloadHomeFromLogo}>
       <img src={logoBig} alt="News4Bharat Logo" width="160" height="160" loading="eager" fetchPriority="high" decoding="async" />
     </Link>
   </div>
@@ -694,7 +701,7 @@ const LogoFull = memo(() => (
 
 const LogoScroll = memo(() => (
   <div className="logo-scroll">
-    <Link to="/" onClick={jumpToTop}><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
+    <Link to="/" onClick={reloadHomeFromLogo}><img src={logoSmall} alt="News4Bharat Logo Small" width="192" height="95" loading="eager" fetchPriority="high" decoding="async" /></Link>
   </div>
 ));
 

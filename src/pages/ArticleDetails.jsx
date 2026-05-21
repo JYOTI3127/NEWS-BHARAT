@@ -204,7 +204,7 @@ const FloatingShareBar = ({ article, onShare, copied }) => {
 const isPrerenderUserAgent = () => {
   if (typeof window === "undefined") return false;
   const userAgent = window.navigator?.userAgent || "";
-  return /HeadlessChrome|prerender/i.test(userAgent);
+return /HeadlessChrome|prerender|LinkedInBot|Twitterbot|facebookexternalhit|Slackbot|WhatsApp|TelegramBot/i.test(userAgent);
 };
 
 const fetchWithRetry = async (url, options, attempts = 3) => {
@@ -752,7 +752,7 @@ const INLINE_ELEMENT_TAGS = new Set([
 const HEADING_ELEMENT_TAGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
 
 const normalizeHeadingStructure = (doc) => {
-  const headings = Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6"));
+  const headings = Array.from(doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6"));
   headings.forEach((heading) => {
     const inlineNodes = [];
     const blockNodes = [];
@@ -816,8 +816,9 @@ const normalizeArticleContent = (html) => {
     .replace(/\s(?:size|face)=["'][^"']*["']/gi, "")
     // Some editor payloads keep a trailing "\" before blockquote markup.
     .replace(/\\+\s*(?=<blockquote\b)/gi, "")
-    .replace(/<h1(\b[^>]*)>/gi, "<h2$1>")
-    .replace(/<\/h1>/gi, "</h2>");
+    // Repair invalid editor output such as <h2><p>Title</p><p></h2></p>.
+    .replace(/<h([1-6])(\b[^>]*)>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*(?:<p\b[^>]*>\s*)?<\/h\1>\s*(?:<\/p>)?/gi, "<h$1$2>$3</h$1>")
+    .replace(/<h([1-6])(\b[^>]*)>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*<\/h\1>/gi, "<h$1$2>$3</h$1>");
 
   // Preserve paragraph/block formatting for raw text payloads.
   // When backend sends plain text in content_raw, convert newlines into block HTML.
@@ -852,12 +853,6 @@ const normalizeArticleContent = (html) => {
   const doc = new DOMParser().parseFromString(normalized, "text/html");
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
   normalizeHeadingStructure(doc);
-  Array.from(doc.body.querySelectorAll("h1")).forEach((heading) => {
-    const replacement = doc.createElement("h2");
-    Array.from(heading.attributes).forEach((attribute) => replacement.setAttribute(attribute.name, attribute.value));
-    replacement.innerHTML = heading.innerHTML;
-    heading.replaceWith(replacement);
-  });
   Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
     Array.from(element.childNodes).forEach((node) => {
       if (node.nodeType !== Node.TEXT_NODE) return;
@@ -865,7 +860,7 @@ const normalizeArticleContent = (html) => {
       if (cleanedValue !== node.textContent) node.textContent = cleanedValue;
     });
   });
-  Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
+  Array.from(doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6")).forEach((heading) => {
     if (getPlainText(heading.textContent || "").length === 0) heading.remove();
   });
   Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
@@ -922,7 +917,7 @@ const normalizeArticleContent = (html) => {
   Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
     if (node.parentElement !== doc.body) return;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
-    if (node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div, img, iframe, video")) return;
+    if (node.querySelector("h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div, img, iframe, video")) return;
     if (getPlainText(node.textContent || "").length === 0) return;
     const paragraph = doc.createElement("p");
     Array.from(node.attributes).forEach((attribute) => paragraph.setAttribute(attribute.name, attribute.value));
@@ -930,14 +925,60 @@ const normalizeArticleContent = (html) => {
     node.replaceWith(paragraph);
   });
 
-  const bulletParagraphPattern = /^\s*(?:[•●▪◦*-]|(?:\d+|[a-z])[\).])\s+/i;
+  const isPlainTextBlock = (node) => {
+    if (!node?.matches?.("p, div, span")) return false;
+    if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
+    if (node.querySelector("h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, img, iframe, video")) return false;
+    return getPlainText(node.textContent || "").length > 0;
+  };
+
+  const textBlocks = Array.from(doc.body.querySelectorAll("p, div, span")).filter(isPlainTextBlock);
+
+  const looksLikeEditorHeading = (node, index) => {
+    if (!isPlainTextBlock(node)) return false;
+
+    const text = getPlainText(node.textContent || "");
+    if (text.length < 12 || text.length > 150) return false;
+    if (/^also\s+read\s*:/i.test(text)) return false;
+    if (/[.!:;][)"'”’]*$/.test(text)) return false;
+
+    const previousText = getPlainText(textBlocks[index - 1]?.textContent || "");
+    const nextText = getPlainText(textBlocks[index + 1]?.textContent || "");
+    const isFirstTextBlock = !previousText;
+    const followsBodyCopy = previousText.length > 120 || /[.!?]"?$/.test(previousText);
+    const hasBodyAfter = nextText.length > 40;
+    const words = text.split(/\s+/).filter((word) => /[A-Za-z0-9]/.test(word));
+    const titleLikeWords = words.filter((word) =>
+      /^(?:["'“‘(]*[A-Z0-9]|[A-Z]{2,})/.test(word)
+    );
+    const isTitleLikeLine = words.length >= 4 && titleLikeWords.length / words.length >= 0.45;
+
+    const boldText = Array.from(node.querySelectorAll("strong, b"))
+      .map((child) => getPlainText(child.textContent || ""))
+      .join(" ");
+    const boldCoverage = boldText.length / Math.max(text.length, 1);
+    const style = String(node.getAttribute("style") || "");
+    const hasBoldStyle = /font-weight\s*:\s*(?:bold|[6-9]00)/i.test(style);
+
+    return boldCoverage >= 0.65 || hasBoldStyle || (isTitleLikeLine && hasBodyAfter && (isFirstTextBlock || followsBodyCopy));
+  };
+
+  textBlocks.forEach((node, index) => {
+    if (!looksLikeEditorHeading(node, index)) return;
+    const heading = doc.createElement("h2");
+    Array.from(node.attributes).forEach((attribute) => heading.setAttribute(attribute.name, attribute.value));
+    heading.innerHTML = node.innerHTML;
+    node.replaceWith(heading);
+  });
+
+  const bulletParagraphPattern = /^\s*(?:[•●▪◦*-]|(?:\d+|[a-z])[).])\s+/i;
   const getParagraphListMarker = (paragraph) => {
     const text = String(paragraph?.textContent || "").replace(/\u00a0/g, " ").trim();
     const match = text.match(bulletParagraphPattern);
     if (!match) return null;
     return {
       marker: match[0],
-      isOrdered: /^(?:\d+|[a-z])[\).]\s+/i.test(match[0].trim()),
+      isOrdered: /^(?:\d+|[a-z])[).]\s+/i.test(match[0].trim()),
       text: text.slice(match[0].length).trim(),
     };
   };
@@ -979,7 +1020,7 @@ const normalizeArticleContent = (html) => {
   flushParagraphListRun();
 
   const listHeadingPattern = /^(confirmed|still unconfirmed|what we know|what we don'?t know|key details|full story in brief|news summary)$/i;
-  Array.from(doc.body.querySelectorAll("h2, h3, h4, h5, h6")).forEach((heading) => {
+  Array.from(doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6")).forEach((heading) => {
     const headingText = getPlainText(heading.textContent || "");
     if (!listHeadingPattern.test(headingText)) return;
 
@@ -1018,7 +1059,7 @@ const normalizeArticleContent = (html) => {
     const snapshotHtmlBeforeChatCleanup = doc.body.innerHTML;
     const snapshotPlainBeforeChatCleanup = getPlainText(doc.body.textContent || "");
     const topLevelBlockTags = new Set([
-      "H2", "H3", "H4", "H5", "H6", "P", "UL", "OL", "TABLE", "BLOCKQUOTE", "DIV", "GOOGLE-SHEETS-HTML-ORIGIN",
+      "H1", "H2", "H3", "H4", "H5", "H6", "P", "UL", "OL", "TABLE", "BLOCKQUOTE", "DIV", "GOOGLE-SHEETS-HTML-ORIGIN",
     ]);
     const inlinePassTags = new Set([
       "SPAN", "STRONG", "B", "I", "EM", "U", "A", "SMALL", "MARK", "SUB", "SUP", "BR",
@@ -1064,7 +1105,7 @@ const normalizeArticleContent = (html) => {
     const seen = new Set();
     const candidates = Array.from(doc.body.children).filter((node) => {
       const tag = node.tagName.toLowerCase();
-      return ["h2", "h3", "h4", "h5", "h6", "p", "ul", "ol", "table", "blockquote", "div", "google-sheets-html-origin"].includes(tag);
+      return ["h1", "h2", "h3", "h4", "h5", "h6", "p", "ul", "ol", "table", "blockquote", "div", "google-sheets-html-origin"].includes(tag);
     });
 
     const getTextSignature = (node) =>
@@ -1080,7 +1121,7 @@ const normalizeArticleContent = (html) => {
       const textSig = getTextSignature(node);
 
       // Keep only meaningful neutral wrappers to avoid duplicate container extraction.
-      if (tag === "div" && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return;
+      if (tag === "div" && node.querySelector("h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return;
 
       if (tag === "div") {
         if (textSig.length < 20) return;
@@ -1178,7 +1219,7 @@ const normalizeArticleContent = (html) => {
     }
 
     const hasBlockChild = Array.from(blockquote.children).some((child) =>
-      ["P", "DIV", "H2", "H3", "H4", "H5", "H6", "UL", "OL"].includes(child.tagName)
+      ["P", "DIV", "H1", "H2", "H3", "H4", "H5", "H6", "UL", "OL"].includes(child.tagName)
     );
 
     if (!hasBlockChild) {
@@ -1394,7 +1435,7 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
         if (!node) return false;
         if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
         if (node.closest("blockquote")) return false;
-        if (node.matches("div, span") && node.querySelector("h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
+        if (node.matches("div, span") && node.querySelector("h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, div")) return false;
         const text = getPlainText(node.textContent || "");
         return text.length > 1;
       });

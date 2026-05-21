@@ -227,6 +227,7 @@ class Article(models.Model):
 
         source_html = self.content_raw or self.content_clean or self.content
         normalized_clean = sanitize_article_html(source_html)
+        self.content_raw = normalized_clean
         self.content_clean = normalized_clean
         self.content = normalized_clean
         self.clean_version = ARTICLE_CLEAN_VERSION

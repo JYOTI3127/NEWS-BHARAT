@@ -1392,7 +1392,7 @@ grammarly-button,
       </div>
     </div>
 
-    <div class="nb-section-title">Editorial Comments</div>
+    <div class="nb-section-title" id="editorial-comments">Editorial Comments</div>
     <div class="comment-input-row">
       <input type="text" id="comment_inp" placeholder="Add a note or editorial comment..." />
       <button onclick="addComment()">Add</button>
@@ -4161,6 +4161,18 @@ function nbApplyBgColor(color){
 function nbStoreColorSelection(){
   if(typeof nbItSaveSelection==='function') nbItSaveSelection();
 }
+function nbNormalizeHeadingHtml(html){
+  var normalized=String(html||'');
+  if(!normalized)return '';
+  normalized=normalized.replace(/<p\b[^>]*>\s*<\/p>/gi,'');
+  normalized=normalized.replace(/<div\b[^>]*>\s*<\/div>/gi,'');
+  normalized=normalized.replace(/<\/p>\s*<p\b[^>]*>/gi,'<br>');
+  normalized=normalized.replace(/<\/div>\s*<div\b[^>]*>/gi,'<br>');
+  normalized=normalized.replace(/<(?:p|div)\b[^>]*>/gi,'');
+  normalized=normalized.replace(/<\/(?:p|div)>/gi,'');
+  normalized=normalized.replace(/(?:<br\s*\/?>\s*){3,}/gi,'<br><br>');
+  return normalized.trim();
+}
 function nbInsertTag(tag){
   if(!nbEditor)return;
   nbSaveHistory();
@@ -4169,8 +4181,15 @@ function nbInsertTag(tag){
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
   const el=document.createElement(tag);
-  el.appendChild(range.extractContents());
-  if(!el.textContent.trim())el.textContent=tag==='h2'?'Heading 2':'Heading 3';
+  const fragment=range.extractContents();
+  const wrapper=document.createElement('div');
+  wrapper.appendChild(fragment);
+  const normalizedHtml=nbNormalizeHeadingHtml(wrapper.innerHTML);
+  if(normalizedHtml){
+    el.innerHTML=normalizedHtml;
+  }else{
+    el.textContent=tag==='h2'?'Heading 2':'Heading 3';
+  }
   range.insertNode(el);
   range.setStartAfter(el);
   range.collapse(true);
@@ -7104,6 +7123,15 @@ window.nbInlineInsertLink=window.nbInlineInsertLink;
   if(typeof renderTags==='function')renderTags();
   if(typeof renderSecKws==='function')renderSecKws();
   if(typeof renderComments==='function')renderComments();
+  try{
+    var focusTarget=(new URLSearchParams(window.location.search)).get('focus')||window.location.hash.replace('#','');
+    if(focusTarget==='editorial-comments'){
+      var commentInput=document.getElementById('comment_inp');
+      var commentSection=document.getElementById('editorial-comments');
+      if(commentSection)commentSection.scrollIntoView({behavior:'smooth',block:'center'});
+      if(commentInput)setTimeout(function(){commentInput.focus();},250);
+    }
+  }catch(e){}
 })();
 </script>
 

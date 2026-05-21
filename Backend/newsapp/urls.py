@@ -8,6 +8,7 @@ urlpatterns = [
     path('newsletters', views.newsletters_api, name='api_newsletters_no_slash'),
     path('newsletters/<int:newsletter_id>/', views.newsletter_detail_api, name='api_newsletter_detail'),
     path('articles/', article_list),
+    path('articles/<int:pk>/review-action/<str:action>/', views.article_review_email_action, name='article_review_email_action'),
     path('articles/<int:pk>/', views.article_detail),
     path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
     path('articles/by-state/', views.articles_by_state),

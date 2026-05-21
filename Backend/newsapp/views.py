@@ -10,6 +10,7 @@ from .utils import (
     ARTICLE_CLEAN_VERSION,
     get_article_render_content,
     has_permission,
+    read_article_review_action_token,
     sanitize_article_html,
 )
 import json
@@ -41,7 +42,7 @@ import uuid
 import re
 import hashlib
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from openai import OpenAI
 from django.urls import reverse
 from django.templatetags.static import static
@@ -1545,6 +1546,54 @@ def update_article_status(request, article):
     article.status = "published"
     article.published_at = timezone.now()
     article.save()
+
+
+@require_GET
+def article_review_email_action(request, pk, action):
+    normalized_action = str(action or "").strip().lower()
+    status_map = {
+        "approve": "approved",
+    }
+    target_status = status_map.get(normalized_action)
+    if not target_status:
+        raise Http404("Unknown review action.")
+
+    token = str(request.GET.get("token") or "").strip()
+    if not token:
+        return HttpResponse("Missing review token.", status=403)
+
+    try:
+        payload = read_article_review_action_token(token)
+    except Exception:
+        return HttpResponse("This review link is invalid or has expired.", status=403)
+
+    if payload.get("article_id") != int(pk) or payload.get("action") != normalized_action:
+        return HttpResponse("This review link does not match the requested action.", status=403)
+
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return redirect(f"/admin/login/?next={quote(request.get_full_path())}")
+
+    if not (request.user.is_superuser or has_permission(request.user, "publish_article")):
+        return HttpResponse("You do not have permission to approve articles.", status=403)
+
+    article = get_object_or_404(Article, pk=pk)
+    article_admin_url = f"/admin/newsapp/article/{article.pk}/change/"
+
+    if article.status == target_status:
+        messages.info(request, f'"{article.title}" is already {target_status}.')
+        return redirect(article_admin_url)
+
+    if article.status not in {"review", "fact_check", "legal"}:
+        messages.warning(
+            request,
+            f'"{article.title}" is currently in "{article.status}" status, so no email approval was applied.',
+        )
+        return redirect(article_admin_url)
+
+    article.status = target_status
+    article.save(update_fields=["status"])
+    messages.success(request, f'"{article.title}" has been approved from the review email.')
+    return redirect(article_admin_url)
 
 
 @api_view(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])

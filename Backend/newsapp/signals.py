@@ -6,8 +6,9 @@ from newsapp.models import *
 from django.db import transaction
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
-from django.utils.html import escape
+from django.utils.html import escape, strip_tags
 import re
+from .utils import build_article_review_action_token
 
 
 def _admin_base_url():
@@ -19,6 +20,43 @@ def _admin_base_url():
 
 def _article_admin_url(article_id):
     return f"{_admin_base_url()}/newsapp/article/{article_id}/change/"
+
+
+def _site_base_url():
+    configured = getattr(settings, "NEWSROOM_SITE_URL", "").strip()
+    if configured:
+        return configured.rstrip("/")
+    admin_base = _admin_base_url()
+    if admin_base.endswith("/admin"):
+        return admin_base[:-6]
+    return admin_base
+
+
+def _article_review_action_url(article_id, action):
+    token = build_article_review_action_token(article_id, action)
+    return f"{_site_base_url()}/api/articles/{article_id}/review-action/{action}/?token={token}"
+
+
+def _article_comments_admin_url(article_id):
+    return f"{_article_admin_url(article_id)}?focus=editorial-comments#editorial-comments"
+
+
+def _article_preview_paragraphs(article, limit=3):
+    content = str(
+        getattr(article, "content_clean", "")
+        or getattr(article, "content", "")
+        or getattr(article, "content_raw", "")
+        or ""
+    )
+    if not content:
+        return []
+
+    normalized = re.sub(r"</(p|div|h[1-6]|li|blockquote)>", r"</\1>\n", content, flags=re.IGNORECASE)
+    normalized = re.sub(r"<br\s*/?>", "\n", normalized, flags=re.IGNORECASE)
+    text = strip_tags(normalized)
+    text = text.replace("\r", "\n")
+    blocks = [re.sub(r"\s+", " ", block).strip() for block in text.split("\n") if block.strip()]
+    return blocks[:limit]
 
 
 def _send_rich_email(*, subject, text_body, html_body, recipient_list):
@@ -179,10 +217,27 @@ def article_status_notification(sender, instance, **kwargs):
         return
 
     article_admin_url = _article_admin_url(instance.id)
+    comments_admin_url = _article_comments_admin_url(instance.id)
     author_name = instance.author.get_full_name() or instance.author.username 
     safe_title = escape(instance.title)
+    safe_subtitle = escape(instance.subtitle or "")
     safe_author_name = escape(author_name)
     safe_article_admin_url = escape(article_admin_url)
+    safe_comments_admin_url = escape(comments_admin_url)
+    approve_review_url = _article_review_action_url(instance.id, "approve")
+    safe_approve_review_url = escape(approve_review_url)
+    preview_paragraphs = _article_preview_paragraphs(instance)
+    preview_text = "\n\n".join(preview_paragraphs)
+    preview_html = "".join(
+        f"<p style='margin:0 0 14px;font-size:15px;line-height:1.75;color:#334155;'>{escape(paragraph)}</p>"
+        for paragraph in preview_paragraphs
+    )
+    subtitle_html = (
+        f"<p style='margin:0 0 14px;font-size:18px;line-height:1.55;color:#475569;'>{safe_subtitle}</p>"
+        if safe_subtitle else ""
+    )
+    if not preview_html:
+        preview_html = "<p style='margin:0;font-size:15px;line-height:1.75;color:#64748b;'>Article preview was not available in the email.</p>"
 
     if instance.status == "review":
         super_admins = User.objects.filter(
@@ -209,8 +264,12 @@ def article_status_notification(sender, instance, **kwargs):
                         f"Hello Team,\n\n"
                         f"A new article has been submitted for editorial review on News4Bharat.\n\n"
                         f"Article Title: {instance.title}\n"
+                        f"{f'Subtitle: {instance.subtitle}\\n' if instance.subtitle else ''}"
                         f"Submitted By: {author_name}\n"
+                        f"{f'Preview:\\n{preview_text}\\n\\n' if preview_text else ''}"
                         f"Review Link: {article_admin_url}\n\n"
+                        f"Editorial Comments: {comments_admin_url}\n"
+                        f"Approve Now: {approve_review_url}\n\n"
                         f"Please review the article in the admin panel. The publishing workflow will move forward only after an admin approves it.\n\n"
                         f"If anything looks unclear, or if you need context before approving, please coordinate with the editorial admin team.\n\n"
                         f"Regards,\nNews4Bharat CMS"
@@ -221,11 +280,18 @@ def article_status_notification(sender, instance, **kwargs):
                         f"<p style='margin:0 0 12px;'>Hello Team,</p>"
                         f"<p style='margin:0 0 14px;'>A new article has been submitted for editorial review on <strong>News4Bharat</strong>.</p>"
                         f"<div style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin:0 0 16px;'>"
-                        f"<p style='margin:0 0 8px;'><strong>Article Title:</strong> {safe_title}</p>"
-                        f"<p style='margin:0;'><strong>Submitted By:</strong> {safe_author_name}</p>"
+                        f"<div style='font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 10px;'>Article Preview</div>"
+                        f"<h1 style='margin:0 0 10px;font-size:28px;line-height:1.25;color:#0f172a;'>{safe_title}</h1>"
+                        f"{subtitle_html}"
+                        f"<p style='margin:0 0 16px;font-size:14px;color:#64748b;'><strong>By:</strong> {safe_author_name}</p>"
+                        f"{preview_html}"
                         f"</div>"
                         f"<p style='margin:0 0 14px;'>Please review the article in the admin panel. The workflow will move forward <strong>only after admin approval</strong>.</p>"
-                        f"<p style='margin:0 0 18px;'><a href='{safe_article_admin_url}' style='display:inline-block;background:#d80100;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;'>Open Article In Admin</a></p>"
+                        f"<div style='margin:0 0 18px;'>"
+                        f"<a href='{safe_article_admin_url}' style='display:inline-block;background:#d80100;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;margin-right:10px;'>Open Article In Admin</a>"
+                        f"<a href='{safe_comments_admin_url}' style='display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;margin-right:10px;'>Add Editorial Comments</a>"
+                        f"<a href='{safe_approve_review_url}' style='display:inline-block;background:#15803d;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:700;'>Approve Article</a>"
+                        f"</div>"
                         f"<p style='margin:0 0 10px;'>If anything looks unclear or you need more context before approving, please contact the admin team.</p>"
                         f"<p style='margin:0;color:#6b7280;font-size:13px;'>Direct link: <a href='{safe_article_admin_url}'>{safe_article_admin_url}</a></p>"
                         f"</div>"

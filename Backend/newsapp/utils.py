@@ -19,11 +19,13 @@ import html
 import re
 from django.conf import settings
 from django.core.cache import cache
+from django.core import signing
 from django.utils import timezone
 
 from .models import MetalRate
 
-ARTICLE_CLEAN_VERSION = 5
+ARTICLE_CLEAN_VERSION = 6
+ARTICLE_REVIEW_ACTION_SALT = "newsapp.article-review-action"
 
 _TWITTER_EMBED_RE = re.compile(
     r'<(?P<tag>div|blockquote)\b(?=[^>]*\barticle-twitter-embed\b)(?=[^>]*\bdata-tweet-url="(?P<url>[^"]+)")[^>]*>[\s\S]*?</(?P=tag)>',
@@ -65,7 +67,20 @@ _TOP_LEVEL_BLOCK_RE = re.compile(
     re.IGNORECASE,
 )
 _PARAGRAPH_BLOCK_RE = re.compile(r'<p\b(?P<attrs>[^>]*)>(?P<body>[\s\S]*?)</p>', re.IGNORECASE)
+_HEADING_BLOCK_RE = re.compile(r'<(?P<tag>h[1-6])(?P<attrs>\b[^>]*)?>(?P<body>[\s\S]*?)</(?P=tag)>', re.IGNORECASE)
 _TAG_RE = re.compile(r'<[^>]+>')
+
+
+def build_article_review_action_token(article_id, action):
+    payload = {
+        "article_id": int(article_id),
+        "action": str(action or "").strip().lower(),
+    }
+    return signing.dumps(payload, salt=ARTICLE_REVIEW_ACTION_SALT, compress=True)
+
+
+def read_article_review_action_token(token, *, max_age=60 * 60 * 24 * 7):
+    return signing.loads(token, salt=ARTICLE_REVIEW_ACTION_SALT, max_age=max_age)
 
 
 def normalize_twitter_embeds(content):
@@ -274,6 +289,32 @@ def _ensure_article_block_structure(content):
     return ''.join(piece for piece in pieces if piece).strip()
 
 
+def _normalize_heading_structure(content):
+    def replace_heading(match):
+        tag = match.group('tag')
+        attrs = match.group('attrs') or ''
+        body = match.group('body') or ''
+        normalized_body = body
+
+        normalized_body = re.sub(r'<p\b[^>]*>\s*</p>', '', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'<div\b[^>]*>\s*</div>', '', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'</p>\s*<p\b[^>]*>', '<br>', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'</div>\s*<div\b[^>]*>', '<br>', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'<(?:p|div)\b[^>]*>', '', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'</(?:p|div)>', '', normalized_body, flags=re.IGNORECASE)
+        normalized_body = re.sub(r'(?:<br\s*/?>\s*){3,}', '<br><br>', normalized_body, flags=re.IGNORECASE)
+        normalized_body = normalized_body.strip()
+
+        return f'<{tag}{attrs}>{normalized_body}</{tag}>'
+
+    previous = None
+    normalized = str(content or '')
+    while normalized != previous:
+        previous = normalized
+        normalized = _HEADING_BLOCK_RE.sub(replace_heading, normalized)
+    return normalized
+
+
 def sanitize_article_html(content):
     normalized = normalize_twitter_embeds(str(content or ''))
     cleaned = _HTML_COMMENT_RE.sub('', normalized)
@@ -287,7 +328,9 @@ def sanitize_article_html(content):
     cleaned = _JS_PROTOCOL_RE.sub('', cleaned)
     cleaned = _DATA_HTML_RE.sub('', cleaned)
     cleaned = _ANCHOR_TAG_RE.sub(_ensure_safe_anchor_attrs, cleaned)
+    cleaned = _normalize_heading_structure(cleaned)
     cleaned = _ensure_article_block_structure(cleaned)
+    cleaned = _normalize_heading_structure(cleaned)
     cleaned = re.sub(r'<p>\s*</p>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'<div>\s*</div>', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'(?:<br\s*/?>\s*){3,}', '<br><br>', cleaned, flags=re.IGNORECASE)

@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Role
-from .utils import merge_soft_split_paragraphs, sanitize_article_html
+from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
 
@@ -340,7 +340,8 @@ class ArticleWorkflowNotificationTests(TestCase):
         article = Article.objects.create(
             author=self.author,
             title='Review me',
-            content='Body',
+            subtitle='A useful subtitle',
+            content='<p>First para for preview.</p><p>Second para for preview.</p>',
             status='draft',
         )
         mail.outbox = []
@@ -357,6 +358,10 @@ class ArticleWorkflowNotificationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('Article Submitted For Review', mail.outbox[0].subject)
         self.assertIn('Review me', mail.outbox[0].body)
+        self.assertIn('A useful subtitle', mail.outbox[0].body)
+        self.assertIn('First para for preview.', mail.outbox[0].body)
+        self.assertIn(f'/admin/newsapp/article/{article.pk}/change/?focus=editorial-comments#editorial-comments', mail.outbox[0].body)
+        self.assertIn(f'/api/articles/{article.pk}/review-action/approve/', mail.outbox[0].body)
 
     def test_admin_approval_notifies_and_emails_author(self):
         article = Article.objects.create(
@@ -423,6 +428,50 @@ class ArticlePublishPushTests(TestCase):
         payload = mock_send_push.call_args.kwargs
         self.assertEqual(payload['title'], 'Transition publish')
         self.assertIn('https://news4bharat.com/', payload['url'])
+
+
+class ArticleReviewEmailActionTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='writer',
+            password='testpass123',
+            email='writer@example.com',
+        )
+        self.super_admin = User.objects.create_user(
+            username='reviewboss',
+            password='testpass123',
+            email='boss@example.com',
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.article = Article.objects.create(
+            author=self.author,
+            title='Email approval story',
+            content='Body',
+            status='review',
+        )
+
+    def test_review_email_action_redirects_anonymous_user_to_admin_login(self):
+        token = build_article_review_action_token(self.article.pk, 'approve')
+        response = self.client.get(
+            f'/api/articles/{self.article.pk}/review-action/approve/?token={token}'
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/admin/login/', response['Location'])
+
+    def test_review_email_action_approves_article_for_super_admin(self):
+        token = build_article_review_action_token(self.article.pk, 'approve')
+        self.client.force_login(self.super_admin)
+
+        response = self.client.get(
+            f'/api/articles/{self.article.pk}/review-action/approve/?token={token}'
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], f'/admin/newsapp/article/{self.article.pk}/change/')
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.status, 'approved')
 
 
 class ArticleVersioningTests(TestCase):
@@ -649,6 +698,31 @@ class ArticleContentCleaningTests(TestCase):
         cleaned = sanitize_article_html('<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
 
         self.assertEqual(cleaned, '<h2>Brief</h2><p>Already formatted.</p><ul><li>Point one</li></ul>')
+
+    def test_sanitize_article_html_unwraps_nested_paragraphs_inside_headings(self):
+        cleaned = sanitize_article_html(
+            '<h2><p>Why “Cockroach Janta Party” Is Taking Over India’s Internet</p><p></p></h2>'
+            '<p>Body paragraph.</p>'
+        )
+
+        self.assertEqual(
+            cleaned,
+            '<h2>Why “Cockroach Janta Party” Is Taking Over India’s Internet</h2><p>Body paragraph.</p>',
+        )
+
+    def test_article_save_normalizes_invalid_heading_structure_in_all_content_fields(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Heading cleanup story',
+            content_raw='<h3><p>Broken subhead</p></h3><p>Body</p>',
+            content_clean='<h3><p>Broken subhead</p></h3><p>Body</p>',
+            content='<h3><p>Broken subhead</p></h3><p>Body</p>',
+            status='draft',
+        )
+
+        self.assertEqual(article.content_raw, '<h3>Broken subhead</h3><p>Body</p>')
+        self.assertEqual(article.content_clean, '<h3>Broken subhead</h3><p>Body</p>')
+        self.assertEqual(article.content, '<h3>Broken subhead</h3><p>Body</p>')
 
     def test_sanitize_article_html_normalizes_basic_inline_formatting(self):
         cleaned = sanitize_article_html('<p><b>Bold</b> and <i>italic</i> under <h3>Subhead</h3></p>')

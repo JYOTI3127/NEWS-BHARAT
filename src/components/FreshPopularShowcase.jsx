@@ -764,7 +764,7 @@ export default function FreshPopularShowcase({
             style={sideColumnStyle}
           >
             <h2 className="m-0 whitespace-nowrap text-[14px] font-extrabold leading-none text-[#121212] min-[320px]:text-[14px] min-[375px]:text-[15px] min-[425px]:text-[16px] min-[768px]:text-[16px] min-[1024px]:text-[17px] min-[1440px]:text-[18px] min-[1920px]:text-[20px]">
-              Popular
+              Most Read Today
             </h2>
             <div
               className={`mt-2 flex min-h-0 flex-1 flex-col bg-white min-[1440px]:mt-2.5 ${

@@ -6,6 +6,7 @@ import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag, ArrowLeft,
   Instagram, Youtube, Linkedin, TrendingUp,
+  Bookmark, Minus, Plus, Share2, Type, Volume2,
 } from "lucide-react";
 import {
   apiUrl,
@@ -238,6 +239,37 @@ const getPlainText = (value) =>
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const getArticleReadTime = (article) => {
+  const directValue =
+    article?.read_time ||
+    article?.reading_time ||
+    article?.estimated_read_time ||
+    article?.readTime;
+
+  if (directValue) {
+    const directText = String(directValue).trim();
+    if (/read/i.test(directText)) return directText;
+    if (/min/i.test(directText)) return `${directText} read`;
+    return `${directText} min read`;
+  }
+
+  const wordCount = getPlainText(
+    article?.content_html ||
+      article?.content ||
+      article?.content_clean ||
+      article?.content_raw ||
+      article?.articleBody ||
+      article?.body ||
+      article?.subtitle ||
+      article?.summary ||
+      article?.description ||
+      article?.excerpt ||
+      ""
+  ).split(/\s+/).filter(Boolean).length;
+
+  return `${Math.max(1, Math.ceil(wordCount / 220))} min read`;
+};
 
 const decodeHtmlEntities = (value) => {
   const text = String(value || "");
@@ -575,6 +607,130 @@ const dedupeStructuredSchemas = (schemas) => {
   return unique;
 };
 
+const FAQ_CONTENT_KEYS = [
+  "faq",
+  "faqs",
+  "faq_items",
+  "faqItems",
+  "faq_schema",
+  "faq_schemas",
+  "faqpage",
+  "faq_page",
+  "mainEntity",
+  "items",
+  "questions",
+];
+
+const getFaqAnswerText = (value) => {
+  const parsed = parseJsonMaybe(value);
+  if (typeof parsed === "string") return getPlainText(decodeHtmlEntities(parsed));
+  if (Array.isArray(parsed)) return parsed.map(getFaqAnswerText).filter(Boolean).join(" ");
+  if (!isSchemaPlainObject(parsed)) return "";
+
+  return getPlainText(decodeHtmlEntities(
+    parsed.text ||
+    parsed.answer ||
+    parsed.content ||
+    parsed.description ||
+    parsed.value ||
+    ""
+  ));
+};
+
+const getFaqQuestionText = (value) =>
+  getPlainText(decodeHtmlEntities(
+    value?.name ||
+    value?.question ||
+    value?.title ||
+    value?.heading ||
+    ""
+  ));
+
+const extractFaqItems = (input, depth = 0, seen = new Set()) => {
+  if (depth > 10 || input == null) return [];
+
+  const parsed = parseJsonMaybe(input);
+  if (parsed !== input) return extractFaqItems(parsed, depth + 1, seen);
+
+  if (Array.isArray(parsed)) {
+    return parsed.flatMap((item) => extractFaqItems(item, depth + 1, seen));
+  }
+
+  if (!isSchemaPlainObject(parsed)) return [];
+  if (seen.has(parsed)) return [];
+  seen.add(parsed);
+
+  if (schemaHasType(parsed, "FAQPage")) {
+    return extractFaqItems(parsed.mainEntity || parsed.main_entity || parsed.items, depth + 1, seen);
+  }
+
+  const question = getFaqQuestionText(parsed);
+  const answer = getFaqAnswerText(
+    parsed.acceptedAnswer ||
+    parsed.accepted_answer ||
+    parsed.answer ||
+    parsed.answers ||
+    parsed.text ||
+    parsed.description
+  );
+
+  if (question && answer) return [{ question, answer }];
+
+  return FAQ_CONTENT_KEYS.flatMap((key) =>
+    Object.prototype.hasOwnProperty.call(parsed, key)
+      ? extractFaqItems(parsed[key], depth + 1, seen)
+      : []
+  );
+};
+
+const dedupeFaqItems = (items) => {
+  const seen = new Set();
+  const unique = [];
+  items.forEach((item) => {
+    const question = getPlainText(item?.question);
+    const answer = getPlainText(item?.answer);
+    const key = `${question.toLowerCase()}::${answer.toLowerCase()}`;
+    if (!question || !answer || seen.has(key)) return;
+    seen.add(key);
+    unique.push({ question, answer });
+  });
+  return unique;
+};
+
+const ArticleFaqAccordion = ({ items = [], maxWidth }) => {
+  const [openIndex, setOpenIndex] = useState(0);
+  if (!items.length) return null;
+
+  return (
+    <section className="article-faq" style={{ maxWidth }} aria-labelledby="article-faq-heading">
+      <div className="article-faq__header">
+        <h2 id="article-faq-heading">Frequently Asked Questions</h2>
+      </div>
+      <div className="article-faq__list">
+        {items.map((item, index) => {
+          const isOpen = openIndex === index;
+          return (
+            <article key={`${item.question}-${index}`} className={`article-faq__item${isOpen ? " article-faq__item--open" : ""}`}>
+              <button
+                type="button"
+                className="article-faq__question"
+                onClick={() => setOpenIndex(isOpen ? -1 : index)}
+                aria-expanded={isOpen}
+              >
+                <span>{item.question}</span>
+                <span className="article-faq__icon" aria-hidden="true">{isOpen ? "×" : "+"}</span>
+              </button>
+              {isOpen ? (
+                <p className="article-faq__answer">{item.answer}</p>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+
 const XIcon = ({ size = 15 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M18.244 2H21.5l-7.11 8.128L22.75 22h-6.547l-5.126-6.697L5.215 22H1.957l7.605-8.692L1.25 2h6.713l4.634 6.115L18.244 2Zm-1.141 18h1.804L6.978 3.895H5.043L17.103 20Z" />
@@ -806,6 +962,12 @@ const normalizeHeadingStructure = (doc) => {
 
 const normalizeArticleContent = (html) => {
   if (typeof html !== "string" || !html.trim()) return "";
+  const escapeHtml = (value) =>
+    String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   const entityDecodedHtml = /&lt;\/?(?:h[1-6]|p|div|ul|ol|li|blockquote|table|strong|b|em|i|a|br)\b/i.test(html)
     ? decodeHtmlEntities(html)
     : html;
@@ -830,11 +992,6 @@ const normalizeArticleContent = (html) => {
       .replace(/$/, "</p>");
   }
   if (!hasHtmlMarkup) {
-    const escapeHtml = (value) =>
-      String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
     const blocks = normalized
       .replace(/\r\n?/g, "\n")
       .split(/\n{2,}/)
@@ -879,6 +1036,32 @@ const normalizeArticleContent = (html) => {
     if (getPlainText(node.textContent || "").length === 0) node.remove();
   });
 
+  const normalizeAlsoReadText = (node) => {
+    const text = getPlainText(node.textContent || "");
+    if (!/^also\s+read\b/i.test(text)) return;
+
+    const title = text
+      .replace(/^also\s+read\s*(?:[:|])?\s*/i, "")
+      .replace(/^\|\s*/, "")
+      .trim();
+    if (!title) return;
+    const link = node.matches?.("a[href]") ? node : node.querySelector?.("a[href]");
+    const href = link?.getAttribute("href");
+    const titleMarkup = href
+      ? `<a class="article-also-read__title" href="${escapeHtml(href)}">${escapeHtml(title)}</a>`
+      : `<span class="article-also-read__title">${escapeHtml(title)}</span>`;
+
+    Array.from(node.attributes).forEach((attribute) => node.removeAttribute(attribute.name));
+    node.className = "article-also-read";
+    node.innerHTML = `<strong class="article-also-read__label">Also Read</strong><span class="article-also-read__divider" aria-hidden="true">|</span>${titleMarkup}`;
+  };
+
+  Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
+    if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+    if (node.querySelector("img, iframe, video, table")) return;
+    normalizeAlsoReadText(node);
+  });
+
   const inlineRootTags = new Set(["SPAN", "STRONG", "B", "I", "EM", "U", "A", "SMALL", "MARK", "SUB", "SUP", "BR"]);
   const rebuiltRootNodes = [];
   let inlineRootBuffer = [];
@@ -914,6 +1097,12 @@ const normalizeArticleContent = (html) => {
     rebuiltRootNodes.forEach((node) => doc.body.appendChild(node));
   }
 
+  Array.from(doc.body.querySelectorAll("p, div, span, h1, h2, h3, h4, h5, h6")).forEach((node) => {
+    if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+    if (node.querySelector("img, iframe, video, table")) return;
+    normalizeAlsoReadText(node);
+  });
+
   Array.from(doc.body.querySelectorAll("div, span")).forEach((node) => {
     if (node.parentElement !== doc.body) return;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
@@ -926,6 +1115,7 @@ const normalizeArticleContent = (html) => {
   });
 
   const isPlainTextBlock = (node) => {
+    if (node?.classList?.contains("article-also-read")) return false;
     if (!node?.matches?.("p, div, span")) return false;
     if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
     if (node.querySelector("h1, h2, h3, h4, h5, h6, p, ul, ol, table, blockquote, img, iframe, video")) return false;
@@ -1004,6 +1194,10 @@ const normalizeArticleContent = (html) => {
   };
 
   Array.from(doc.body.children).forEach((node) => {
+    if (node.classList?.contains("article-also-read")) {
+      flushParagraphListRun();
+      return;
+    }
     if (!node.matches?.("p")) {
       flushParagraphListRun();
       return;
@@ -1408,6 +1602,12 @@ const normalizeArticleContent = (html) => {
     }
     if (descriptor) element.replaceWith(createEmbedNode(doc, descriptor));
   });
+  Array.from(doc.body.querySelectorAll("p, div, span, h1, h2, h3, h4, h5, h6")).forEach((node) => {
+    if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+    if (node.querySelector("img, iframe, video, table")) return;
+    normalizeAlsoReadText(node);
+  });
+
   const finalHtml = doc.body.innerHTML;
   const finalPlainText = getPlainText(finalHtml);
 
@@ -1425,6 +1625,31 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     const result = [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
+    const escapeInlineHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    Array.from(doc.body.querySelectorAll("p, div, span, h1, h2, h3, h4, h5, h6")).forEach((node) => {
+      if (node.closest("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+      if (node.querySelector("img, iframe, video, table")) return;
+      const text = getPlainText(node.textContent || "");
+      if (!/^also\s+read\b/i.test(text)) return;
+      const title = text
+        .replace(/^also\s+read\s*(?:[:|])?\s*/i, "")
+        .replace(/^\|\s*/, "")
+        .trim();
+      if (!title) return;
+      const link = node.matches?.("a[href]") ? node : node.querySelector?.("a[href]");
+      const href = link?.getAttribute("href");
+      const titleMarkup = href
+        ? `<a class="article-also-read__title" href="${escapeInlineHtml(href)}">${escapeInlineHtml(title)}</a>`
+        : `<span class="article-also-read__title">${escapeInlineHtml(title)}</span>`;
+      Array.from(node.attributes).forEach((attribute) => node.removeAttribute(attribute.name));
+      node.className = "article-also-read";
+      node.innerHTML = `<strong class="article-also-read__label">Also Read</strong><span class="article-also-read__divider" aria-hidden="true">|</span>${titleMarkup}`;
+    });
     replaceTweetUrlsWithPlaceholders(doc);
     const hasGoogleSheetsMarkup = Boolean(
       doc.body.querySelector("google-sheets-html-origin, [data-sheets-root], [data-sheets-baot]")
@@ -1490,6 +1715,9 @@ export default function ArticleDetails() {
   const [seoEndpointSchemaState, setSeoEndpointSchemaState] = useState({ slug: "", schemas: [] });
   const [categoryMoreArticles, setCategoryMoreArticles] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [textScale, setTextScale] = useState(1);
   const [moreInListMaxHeight, setMoreInListMaxHeight] = useState(null);
   const mainArticleRef = useRef(null);
   const articleContentRef = useRef(null);
@@ -1501,6 +1729,47 @@ export default function ArticleDetails() {
     [articleBodyHtml]
   );
   const plainArticleContent = useMemo(() => getPlainText(articleBodyHtml), [articleBodyHtml]);
+
+  useEffect(() => {
+    const root = articleContentRef.current;
+    if (!root) return;
+
+    const normalizeRenderedAlsoRead = (node) => {
+      if (!node || node.closest?.("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
+      if (node.querySelector?.("img, iframe, video, table")) return;
+
+      const text = getPlainText(node.textContent || "");
+      if (!/^also\s+read\b/i.test(text)) return;
+
+      const title = text
+        .replace(/^also\s+read\s*(?:[:|])?\s*/i, "")
+        .replace(/^\|\s*/, "")
+        .trim();
+      if (!title) return;
+      const link = node.matches?.("a[href]") ? node : node.querySelector?.("a[href]");
+      const href = link?.getAttribute("href");
+
+      const label = document.createElement("strong");
+      label.className = "article-also-read__label";
+      label.textContent = "Also Read";
+
+      const divider = document.createElement("span");
+      divider.className = "article-also-read__divider";
+      divider.setAttribute("aria-hidden", "true");
+      divider.textContent = "|";
+
+      const titleNode = href ? document.createElement("a") : document.createElement("span");
+      titleNode.className = "article-also-read__title";
+      titleNode.textContent = title;
+      if (href) titleNode.setAttribute("href", href);
+
+      Array.from(node.attributes || []).forEach((attribute) => node.removeAttribute(attribute.name));
+      node.className = "article-also-read";
+      node.replaceChildren(label, divider, titleNode);
+    };
+
+    Array.from(root.querySelectorAll("p, div, span, h1, h2, h3, h4, h5, h6")).forEach(normalizeRenderedAlsoRead);
+  }, [normalizedContent]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1760,6 +2029,26 @@ export default function ArticleDetails() {
 
   useEffect(() => { if (!article) return; document.title = getBrowserTitle(article); }, [article]);
 
+  useEffect(() => {
+    if (!article || typeof window === "undefined") return;
+    const key = String(article?.slug || article?.id || "");
+    if (!key) return;
+    try {
+      const savedArticles = JSON.parse(window.localStorage.getItem("n4b_saved_articles") || "[]");
+      setSaved(Array.isArray(savedArticles) && savedArticles.some((item) => String(item?.key) === key));
+    } catch {
+      setSaved(false);
+    }
+  }, [article]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [articleSlug]);
+
   const sidebarBaseArticles = article ? allArticles.filter((a) => String(a?.slug || a?.id || "") !== String(article?.slug || article?.id || "")) : [];
   const moreInArticles = article ? sidebarBaseArticles.filter((a) => sharesCategoryWithArticle(a, article)) : [];
 
@@ -1774,6 +2063,62 @@ export default function ArticleDetails() {
     else if (platform === "linkedin") window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, "_blank");
     else if (platform === "copy") { navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }
   };
+
+  const handleSaveArticle = () => {
+    if (!article || typeof window === "undefined") return;
+    const key = String(article?.slug || article?.id || "");
+    if (!key) return;
+
+    try {
+      const savedArticles = JSON.parse(window.localStorage.getItem("n4b_saved_articles") || "[]");
+      const safeSavedArticles = Array.isArray(savedArticles) ? savedArticles : [];
+      const alreadySaved = safeSavedArticles.some((item) => String(item?.key) === key);
+      const nextSavedArticles = alreadySaved
+        ? safeSavedArticles.filter((item) => String(item?.key) !== key)
+        : [
+            {
+              key,
+              title: article.title,
+              path: getArticlePath(article),
+              savedAt: new Date().toISOString(),
+            },
+            ...safeSavedArticles,
+          ].slice(0, 50);
+
+      window.localStorage.setItem("n4b_saved_articles", JSON.stringify(nextSavedArticles));
+      setSaved(!alreadySaved);
+    } catch {
+      setSaved((current) => !current);
+    }
+  };
+
+  const handleListenArticle = () => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    if (isListening) {
+      window.speechSynthesis.cancel();
+      setIsListening(false);
+      return;
+    }
+
+    const text = [article?.title, visibleSummary, plainArticleContent]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(". ");
+    if (!text) return;
+
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 12000));
+    utterance.lang = "en-IN";
+    utterance.rate = 0.95;
+    utterance.onend = () => setIsListening(false);
+    utterance.onerror = () => setIsListening(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setIsListening(true);
+  };
+
+  const decreaseTextSize = () => setTextScale((value) => Math.max(0.9, Number((value - 0.08).toFixed(2))));
+  const increaseTextSize = () => setTextScale((value) => Math.min(1.18, Number((value + 0.08).toFixed(2))));
 
   if (notFound) return (
     <>
@@ -1844,7 +2189,10 @@ export default function ArticleDetails() {
   const authorPhotoUrl = toAbsoluteSiteUrl(article.author_display_photo?.trim());
   const authorInitials = authorDisplayName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-  /* ── reading time ── */
+  const articleReadTime = getArticleReadTime({
+    ...article,
+    content: articleBodyHtml || article.content,
+  });
 
   const shellStyle = is2K ? { width: "var(--site-content-width)", maxWidth: "var(--site-content-width)", paddingLeft: 0, paddingRight: 0 } : undefined;
   const articleTextMaxWidth = is2K ? "1120px" : "720px";
@@ -1936,6 +2284,24 @@ export default function ArticleDetails() {
 
     return dedupeStructuredSchemas(merged);
   })();
+  const visualFaqItems = dedupeFaqItems([
+    ...extractFaqItems({
+      faq: article?.faq,
+      faqs: article?.faqs,
+      faq_items: article?.faq_items,
+      faqItems: article?.faqItems,
+      faq_schema: article?.faq_schema,
+      faq_schemas: article?.faq_schemas,
+      faqpage: article?.faqpage,
+      faq_page: article?.faq_page,
+      seo: article?.seo,
+      structured_data: article?.structured_data,
+      structured_datakey: article?.structured_datakey,
+      schema: article?.schema,
+      schemas: article?.schemas,
+    }),
+    ...extractFaqItems(resolvedJsonLdSchemas),
+  ]);
 
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
@@ -2053,7 +2419,44 @@ export default function ArticleDetails() {
               </span>
             )}
 
-            {/* ── 5. READING TIME ── */}
+            {articleReadTime && (
+              <span className="flex items-center gap-1.5 text-gray-500">
+                <Newspaper size={13} />
+                {articleReadTime}
+              </span>
+            )}
+          </div>
+
+          <div className="article-action-toolbar" style={{ maxWidth: articleTextMaxWidth }}>
+            <button type="button" onClick={() => handleShare("copy")} className="article-action-toolbar__button">
+              <Share2 size={15} />
+              {copied ? "Copied" : "Share"}
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveArticle}
+              className={`article-action-toolbar__button${saved ? " article-action-toolbar__button--active" : ""}`}
+            >
+              <Bookmark size={15} />
+              {saved ? "Saved" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={handleListenArticle}
+              className={`article-action-toolbar__button${isListening ? " article-action-toolbar__button--active" : ""}`}
+            >
+              <Volume2 size={15} />
+              {isListening ? "Stop" : "Listen"}
+            </button>
+            <div className="article-action-toolbar__text-controls" aria-label="Text size controls">
+              <Type size={15} />
+              <button type="button" onClick={decreaseTextSize} aria-label="Decrease text size">
+                <Minus size={13} />
+              </button>
+              <button type="button" onClick={increaseTextSize} aria-label="Increase text size">
+                <Plus size={13} />
+              </button>
+            </div>
           </div>
 
           {imageUrl && (
@@ -2084,7 +2487,7 @@ export default function ArticleDetails() {
             html={normalizedContent}
             contentRef={articleContentRef}
             className="article-content"
-            style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth }}
+            style={{ userSelect: "text", WebkitUserSelect: "text", maxWidth: articleTextMaxWidth, fontSize: `${textScale}rem` }}
           />
 
           <style>{`
@@ -2104,6 +2507,8 @@ export default function ArticleDetails() {
               color: #dc2626;
             }
           `}</style>
+
+          <ArticleFaqAccordion items={visualFaqItems} maxWidth={articleTextMaxWidth} />
 
           {/* ── 7. TAGS — "Related Topics" ── */}
           {tags.length > 0 && (

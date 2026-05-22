@@ -446,7 +446,7 @@ const navLinks = [
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },
   { label: "Business", path: "/category/business" },
   { label: "Politics", path: "/category/politics" },
-  
+
   { label: "Stock Market", path: "/category/stock-market" },
   { label: "Technology", path: "/category/technology" },
   { label: "States of Bharat", path: "/category/state-of-bharat" },
@@ -677,6 +677,127 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = PUSH_REQUEST_TIME
   }
 };
 
+const TRANSLATE_REQUEST_TIMEOUT_MS = 45000;
+const TRANSLATE_BATCH_CHAR_LIMIT = 3500;
+const TRANSLATE_MAX_BATCHES = 1;
+const TRANSLATABLE_TEXT_SELECTOR = "h1,h2,h3,h4,h5,h6,p,li,figcaption";
+
+const getMainTranslatableRoot = () => {
+  if (typeof document === "undefined") return null;
+
+  const selectors = [
+    ".article-content",
+    ".home-main-column",
+    "main",
+    ".category-page-align",
+    ".sn-wrap",
+    ".min-h-screen",
+  ];
+
+  for (const selector of selectors) {
+    const node = Array.from(document.querySelectorAll(selector)).find(
+      (item) =>
+        !item.closest(".header-wrapper, .drawer-overlay, .drawer-panel") &&
+        String(item.textContent || "").trim().length > 40
+    );
+    if (node) return node;
+  }
+
+  return null;
+};
+
+const getTranslatableElements = (root) =>
+  Array.from(root.querySelectorAll(TRANSLATABLE_TEXT_SELECTOR)).filter((element) => {
+    if (element.dataset.n4bTranslated === "true") return false;
+    if (element.closest("header, nav, footer, script, style, svg, button, form, .home-layout-ad, .home-ad-frame, .top-actions")) {
+      return false;
+    }
+    if (element.querySelector(TRANSLATABLE_TEXT_SELECTOR)) return false;
+
+    const text = String(element.textContent || "").replace(/\s+/g, " ").trim();
+    if (text.length < 2) return false;
+    if (/^[\d\s:.,|/+\-–—]+$/.test(text)) return false;
+
+    return true;
+  });
+
+const getTranslationErrorMessage = async (response) => {
+  try {
+    const data = await response.clone().json();
+    return String(data?.detail || data?.error || data?.message || "").trim();
+  } catch {
+    return getPushErrorMessage(response, `Translate API failed: ${response.status}`);
+  }
+};
+
+const requestTranslation = async ({ content, preserveHtml }) => {
+  const response = await fetchWithTimeout(
+    apiUrl("/ai/translate/"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content,
+        target_language: "Hindi",
+        source_language: "English",
+        preserve_html: preserveHtml,
+      }),
+    },
+    TRANSLATE_REQUEST_TIMEOUT_MS
+  );
+
+  if (!response.ok) {
+    throw new Error(await getTranslationErrorMessage(response));
+  }
+
+  const data = await response.json();
+  if (!data?.ok || typeof data?.translated !== "string") {
+    throw new Error("Translate API response invalid.");
+  }
+
+  return data.translated;
+};
+
+const getTranslationBatches = (elements) => {
+  const batches = [];
+  let currentElements = [];
+  let currentHtml = "";
+
+  elements.forEach((element) => {
+    const index = currentElements.length;
+    const html = `<div data-n4b-translate-index="${index}">${element.innerHTML}</div>`;
+
+    if (currentHtml && currentHtml.length + html.length > TRANSLATE_BATCH_CHAR_LIMIT) {
+      batches.push({ elements: currentElements, html: currentHtml });
+      currentElements = [];
+      currentHtml = "";
+    }
+
+    const nextIndex = currentElements.length;
+    const nextHtml = `<div data-n4b-translate-index="${nextIndex}">${element.innerHTML}</div>`;
+    currentElements.push(element);
+    currentHtml += nextHtml;
+  });
+
+  if (currentHtml) batches.push({ elements: currentElements, html: currentHtml });
+  return batches.slice(0, TRANSLATE_MAX_BATCHES);
+};
+
+const applyTranslatedBatch = (batch, translatedHtml) => {
+  const template = document.createElement("template");
+  template.innerHTML = translatedHtml;
+  const blocks = Array.from(template.content.querySelectorAll("[data-n4b-translate-index]"));
+
+  blocks.forEach((block) => {
+    const index = Number(block.getAttribute("data-n4b-translate-index"));
+    const target = batch.elements[index];
+    if (target) {
+      target.innerHTML = block.innerHTML;
+      target.dataset.n4bTranslated = "true";
+    }
+  });
+};
+
 const reloadHomeFromLogo = (event) => {
   if (typeof window === "undefined") return;
   event?.preventDefault();
@@ -784,6 +905,10 @@ const Header = () => {
   const [canScrollNavRight, setCanScrollNavRight] = useState(false);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [isPushLoading, setIsPushLoading] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [hasTranslatedContent, setHasTranslatedContent] = useState(false);
+  const [translationDone, setTranslationDone] = useState(false);
+  const [translationStatus, setTranslationStatus] = useState("");
 
   // ✅ Hooks — clean
   const isMobile = useIsMobile();
@@ -1353,14 +1478,53 @@ const Header = () => {
     navigate(path);
   }, [navigate]);
 
-  const handleTranslateToHindi = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const translateUrl = new URL("https://translate.google.com/translate");
-    translateUrl.searchParams.set("sl", "en");
-    translateUrl.searchParams.set("tl", "hi");
-    translateUrl.searchParams.set("u", window.location.href);
-    window.open(translateUrl.toString(), "_blank", "noopener,noreferrer");
-  }, []);
+  const handleTranslateToHindi = useCallback(async () => {
+    if (typeof window === "undefined" || isTranslating) return;
+
+    const root = getMainTranslatableRoot();
+    if (!root) {
+      window.alert("Translate karne ke liye page content nahi mila.");
+      return;
+    }
+
+    setIsTranslating(true);
+    setTranslationDone(false);
+    setTranslationStatus("");
+
+    try {
+      const elements = getTranslatableElements(root);
+      if (elements.length === 0) {
+        setTranslationDone(true);
+        setTranslationStatus("Complete");
+        return;
+      }
+
+      const batches = getTranslationBatches(elements);
+      if (batches.length === 0) {
+        setTranslationStatus("Try again");
+        return;
+      }
+
+      for (const batch of batches) {
+        const translated = await requestTranslation({
+          content: batch.html,
+          preserveHtml: true,
+        });
+        applyTranslatedBatch(batch, translated);
+      }
+
+      const remainingElements = getTranslatableElements(root);
+      setHasTranslatedContent(true);
+      setTranslationDone(remainingElements.length === 0);
+      setTranslationStatus(remainingElements.length === 0 ? "Complete" : "Continue");
+    } catch (error) {
+      const message = String(error?.message || "");
+      console.warn("Translation skipped:", error);
+      setTranslationStatus(/429|too many|rate/i.test(message) ? "Wait 1m" : "Try again");
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [isTranslating]);
 
   const fetchVapidPublicKey = useCallback(async () => {
     try {
@@ -1875,10 +2039,12 @@ const Header = () => {
                     type="button"
                     className="top-action-btn"
                     onClick={handleTranslateToHindi}
+                    disabled={isTranslating}
                     aria-label="Translate this page from English to Hindi"
+                    title={translationStatus || "Translate this page from English to Hindi"}
                   >
                     <Languages size={14} aria-hidden="true" />
-                    <span>EN to HI</span>
+                    <span>{isTranslating ? "Translating..." : translationStatus === "Wait 1m" ? "Wait 1m" : translationDone ? "Hindi" : hasTranslatedContent ? "Continue HI" : "EN to HI"}</span>
                   </button>
                   <button
                     type="button"
@@ -1941,7 +2107,9 @@ const Header = () => {
                 type="button"
                 className="btn-flag navbar-hindi-btn"
                 onClick={handleTranslateToHindi}
+                disabled={isTranslating}
                 aria-label="Translate this page from English to Hindi"
+                title={translationStatus || "Translate this page from English to Hindi"}
               >
                 <svg width="14" height="10" viewBox="0 0 16 11">
                   <rect width="16" height="3.67" fill="#FF9933" />
@@ -1949,7 +2117,7 @@ const Header = () => {
                   <rect y="7.33" width="16" height="3.67" fill="#138808" />
                   <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
                 </svg>
-                EN to HI
+                {isTranslating ? "..." : translationStatus === "Wait 1m" ? "Wait" : translationDone ? "Hindi" : hasTranslatedContent ? "More HI" : "EN to HI"}
               </button>
               <button
                 type="button"

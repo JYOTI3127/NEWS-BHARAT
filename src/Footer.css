@@ -60,6 +60,56 @@
   margin-bottom: -6px;
 }
 
+.ft-newsletter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.ft-newsletter-block .ft-follow-label {
+  margin-bottom: 0;
+}
+
+.ft-newsletter-btn {
+  width: fit-content;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid #dddddd;
+  background: #fafafa;
+  color: #444444;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(17, 17, 17, 0.04);
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.ft-newsletter-btn:hover {
+  color: #d80100;
+  border-color: #d80100;
+  background: #ffffff;
+}
+
+.ft-newsletter-main {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.ft-newsletter-arrow {
+  transition: transform 0.18s ease;
+}
+
+.ft-newsletter-btn:hover .ft-newsletter-arrow {
+  transform: translateX(2px);
+}
+
 /* Social icons */
 .ft-social-row {
   display: flex;
@@ -155,7 +205,9 @@
 }
 
 .ft-sub-col {
-  margin-top: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #999999;
 }
 
 /* Only after ENTERTAINMENT (2nd column) */
@@ -176,6 +228,15 @@
   letter-spacing: 0.8px;
   text-transform: uppercase;
   margin-bottom: 7px;
+}
+
+.ft-col-title-link {
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.ft-col-title-link:hover {
+  color: #d80100;
 }
 
 .ft-col-title-tight {

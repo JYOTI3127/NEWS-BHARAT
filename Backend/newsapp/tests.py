@@ -362,6 +362,34 @@ class ArticleWorkflowNotificationTests(TestCase):
         self.assertIn('First para for preview.', mail.outbox[0].body)
         self.assertIn(f'/admin/newsapp/article/{article.pk}/change/?focus=editorial-comments#editorial-comments', mail.outbox[0].body)
         self.assertIn(f'/api/articles/{article.pk}/review-action/approve/', mail.outbox[0].body)
+        self.assertTrue(mail.outbox[0].alternatives)
+        html_body = mail.outbox[0].alternatives[0][0]
+        self.assertIn('<p', html_body)
+        self.assertIn('First para for preview.', html_body)
+
+    def test_review_submission_email_includes_full_rendered_content_preview(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Rendered preview',
+            subtitle='Rendered subtitle',
+            content='<h2>Brief</h2><p>Opening paragraph.</p><ul><li>Point one</li><li>Point two</li></ul><blockquote>Quoted line</blockquote>',
+            status='draft',
+        )
+        mail.outbox = []
+
+        article.status = 'review'
+        article.save()
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue(mail.outbox[0].alternatives)
+        html_body = mail.outbox[0].alternatives[0][0]
+        self.assertIn('Brief', html_body)
+        self.assertIn('Opening paragraph.', html_body)
+        self.assertIn('Point one', html_body)
+        self.assertIn('Quoted line', html_body)
+        self.assertIn('<h2', html_body)
+        self.assertIn('<ul', html_body)
+        self.assertIn('<blockquote', html_body)
 
     def test_admin_approval_notifies_and_emails_author(self):
         article = Article.objects.create(

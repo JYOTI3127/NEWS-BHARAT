@@ -8,7 +8,7 @@ from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
 from django.utils.html import escape, strip_tags
 import re
-from .utils import build_article_review_action_token
+from .utils import build_article_review_action_token, get_article_render_content
 
 
 def _admin_base_url():
@@ -57,6 +57,28 @@ def _article_preview_paragraphs(article, limit=3):
     text = text.replace("\r", "\n")
     blocks = [re.sub(r"\s+", " ", block).strip() for block in text.split("\n") if block.strip()]
     return blocks[:limit]
+
+
+def _article_preview_email_html(article):
+    content = str(get_article_render_content(article) or "").strip()
+    if not content:
+        return ""
+
+    html = content
+    html = re.sub(r"<p(\b[^>]*)>", r"<p\1 style=\"margin:0 0 14px;font-size:15px;line-height:1.8;color:#334155;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<h1(\b[^>]*)>", r"<h1\1 style=\"margin:24px 0 12px;font-size:30px;line-height:1.25;color:#0f172a;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<h2(\b[^>]*)>", r"<h2\1 style=\"margin:22px 0 10px;font-size:24px;line-height:1.3;color:#0f172a;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<h3(\b[^>]*)>", r"<h3\1 style=\"margin:18px 0 10px;font-size:20px;line-height:1.35;color:#0f172a;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<blockquote(\b[^>]*)>", r"<blockquote\1 style=\"margin:18px 0;padding:12px 16px;border-left:4px solid #cbd5e1;background:#f8fafc;color:#334155;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<ul(\b[^>]*)>", r"<ul\1 style=\"margin:0 0 16px 20px;padding:0;color:#334155;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<ol(\b[^>]*)>", r"<ol\1 style=\"margin:0 0 16px 20px;padding:0;color:#334155;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<li(\b[^>]*)>", r"<li\1 style=\"margin:0 0 8px;line-height:1.8;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<a(\b[^>]*)>", r"<a\1 style=\"color:#1d4ed8;text-decoration:underline;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<hr(\b[^>]*)/?>", r"<hr\1 style=\"border:none;border-top:1px solid #e5e7eb;margin:22px 0;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<table(\b[^>]*)>", r"<table\1 style=\"width:100%;border-collapse:collapse;margin:0 0 16px;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<th(\b[^>]*)>", r"<th\1 style=\"border:1px solid #cbd5e1;padding:8px 10px;background:#f8fafc;color:#0f172a;text-align:left;\">", html, flags=re.IGNORECASE)
+    html = re.sub(r"<td(\b[^>]*)>", r"<td\1 style=\"border:1px solid #cbd5e1;padding:8px 10px;color:#334155;vertical-align:top;\">", html, flags=re.IGNORECASE)
+    return html
 
 
 def _send_rich_email(*, subject, text_body, html_body, recipient_list):
@@ -226,12 +248,11 @@ def article_status_notification(sender, instance, **kwargs):
     safe_comments_admin_url = escape(comments_admin_url)
     approve_review_url = _article_review_action_url(instance.id, "approve")
     safe_approve_review_url = escape(approve_review_url)
-    preview_paragraphs = _article_preview_paragraphs(instance)
-    preview_text = "\n\n".join(preview_paragraphs)
-    preview_html = "".join(
-        f"<p style='margin:0 0 14px;font-size:15px;line-height:1.75;color:#334155;'>{escape(paragraph)}</p>"
-        for paragraph in preview_paragraphs
-    )
+    preview_source_html = str(get_article_render_content(instance) or "").strip()
+    preview_text = strip_tags(
+        re.sub(r"</(p|div|h[1-6]|li|blockquote|tr)>", r"</\1>\n", preview_source_html, flags=re.IGNORECASE)
+    ).strip()
+    preview_html = _article_preview_email_html(instance)
     subtitle_html = (
         f"<p style='margin:0 0 14px;font-size:18px;line-height:1.55;color:#475569;'>{safe_subtitle}</p>"
         if safe_subtitle else ""

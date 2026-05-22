@@ -7228,34 +7228,8 @@ updateSubtitleCount();
     sel.addRange(_nbItSavedRange);
   };
   window.nbInlineInsertLink=function(){
-  nbItRestoreSelection();
-  // Selection already restore ho gayi, directly link insert karo
-  const sel=window.getSelection();
-  const savedRange=sel&&sel.rangeCount?sel.getRangeAt(0).cloneRange():null;
-  const selectedText=savedRange?savedRange.toString().trim():'';
-  const url=prompt('Enter URL (e.g. https://example.com):');
-  if(!url||!url.trim())return;
-  if(savedRange){
-    sel.removeAllRanges();
-    sel.addRange(savedRange);
-  }
-  if(selectedText){
-    document.execCommand('createLink',false,url.trim());
-  }else{
-    const displayText=prompt('Enter link display text:',url.trim())||url.trim();
-    const a=document.createElement('a');
-    a.href=url.trim();
-    a.textContent=displayText;
-    a.target='_blank';
-    a.rel='noopener noreferrer';
-    if(savedRange){
-      savedRange.deleteContents();
-      savedRange.insertNode(a);
-    }else{
-      nbEditor.appendChild(a);
-    }
-  }
-  nbSaveHistory();
+    nbItRestoreSelection();
+    nbInsertLink();
   };
 })();
 

@@ -793,13 +793,24 @@ label.image-drop {
   to   { opacity:1; transform: scale(1) translateY(0); }
 }
 #nb_inline_toolbar button {
-  background: none; border: none; color: #e2e8f0; cursor: pointer;
+  background: none !important; border: none !important; color: #e2e8f0 !important; cursor: pointer;
   padding: 4px 6px; border-radius: 5px; font-size: 12px; font-weight: 600;
   display: flex; align-items: center; gap: 3px; transition: background 0.1s;
   min-width: 24px; justify-content: center; line-height: 1;
 }
-#nb_inline_toolbar button:hover { background: #334155; color:#fff; }
-#nb_inline_toolbar button.active { background: #2563eb; color: #fff; }
+#nb_inline_toolbar button:hover { background: #334155 !important; color:#fff !important; }
+#nb_inline_toolbar button.active,
+#nb_inline_toolbar button.active:hover {
+  background: #facc15 !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 1px rgba(250,204,21,.45), 0 6px 14px rgba(250,204,21,.22) !important;
+}
+#nb_inline_toolbar button.active *,
+#nb_inline_toolbar button.active:hover * {
+  color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
 #nb_inline_toolbar .nb-it-sep { width: 1px; height: 14px; background: #475569; margin: 0 2px; flex-shrink:0; }
 #nb_inline_toolbar .nb-it-color {
   position: relative; width: 22px; height: 22px; border-radius: 4px;
@@ -1119,9 +1130,9 @@ grammarly-button,
 <div id="nb_inline_toolbar">
 
   <!-- ROW 1: Font, Size, Style, Color -->
-  <select class="nb-it-select" title="Font Family"
+  <select class="nb-it-select" id="nb_it_font_family" title="Font Family"
     onmousedown="nbItSaveSelection()"
-    onchange="nbItRestoreSelection();nbSetFontFamily(this.value);this.value='';">
+    onchange="nbItRestoreSelection();nbSetFontFamily(this.value);">
     <option value="">Font</option>
     <option value="Poppins">Poppins</option>
     <option value="Arial">Arial</option>
@@ -1134,9 +1145,9 @@ grammarly-button,
     <option value="Impact">Impact</option>
     <option value="Comic Sans MS">Comic Sans MS</option>
   </select>
-  <select class="nb-it-select" title="Font Size" style="width:52px;"
+  <select class="nb-it-select" id="nb_it_font_size" title="Font Size" style="width:52px;"
     onmousedown="nbItSaveSelection()"
-    onchange="nbItRestoreSelection();nbSetFontSize(this.value);this.value='';">
+    onchange="nbItRestoreSelection();nbSetFontSize(this.value);">
     <option value="">Size</option>
     <option value="1">8pt</option>
     <option value="2">10pt</option>
@@ -1150,9 +1161,9 @@ grammarly-button,
   <button onclick="fmt('bold')" title="Bold (Ctrl+B)" id="nb_it_bold"><b>B</b></button>
   <button onclick="fmt('italic')" title="Italic (Ctrl+I)" id="nb_it_italic"><i style="font-family:serif">I</i></button>
   <button onclick="fmt('underline')" title="Underline (Ctrl+U)" id="nb_it_underline"><u>U</u></button>
-  <button onclick="fmt('strikeThrough')" title="Strikethrough" style="text-decoration:line-through">S</button>
-  <button onclick="fmt('superscript')" title="Superscript" style="font-size:10px">X&#x00B2;</button>
-  <button onclick="fmt('subscript')" title="Subscript" style="font-size:10px">X&#x2082;</button>
+  <button onclick="fmt('strikeThrough')" title="Strikethrough" id="nb_it_strike" style="text-decoration:line-through">S</button>
+  <button onclick="fmt('superscript')" title="Superscript" id="nb_it_superscript" style="font-size:10px">X&#x00B2;</button>
+  <button onclick="fmt('subscript')" title="Subscript" id="nb_it_subscript" style="font-size:10px">X&#x2082;</button>
   <div class="nb-it-sep"></div>
   <div class="nb-it-color" title="Text Color">
     <span style="font-size:10px;font-weight:800;color:#e2e8f0;pointer-events:none;line-height:1">A</span>
@@ -1174,22 +1185,22 @@ grammarly-button,
   <button onclick="nbUndo()" title="Undo">&#8617;</button>
   <button onclick="nbRedo()" title="Redo">&#8618;</button>
   <div class="nb-it-sep"></div>
-  <button onclick="fmt('justifyLeft')" title="Align Left">&#8676;</button>
-  <button onclick="fmt('justifyCenter')" title="Align Center">&#8596;</button>
-  <button onclick="fmt('justifyRight')" title="Align Right">&#8677;</button>
-  <button onclick="fmt('justifyFull')" title="Justify" style="font-size:12px">&#8803;</button>
+  <button onclick="fmt('justifyLeft')" title="Align Left" id="nb_it_align_left">&#8676;</button>
+  <button onclick="fmt('justifyCenter')" title="Align Center" id="nb_it_align_center">&#8596;</button>
+  <button onclick="fmt('justifyRight')" title="Align Right" id="nb_it_align_right">&#8677;</button>
+  <button onclick="fmt('justifyFull')" title="Justify" id="nb_it_align_full" style="font-size:12px">&#8803;</button>
   <div class="nb-it-sep"></div>
-  <button onclick="fmt('insertUnorderedList')" title="Bullet List">&#8226;&#8801;</button>
-  <button onclick="fmt('insertOrderedList')" title="Numbered List">1.&#8801;</button>
+  <button onclick="fmt('insertUnorderedList')" title="Bullet List" id="nb_it_list_ul">&#8226;&#8801;</button>
+  <button onclick="fmt('insertOrderedList')" title="Numbered List" id="nb_it_list_ol">1.&#8801;</button>
   <button onclick="fmt('indent')" title="Indent">&#8594;&#x25A0;</button>
   <button onclick="fmt('outdent')" title="Outdent">&#8592;&#x25A0;</button>
   <div class="nb-it-sep"></div>
-  <button onclick="nbInsertTag('h2')" title="Heading 2">H2</button>
-  <button onclick="nbInsertTag('h3')" title="Heading 3">H3</button>
-  <button onclick="nbInsertBlockquote()" title="Blockquote">&#10077;</button>
+  <button onclick="nbInsertTag('h2')" title="Heading 2" id="nb_it_h2">H2</button>
+  <button onclick="nbInsertTag('h3')" title="Heading 3" id="nb_it_h3">H3</button>
+  <button onclick="nbInsertBlockquote()" title="Blockquote" id="nb_it_blockquote">&#10077;</button>
   <button onclick="nbInsertHR()" title="Horizontal Rule">&mdash;</button>
   <div class="nb-it-sep"></div>
-  <button onclick="nbInlineInsertLink()" title="Insert Link">
+  <button onclick="nbInlineInsertLink()" title="Insert Link" id="nb_it_link">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
   </button>
   <button onclick="nbInsertInlineImage()" title="Insert Image">
@@ -1289,7 +1300,7 @@ grammarly-button,
           <option value="Comic Sans MS" style="font-family:'Comic Sans MS'">Comic Sans MS</option>
         </select>
         <div class="sep"></div>
-        <select onchange="nbSetFontSize(this.value)" title="Font Size" style="width:70px;">
+        <select id="nb_fontSizeSelect" onchange="nbSetFontSize(this.value)" title="Font Size" style="width:70px;">
           <option value="">Size</option>
           <option value="1">8pt</option>
           <option value="2">10pt</option>
@@ -3964,8 +3975,6 @@ function nbSetFontFamily(family){
   document.execCommand('fontName',false,family);
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
-  var sel=document.getElementById('nb_fontFamilySelect');
-  if(sel)setTimeout(function(){sel.value='';},80);
 }
 function nbSetLineHeight(value){
   if(!value||!nbEditor)return;
@@ -4180,21 +4189,47 @@ function nbInsertTag(tag){
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
-  const el=document.createElement(tag);
-  const fragment=range.extractContents();
-  const wrapper=document.createElement('div');
-  wrapper.appendChild(fragment);
-  const normalizedHtml=nbNormalizeHeadingHtml(wrapper.innerHTML);
-  if(normalizedHtml){
-    el.innerHTML=normalizedHtml;
-  }else{
-    el.textContent=tag==='h2'?'Heading 2':'Heading 3';
+  let block=range.commonAncestorContainer;
+  if(block&&block.nodeType===3)block=block.parentNode;
+  while(block&&block!==nbEditor){
+    if(block.nodeType===1&&/^(P|DIV|LI|BLOCKQUOTE|H1|H2|H3|H4|H5|H6)$/.test(block.tagName||''))break;
+    block=block.parentNode;
   }
-  range.insertNode(el);
-  range.setStartAfter(el);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
+
+  if(block&&block!==nbEditor){
+    const currentTag=(block.tagName||'').toLowerCase();
+    if(currentTag===tag){
+      const p=document.createElement('p');
+      p.innerHTML=block.innerHTML&&block.innerHTML.trim()?block.innerHTML:'<br>';
+      block.parentNode.replaceChild(p,block);
+      const resetRange=document.createRange();
+      resetRange.selectNodeContents(p);
+      resetRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(resetRange);
+      nbSaveSelection();
+      setTimeout(nbSaveHistory,50);
+      return;
+    }
+    if(/^h[1-6]$/.test(currentTag)||currentTag==='blockquote'){
+      const replacement=document.createElement(tag);
+      replacement.innerHTML=block.innerHTML&&block.innerHTML.trim()?nbNormalizeHeadingHtml(block.innerHTML):'';
+      if(!replacement.innerHTML.trim())replacement.textContent=tag==='h2'?'Heading 2':'Heading 3';
+      block.parentNode.replaceChild(replacement,block);
+      const replaceRange=document.createRange();
+      replaceRange.selectNodeContents(replacement);
+      replaceRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(replaceRange);
+      nbSaveSelection();
+      setTimeout(nbSaveHistory,50);
+      return;
+    }
+  }
+
+  try{
+    document.execCommand('formatBlock',false,'<'+tag+'>');
+  }catch(e){}
   nbSaveSelection();
   setTimeout(nbSaveHistory,50);
 }
@@ -4205,6 +4240,43 @@ function nbInsertBlockquote(){
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
+  let block=range.commonAncestorContainer;
+  if(block&&block.nodeType===3)block=block.parentNode;
+  while(block&&block!==nbEditor){
+    if(block.nodeType===1&&/^(P|DIV|LI|BLOCKQUOTE|H1|H2|H3|H4|H5|H6)$/.test(block.tagName||''))break;
+    block=block.parentNode;
+  }
+
+  if(block&&block!==nbEditor){
+    const currentTag=(block.tagName||'').toLowerCase();
+    if(currentTag==='blockquote'){
+      const p=document.createElement('p');
+      p.innerHTML=block.innerHTML&&block.innerHTML.trim()?block.innerHTML:'<br>';
+      block.parentNode.replaceChild(p,block);
+      const resetRange=document.createRange();
+      resetRange.selectNodeContents(p);
+      resetRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(resetRange);
+      nbSaveSelection();
+      setTimeout(nbSaveHistory,50);
+      return;
+    }
+    if(/^h[1-6]$/.test(currentTag)){
+      const replacement=document.createElement('blockquote');
+      replacement.innerHTML=block.innerHTML&&block.innerHTML.trim()?block.innerHTML:'Quote here...';
+      block.parentNode.replaceChild(replacement,block);
+      const replaceRange=document.createRange();
+      replaceRange.selectNodeContents(replacement);
+      replaceRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(replaceRange);
+      nbSaveSelection();
+      setTimeout(nbSaveHistory,50);
+      return;
+    }
+  }
+
   const bq=document.createElement('blockquote');
   bq.appendChild(range.extractContents());
   if(!bq.textContent.trim())bq.textContent='Quote here...';
@@ -6749,6 +6821,326 @@ updateSubtitleCount();
   var editor=document.getElementById('ui_content');
   if(!tb||!editor)return;
   var _itHideTimer=null;
+  var _itSelectionTimer=null;
+  var FONT_SIZE_OPTIONS=[
+    {value:'1',label:'8pt',px:11},
+    {value:'2',label:'10pt',px:13},
+    {value:'3',label:'12pt',px:16},
+    {value:'4',label:'14pt',px:19},
+    {value:'5',label:'18pt',px:24},
+    {value:'6',label:'24pt',px:32},
+    {value:'7',label:'36pt',px:48}
+  ];
+
+  function getElementStyleValue(el, prop){
+    try{
+      return window.getComputedStyle(el)[prop]||'';
+    }catch(e){
+      return '';
+    }
+  }
+
+  function getClosestElement(node){
+    return node&&node.nodeType===1?node:(node&&node.parentElement?node.parentElement:null);
+  }
+
+  function getRangeRootElement(range){
+    if(!range||!range.commonAncestorContainer)return null;
+    return range.commonAncestorContainer.nodeType===1
+      ?range.commonAncestorContainer
+      :range.commonAncestorContainer.parentElement;
+  }
+
+  function getClosestBlockTag(node){
+    var el=getClosestElement(node);
+    while(el&&el!==editor){
+      var tag=(el.tagName||'').toLowerCase();
+      if(/^(p|div|li|blockquote|h1|h2|h3|h4|h5|h6|td|th)$/.test(tag))return tag;
+      el=el.parentElement;
+    }
+    return '';
+  }
+
+  function getClosestBlockElement(node){
+    var el=getClosestElement(node);
+    while(el&&el!==editor){
+      if(/^(P|DIV|LI|BLOCKQUOTE|H1|H2|H3|H4|H5|H6|TD|TH)$/.test(el.tagName||''))return el;
+      el=el.parentElement;
+    }
+    return null;
+  }
+
+  function normalizeColorValue(value){
+    return String(value||'').replace(/\s+/g,'').toLowerCase();
+  }
+
+  function normalizeFontFamilyValue(value){
+    return String(value||'')
+      .split(',')[0]
+      .replace(/["']/g,'')
+      .trim()
+      .toLowerCase();
+  }
+
+  function formatFontFamilyLabel(value){
+    return String(value||'')
+      .split(',')[0]
+      .replace(/["']/g,'')
+      .trim();
+  }
+
+  function getRangeFontFamily(range){
+    var el=getClosestElement(range&&range.startContainer);
+    while(el&&el!==editor){
+      var family=getElementStyleValue(el,'fontFamily');
+      if(family)return family;
+      el=el.parentElement;
+    }
+    return getElementStyleValue(editor,'fontFamily')||'';
+  }
+
+  function getRangeFontSize(range){
+    var el=getClosestElement(range&&range.startContainer);
+    while(el&&el!==editor){
+      var size=getElementStyleValue(el,'fontSize');
+      if(size)return size;
+      el=el.parentElement;
+    }
+    return getElementStyleValue(editor,'fontSize')||'';
+  }
+
+  function findClosestFontSizeOption(pxValue){
+    var px=parseFloat(String(pxValue||'').replace('px',''));
+    if(!px||isNaN(px))return null;
+    var closest=FONT_SIZE_OPTIONS[0];
+    var minDiff=Math.abs(px-closest.px);
+    FONT_SIZE_OPTIONS.forEach(function(option){
+      var diff=Math.abs(px-option.px);
+      if(diff<minDiff){
+        closest=option;
+        minDiff=diff;
+      }
+    });
+    return closest;
+  }
+
+  function updateSelectDisplay(selectEl, matchedValue, fallbackLabel, placeholderLabel){
+    if(!selectEl||!selectEl.options||!selectEl.options.length)return;
+    var placeholderOption=selectEl.options[0];
+    placeholderOption.text=fallbackLabel||placeholderLabel||placeholderOption.text;
+    placeholderOption.value='';
+    selectEl.value='';
+    if(matchedValue){
+      var matchedOption=Array.prototype.find.call(selectEl.options,function(option){
+        return option.value===matchedValue;
+      });
+      if(matchedOption)selectEl.value=matchedValue;
+    }
+  }
+
+  function updateFontSelectors(range){
+    var inlineFontSelect=document.getElementById('nb_it_font_family');
+    var inlineSizeSelect=document.getElementById('nb_it_font_size');
+    var mainFontSelect=document.getElementById('nb_fontFamilySelect');
+    var mainSizeSelect=document.getElementById('nb_fontSizeSelect');
+
+    var familyValue=getRangeFontFamily(range);
+    var normalizedFamily=normalizeFontFamilyValue(familyValue);
+    var familyLabel=formatFontFamilyLabel(familyValue)||'Font';
+    var matchedFamily='';
+    [inlineFontSelect,mainFontSelect].forEach(function(selectEl){
+      if(!selectEl)return;
+      Array.prototype.forEach.call(selectEl.options,function(option){
+        if(option.value&&normalizeFontFamilyValue(option.value)===normalizedFamily)matchedFamily=option.value;
+      });
+    });
+
+    var sizeValue=getRangeFontSize(range);
+    var sizeOption=findClosestFontSizeOption(sizeValue);
+    var sizeLabel=sizeOption?sizeOption.label:(sizeValue||'Size');
+    var sizeMatch=sizeOption?sizeOption.value:'';
+
+    updateSelectDisplay(inlineFontSelect,matchedFamily,familyLabel,'Font');
+    updateSelectDisplay(mainFontSelect,matchedFamily,familyLabel,'Font');
+    updateSelectDisplay(inlineSizeSelect,sizeMatch,sizeLabel,'Size');
+    updateSelectDisplay(mainSizeSelect,sizeMatch,sizeLabel,'Size');
+  }
+
+  function matchesFormatOnNode(node, format){
+    var el=node&&node.nodeType===1?node:(node&&node.parentElement?node.parentElement:null);
+    while(el&&el!==editor){
+      var tag=(el.tagName||'').toUpperCase();
+      if(format==='bold'){
+        var weight=getElementStyleValue(el,'fontWeight');
+        if(tag==='B'||tag==='STRONG'||weight==='bold'||parseInt(weight,10)>=600)return true;
+      }else if(format==='italic'){
+        if(tag==='I'||tag==='EM'||/italic/i.test(getElementStyleValue(el,'fontStyle')))return true;
+      }else if(format==='underline'){
+        var decoration=(getElementStyleValue(el,'textDecorationLine')||getElementStyleValue(el,'textDecoration')||'');
+        if(tag==='U'||/underline/i.test(decoration))return true;
+      }else if(format==='strikeThrough'){
+        var strikeDecoration=(getElementStyleValue(el,'textDecorationLine')||getElementStyleValue(el,'textDecoration')||'');
+        if(tag==='S'||tag==='STRIKE'||/line-through/i.test(strikeDecoration))return true;
+      }else if(format==='superscript'){
+        if(tag==='SUP'||/super/i.test(getElementStyleValue(el,'verticalAlign')))return true;
+      }else if(format==='subscript'){
+        if(tag==='SUB'||/sub/i.test(getElementStyleValue(el,'verticalAlign')))return true;
+      }else if(format==='createLink'){
+        if(tag==='A'&&el.getAttribute('href'))return true;
+      }else if(format==='formatBlock_h2'){
+        if(tag==='H2')return true;
+      }else if(format==='formatBlock_h3'){
+        if(tag==='H3')return true;
+      }else if(format==='blockquote'){
+        if(tag==='BLOCKQUOTE')return true;
+      }
+      el=el.parentElement;
+    }
+    return false;
+  }
+
+  function rangeHasFormat(range, format){
+    if(!range)return false;
+    if(matchesFormatOnNode(range.startContainer,format)||matchesFormatOnNode(range.endContainer,format))return true;
+    var root=range.commonAncestorContainer&&range.commonAncestorContainer.nodeType===1
+      ?range.commonAncestorContainer
+      :range.commonAncestorContainer.parentElement;
+    if(!root)return false;
+    var walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,null);
+    var current=walker.currentNode;
+    while(current){
+      if(current!==root&&editor.contains(current)){
+        try{
+          if(range.intersectsNode(current)&&matchesFormatOnNode(current,format))return true;
+        }catch(e){}
+      }
+      current=walker.nextNode();
+    }
+    return false;
+  }
+
+  function getBlockAlignment(range){
+    var block=getClosestBlockElement(range&&range.startContainer);
+    if(!block)block=getClosestBlockElement(range&&range.commonAncestorContainer);
+    var align=normalizeColorValue(block?getElementStyleValue(block,'textAlign'):'');
+    if(align==='center')return 'center';
+    if(align==='right'||align==='end')return 'right';
+    if(align==='justify')return 'full';
+    return 'left';
+  }
+
+  function getRangeColor(range, kind){
+    var node=(range&&range.startContainer)||null;
+    var el=getClosestElement(node);
+    while(el&&el!==editor){
+      var colorValue=kind==='background'
+        ?(getElementStyleValue(el,'backgroundColor')||getElementStyleValue(el,'background'))
+        :(getElementStyleValue(el,'color')||'');
+      if(colorValue&&colorValue!=='rgba(0, 0, 0, 0)'&&colorValue!=='transparent')return colorValue;
+      el=el.parentElement;
+    }
+    return '';
+  }
+
+  function updateInlineToolbarState(range){
+    var btnBold=document.getElementById('nb_it_bold');
+    var btnItalic=document.getElementById('nb_it_italic');
+    var btnUnder=document.getElementById('nb_it_underline');
+    var btnStrike=document.getElementById('nb_it_strike');
+    var btnSup=document.getElementById('nb_it_superscript');
+    var btnSub=document.getElementById('nb_it_subscript');
+    var btnAlignLeft=document.getElementById('nb_it_align_left');
+    var btnAlignCenter=document.getElementById('nb_it_align_center');
+    var btnAlignRight=document.getElementById('nb_it_align_right');
+    var btnAlignFull=document.getElementById('nb_it_align_full');
+    var btnListUl=document.getElementById('nb_it_list_ul');
+    var btnListOl=document.getElementById('nb_it_list_ol');
+    var btnH2=document.getElementById('nb_it_h2');
+    var btnH3=document.getElementById('nb_it_h3');
+    var btnBlockquote=document.getElementById('nb_it_blockquote');
+    var btnLink=document.getElementById('nb_it_link');
+    var isBold=false;
+    var isItalic=false;
+    var isUnder=false;
+    var isStrike=false;
+    var isSup=false;
+    var isSub=false;
+    var isAlignLeft=false;
+    var isAlignCenter=false;
+    var isAlignRight=false;
+    var isAlignFull=false;
+    var isListUl=false;
+    var isListOl=false;
+    var isH2=false;
+    var isH3=false;
+    var isBlockquote=false;
+    var isLink=false;
+
+    try{
+      isBold=document.queryCommandState('bold');
+      isItalic=document.queryCommandState('italic');
+      isUnder=document.queryCommandState('underline');
+      isStrike=document.queryCommandState('strikeThrough');
+      isSup=document.queryCommandState('superscript');
+      isSub=document.queryCommandState('subscript');
+      isAlignLeft=document.queryCommandState('justifyLeft');
+      isAlignCenter=document.queryCommandState('justifyCenter');
+      isAlignRight=document.queryCommandState('justifyRight');
+      isAlignFull=document.queryCommandState('justifyFull');
+      isListUl=document.queryCommandState('insertUnorderedList');
+      isListOl=document.queryCommandState('insertOrderedList');
+    }catch(e){}
+
+    isBold=isBold||rangeHasFormat(range,'bold');
+    isItalic=isItalic||rangeHasFormat(range,'italic');
+    isUnder=isUnder||rangeHasFormat(range,'underline');
+    isStrike=isStrike||rangeHasFormat(range,'strikeThrough');
+    isSup=isSup||rangeHasFormat(range,'superscript');
+    isSub=isSub||rangeHasFormat(range,'subscript');
+    isLink=rangeHasFormat(range,'createLink');
+    isH2=rangeHasFormat(range,'formatBlock_h2')||getClosestBlockTag(range&&range.startContainer)==='h2';
+    isH3=rangeHasFormat(range,'formatBlock_h3')||getClosestBlockTag(range&&range.startContainer)==='h3';
+    isBlockquote=rangeHasFormat(range,'blockquote')||getClosestBlockTag(range&&range.startContainer)==='blockquote';
+
+    var alignment=getBlockAlignment(range);
+    isAlignLeft=isAlignLeft||alignment==='left';
+    isAlignCenter=isAlignCenter||alignment==='center';
+    isAlignRight=isAlignRight||alignment==='right';
+    isAlignFull=isAlignFull||alignment==='full';
+
+    var blockTag=getClosestBlockTag(range&&range.startContainer);
+    isListUl=isListUl||blockTag==='li'&&!!(getClosestElement(range&&range.startContainer)&&getClosestElement(range&&range.startContainer).closest&&getClosestElement(range&&range.startContainer).closest('ul'));
+    isListOl=isListOl||blockTag==='li'&&!!(getClosestElement(range&&range.startContainer)&&getClosestElement(range&&range.startContainer).closest&&getClosestElement(range&&range.startContainer).closest('ol'));
+
+    if(btnBold)btnBold.classList.toggle('active',!!isBold);
+    if(btnItalic)btnItalic.classList.toggle('active',!!isItalic);
+    if(btnUnder)btnUnder.classList.toggle('active',!!isUnder);
+    if(btnStrike)btnStrike.classList.toggle('active',!!isStrike);
+    if(btnSup)btnSup.classList.toggle('active',!!isSup);
+    if(btnSub)btnSub.classList.toggle('active',!!isSub);
+    if(btnAlignLeft)btnAlignLeft.classList.toggle('active',!!isAlignLeft);
+    if(btnAlignCenter)btnAlignCenter.classList.toggle('active',!!isAlignCenter);
+    if(btnAlignRight)btnAlignRight.classList.toggle('active',!!isAlignRight);
+    if(btnAlignFull)btnAlignFull.classList.toggle('active',!!isAlignFull);
+    if(btnListUl)btnListUl.classList.toggle('active',!!isListUl);
+    if(btnListOl)btnListOl.classList.toggle('active',!!isListOl);
+    if(btnH2)btnH2.classList.toggle('active',!!isH2);
+    if(btnH3)btnH3.classList.toggle('active',!!isH3);
+    if(btnBlockquote)btnBlockquote.classList.toggle('active',!!isBlockquote);
+    if(btnLink)btnLink.classList.toggle('active',!!isLink);
+
+    var mainTxtColor=document.getElementById('nb_textColorPicker');
+    var itTxtSwatch=document.getElementById('nb_it_text_swatch');
+    var textColor=getRangeColor(range,'text');
+    if(mainTxtColor&&itTxtSwatch)itTxtSwatch.style.background=textColor||mainTxtColor.value;
+
+    var mainBgColor=document.getElementById('nb_bgColorPicker');
+    var itBgSwatch=document.getElementById('nb_it_bg_swatch');
+    var bgColor=getRangeColor(range,'background');
+    if(mainBgColor&&itBgSwatch)itBgSwatch.style.background=bgColor||mainBgColor.value;
+
+    updateFontSelectors(range);
+  }
 
   function positionToolbar(rect){
     tb.style.display='flex';
@@ -6783,26 +7175,7 @@ updateSubtitleCount();
     var rect=range.getBoundingClientRect();
     if(!rect.width&&!rect.height)return;
     positionToolbar(rect);
-
-    try{
-      var isBold=document.queryCommandState('bold');
-      var isItalic=document.queryCommandState('italic');
-      var isUnder=document.queryCommandState('underline');
-      var btnBold=document.getElementById('nb_it_bold');
-      var btnItalic=document.getElementById('nb_it_italic');
-      var btnUnder=document.getElementById('nb_it_underline');
-      if(btnBold)btnBold.classList.toggle('active',isBold);
-      if(btnItalic)btnItalic.classList.toggle('active',isItalic);
-      if(btnUnder)btnUnder.classList.toggle('active',isUnder);
-
-      var mainTxtColor=document.getElementById('nb_textColorPicker');
-      var itTxtSwatch=document.getElementById('nb_it_text_swatch');
-      if(mainTxtColor&&itTxtSwatch)itTxtSwatch.style.background=mainTxtColor.value;
-
-      var mainBgColor=document.getElementById('nb_bgColorPicker');
-      var itBgSwatch=document.getElementById('nb_it_bg_swatch');
-      if(mainBgColor&&itBgSwatch)itBgSwatch.style.background=mainBgColor.value;
-    }catch(e){}
+    updateInlineToolbarState(range);
   }
 
   editor.addEventListener('mouseup',function(){setTimeout(checkSelection,10);});
@@ -6814,6 +7187,15 @@ updateSubtitleCount();
     ){
       setTimeout(checkSelection,10);
     }
+  });
+  document.addEventListener('selectionchange',function(){
+    clearTimeout(_itSelectionTimer);
+    _itSelectionTimer=setTimeout(function(){
+      var sel=window.getSelection();
+      if(!sel||!sel.rangeCount)return;
+      var range=sel.getRangeAt(0);
+      if(editor.contains(range.commonAncestorContainer))checkSelection();
+    },20);
   });
 
   document.addEventListener('mousedown',function(e){

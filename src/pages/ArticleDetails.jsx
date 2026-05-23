@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Tweet } from "react-tweet";
 import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag, ArrowLeft,
@@ -736,6 +735,25 @@ const XIcon = ({ size = 15 }) => (
     <path d="M18.244 2H21.5l-7.11 8.128L22.75 22h-6.547l-5.126-6.697L5.215 22H1.957l7.605-8.692L1.25 2h6.713l4.634 6.115L18.244 2Zm-1.141 18h1.804L6.978 3.895H5.043L17.103 20Z" />
   </svg>
 );
+
+const ArticleTweetEmbed = ({ id }) => {
+  const tweetId = String(id || "").trim();
+  if (!tweetId) return null;
+
+  return (
+    <div className="my-4 flex justify-center" suppressHydrationWarning>
+      <a
+        href={`https://twitter.com/i/web/status/${tweetId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 no-underline hover:text-[#D80100]"
+      >
+        <XIcon size={14} />
+        View post on X
+      </a>
+    </div>
+  );
+};
 
 const DIRECT_VIDEO_FILE_REGEX = /\.(mp4|webm|ogg|mov|m4v)(?:[?#].*)?$/i;
 const TWEET_URL_REGEX = /https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/(?:[A-Za-z0-9_]+\/status(?:es)?|i\/web\/status|i\/status)\/(\d+)(?:[^\s"'<>]*)?/i;
@@ -1684,7 +1702,7 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     <div ref={contentRef} className={className} style={style}>
       {parts.map((part) =>
         part.type === "tweet" ? (
-          <div key={part.key} className="my-4 flex justify-center"><Tweet id={part.id} /></div>
+          <ArticleTweetEmbed key={part.key} id={part.id} />
         ) : (
           <div key={part.key} dangerouslySetInnerHTML={{ __html: part.content }} />
         )

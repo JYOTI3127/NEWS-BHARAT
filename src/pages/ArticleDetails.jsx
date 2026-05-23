@@ -358,6 +358,15 @@ const toAbsoluteSiteUrl = (value) => {
   try { return new URL(normalized, SITE_URL).toString(); } catch { return null; }
 };
 
+const getSeoEndpointMeta = (payload) =>
+  isSchemaPlainObject(payload?.meta) ? payload.meta : {};
+
+const splitSeoKeywordText = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => normalizeKeywordPhrase(item))
+    .filter(Boolean);
+
 const getArticleImage = (article) => {
   const candidates = [article?.image_url, article?.image];
   return candidates.find((value) => typeof value === "string" && value.trim().length > 0) || null;
@@ -1737,7 +1746,7 @@ export default function ArticleDetails() {
   const [allArticles, setAllArticles] = useState([]);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [seoEndpointSchemaState, setSeoEndpointSchemaState] = useState({ slug: "", schemas: [] });
+  const [seoEndpointSchemaState, setSeoEndpointSchemaState] = useState({ slug: "", schemas: [], meta: {} });
   const [categoryMoreArticles, setCategoryMoreArticles] = useState([]);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1914,11 +1923,13 @@ export default function ArticleDetails() {
 
           const payload = await response.json();
           const schemas = dedupeStructuredSchemas(extractStructuredDataSchemas(payload));
-          if (schemas.length > 0) {
+          const meta = getSeoEndpointMeta(payload);
+          if (schemas.length > 0 || Object.keys(meta).length > 0) {
             if (!ignore) {
               setSeoEndpointSchemaState({
                 slug: currentSlug || slugCandidate,
                 schemas,
+                meta,
               });
             }
             return;
@@ -1933,6 +1944,7 @@ export default function ArticleDetails() {
         setSeoEndpointSchemaState({
           slug: currentSlug,
           schemas: [],
+          meta: {},
         });
       }
     };
@@ -2183,12 +2195,23 @@ export default function ArticleDetails() {
   );
 
   /* ── derived values ── */
+  const currentArticleSlugToken = normalizeSlugValue(article?.slug || articleSlug).toLowerCase();
+  const hasMatchingSeoEndpoint =
+    currentArticleSlugToken &&
+    normalizeSlugValue(seoEndpointSchemaState.slug).toLowerCase() === currentArticleSlugToken;
+  const seoEndpointMeta = hasMatchingSeoEndpoint ? seoEndpointSchemaState.meta || {} : {};
+  const seoEndpointOg = isSchemaPlainObject(seoEndpointMeta.og) ? seoEndpointMeta.og : {};
+  const seoEndpointTwitter = isSchemaPlainObject(seoEndpointMeta.twitter) ? seoEndpointMeta.twitter : {};
+
   const date = getArticleDateValue(article);
   const modifiedDate = article.updated_at || getArticleDateValue(article);
   const imageUrl = getArticleImage(article);
-  const imageAlt = article.image_alt?.trim() || article.title;
+  const imageAlt = getPlainText(seoEndpointOg.image_alt) || article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
-  const absoluteImageUrl = toAbsoluteSiteUrl(imageUrl) || DEFAULT_SHARE_IMAGE;
+  const absoluteImageUrl =
+    toAbsoluteSiteUrl(seoEndpointOg.image || seoEndpointTwitter.image) ||
+    toAbsoluteSiteUrl(imageUrl) ||
+    DEFAULT_SHARE_IMAGE;
   const primaryCategory = getArticleCategoryDetails(article)[0] || null;
   const primaryCategorySlug = normalizeSlugValue(primaryCategory?.slug || primaryCategory?.category_slug || "");
   const primaryCategoryNameToken = normalizeCategoryToken(primaryCategory?.name || "");
@@ -2201,12 +2224,12 @@ export default function ArticleDetails() {
   const normalizedCategorySlug = isBfsiCategory
     ? ""
     : normalizeSlugValue(primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || "");
-  const canonicalUrl = getCanonicalArticleUrl(article) || "";
+  const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || "";
   const articlePath = getArticlePath(article) || "";
   const articleUrlForSchema = canonicalUrl || (articlePath ? `${SITE_URL}${articlePath}` : "");
   const displayMoreArticles = categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;
   const tags = getArticleTags(article);
-  const authorDisplayName = article.display_author_name?.trim() || article.author_display_name?.trim() || article.author_name?.trim() || article.posted_by_fullname?.trim() || "News4Bharat";
+  const authorDisplayName = getPlainText(seoEndpointMeta.author) || article.display_author_name?.trim() || article.author_display_name?.trim() || article.author_name?.trim() || article.posted_by_fullname?.trim() || "News4Bharat";
   const authorPosition = article.author_display_position?.trim() || "";
   const authorSlug = getArticleAuthorSlug(article) || buildAuthorSlug(authorDisplayName);
   const authorPagePath = `/author/${authorSlug}`;
@@ -2232,13 +2255,28 @@ export default function ArticleDetails() {
 
   const articleSummaryText = getPlainText(article.subtitle) || getPlainText(article.description) || getPlainText(article.summary) || getPlainText(article.excerpt);
   const visibleSummary = articleSummaryText || truncateText(plainArticleContent, 220) || article.title;
-  const seoTitle = getBrowserTitle(article);
-  const metaDescription = getPlainText(article.meta_description) || articleSummaryText || getPlainText(plainArticleContent) || article.title;
+  const seoTitle =
+    getPlainText(seoEndpointMeta.title) ||
+    getPlainText(seoEndpointOg.title) ||
+    getPlainText(seoEndpointTwitter.title) ||
+    getBrowserTitle(article);
+  const metaDescription =
+    getPlainText(seoEndpointMeta.description) ||
+    getPlainText(seoEndpointOg.description) ||
+    getPlainText(seoEndpointTwitter.description) ||
+    getPlainText(article.meta_description) ||
+    articleSummaryText ||
+    getPlainText(plainArticleContent) ||
+    article.title;
   const secondaryKeywords = Array.isArray(article.secondary_keywords_list) ? article.secondary_keywords_list.map(normalizeKeywordPhrase).filter(Boolean) : String(article.secondary_keywords || "").split(",").map((item) => normalizeKeywordPhrase(item)).filter(Boolean);
   const focusKeyword = normalizeKeywordPhrase(article.focus_keyword);
-  const metaKeywords = Array.from(new Set([focusKeyword, ...secondaryKeywords, ...tags].map((item) => String(item || "").trim()).filter(Boolean))).join(", ");
-  const articleTags = tags.filter(Boolean);
-  const robotsContent = getRobotsContent(article);
+  const seoKeywords = splitSeoKeywordText(seoEndpointMeta.keywords);
+  const metaKeywords = seoKeywords.length > 0
+    ? Array.from(new Set(seoKeywords)).join(", ")
+    : Array.from(new Set([focusKeyword, ...secondaryKeywords, ...tags].map((item) => String(item || "").trim()).filter(Boolean))).join(", ");
+  const seoArticleTags = splitSeoKeywordText(seoEndpointOg["article:tag"]);
+  const articleTags = (seoArticleTags.length > 0 ? seoArticleTags : tags).filter(Boolean);
+  const robotsContent = getPlainText(seoEndpointMeta.robots) || getRobotsContent(article);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -2281,10 +2319,8 @@ export default function ArticleDetails() {
     })
   );
 
-  const currentArticleSlugToken = normalizeSlugValue(article?.slug || articleSlug).toLowerCase();
   const seoEndpointSchemas =
-    currentArticleSlugToken &&
-      normalizeSlugValue(seoEndpointSchemaState.slug).toLowerCase() === currentArticleSlugToken
+    hasMatchingSeoEndpoint
       ? seoEndpointSchemaState.schemas
       : [];
 

@@ -135,6 +135,16 @@ const getRobotsContent = (article) => {
   return parts.join(',')
 }
 
+const isPlainObject = (value) =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+const getSeoEndpointMeta = (article) => {
+  const endpoint = article?.seo_endpoint || article?.seoEndpoint || null
+  if (isPlainObject(endpoint?.meta)) return endpoint.meta
+  if (isPlainObject(article?.seo_meta)) return article.seo_meta
+  return {}
+}
+
 const getArticleRoutes = (article) => {
   const routes = new Set()
   const primaryPath = getArticlePath(article)
@@ -540,6 +550,19 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     if (!text || text.length <= maxLength) return text
     return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`
   }
+  const toTitleCase = (value) =>
+    normalizeText(value)
+      .split(' ')
+      .map((word) =>
+        word ? `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}` : ''
+      )
+      .join(' ')
+      .trim()
+  const splitKeywords = (value) =>
+    String(value || '')
+      .split(',')
+      .map((item) => normalizeKeywordPhrase(item))
+      .filter(Boolean)
   const getCategorySeoTitle = (category, catName) => {
     return [
       category?.meta_title,
@@ -604,7 +627,13 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     const article = articleMap.get(route)
 
     if (article) {
+      const endpointMeta = getSeoEndpointMeta(article)
+      const endpointOg = isPlainObject(endpointMeta.og) ? endpointMeta.og : {}
+      const endpointTwitter = isPlainObject(endpointMeta.twitter) ? endpointMeta.twitter : {}
       const apiMetaTitle = [
+        endpointMeta.title,
+        endpointOg.title,
+        endpointTwitter.title,
         article?.meta_title,
         article?.metaTitle,
         article?.seo_title,
@@ -622,7 +651,10 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         : `${SITE_NAME} - News As It Is`
       const title = apiMetaTitle || fallbackTitle
 
-      const description = (
+      const description = normalizeText(
+        endpointMeta.description ||
+        endpointOg.description ||
+        endpointTwitter.description ||
         article.meta_description ||
         article.subtitle ||
         article.summary ||
@@ -630,10 +662,10 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         article.description ||
         rawTitle ||
         `${SITE_NAME} - News As It Is`
-      ).trim()
+      )
 
-      const image = toAbsoluteUrl(article.image_url || article.image) || DEFAULT_IMAGE
-      const canonical = getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
+      const image = toAbsoluteUrl(endpointOg.image || endpointTwitter.image || article.image_url || article.image) || DEFAULT_IMAGE
+      const canonical = toAbsoluteUrl(endpointMeta.canonical) || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
         ? article.secondary_keywords_list.map((item) => normalizeKeywordPhrase(item))
         : String(article.secondary_keywords || '')
@@ -646,28 +678,33 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
             .split(',')
             .map((item) => item.trim())
             .filter(Boolean)
-      const keywords = Array.from(
-        new Set(
-          [normalizeKeywordPhrase(article.focus_keyword), ...secondaryKeywords, ...tagKeywords]
-            .map((item) => String(item || '').trim())
-            .filter(Boolean)
-        )
-      )
-      const robots = getRobotsContent(article)
-      const publishedAt = article.published_at || article.created_at || ''
+      const seoKeywords = splitKeywords(endpointMeta.keywords)
+      const keywords = seoKeywords.length > 0
+        ? Array.from(new Set(seoKeywords))
+        : Array.from(
+            new Set(
+              [normalizeKeywordPhrase(article.focus_keyword), ...secondaryKeywords, ...tagKeywords]
+                .map((item) => String(item || '').trim())
+                .filter(Boolean)
+            )
+          )
+      const robots = normalizeText(endpointMeta.robots) || getRobotsContent(article)
+      const publishedAt = endpointOg['article:published_time'] || article.published_at || article.created_at || ''
       const modifiedAt = article.updated_at || article.published_at || article.created_at || ''
       const primaryCategory = Array.isArray(article.category_details)
         ? article.category_details[0]
         : article.category_details || article.category || null
       const categoryName = String(primaryCategory?.name || '').trim()
-      const authorName = String(
-        article.display_author_name ||
+      const authorName = normalizeText(
+        endpointMeta.author ||
+          article.display_author_name ||
           article.author_display_name ||
           article.author_name ||
           article.posted_by_fullname ||
           SITE_NAME
-      ).trim()
-      const articleTags = Array.from(new Set(tagKeywords))
+      )
+      const seoArticleTags = splitKeywords(endpointOg['article:tag'])
+      const articleTags = Array.from(new Set(seoArticleTags.length > 0 ? seoArticleTags : tagKeywords))
 
       return {
         title,
@@ -675,7 +712,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         description,
         canonical,
         ogImage: image,
-        ogImageAlt: String(article.image_alt || rawTitle || SITE_NAME).trim(),
+        ogImageAlt: normalizeText(endpointOg.image_alt || article.image_alt || rawTitle || SITE_NAME),
         ogType: 'article',
         robots,
         author: authorName,
@@ -691,10 +728,13 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       }
     }
 
+    const slugTitle = toTitleCase(getArticleSlugFromRoute(route).replace(/-/g, ' '))
+    const fallbackSubject = slugTitle || 'Latest News'
+
     return {
-      title: `${SITE_NAME} - News As It Is`,
+      title: `${fallbackSubject} | ${SITE_NAME}`,
       articleHeadline: '',
-      description: `Read the latest news on ${SITE_NAME}.`,
+      description: `Read the latest updates on ${fallbackSubject} from ${SITE_NAME}.`,
       canonical: `${BASE_URL}${route}`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'article',
@@ -707,11 +747,13 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   if (route.startsWith('/category/')) {
     const slug = route.replace('/category/', '').trim().toLowerCase()
     const category = categoryMap.get(slug)
-    const catName = category?.name || slug.replace(/-/g, ' ')
+    const catName = category?.name || toTitleCase(slug.replace(/-/g, ' '))
 
     return {
-      title: getCategorySeoTitle(category, catName),
-      description: getCategorySeoDescription(category, catName),
+      title: getCategorySeoTitle(category, catName) || `${catName} News | ${SITE_NAME}`,
+      description:
+        getCategorySeoDescription(category, catName) ||
+        `Read the latest ${catName} news, updates, analysis and explainers on ${SITE_NAME}.`,
       canonical: `${BASE_URL}/category/${slug}`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
@@ -1023,12 +1065,22 @@ async function getRoutesAndData() {
         })
         if (articleSlug) {
           detailTasks.push(
-            fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(articleSlug)}/?${cacheBust}`)
-              .then((detail) => {
+            Promise.all([
+              fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(articleSlug)}/?${cacheBust}`),
+              fetchWithRetry(`${API_BASE}/seo/article/${encodeURIComponent(articleSlug)}/?${cacheBust}`).catch(() => null),
+            ])
+              .then(([detail, seoEndpoint]) => {
                 const finalDetail = Array.isArray(detail) ? detail[0] : detail
                 if (finalDetail) {
+                  const articleWithSeo = seoEndpoint
+                    ? {
+                        ...finalDetail,
+                        seo_endpoint: seoEndpoint,
+                        seo_meta: isPlainObject(seoEndpoint?.meta) ? seoEndpoint.meta : {},
+                      }
+                    : finalDetail
                   articleRoutes.forEach((route) => {
-                    articleMap.set(route, finalDetail)
+                    articleMap.set(route, articleWithSeo)
                   })
                 }
               })
@@ -1049,11 +1101,22 @@ async function getRoutesAndData() {
         const forcedArticle = Array.isArray(forcedDetail) ? forcedDetail[0] : forcedDetail
 
         if (forcedArticle && (forcedArticle.slug || forcedArticle.id)) {
-          const forcedRoutes = getArticleRoutes(forcedArticle)
+          const forcedSlug = normalizeSlugToken(forcedArticle.slug || dispatchPayload.slug)
+          const forcedSeoEndpoint = forcedSlug
+            ? await fetchWithRetry(`${API_BASE}/seo/article/${encodeURIComponent(forcedSlug)}/?${cacheBust}`).catch(() => null)
+            : null
+          const forcedArticleWithSeo = forcedSeoEndpoint
+            ? {
+                ...forcedArticle,
+                seo_endpoint: forcedSeoEndpoint,
+                seo_meta: isPlainObject(forcedSeoEndpoint?.meta) ? forcedSeoEndpoint.meta : {},
+              }
+            : forcedArticle
+          const forcedRoutes = getArticleRoutes(forcedArticleWithSeo)
 
           forcedRoutes.forEach((route) => routeSet.add(route))
           forcedRoutes.forEach((route) => {
-            articleMap.set(route, forcedArticle)
+            articleMap.set(route, forcedArticleWithSeo)
           })
 
           console.log(
@@ -1192,6 +1255,11 @@ installPrerenderDataScript(siteData)
 
 const prerenderer = new Prerenderer({
   staticDir: path.join(__dirname, 'build'),
+  server: {
+    host: '127.0.0.1',
+    listenHost: '127.0.0.1',
+    port: 0,
+  },
   renderer: new PuppeteerRenderer({
     renderAfterDocumentEvent: 'prerender-ready',
   timeout: 150000,

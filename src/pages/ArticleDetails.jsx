@@ -740,17 +740,24 @@ const ArticleTweetEmbed = ({ id }) => {
   const tweetId = String(id || "").trim();
   if (!tweetId) return null;
 
+  const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+  const embedUrl = `https://platform.twitter.com/embed/Tweet.html?id=${encodeURIComponent(tweetId)}&dnt=true&theme=light`;
+
   return (
-    <div className="my-4 flex justify-center" suppressHydrationWarning>
-      <a
-        href={`https://twitter.com/i/web/status/${tweetId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 no-underline hover:text-[#D80100]"
-      >
-        <XIcon size={14} />
-        View post on X
-      </a>
+    <div className="my-4 flex flex-col items-center" suppressHydrationWarning>
+      <iframe
+        src={embedUrl}
+        title="Embedded X post"
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="w-full max-w-[560px] rounded-xl border border-gray-200 bg-white"
+        style={{ minHeight: 320, height: 360 }}
+      />
+      <noscript>
+        <a href={tweetUrl} target="_blank" rel="noopener noreferrer">
+          View post on X
+        </a>
+      </noscript>
     </div>
   );
 };

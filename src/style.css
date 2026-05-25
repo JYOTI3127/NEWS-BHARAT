@@ -804,8 +804,8 @@ img {
 }
 
 .latest-updates-rail__item--lead .latest-updates-rail__title {
-  font-size: 14px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .latest-updates-rail__item:hover .latest-updates-rail__title {
@@ -866,12 +866,12 @@ img {
 
 .latest-updates-rail__title {
   color: #111827;
-  font-size: 13.5px;
-  line-height: 1.42;
-  font-weight: 800;
+  font-size: 12px;
+  line-height: 1.38;
+  font-weight: 600;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.2s ease;
@@ -1115,10 +1115,10 @@ img {
 }
 
 @keyframes businessBriefAutoSlide {
-  0%, 14% {
+  0% {
     transform: translateY(0);
   }
-  86%, 100% {
+  100% {
     transform: translateY(calc(-100% + 330px));
   }
 }
@@ -1133,8 +1133,12 @@ img {
 .business-brief-actions {
   display: flex;
   justify-content: flex-end;
-  padding: 0 0 8px;
-  background: #ffffff;
+  padding: 0;
+  background: transparent;
+  position: absolute;
+  top: -26px;
+  right: 2px;
+  z-index: 3;
 }
 
 .business-brief-readmore {
@@ -1293,7 +1297,7 @@ img {
   }
 
   .latest-updates-rail__item {
-    min-height: 82px;
+    min-height: auto;
     padding: 12px;
   }
 
@@ -3303,10 +3307,10 @@ img {
 }
 
 .tn-latest-item-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #111;
-  line-height: 1.4;
+  line-height: 1.35;
   margin-bottom: 3px;
 }
 

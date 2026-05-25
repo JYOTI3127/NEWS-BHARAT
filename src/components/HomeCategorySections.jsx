@@ -538,7 +538,7 @@ const CategorySection = memo(({ section, articles }) => {
 // ─────────────────────────────────────────────
 // ✅ Main Component
 // ─────────────────────────────────────────────
-export default function HomeCategorySections({ articles: passedArticles = null, onReady = null }) {
+export default function HomeCategorySections({ articles: passedArticles = null, onReady = null, afterSection = null }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading]   = useState(true);
   const is4K = useIs4K();
@@ -615,7 +615,10 @@ export default function HomeCategorySections({ articles: passedArticles = null, 
   return (
     <div className={`hcs-root${is4K ? " hcs-root-4k" : ""}`}>
       {sections.map((section) => (
-        <CategorySection key={section.key} section={section} articles={section.articles} />
+        <div key={section.key} className="hcs-section-group">
+          <CategorySection section={section} articles={section.articles} />
+          {typeof afterSection === "function" ? afterSection(section) : null}
+        </div>
       ))}
     </div>
   );

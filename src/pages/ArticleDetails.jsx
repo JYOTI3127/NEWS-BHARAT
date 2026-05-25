@@ -358,6 +358,13 @@ const toAbsoluteSiteUrl = (value) => {
   try { return new URL(normalized, SITE_URL).toString(); } catch { return null; }
 };
 
+const buildCanonicalFromRoute = (categorySlug, articleSlug) => {
+  const category = normalizeSlugValue(categorySlug);
+  const slug = normalizeSlugValue(articleSlug);
+  if (!category || !slug) return "";
+  return `${SITE_URL}/${category}/${slug}/`;
+};
+
 const getSeoEndpointMeta = (payload) =>
   isSchemaPlainObject(payload?.meta) ? payload.meta : {};
 
@@ -2234,8 +2241,9 @@ export default function ArticleDetails() {
   const normalizedCategorySlug = isBfsiCategory
     ? ""
     : normalizeSlugValue(primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || "");
-  const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || "";
-  const articlePath = getArticlePath(article) || "";
+  const routeCanonicalUrl = buildCanonicalFromRoute(normalizedCategorySlug || categorySlug, article?.slug || articleSlug);
+  const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
+  const articlePath = getArticlePath(article) || (routeCanonicalUrl ? new URL(routeCanonicalUrl).pathname : "");
   const articleUrlForSchema = canonicalUrl || (articlePath ? `${SITE_URL}${articlePath}` : "");
   const displayMoreArticles = categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;
   const tags = getArticleTags(article);
@@ -2355,24 +2363,16 @@ export default function ArticleDetails() {
 
     return dedupeStructuredSchemas(merged);
   })();
-  const visualFaqItems = dedupeFaqItems([
-    ...extractFaqItems({
+  // Frontend FAQ accordion should show only article-authored FAQ content.
+  // JSON-LD schemas are still emitted separately for crawlers below.
+  const visualFaqItems = dedupeFaqItems(
+    extractFaqItems({
       faq: article?.faq,
       faqs: article?.faqs,
       faq_items: article?.faq_items,
       faqItems: article?.faqItems,
-      faq_schema: article?.faq_schema,
-      faq_schemas: article?.faq_schemas,
-      faqpage: article?.faqpage,
-      faq_page: article?.faq_page,
-      seo: article?.seo,
-      structured_data: article?.structured_data,
-      structured_datakey: article?.structured_datakey,
-      schema: article?.schema,
-      schemas: article?.schemas,
-    }),
-    ...extractFaqItems(resolvedJsonLdSchemas),
-  ]);
+    })
+  );
 
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">

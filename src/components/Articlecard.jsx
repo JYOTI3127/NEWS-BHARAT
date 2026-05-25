@@ -1,36 +1,23 @@
 import { Link } from "react-router-dom";
 import { getArticlePath } from "../lib/articleUrl";
+import {
+  getArticleAuthorName,
+  getArticleDateLabel,
+  getArticleReadTime,
+  getArticleSummary,
+} from "../lib/articlePresentation";
 
 export default function ArticleCard({ article }) {
   const {
     title,
     subtitle,
     category_details,
-    published_date,
-    published_at,
-    created_at,
     image_url,
     image,
-    display_author_name,   // ✅ API mein yahi field hai
-    author_display_name,   // ✅ backup field
   } = article;
 
   const imageUrl = image_url || image || null;
-
-  const date = published_date || published_at || created_at;
-
-  // ✅ AM/PM ke saath time
-  const formattedDate = date
-    ? new Date(date).toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: "Asia/Kolkata",
-      }).replace(/\b(am|pm)\b/g, (match) => match.toUpperCase()) + " IST"
-    : "";
+  const formattedDate = getArticleDateLabel(article);
 
   const articlePath = getArticlePath(article);
   const breakingCategory = Array.isArray(category_details)
@@ -43,8 +30,9 @@ export default function ArticleCard({ article }) {
 
   const primaryCategory = breakingCategory || category_details?.[0];
 
-  // ✅ Author: API se aaye toh wahi, warna News4Bharat
-  const authorName = display_author_name || author_display_name || "News4Bharat";
+  const authorName = getArticleAuthorName(article);
+  const summary = getArticleSummary(article);
+  const readTime = getArticleReadTime(article);
 
   return (
     <Link
@@ -79,17 +67,16 @@ export default function ArticleCard({ article }) {
             {title}
           </h3>
 
-          {subtitle && (
+          {(summary || subtitle) && (
             <p className="text-sm text-slate-500 mb-3 line-clamp-2">
-              {subtitle}
+              {summary || subtitle}
             </p>
           )}
 
-          <div className="mt-auto flex flex-wrap gap-3 text-xs text-slate-400">
-            {/* ✅ Author name — API se aata hai "News4Bharat" */}
+          <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
             <span className="font-medium text-red-600">{authorName}</span>
-            {/* ✅ Date with AM/PM */}
-            {formattedDate && <span>{formattedDate}</span>}
+            {readTime && <span>{readTime}</span>}
+            {formattedDate && <span>Updated {formattedDate}</span>}
           </div>
         </div>
 

@@ -2,22 +2,18 @@ import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { Link } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchArticlePage,
   fetchPaginatedArticles,
   fetchCategories,
-  fetchHomepageHeroCurrent,
-  getHomepageHeroArticlesFromResponse,
-  getListFromResponse,
   fetchFreshPopularShowcase,
   getFreshPopularArticlesFromResponse,
 } from '../lib/api';
 
-import NewsBanner from '../components/Banner';
 import BreakingNewsSection from '../components/BreakingNewsSection';
 import HomeCategorySections from '../components/HomeCategorySections';
 import AdvertisementSlot from '../components/AdvertisementSlot';
 import CategoryMiniCarousel from '../components/CategoryMiniCarousel';
 import FreshPopularShowcase from '../components/FreshPopularShowcase';
+import LatestUpdatesRail from '../components/LatestUpdatesRail';
 
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
@@ -28,6 +24,7 @@ const Newsletter = lazy(() => import('../components/Newsletter'));
 const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
 const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
 const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
+const EDITORIAL_CATEGORY_SLUGS = ['bharat-opinions'];
 
 const getPrerenderData = () => {
   if (typeof window === 'undefined') return {};
@@ -74,6 +71,31 @@ const getSeedArticlesForSlugs = (articles, slugs, limit = 12) => {
       getArticleCategorySlugs(article).some((slug) => targetSlugs.has(slug))
     )
     .slice(0, limit);
+};
+
+const dedupeArticleList = (articles) => {
+  const seen = new Set();
+  return (Array.isArray(articles) ? articles : []).filter((article, index) => {
+    const key = String(
+      article?.id || article?.slug || article?.public_url ||
+      article?.url || article?.title || article?.headline || index
+    ).trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const fetchArticlesForCategorySlugs = async (slugs) => {
+  const settled = await Promise.allSettled(
+    slugs.map((slug) =>
+      fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 })
+    )
+  );
+  const combined = settled.flatMap((result) =>
+    result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
+  );
+  return dedupeArticleList(combined);
 };
 
 const WhatsAppFloatingIcon = () => (
@@ -195,14 +217,6 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: heroData, isLoading: heroLoading } = useQuery({
-    queryKey: ['homepage-hero-current'],
-    queryFn: fetchHomepageHeroCurrent,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   const { data: freshPopularData, isLoading: freshPopularLoading } = useQuery({
     queryKey: ['fresh-popular-showcase'],
     queryFn: fetchFreshPopularShowcase,
@@ -243,26 +257,15 @@ const Home = () => {
 
   const { data: q4ArticlesData, isLoading: q4Loading } = useQuery({
     queryKey: ['q4-results-home'],
-    queryFn: async () => {
-      const settled = await Promise.allSettled(
-        Q4_CATEGORY_SLUGS.map((slug) =>
-          fetchPaginatedArticles({ category: slug, limit: 30, maxPages: 3 })
-        )
-      );
-      const combined = settled.flatMap((result) =>
-        result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
-      );
-      const seen = new Set();
-      return combined.filter((article, index) => {
-        const key = String(
-          article?.id || article?.slug || article?.public_url ||
-          article?.url || article?.title || article?.headline || index
-        ).trim().toLowerCase();
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    },
+    queryFn: () => fetchArticlesForCategorySlugs(Q4_CATEGORY_SLUGS),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: editorialArticlesData, isLoading: editorialLoading } = useQuery({
+    queryKey: ['editorials-home'],
+    queryFn: () => fetchArticlesForCategorySlugs(EDITORIAL_CATEGORY_SLUGS),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -273,43 +276,32 @@ const Home = () => {
     [q4ArticlesData]
   );
 
-  const heroArticles = React.useMemo(() => {
-    const list = getHomepageHeroArticlesFromResponse(heroData);
-    const displayCount = Number(heroData?.display_count ?? heroData?.data?.display_count);
-    if (Number.isFinite(displayCount) && displayCount > 0) return list.slice(0, displayCount);
-    return list;
-  }, [heroData]);
-
-  const shouldUseFallbackBanner = !heroLoading && heroArticles.length === 0;
-
-  const { data: bannerArticlesData, isLoading: bannerArticlesLoading } = useQuery({
-    queryKey: ['banner-articles'],
-    queryFn: () => fetchArticlePage({ page: 1, limit: 5 }),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    enabled: shouldUseFallbackBanner,
-  });
-
-  const fallbackBannerArticles = React.useMemo(
-    () => getListFromResponse(bannerArticlesData),
-    [bannerArticlesData]
+  const editorialArticles = React.useMemo(
+    () => (Array.isArray(editorialArticlesData) ? editorialArticlesData : []),
+    [editorialArticlesData]
   );
 
-  const bannerArticles = React.useMemo(
-    () => (heroArticles.length > 0 ? heroArticles : fallbackBannerArticles),
-    [heroArticles, fallbackBannerArticles]
-  );
-
-  const bannerLoading = heroLoading || (shouldUseFallbackBanner && bannerArticlesLoading);
+  const renderQ4Section = React.useCallback(() => (
+    <div className="home-section-align">
+      <Profiler id="Q4ResultsSection" onRender={onRenderCallback}>
+        <BreakingNewsSection
+          articles={q4Articles}
+          mode="q4"
+          sectionEyebrow="Corporate Tracker"
+          sectionTitle="Q4 Results"
+          viewAllPath="/category/q4-results"
+          sectionId="q4-results-heading"
+        />
+      </Profiler>
+    </div>
+  ), [q4Articles]);
 
   // ── homeApiReady: loading khatam + data aaya ─────────────────────────────
   const homeApiReady =
     !articlesLoading &&
-    !heroLoading &&
     !freshPopularLoading &&
     !q4Loading &&
-    !bannerLoading &&
+    !editorialLoading &&
     allArticles.length > 0 &&
     freshPopularArticles.length > 0;
 
@@ -372,12 +364,6 @@ const Home = () => {
           <WhatsAppFloatingIcon />
         </a>
 
-        <div className="w-full">
-          <Profiler id="NewsBanner" onRender={onRenderCallback}>
-            <NewsBanner articles={bannerArticles} loading={bannerLoading} />
-          </Profiler>
-        </div>
-
         <AdvertisementSlot
           page="home"
           placement="home_top"
@@ -392,6 +378,9 @@ const Home = () => {
           className="home-top-ad home-top-ad--mobile"
           maxWidth={768}
         />
+        <div className="home-section-align home-section-align--latest-updates">
+          <LatestUpdatesRail articles={allArticles.length > 0 ? allArticles : freshPopularArticles} />
+        </div>
 
         <div className="home-section-align home-section-align--fresh-popular">
           <Profiler id="FreshPopularShowcase" onRender={onRenderCallback}>
@@ -404,14 +393,14 @@ const Home = () => {
         </div>
 
         <div className="home-section-align">
-          <Profiler id="Q4ResultsSection" onRender={onRenderCallback}>
+          <Profiler id="EditorialSection" onRender={onRenderCallback}>
             <BreakingNewsSection
-              articles={q4Articles}
+              articles={editorialArticles}
               mode="q4"
-              sectionEyebrow="Corporate Tracker"
-              sectionTitle="Q4 Results"
-              viewAllPath="/category/q4-results"
-              sectionId="q4-results-heading"
+              sectionEyebrow="Bharat Opinion"
+              sectionTitle="Editorials"
+              viewAllPath="/category/bharat-opinions"
+              sectionId="editorials-heading"
             />
           </Profiler>
         </div>
@@ -452,6 +441,7 @@ const Home = () => {
           <HomeCategorySections
             articles={allArticles}
             onReady={handleHomeCategoriesReady}
+            afterSection={(section) => section?.key === 'automobile' ? renderQ4Section() : null}
           />
         </DeferredSection>
 

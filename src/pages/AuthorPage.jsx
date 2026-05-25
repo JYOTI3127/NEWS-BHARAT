@@ -202,7 +202,7 @@ export default function AuthorPage() {
   const authorBio = String(authorProfile?.author_display_bio || "").trim();
   const authorBioText =
     authorBio ||
-    `${displayAuthorName} News4Bharat ke contributor hain. Inke latest articles aur updates yahan milenge.`;
+    `${displayAuthorName} is a contributor at News4Bharat. Find their latest articles and updates here.`;
   const authorPosition = String(authorProfile?.author_display_position || "").trim();
   const authorLinksRaw = [
     { href: String(authorProfile?.author_display_linkedin || "").trim(), icon: <Linkedin size={15} />, label: "LinkedIn" },
@@ -243,7 +243,7 @@ export default function AuthorPage() {
         </Link>
         <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-2xl font-bold text-gray-900">Author page not found</h1>
-          <p className="mt-3 text-gray-500">Iss author ke liye abhi article data available nahi hai.</p>
+          <p className="mt-3 text-gray-500">Article data is not available for this author yet.</p>
         </div>
       </div>
     );
@@ -251,7 +251,7 @@ export default function AuthorPage() {
 
   const metaDescription =
     authorBio ||
-    `${displayAuthorName} ke latest articles, explainers aur updates News4Bharat par padhiye.`;
+    `Read the latest articles, explainers, and updates by ${displayAuthorName} on News4Bharat.`;
 
   return (
     <div className="min-h-screen">

@@ -74,13 +74,13 @@ class StaticSitemap(Sitemap):
         return [
             '/',
             '/about-us/',
-            '/contact-us',
+            '/contact-us/',
             '/privacy-policy/',
-            '/terms-and-conditions',
-            '/disclaimer',
-            '/editorial-policy',
-            '/founders-note',
-            '/careers',
+            '/terms-and-conditions/',
+            '/disclaimer/',
+            '/editorial-policy/',
+            '/founders-note/',
+            '/careers/',
         ]
 
     def location(self, item):

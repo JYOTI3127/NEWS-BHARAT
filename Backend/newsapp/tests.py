@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .seo_direct import SitemapEngine
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
@@ -1020,6 +1021,21 @@ class SeoPageRenderTests(TestCase):
             '<link rel="canonical" href="https://news4bharat.com/category/politics/">',
             html=False,
         )
+
+
+@override_settings(SEO_SITE_URL='https://news4bharat.com')
+class StaticSitemapTests(TestCase):
+    def test_static_sitemap_uses_trailing_slash_urls(self):
+        sitemap_xml = SitemapEngine.static_pages()
+
+        self.assertIn('https://news4bharat.com/contact-us/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/terms-and-conditions/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/disclaimer/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/editorial-policy/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/founders-note/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/careers/', sitemap_xml)
+        self.assertNotIn('https://news4bharat.com/contact-us</loc>', sitemap_xml)
+        self.assertNotIn('https://news4bharat.com/terms-and-conditions</loc>', sitemap_xml)
 
     def test_non_superadmin_cannot_change_article_slug(self):
         article = Article.objects.create(

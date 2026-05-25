@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page_title }}</title>
-  <meta name="description" content="{{ page_description }}">
+  {% if seo_head %}
+    {{ seo_head|safe }}
+  {% else %}
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ page_description }}">
+  {% endif %}
   <style>
     body {
       margin: 0;

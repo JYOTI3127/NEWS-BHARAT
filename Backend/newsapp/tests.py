@@ -968,6 +968,59 @@ class SlugPermissionTests(TestCase):
         category.refresh_from_db()
         self.assertEqual(category.slug, 'bharat-business')
 
+
+@override_settings(SEO_SITE_URL='https://news4bharat.com')
+class SeoPageRenderTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='seo-editor',
+            password='testpass123',
+        )
+        self.category = Category.objects.create(
+            name='Politics',
+            slug='politics',
+            description='Daily politics coverage.',
+            meta_title='Politics News Today',
+            meta_description='Latest politics coverage and analysis from News4Bharat.',
+        )
+        self.article = Article.objects.create(
+            author=self.user,
+            title='Cabinet meeting updates',
+            content='Important updates from the latest cabinet meeting.',
+            status='published',
+            slug='cabinet-meeting-updates',
+            meta_title='Cabinet Meeting Updates',
+            meta_description='Breaking cabinet meeting updates from the capital.',
+            primary_category=self.category,
+        )
+        self.article.categories.add(self.category)
+
+    def test_article_page_renders_canonical_tag(self):
+        response = self.client.get('/politics/cabinet-meeting-updates/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<link rel="canonical" href="https://news4bharat.com/politics/cabinet-meeting-updates/">',
+            html=False,
+        )
+
+    def test_category_page_renders_saved_meta_and_canonical(self):
+        response = self.client.get('/category/politics/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<title>Politics News Today</title>', html=False)
+        self.assertContains(
+            response,
+            '<meta name="description" content="Latest politics coverage and analysis from News4Bharat.">',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<link rel="canonical" href="https://news4bharat.com/category/politics/">',
+            html=False,
+        )
+
     def test_non_superadmin_cannot_change_article_slug(self):
         article = Article.objects.create(
             author=self.other_staff,

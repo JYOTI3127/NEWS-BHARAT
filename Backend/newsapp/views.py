@@ -783,11 +783,14 @@ def category_detail_page(request, slug):
     articles = category.articles.filter(status='published').order_by('-created_at')
     paginator = Paginator(articles, 6)
     page_obj = paginator.get_page(request.GET.get('page'))
+    page_title = (category.meta_title or category.name).strip()
+    page_description = (category.meta_description or category.description or '').strip()
     return render(request, 'articles/category_detail.html', {
         'category': category,
         'page_obj': page_obj,
-        'page_title': (category.meta_title or category.name).strip(),
-        'page_description': (category.meta_description or category.description or '').strip(),
+        'page_title': page_title,
+        'page_description': page_description,
+        'seo_head': _build_category_seo_head(category),
     })
 
 
@@ -1646,6 +1649,35 @@ def normalize_article_canonical(raw_value, slug):
     if canonical.rstrip('/') == legacy_url.rstrip('/') or canonical.rstrip('/') == legacy_article_url.rstrip('/'):
         return ""
     return canonical
+
+
+def _build_category_seo_head(category):
+    base_url = str(getattr(settings, 'SEO_SITE_URL', 'https://news4bharat.com') or 'https://news4bharat.com').rstrip('/')
+    category_slug = clean_url_segment(getattr(category, 'slug', ''))
+    canonical_url = f"{base_url}/category/{category_slug}/" if category_slug else f"{base_url}/category/"
+    title = (getattr(category, 'meta_title', '') or getattr(category, 'name', '')).strip()
+    description = (getattr(category, 'meta_description', '') or getattr(category, 'description', '') or '').strip()
+
+    meta = {
+        "title": title,
+        "description": description,
+        "canonical": canonical_url,
+        "robots": "index, follow, max-snippet:-1, max-image-preview:large",
+        "og": {
+            "type": "website",
+            "title": title,
+            "description": description,
+            "url": canonical_url,
+            "site_name": str(getattr(settings, 'SEO_SITE_NAME', '') or 'News4Bharat').strip() or 'News4Bharat',
+            "locale": "en_IN",
+        },
+        "twitter": {
+            "card": "summary_large_image",
+            "title": title[:70],
+            "description": description[:200],
+        },
+    }
+    return MetaEngine.render_head(meta, [])
 
 def article_detail_page(request, slug, category_slug=None):
     article_qs = Article.objects.filter(

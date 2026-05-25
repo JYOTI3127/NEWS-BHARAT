@@ -1114,6 +1114,131 @@ img {
   color: #d80100;
 }
 
+@keyframes businessBriefAutoSlide {
+  0%, 14% {
+    transform: translateY(0);
+  }
+  86%, 100% {
+    transform: translateY(calc(-100% + 330px));
+  }
+}
+
+.business-brief-viewport {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.72), rgba(255, 255, 255, 0.96)),
+    radial-gradient(circle at 10% 0%, rgba(216, 1, 0, 0.12), transparent 34%);
+}
+
+.business-brief-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 8px;
+  background: #ffffff;
+}
+
+.business-brief-readmore {
+  border: 0;
+  background: transparent;
+  color: #d80100;
+  cursor: pointer;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0;
+  text-decoration: none;
+}
+
+.business-brief-readmore:hover {
+  color: #990f0f;
+  text-decoration: underline;
+}
+
+.business-brief-track {
+  animation: businessBriefAutoSlide 140s linear infinite;
+}
+
+.business-brief-viewport:hover .business-brief-track {
+  animation-play-state: paused;
+}
+
+.business-brief-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid #eef2f7;
+  box-shadow: inset 3px 0 0 rgba(216, 1, 0, 0.12);
+}
+
+.business-brief-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(216, 1, 0, 0.08), transparent 55%);
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.business-brief-card:hover::after {
+  opacity: 1;
+}
+
+.business-brief-bullet {
+  flex: 0 0 auto;
+  width: 12px;
+  min-height: 100%;
+  display: inline-flex;
+  justify-content: center;
+  position: relative;
+}
+
+.business-brief-bullet::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #d80100;
+  box-shadow: 0 0 0 4px rgba(216, 1, 0, 0.12);
+}
+
+.business-brief-bullet::after {
+  content: "";
+  position: absolute;
+  top: 17px;
+  bottom: -14px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(216, 1, 0, 0.45), rgba(216, 1, 0, 0));
+}
+
+/* Legacy class kept harmless in case old markup is cached briefly. */
+.business-brief-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.business-brief-date {
+  display: inline-flex;
+  margin: 8px 0 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(216, 1, 0, 0.08);
+  color: #991b1b;
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-brief-track {
+    animation: none;
+  }
+}
+
 @media (min-width: 1024px) {
   .latest-updates-rail {
     position: sticky;

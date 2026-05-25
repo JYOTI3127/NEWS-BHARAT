@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
-import { API_BASE, apiUrl } from "../lib/api";
+import { API_BASE } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 const CATEGORY_SLUG = "business";
 const CATEGORY_FETCH_SLUGS = ["business", "bharat-economy"];
-const LIVE_CRICKET_API = apiUrl("/live-cricket/");
 const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
-
-const tabs = ["Live", "Upcoming", "Recent"];
 
 const useBreakpoint = () => {
     const getBreakpoint = (w) => {
@@ -195,6 +192,30 @@ const formatArticleDateTime = (article) => {
 
     return `${datePart} | ${timePart}`.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
 };
+
+const getArticleTitle = (article) =>
+    String(article?.title || article?.headline || "News4Bharat story").trim();
+
+const getArticleSummary = (article, limit = 92) => {
+    const text = String(
+        article?.short_description ||
+        article?.summary ||
+        article?.excerpt ||
+        article?.description ||
+        ""
+    )
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!text) return "Sharp context and reporting from the News4Bharat editorial desk.";
+    return text.length > limit ? `${text.slice(0, limit).trim()}...` : text;
+};
+
+const getBusinessStoryKey = (article, index = "") =>
+    String(article?.id || article?.slug || article?.public_url || article?.url || article?.title || index)
+        .trim()
+        .toLowerCase();
 
 const normalizeCricketPayload = (payload) => {
     const source = payload?.data || payload;
@@ -402,12 +423,6 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
     const VISIBLE = storyColumns * storyRows;
 
     const [offset, setOffset] = useState(0);
-    const [activeTab, setActiveTab] = useState(0);
-
-    // ✅ Fix 3 — Cricket loading false kiya, commented API hata di
-    const [cricketData, setCricketData] = useState({ live: [], upcoming: [], recent: [] });
-    const [cricketLoading, setCricketLoading] = useState(true);
-
     const [stories, setStories] = useState([]);
     const [storiesLoading, setStoriesLoading] = useState(true);
     const storiesRailRef = useRef(null);
@@ -469,38 +484,11 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
         };
     }, [seededStories]);
 
-    useEffect(() => {
-        let ignore = false;
-
-        fetch(LIVE_CRICKET_API)
-            .then((r) => {
-                if (!r.ok) throw new Error("Failed to fetch live cricket");
-                return r.json();
-            })
-            .then((data) => {
-                if (ignore) return;
-                setCricketData(normalizeCricketPayload(data));
-                setCricketLoading(false);
-            })
-            .catch(() => {
-                if (ignore) return;
-                setCricketData({ live: [], upcoming: [], recent: [] });
-                setCricketLoading(false);
-            });
-
-        return () => {
-            ignore = true;
-        };
-    }, []);
-
     useEffect(() => { setOffset(0); }, [VISIBLE, stories.length]);
 
     const canPrev = offset > 0;
     const maxOffset = Math.max(0, stories.length - VISIBLE);
     const canNext = offset < maxOffset;
-
-    const tabData = [cricketData.live, cricketData.upcoming, cricketData.recent];
-    const tabTypes = ["live", "upcoming", "recent"];
 
     const scoreCardWidth = {
         s: "100%",
@@ -516,6 +504,10 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
 
     const visibleStories = stories.slice(offset, offset + VISIBLE);
     const renderedStories = isMobile ? stories : visibleStories;
+    const visibleStoryKeys = new Set(visibleStories.map((article, index) => getBusinessStoryKey(article, index)));
+    const businessSideArticles = stories
+        .filter((article, index) => !visibleStoryKeys.has(getBusinessStoryKey(article, index)));
+
     const scrollStories = (direction) => {
         if (isMobile && storiesRailRef.current) {
             const firstCard = storiesRailRef.current.querySelector('[data-story-card="true"]');
@@ -545,11 +537,11 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
     const desktopLayoutStyle = isMobile
         ? undefined
         : is2K
-            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: "16px", alignItems: "stretch" }
-            : { display: "flex", alignItems: "flex-start", gap: "12px" };
+            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: "18px", alignItems: "stretch" }
+            : { display: "flex", alignItems: "flex-start", gap: "16px" };
     const storiesWrapStyle = is2K
-        ? { padding: "10px", borderRadius: "12px", minHeight: "430px", flexWrap: "wrap", alignContent: "flex-start" }
-        : { padding: "8px", borderRadius: "10px", flexWrap: "wrap", alignContent: "flex-start" };
+        ? { padding: "12px", borderRadius: "18px", minHeight: "430px", flexWrap: "wrap", alignContent: "flex-start" }
+        : { padding: "10px", borderRadius: "18px", flexWrap: "wrap", alignContent: "flex-start" };
     const mobileStoriesWrapStyle = isMobile
         ? {
             ...storiesWrapStyle,
@@ -568,22 +560,24 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
         : storiesWrapStyle;
 
     return (
-        <div className="font-sans" style={sectionStyle}>
+        <div className="font-sans" style={{ ...sectionStyle, fontFamily: "Poppins, sans-serif" }}>
             <div className={isMobile ? "flex flex-col gap-3" : ""} style={desktopLayoutStyle}>
 
                 {/* Left: Visual Stories */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
                         <div
                             className="bg-red-600 rounded-sm"
                             style={{ width: is4K ? "6px" : "4px", height: is4K ? "28px" : "20px" }}
                         />
                         <span
                             className="font-bold text-[#111] uppercase"
-                            style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px" }}
+                            style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px", fontFamily: "Poppins, sans-serif" }}
                         >
                             Business
                         </span>
+                        </div>
                     </div>
 
                     <div className="relative">
@@ -608,7 +602,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                         </button>
 
                         <div
-                            className="flex gap-2 overflow-hidden border border-gray-300"
+                            className="flex gap-3 overflow-hidden border border-gray-200 bg-[#f8fafc] shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
                             ref={storiesRailRef}
                             style={mobileStoriesWrapStyle}
                         >
@@ -623,12 +617,13 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                     <div
                                         key={article.id}
                                         data-story-card="true"
-                                        className="group flex-shrink-0 cursor-pointer border border-gray-300 transition-colors rounded-lg bg-white overflow-hidden"
+                                        className="group flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-red-100 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
                                         style={{
-                                            width: `calc((100% - ${(storyColumns - 1) * 8}px) / ${storyColumns})`,
-                                            flex: `0 0 calc((100% - ${(storyColumns - 1) * 8}px) / ${storyColumns})`,
-                                            maxWidth: isMobile ? "calc((100% - 8px) / 2)" : undefined,
+                                            width: `calc((100% - ${(storyColumns - 1) * 12}px) / ${storyColumns})`,
+                                            flex: `0 0 calc((100% - ${(storyColumns - 1) * 12}px) / ${storyColumns})`,
+                                            maxWidth: isMobile ? "calc((100% - 12px) / 2)" : undefined,
                                             scrollSnapAlign: isMobile ? "start" : undefined,
+                                            fontFamily: "Poppins, sans-serif",
                                         }}
                                         onClick={() => {
                                             const articlePath = getArticlePath(article);
@@ -639,10 +634,10 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                         <div
                                             className="w-full overflow-hidden"
                                             style={{
-                                                aspectRatio: isMobile ? "4/3" : "16/10",
+                                                aspectRatio: isMobile ? "4/3" : "16/9",
                                                 position: "relative",
-                                                borderRadius: "8px 8px 0 0",
-                                                background: "#f6f7f9"
+                                                borderRadius: "12px 12px 0 0",
+                                                background: "linear-gradient(135deg, #f3f4f6 0%, #ffffff 52%, #fee2e2 100%)"
                                             }}
                                         >
                                             {article.image_url ? (
@@ -655,9 +650,9 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                                         style={{
                                                             objectFit: "cover",
                                                             objectPosition: "center",
-                                                            filter: "blur(12px)",
-                                                            transform: "scale(1.08)",
-                                                            opacity: 0.18,
+                                                            filter: "blur(18px)",
+                                                            transform: "scale(1.14)",
+                                                            opacity: 0.2,
                                                         }}
                                                         loading="lazy"
                                                         decoding="async"
@@ -666,10 +661,11 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                                     <img
                                                         src={article.image_url}
                                                         alt={article.title}
-                                                        className="absolute inset-0 w-full h-full transition-transform duration-500 ease-in-out group-hover:scale-[1.02]"
+                                                        className="absolute inset-0 w-full h-full transition-transform duration-500 ease-in-out group-hover:scale-[1.03]"
                                                         style={{
-                                                            objectFit: "cover",
+                                                            objectFit: "contain",
                                                             objectPosition: "center",
+                                                            padding: "3px",
                                                         }}
                                                         loading="lazy"
                                                         decoding="async"
@@ -688,17 +684,18 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                         {/* Title — fixed height neeche */}
                                         <div
                                             style={{
-                                                height: is4K ? 108 : is2K ? 92 : 78,
+                                                height: is4K ? 116 : is2K ? 98 : 84,
                                                 overflow: "hidden",
-                                                padding: is4K ? "10px 10px 0" : is2K ? "8px 8px 0" : "6px 6px 0",
+                                                padding: is4K ? "12px 12px 0" : is2K ? "10px 10px 0" : "8px 8px 0",
                                             }}
                                         >
-                                            <p className="text-gray-500 group-hover:text-[#D80100] leading-snug transition-colors duration-300"
+                                            <p className="text-[#334155] group-hover:text-[#D80100] leading-snug transition-colors duration-300"
                                                 style={{
-                                                    fontSize: is4K ? "18px" : is2K ? "14px" : "13px",
-                                                    fontWeight: 500,
+                                                    fontSize: "10px",
+                                                    fontWeight: 600,
+                                                    fontFamily: "Poppins, sans-serif",
                                                     display: "-webkit-box",
-                                                    WebkitLineClamp: 2,
+                                                    WebkitLineClamp: 3,
                                                     WebkitBoxOrient: "vertical",
                                                     overflow: "hidden",
                                                 }}>
@@ -706,11 +703,11 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                             </p>
                                             {formatArticleDateTime(article) ? (
                                                 <p
-                                                    className="text-[#6b7280] leading-snug"
+                                                    className="text-[#64748b] leading-snug"
                                                     style={{
                                                         marginTop: is4K ? "8px" : "6px",
-                                                        fontSize: is4K ? "13px" : is2K ? "12px" : "9px",
-                                                        fontWeight: 600,
+                                                        fontSize: is4K ? "12px" : is2K ? "11px" : "9px",
+                                                        fontWeight: 500,
                                                         fontFamily: "Poppins, sans-serif",
                                                     }}
                                                 >
@@ -745,44 +742,62 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                     </div>
                 </div>
 
-                {/* Right: Live Score Card */}
+                {/* Right: Business summary */}
                 <div
-                    className="flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_12px_28px_rgba(17,17,17,0.07)]"
+                    className="business-brief-panel flex flex-shrink-0 flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
                     style={{
-                        width: is2K ? "280px" : scoreCardWidth,
+                        width: is2K ? "320px" : scoreCardWidth,
                         marginTop: isMobile ? "12px" : is2K ? "30px" : "35px",
                         height: scoreCardHeight,
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
-                    <div className="flex bg-gray-100 p-1">
-                        {tabs.map((tab, i) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(i)}
-                                className={`flex-1 rounded-md border-none py-1.5 text-center transition ${activeTab === i
-                                    ? "bg-[#D80100] text-white shadow-[0_5px_12px_rgba(216,1,0,0.18)]"
-                                    : "bg-transparent text-gray-500 hover:bg-white"
-                                    }`}
-                                style={{
-                                    fontSize: is4K ? "13px" : "9px",
-                                    fontWeight: 800,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.08em",
-                                }}
-                            >
-                                {tab}
-                            </button>
-                        ))}
+                    <div className="business-brief-actions">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/category/business")}
+                            className="business-brief-readmore"
+                        >
+                            Read More
+                        </button>
                     </div>
-
-                    {cricketLoading ? (
-                        <div className="flex flex-1 items-center justify-center px-2.5 py-4 text-center text-[11px] text-gray-400 animate-pulse">
-                            Loading scores...
+                    {businessSideArticles.length === 0 ? (
+                        <div className="flex flex-1 items-center justify-center px-3 py-4 text-center text-[11px] font-semibold text-gray-400">
+                            Business updates coming soon.
                         </div>
                     ) : (
-                        <div className="min-h-0 flex-1 overflow-hidden">
-                            <MultiMatch matches={tabData[activeTab]} type={tabTypes[activeTab]} />
+                        <div className="business-brief-viewport min-h-0 flex-1 overflow-hidden bg-[#f8fafc]">
+                            <div className="business-brief-track flex flex-col">
+                                {businessSideArticles.map((article, index) => {
+                                    const articlePath = getArticlePath(article);
+                                    return (
+                                        <button
+                                            key={article?.id || article?.slug || index}
+                                            type="button"
+                                            onClick={() => articlePath && navigate(articlePath)}
+                                            className="business-brief-card w-full px-3 py-2.5 text-left transition"
+                                            style={{ fontFamily: "Poppins, sans-serif" }}
+                                        >
+                                            <div className="flex gap-2.5">
+                                                <span className="business-brief-bullet" aria-hidden="true" />
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="m-0 line-clamp-2 text-[12px] font-black leading-snug text-[#111827]">
+                                                        {getArticleTitle(article)}
+                                                    </h3>
+                                                    <p className="m-0 mt-1.5 line-clamp-2 text-[10px] font-semibold leading-[1.45] text-gray-500">
+                                                        {getArticleSummary(article, 115)}
+                                                    </p>
+                                                    {formatArticleDateTime(article) ? (
+                                                        <p className="business-brief-date">
+                                                            {formatArticleDateTime(article)}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>

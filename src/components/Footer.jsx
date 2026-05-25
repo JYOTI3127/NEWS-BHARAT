@@ -1,7 +1,7 @@
 import logo from "../assets/Logo 02 compact.png";
 import "../Footer.css";
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Youtube, Linkedin, X, MessageCircle } from "lucide-react";
+import { Facebook, Instagram, Youtube, Linkedin, Mail, ArrowRight } from "lucide-react";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
 const WhatsAppIcon = ({ size = 17 }) => (
@@ -191,6 +191,14 @@ export default function Footer() {
             <a href="https://www.linkedin.com/company/news4bharat" className="ft-soc"><Linkedin size={18} /></a>
           </div>
 
+          <div className="ft-newsletter-block">
+            <div className="ft-follow-label">NEWSLETTER</div>
+            <Link to="/newsletter" className="ft-newsletter-btn">
+              <Mail size={15} aria-hidden="true" />
+              <span className="ft-newsletter-main">Get the Daily Brief</span>
+              <ArrowRight size={14} aria-hidden="true" className="ft-newsletter-arrow" />
+            </Link>
+          </div>
           {/* App buttons - side by side */}
           {/* <div className="ft-app-row">
             <a href="#" className="ft-app-btn">
@@ -224,9 +232,25 @@ export default function Footer() {
               .map(([heading, links]) => (
               <div className="ft-col" key={heading}>
                 <div className="ft-col-head">
-                  <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>
-                    {heading === "Bharat_Opinion" ? "Bharat Opinion" : heading.replaceAll("_", " ")}
-                  </span>
+                  {heading === "State_of_Bharat" ? (
+                    <Link
+                      to="/category/state-of-bharat"
+                      className="ft-col-title ft-col-title-tight ft-col-title-link"
+                    >
+                      States of Bharat
+                    </Link>
+                  ) : heading === "Bharat_Opinion" ? (
+                    <Link
+                      to="/category/bharat-opinions"
+                      className="ft-col-title ft-col-title-tight ft-col-title-link"
+                    >
+                      Bharats Opinions
+                    </Link>
+                  ) : (
+                    <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>
+                      {heading.replaceAll("_", " ")}
+                    </span>
+                  )}
                   <div className="ft-col-underline">
                     <span className="u-r" />
                     <span className="u-b" />

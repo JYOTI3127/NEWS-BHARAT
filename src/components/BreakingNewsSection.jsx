@@ -47,6 +47,32 @@ const normalizeArticles = (articles) => {
 
 const getArticleImage = (article) => article?.image_url || article?.image || '';
 const getArticleTitle = (article) => article?.title || article?.headline || 'Untitled';
+const getArticleDescription = (article, limit = 120) => {
+  const text = String(
+    article?.short_description ||
+    article?.summary ||
+    article?.excerpt ||
+    article?.description ||
+    article?.meta_description ||
+    article?.seo_description ||
+    article?.content ||
+    article?.body ||
+    article?.article_body ||
+    article?.details ||
+    ''
+  )
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) return '';
+  return text.length > limit ? `${text.slice(0, limit).trim()}...` : text;
+};
+const getQ4Description = (article, limit = 120) =>
+  getArticleDescription(article, limit) ||
+  'Latest quarterly earnings update with key revenue, profit and management commentary.';
 const getImageStyle = (mode, variant = 'card') => {
   if (mode !== 'q4') return undefined;
 
@@ -119,6 +145,7 @@ export default function BreakingNewsSection({
   mode = 'breaking',
   sectionTitle = 'Trending Today',
   sectionEyebrow = 'Live Desk',
+  sectionDescription = '',
   viewAllPath = BREAKING_NEWS_PATH,
   sectionId = 'breaking-news-heading',
 }) {
@@ -131,7 +158,7 @@ export default function BreakingNewsSection({
 
     if (mode === 'q4') {
       // Q4 list already category-specific endpoint se aati hai, isliye yahan re-filter nahi karte.
-      return dedupeArticles(filtered).slice(0, 12);
+      return dedupeArticles(filtered).slice(0, 18);
     }
 
     return dedupeArticles([...filtered, ...normalized]).slice(0, 10);
@@ -143,8 +170,12 @@ export default function BreakingNewsSection({
   const featuredArticle = sectionArticles[0];
   const leftSecondaryArticle = sectionArticles[1];
   const q4LeftSecondaryArticles = isQ4Mode ? sectionArticles.slice(1, 3) : [];
-  const q4LeftTertiaryArticle = isQ4Mode ? sectionArticles[3] : null;
-  const headlineArticles = sectionArticles.slice(isQ4Mode ? 4 : 2, isQ4Mode ? 12 : 10);
+  const q4RemainingArticles = isQ4Mode ? sectionArticles.slice(3, 18) : [];
+  const q4SplitIndex = Math.max(0, Math.floor((q4RemainingArticles.length - 4) / 2));
+  const q4LeftTertiaryArticles = isQ4Mode ? q4RemainingArticles.slice(0, q4SplitIndex) : [];
+  const headlineArticles = isQ4Mode
+    ? q4RemainingArticles.slice(q4SplitIndex)
+    : sectionArticles.slice(2, 10);
   const featuredImagePosition = mode === 'q4' ? 'left center' : 'center center';
 
   return (
@@ -173,6 +204,11 @@ export default function BreakingNewsSection({
           >
             {sectionTitle}
           </h2>
+          {sectionDescription ? (
+            <p className="mt-2 max-w-[620px] font-[Poppins,sans-serif] text-[13px] font-medium leading-[1.55] text-slate-600 max-[425px]:text-[12px]">
+              {sectionDescription}
+            </p>
+          ) : null}
         </div>
 
         <Link
@@ -213,8 +249,13 @@ export default function BreakingNewsSection({
                   <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(1.12rem,1.35vw,1.7rem)] font-semibold leading-[1.12] text-white max-[425px]:text-[1rem] max-[375px]:text-[0.92rem]">
                     {getArticleTitle(featuredArticle)}
                   </h3>
+                  {isQ4Mode ? (
+                    <p className="mt-2 line-clamp-2 font-[Poppins,sans-serif] text-[0.86rem] font-medium leading-[1.35] text-white/85 max-[425px]:text-[0.72rem]">
+                      {getQ4Description(featuredArticle, 150)}
+                    </p>
+                  ) : null}
                   {formatArticleDate(featuredArticle) ? (
-                    <p className="mt-2.5 font-[Poppins,sans-serif] text-[0.82rem] font-semibold leading-[1.35] text-white/85 max-[425px]:text-[0.72rem]">
+                    <p className="mt-2 font-[Poppins,sans-serif] text-[0.72rem] font-semibold leading-[1.35] text-white/85 max-[425px]:text-[0.66rem]">
                       {formatArticleDate(featuredArticle)}
                     </p>
                   ) : null}
@@ -241,8 +282,16 @@ export default function BreakingNewsSection({
                     <h3 className="m-0 line-clamp-2 font-[Poppins,sans-serif] text-[0.88rem] font-semibold leading-[1.22] text-[#111] transition-colors duration-200 group-hover:text-[#D80100]">
                       {getArticleTitle(article)}
                     </h3>
+                    {isQ4Mode ? (
+                      <p
+                        className="mt-1 font-[Poppins,sans-serif] text-[0.72rem] font-medium leading-[1.35] text-[#64748b]"
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                      >
+                        {getQ4Description(article, 90)}
+                      </p>
+                    ) : null}
                     {formatArticleDate(article) ? (
-                      <p className="mt-1.5 font-[Poppins,sans-serif] text-[0.72rem] font-semibold leading-[1.35] text-[#6b7280]">
+                      <p className="mt-1.5 font-[Poppins,sans-serif] text-[0.64rem] font-semibold leading-[1.35] text-[#6b7280]">
                         {formatArticleDate(article)}
                       </p>
                     ) : null}
@@ -284,32 +333,45 @@ export default function BreakingNewsSection({
             </StoryCard>
           ) : null}
 
-          {isQ4Mode && q4LeftTertiaryArticle ? (
-            <StoryCard
-              article={q4LeftTertiaryArticle}
-              className="
-                group grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 rounded-[10px] border-b border-dotted border-[#9a9a9a] py-[9px] text-inherit no-underline
-                max-[640px]:grid-cols-[minmax(0,1fr)_100px] max-[640px]:gap-3
-                max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
-              "
-            >
-              <div className="min-w-0">
-                <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem]">
-                  {getArticleTitle(q4LeftTertiaryArticle)}
-                </h3>
-                {formatArticleDate(q4LeftTertiaryArticle) ? (
-                  <p className="mt-2.5 font-[Poppins,sans-serif] text-[0.82rem] font-semibold leading-[1.35] text-[#6b7280] max-[425px]:mt-1.5 max-[425px]:text-[0.72rem]">
-                    {formatArticleDate(q4LeftTertiaryArticle)}
-                  </p>
-                ) : null}
-              </div>
-              <StoryImage
-                article={q4LeftTertiaryArticle}
-                alt={getArticleTitle(q4LeftTertiaryArticle)}
-                className="block aspect-[16/9] w-full rounded-[10px] object-cover bg-[#f4f4f4]"
-                style={getImageStyle(mode, 'card')}
-              />
-            </StoryCard>
+          {isQ4Mode && q4LeftTertiaryArticles.length > 0 ? (
+            <div className="grid content-start">
+              {q4LeftTertiaryArticles.map((article) => (
+                <StoryCard
+                  key={article.id || article.slug || getArticleTitle(article)}
+                  article={article}
+                  className="
+                    group grid grid-cols-[minmax(0,1fr)_180px] items-center gap-3 rounded-[10px] border-b border-dotted border-[#9a9a9a] py-[10px] text-inherit no-underline
+                    first:pt-0 last:border-b-0
+                    max-[768px]:grid-cols-[minmax(0,1fr)_132px]
+                    max-[640px]:grid-cols-[minmax(0,1fr)_100px] max-[640px]:gap-3
+                    max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
+                  "
+                >
+                  <div className="min-w-0">
+                    <h3 className="m-0 line-clamp-2 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem]">
+                      {getArticleTitle(article)}
+                    </h3>
+                    <p
+                      className="mt-1.5 font-[Poppins,sans-serif] text-[0.76rem] font-medium leading-[1.35] text-[#64748b] max-[425px]:text-[0.68rem]"
+                      style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                    >
+                      {getQ4Description(article, 110)}
+                    </p>
+                    {formatArticleDate(article) ? (
+                        <p className="mt-2 font-[Poppins,sans-serif] text-[0.68rem] font-semibold leading-[1.35] text-[#6b7280] max-[425px]:mt-1.5 max-[425px]:text-[0.62rem]">
+                        {formatArticleDate(article)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <StoryImage
+                    article={article}
+                    alt={getArticleTitle(article)}
+                    className="block aspect-[16/9] w-full rounded-[10px] object-cover bg-[#f4f4f4]"
+                    style={getImageStyle(mode, 'card')}
+                  />
+                </StoryCard>
+              ))}
+            </div>
           ) : null}
         </div>
 
@@ -328,16 +390,24 @@ export default function BreakingNewsSection({
                 max-[425px]:grid-cols-[minmax(0,1fr)_88px] max-[425px]:gap-2.5 max-[425px]:py-2
                 max-[375px]:grid-cols-[minmax(0,1fr)_82px]
                 max-[320px]:grid-cols-[minmax(0,1fr)_72px]
-                ${index >= 7 ? 'max-[1440px]:hidden' : ''}
-                ${index >= 8 ? 'min-[1441px]:max-[2560px]:hidden' : ''}
+                ${!isQ4Mode && index >= 7 ? 'max-[1440px]:hidden' : ''}
+                ${!isQ4Mode && index >= 8 ? 'min-[1441px]:max-[2560px]:hidden' : ''}
               `}
             >
               <div className="min-w-0">
-                <h3 className="m-0 line-clamp-3 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem] max-[320px]:text-[0.72rem]">
+                <h3 className="m-0 line-clamp-2 font-[Poppins,sans-serif] text-[clamp(0.92rem,1.02vw,1.22rem)] font-medium leading-[1.14] text-[#111] transition-colors duration-200 group-hover:text-[#D80100] max-[425px]:text-[0.84rem] max-[375px]:text-[0.78rem] max-[320px]:text-[0.72rem]">
                   {getArticleTitle(article)}
                 </h3>
+                {isQ4Mode ? (
+                  <p
+                    className="mt-1.5 font-[Poppins,sans-serif] text-[0.76rem] font-medium leading-[1.35] text-[#64748b] max-[425px]:text-[0.68rem] max-[320px]:hidden"
+                    style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                  >
+                    {getQ4Description(article, 92)}
+                  </p>
+                ) : null}
                 {formatArticleDate(article) ? (
-                  <p className="mt-2.5 font-[Poppins,sans-serif] text-[0.82rem] font-semibold leading-[1.35] text-[#6b7280] max-[425px]:mt-1.5 max-[425px]:text-[0.72rem] max-[320px]:text-[0.68rem]">
+                  <p className="mt-2 font-[Poppins,sans-serif] text-[0.68rem] font-semibold leading-[1.35] text-[#6b7280] max-[425px]:mt-1.5 max-[425px]:text-[0.62rem] max-[320px]:text-[0.6rem]">
                     {formatArticleDate(article)}
                   </p>
                 ) : null}

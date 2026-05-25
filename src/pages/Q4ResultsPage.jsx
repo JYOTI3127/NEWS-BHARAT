@@ -144,6 +144,9 @@ export default function Q4ResultsPage() {
               Corporate Tracker
             </p>
             <h1 className="text-3xl font-extrabold text-slate-900">Q4 Results</h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+              Track quarterly earnings, profit trends, revenue updates and management commentary from listed companies.
+            </p>
           </div>
           {!loading && <span className="text-sm text-slate-500">{titleCount}</span>}
         </div>
@@ -219,4 +222,3 @@ export default function Q4ResultsPage() {
     </div>
   );
 }
-

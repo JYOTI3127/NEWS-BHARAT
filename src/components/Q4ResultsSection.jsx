@@ -141,6 +141,9 @@ export default function Q4ResultsSection({ articles = [] }) {
           <h2 id="q4-results-heading" className="text-[28px] font-extrabold leading-none text-slate-900 max-[425px]:text-[22px]">
             Q4 Results
           </h2>
+          <p className="mt-2 max-w-[620px] text-[13px] font-medium leading-[1.55] text-slate-600">
+            Track quarterly earnings, profit trends, revenue updates and management commentary from listed companies.
+          </p>
         </div>
         <Link
           to={Q4_RESULTS_PATH}

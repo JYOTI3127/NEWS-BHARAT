@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import {
-  Clock, User,
-  Newspaper, RefreshCw, BookOpen, Eye,
-} from "lucide-react";
+import { Clock, User, Newspaper, RefreshCw, BookOpen, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+
 import {
   API_BASE,
   formatArticleDateTimeIST,
@@ -210,11 +208,73 @@ const getPossibleStateValues = (article) => {
     article?.state_name,
     article?.selected_subcategory,
     article?.selectedState,
+    ...getSelectedSubcategoryValues(article?.selected_subcategories),
   ];
 
   return values
     .map((value) => String(value || "").trim())
     .filter(Boolean);
+};
+
+const toUniqueStateOptions = (values = []) => {
+  const seen = new Set();
+  const result = [];
+
+  values.forEach((value) => {
+    const stateName = canonicalizeRegionName(value);
+    if (!stateName) return;
+    const key = normalizeRegionKey(stateName);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    result.push(stateName);
+  });
+
+  return result;
+};
+
+const getArticleStateName = (article) =>
+  toUniqueStateOptions(getPossibleStateValues(article))[0] || "";
+
+const normalizeStateArticlesResponse = (data, fallbackState = "") => {
+  const stateValues = [];
+  let articles = [];
+
+  if (Array.isArray(data?.states)) {
+    stateValues.push(...data.states);
+  }
+
+  if (Array.isArray(data?.results)) {
+    articles = data.results;
+  } else if (Array.isArray(data)) {
+    articles = data;
+  } else if (data?.results && typeof data.results === "object") {
+    Object.entries(data.results).forEach(([stateName, stateArticles]) => {
+      stateValues.push(stateName);
+      if (!Array.isArray(stateArticles)) return;
+      articles.push(
+        ...stateArticles.map((article) => ({
+          ...article,
+          selected_state_name: article?.selected_state_name || canonicalizeRegionName(stateName),
+        }))
+      );
+    });
+  }
+
+  const fallbackCanonical = canonicalizeRegionName(data?.state || fallbackState);
+  if (fallbackCanonical) stateValues.push(fallbackCanonical);
+
+  articles = articles.map((article) => {
+    const stateName = getArticleStateName(article) || fallbackCanonical;
+    if (stateName) stateValues.push(stateName);
+    return stateName && !article?.selected_state_name
+      ? { ...article, selected_state_name: stateName }
+      : article;
+  });
+
+  return {
+    states: toUniqueStateOptions(stateValues),
+    articles,
+  };
 };
 
 const getCategoryArticleFreshnessTime = (article) => {
@@ -307,20 +367,23 @@ const doesArticleMatchSubcategory = (article, subFilter) => {
   return text.includes(target);
 };
 
+
 export default function CategoryPage() {
+  const stateScrollRef = useRef(null); 
   const { slug } = useParams();
   const location = useLocation();
   const viewportWidth = useViewportWidth();
 
-  const searchParams  = new URLSearchParams(location.search);
-  const rawSubFilter  = searchParams.get("subcategory") || "";
+  const searchParams = new URLSearchParams(location.search);
+  const rawSubFilter = searchParams.get("subcategory") || "";
   const subFilter = isStateCategorySlug(slug) && isStateParentGroupLabel(rawSubFilter)
     ? ""
     : rawSubFilter;
 
-  const [category, setCategory]     = useState(null);
-  const [articles, setArticles]     = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [category, setCategory] = useState(null);
+  const [articles, setArticles] = useState([]);
+  const [stateOptions, setStateOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
@@ -370,9 +433,11 @@ export default function CategoryPage() {
 
       const articlesUrls = shouldFetchByState
         ? [`${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`]
-        : categoryFetchSlugs.map((categorySlug) =>
-          `${API_BASE}/articles/?category=${encodeURIComponent(categorySlug)}&page=1&limit=${requestLimit}`
-        );
+        : isStateCategory
+          ? [`${API_BASE}/articles/by-state/`]
+          : categoryFetchSlugs.map((categorySlug) =>
+            `${API_BASE}/articles/?category=${encodeURIComponent(categorySlug)}&page=1&limit=${requestLimit}`
+          );
 
       const [categoryResult, articlesResult] = await Promise.allSettled([
         fetch(`${API_BASE}/categories/`).then((res) => res.json()),
@@ -397,7 +462,26 @@ export default function CategoryPage() {
       }
 
       if (articlesResult.status === "fulfilled") {
-        const filtered = articlesResult.value.flatMap(getListFromArticlesResponse);
+        const stateResponse = isStateCategory
+          ? articlesResult.value.reduce(
+            (acc, payload) => {
+              const normalizedStateData = normalizeStateArticlesResponse(payload, stateSubFilter);
+              acc.states.push(...normalizedStateData.states);
+              acc.articles.push(...normalizedStateData.articles);
+              return acc;
+            },
+            { states: [], articles: [] }
+          )
+          : null;
+        if (isStateCategory) {
+          setStateOptions(stateResponse.states);
+        } else {
+          setStateOptions([]);
+        }
+
+        const filtered = isStateCategory
+          ? stateResponse.articles
+          : articlesResult.value.flatMap(getListFromArticlesResponse);
         const seen = new Set();
         const unique = filtered.filter((article) => {
           const key = article?.id || article?.slug || article?.url || article?.title;
@@ -440,10 +524,27 @@ export default function CategoryPage() {
     fetchData();
   }, [slug, subFilter]);
 
-  const heroArticle   = articles[0] || null;
-  const gridArticles  = articles.slice(1, visibleCount + 1);
+  const heroArticle = articles[0] || null;
+  const gridArticles = articles.slice(1, visibleCount + 1);
   const moreInArticles = articles.slice(0, MORE_IN_ARTICLES_LIMIT);
-  const hasMore       = visibleCount + 1 < articles.length;
+  const hasMore = visibleCount + 1 < articles.length;
+  const isStateCategoryPage = isStateCategorySlug(slug);
+  const activeStateName = isStateCategoryPage ? canonicalizeRegionName(subFilter) : "";
+  const visibleStateOptions = toUniqueStateOptions([
+    ...stateOptions,
+    ...articles.map(getArticleStateName),
+  ]);
+  const showStateGroupedLayout = isStateCategoryPage && !activeStateName;
+  const stateArticleGroups = showStateGroupedLayout
+    ? visibleStateOptions
+      .map((stateName) => ({
+        stateName,
+        articles: articles
+          .filter((article) => normalizeRegionKey(getArticleStateName(article)) === normalizeRegionKey(stateName))
+          .slice(0, 4),
+      }))
+      .filter((group) => group.articles.length > 0)
+    : [];
   const isWorldNewsCategory = ["world-news", "worldnews"].includes(String(slug || "").trim().toLowerCase());
   const shouldClampWorldNewsHeader = isWorldNewsCategory && viewportWidth <= 1440;
   const shouldClampWorldNewsParagraph = isWorldNewsCategory && viewportWidth >= 768 && viewportWidth <= 1440;
@@ -554,6 +655,53 @@ export default function CategoryPage() {
             <BookOpen size={13} className="mr-1.5 align-middle" />
             {articles.length} Articles
           </span>
+          {isStateCategoryPage && visibleStateOptions.length > 0 && (
+            <div className="mt-4 relative" ref={stateScrollRef}>
+              {/* Left Arrow */}
+              <button
+                onClick={() => stateScrollRef.current?.querySelector(".state-scroll-track")?.scrollBy({ left: -240, behavior: "smooth" })}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full rounded-l-full bg-[#002765] hover:bg-[#001a4d] text-white flex items-center justify-center transition-colors"
+                aria-label="Scroll left"
+                style={{ minHeight: "44px" }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              {/* Scrollable Track */}
+              <div
+                className="state-scroll-track flex items-center gap-0 overflow-x-auto bg-[#002765] rounded-full px-10 scrollbar-none"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                <Link
+                  to={`/category/${slug}`}
+                  className={`flex-shrink-0 px-5 py-2.5 text-[13px] font-bold no-underline transition-colors rounded-full whitespace-nowrap ${!activeStateName ? "bg-white text-[#002765]" : "text-white hover:text-slate-200"}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  All States
+                </Link>
+                {visibleStateOptions.map((stateName) => (
+                  <Link
+                    key={stateName}
+                    to={`/category/${slug}?subcategory=${encodeURIComponent(stateName)}`}
+                    className={`flex-shrink-0 px-5 py-2.5 text-[13px] font-bold no-underline transition-colors rounded-full whitespace-nowrap ${normalizeRegionKey(activeStateName) === normalizeRegionKey(stateName) ? "bg-white text-[#002765]" : "text-white hover:text-slate-200"}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    {stateName}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Right Arrow */}
+              <button
+                onClick={() => stateScrollRef.current?.querySelector(".state-scroll-track")?.scrollBy({ left: 240, behavior: "smooth" })}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-full rounded-r-full bg-[#002765] hover:bg-[#001a4d] text-white flex items-center justify-center transition-colors"
+                aria-label="Scroll right"
+                style={{ minHeight: "44px" }}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -581,7 +729,7 @@ export default function CategoryPage() {
         <div className="min-w-0">
 
           {/* Hero Article */}
-          {heroArticle && (
+          {heroArticle && !showStateGroupedLayout && (
             <Link
               to={getArticlePath(heroArticle)}
               style={{ textDecoration: "none", color: "inherit", display: "block" }}
@@ -624,12 +772,63 @@ export default function CategoryPage() {
 
           {/* Section Divider */}
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-[13px] font-bold text-[#D80100] uppercase tracking-[0.8px] whitespace-nowrap">Latest Articles</span>
+            <span className="text-[13px] font-bold text-[#D80100] uppercase tracking-[0.8px] whitespace-nowrap">
+              {showStateGroupedLayout ? "State-wise News" : activeStateName ? `${activeStateName} News` : "Latest Articles"}
+            </span>
             <div className="flex-1 h-px bg-[#e8e4df]" />
           </div>
 
           {/* Articles Grid */}
-          {articles.length === 0 ? (
+          {showStateGroupedLayout && stateArticleGroups.length > 0 ? (
+            <div className="flex flex-col gap-6">
+              {stateArticleGroups.map((group) => (
+                <section key={group.stateName} className="rounded-2xl bg-white p-4 shadow-[0_2px_10px_rgba(0,0,0,0.07)]">
+                  <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <h2 className="m-0 text-[17px] font-extrabold text-slate-900">{group.stateName}</h2>
+                    <Link
+                      to={`/category/${slug}?subcategory=${encodeURIComponent(group.stateName)}`}
+                      className="text-[12px] font-bold text-[#D80100] no-underline hover:underline"
+                      style={{ textDecoration: "none" }}
+                    >
+                      View State News
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {group.articles.map((article) => (
+                      <Link
+                        key={article.id || article.slug || article.title}
+                        to={getArticlePath(article)}
+                        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                      >
+                        <div className="group flex h-full gap-3 rounded-xl border border-slate-100 p-3 transition-colors hover:border-red-100 hover:bg-red-50/30">
+                          <div className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                            {article.image ? (
+                              <img src={article.image} alt={article.title} className="h-full w-full object-cover" loading="lazy" decoding="async" width={224} height={160} />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                                <Newspaper size={22} color="#ccc" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="mb-1 inline-flex text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#D80100]">
+                              {group.stateName}
+                            </span>
+                            <h3 className="m-0 line-clamp-2 text-[14px] font-bold leading-snug text-slate-900 group-hover:text-[#D80100]">
+                              {article.title}
+                            </h3>
+                            <span className="mt-2 flex items-center gap-1 text-[11px] text-slate-500">
+                              <Clock size={11} />{formatCategoryArticleDateLabel(article)}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : articles.length === 0 ? (
             <div className="text-center py-14 flex flex-col items-center">
               <Newspaper size={48} color="#ccc" />
               <p className="text-[16px] font-bold text-[#333] mt-4 mb-2">No articles yet</p>
@@ -683,7 +882,7 @@ export default function CategoryPage() {
           )}
 
           {/* Load More */}
-          {hasMore && (
+          {hasMore && !showStateGroupedLayout && (
             <div className="text-center mt-8">
               <button
                 className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white rounded-lg px-7 py-3 text-sm font-semibold transition-colors duration-200"
@@ -697,7 +896,7 @@ export default function CategoryPage() {
         </div>
 
         {/* RIGHT SIDEBAR */}
-       <aside className="flex flex-col gap-5 lg:order-last">
+        <aside className="flex flex-col gap-5 lg:order-last">
 
           <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b-2 border-red-600">

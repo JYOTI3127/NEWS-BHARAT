@@ -204,7 +204,7 @@ const FloatingShareBar = ({ article, onShare, copied }) => {
 const isPrerenderUserAgent = () => {
   if (typeof window === "undefined") return false;
   const userAgent = window.navigator?.userAgent || "";
-return /HeadlessChrome|prerender|LinkedInBot|Twitterbot|facebookexternalhit|Slackbot|WhatsApp|TelegramBot/i.test(userAgent);
+  return /HeadlessChrome|prerender|LinkedInBot|Twitterbot|facebookexternalhit|Slackbot|WhatsApp|TelegramBot/i.test(userAgent);
 };
 
 const fetchWithRetry = async (url, options, attempts = 3) => {
@@ -255,16 +255,16 @@ const getArticleReadTime = (article) => {
 
   const wordCount = getPlainText(
     article?.content_html ||
-      article?.content ||
-      article?.content_clean ||
-      article?.content_raw ||
-      article?.articleBody ||
-      article?.body ||
-      article?.subtitle ||
-      article?.summary ||
-      article?.description ||
-      article?.excerpt ||
-      ""
+    article?.content ||
+    article?.content_clean ||
+    article?.content_raw ||
+    article?.articleBody ||
+    article?.body ||
+    article?.subtitle ||
+    article?.summary ||
+    article?.description ||
+    article?.excerpt ||
+    ""
   ).split(/\s+/).filter(Boolean).length;
 
   return `${Math.max(1, Math.ceil(wordCount / 220))} min read`;
@@ -654,6 +654,16 @@ const getFaqQuestionText = (value) =>
     ""
   ));
 
+const hasOwn = (value, key) =>
+  isSchemaPlainObject(value) && Object.prototype.hasOwnProperty.call(value, key);
+
+const hasAnyOwn = (value, keys) =>
+  keys.some((key) => hasOwn(value, key));
+
+const looksLikeFaqQuestionObject = (value) =>
+  schemaHasType(value, "Question") ||
+  hasAnyOwn(value, ["question", "acceptedAnswer", "accepted_answer", "answers"]);
+
 const extractFaqItems = (input, depth = 0, seen = new Set()) => {
   if (depth > 10 || input == null) return [];
 
@@ -682,7 +692,7 @@ const extractFaqItems = (input, depth = 0, seen = new Set()) => {
     parsed.description
   );
 
-  if (question && answer) return [{ question, answer }];
+  if (looksLikeFaqQuestionObject(parsed) && question && answer) return [{ question, answer }];
 
   return FAQ_CONTENT_KEYS.flatMap((key) =>
     Object.prototype.hasOwnProperty.call(parsed, key)
@@ -1690,7 +1700,7 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
     );
     const firstTextBlock = hasGoogleSheetsMarkup
       ? Array.from(doc.body.querySelectorAll("p")).find((node) => getPlainText(node?.textContent || "").length > 1)
-      : Array.from(doc.body.querySelectorAll("p, div, span, li")).find((node) => {
+      : Array.from(doc.body.querySelectorAll("p, div, span")).find((node) => {
         if (!node) return false;
         if (node.closest("table, thead, tbody, tfoot, tr, td, th, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return false;
         if (node.closest("blockquote")) return false;
@@ -1698,7 +1708,7 @@ const ArticleBody = ({ html, className, style, contentRef }) => {
         const text = getPlainText(node.textContent || "");
         return text.length > 1;
       });
-    if (firstTextBlock) {
+    if (firstTextBlock && !firstTextBlock.closest("ul, ol")) {
       firstTextBlock.classList.add("article-dropcap-first");
       if (firstTextBlock.tagName.toLowerCase() === "span") {
         firstTextBlock.style.display = "block";
@@ -2113,14 +2123,14 @@ export default function ArticleDetails() {
       const nextSavedArticles = alreadySaved
         ? safeSavedArticles.filter((item) => String(item?.key) !== key)
         : [
-            {
-              key,
-              title: article.title,
-              path: getArticlePath(article),
-              savedAt: new Date().toISOString(),
-            },
-            ...safeSavedArticles,
-          ].slice(0, 50);
+          {
+            key,
+            title: article.title,
+            path: getArticlePath(article),
+            savedAt: new Date().toISOString(),
+          },
+          ...safeSavedArticles,
+        ].slice(0, 50);
 
       window.localStorage.setItem("n4b_saved_articles", JSON.stringify(nextSavedArticles));
       setSaved(!alreadySaved);
@@ -2552,12 +2562,12 @@ export default function ArticleDetails() {
           />
 
           <style>{`
-            .article-content .article-dropcap-first {
-              display: inline;
-              margin: 0;
-              font-size: 16px;
-              line-height: 1.7;
-            }
+.article-content .article-dropcap-first {
+  display: block;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+}
             .article-content .article-dropcap-first::first-letter {
               float: left;
               font-size: 4.4rem;

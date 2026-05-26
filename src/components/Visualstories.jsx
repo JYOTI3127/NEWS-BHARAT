@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaCirclePlay, FaCircle } from "react-icons/fa6";
 import { API_BASE } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
-const CATEGORY_SLUG = "business";
-const CATEGORY_FETCH_SLUGS = ["business", "bharat-economy"];
+const CATEGORY_SLUG = "bharat-opinions";
+const CATEGORY_FETCH_SLUGS = ["bharat-opinions"];
 const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
 const useBreakpoint = () => {
@@ -425,6 +425,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
     const [offset, setOffset] = useState(0);
     const [stories, setStories] = useState([]);
     const [storiesLoading, setStoriesLoading] = useState(true);
+    const [businessRailHeight, setBusinessRailHeight] = useState(null);
     const storiesRailRef = useRef(null);
 
     const seededStories = useMemo(() => {
@@ -486,6 +487,35 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
 
     useEffect(() => { setOffset(0); }, [VISIBLE, stories.length]);
 
+    useEffect(() => {
+        if (isMobile) {
+            setBusinessRailHeight(null);
+            return undefined;
+        }
+
+        const node = storiesRailRef.current;
+        if (!node) return undefined;
+
+        let rafId = 0;
+        const updateHeight = () => {
+            window.cancelAnimationFrame(rafId);
+            rafId = window.requestAnimationFrame(() => {
+                setBusinessRailHeight(Math.ceil(node.getBoundingClientRect().height));
+            });
+        };
+
+        updateHeight();
+        const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateHeight) : null;
+        resizeObserver?.observe(node);
+        window.addEventListener("resize", updateHeight);
+
+        return () => {
+            window.cancelAnimationFrame(rafId);
+            resizeObserver?.disconnect();
+            window.removeEventListener("resize", updateHeight);
+        };
+    }, [VISIBLE, bp, isMobile, offset, stories.length, storiesLoading]);
+
     const canPrev = offset > 0;
     const maxOffset = Math.max(0, stories.length - VISIBLE);
     const canNext = offset < maxOffset;
@@ -500,13 +530,14 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
         "laptop-l": "220px",
         "4k": "220px",
     }[bp] || "220px";
-    const scoreCardHeight = isMobile ? "360px" : is4K ? "520px" : is2K ? "450px" : "330px";
+    const fallbackBusinessPanelHeight = isMobile ? "360px" : is4K ? "520px" : is2K ? "450px" : "398px";
+    const matchedBusinessPanelHeight = businessRailHeight ? `${businessRailHeight}px` : fallbackBusinessPanelHeight;
 
     const visibleStories = stories.slice(offset, offset + VISIBLE);
     const renderedStories = isMobile ? stories : visibleStories;
-    const visibleStoryKeys = new Set(visibleStories.map((article, index) => getBusinessStoryKey(article, index)));
+    const renderedStoryKeys = new Set(renderedStories.map((article, index) => getBusinessStoryKey(article, index)));
     const businessSideArticles = stories
-        .filter((article, index) => !visibleStoryKeys.has(getBusinessStoryKey(article, index)));
+        .filter((article, index) => !renderedStoryKeys.has(getBusinessStoryKey(article, index)));
 
     const scrollStories = (direction) => {
         if (isMobile && storiesRailRef.current) {
@@ -575,14 +606,14 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                             className="font-bold text-[#111] uppercase"
                             style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px", fontFamily: "Poppins, sans-serif" }}
                         >
-                            Business
+                            Bharat Opinion
                         </span>
                         </div>
                     </div>
 
                     <div className="relative">
                         <button
-                            aria-label="Previous Business stories"
+                            aria-label="Previous Bharat Opinion stories"
                             onClick={() => scrollStories(-1)}
                             disabled={!isMobile && !canPrev}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canPrev ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:-translate-x-0.5"
@@ -721,7 +752,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                         </div>
 
                         <button
-                            aria-label="Next Business stories"
+                            aria-label="Next Bharat Opinion stories"
                             onClick={() => scrollStories(1)}
                             disabled={!isMobile && !canNext}
                             className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canNext ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:translate-x-0.5"
@@ -742,64 +773,69 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                     </div>
                 </div>
 
-                {/* Right: Business summary */}
+                {/* Right: Bharat Opinion summary */}
                 <div
-                    className="business-brief-panel flex flex-shrink-0 flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
+                    className="business-brief-wrap relative flex flex-shrink-0 flex-col"
                     style={{
                         width: is2K ? "320px" : scoreCardWidth,
                         marginTop: isMobile ? "12px" : is2K ? "30px" : "35px",
-                        height: scoreCardHeight,
+                        height: isMobile ? undefined : matchedBusinessPanelHeight,
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
                     <div className="business-brief-actions">
                         <button
                             type="button"
-                            onClick={() => navigate("/category/business")}
+                            onClick={() => navigate(`/category/${CATEGORY_SLUG}`)}
                             className="business-brief-readmore"
                         >
                             Read More
                         </button>
                     </div>
-                    {businessSideArticles.length === 0 ? (
-                        <div className="flex flex-1 items-center justify-center px-3 py-4 text-center text-[11px] font-semibold text-gray-400">
-                            Business updates coming soon.
-                        </div>
-                    ) : (
-                        <div className="business-brief-viewport min-h-0 flex-1 overflow-hidden bg-[#f8fafc]">
-                            <div className="business-brief-track flex flex-col">
-                                {businessSideArticles.map((article, index) => {
-                                    const articlePath = getArticlePath(article);
-                                    return (
-                                        <button
-                                            key={article?.id || article?.slug || index}
-                                            type="button"
-                                            onClick={() => articlePath && navigate(articlePath)}
-                                            className="business-brief-card w-full px-3 py-2.5 text-left transition"
-                                            style={{ fontFamily: "Poppins, sans-serif" }}
-                                        >
-                                            <div className="flex gap-2.5">
-                                                <span className="business-brief-bullet" aria-hidden="true" />
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className="m-0 line-clamp-2 text-[12px] font-black leading-snug text-[#111827]">
-                                                        {getArticleTitle(article)}
-                                                    </h3>
-                                                    <p className="m-0 mt-1.5 line-clamp-2 text-[10px] font-semibold leading-[1.45] text-gray-500">
-                                                        {getArticleSummary(article, 115)}
-                                                    </p>
-                                                    {formatArticleDateTime(article) ? (
-                                                        <p className="business-brief-date">
-                                                            {formatArticleDateTime(article)}
-                                                        </p>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                    <div
+                        className="business-brief-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
+                        style={{ height: isMobile ? fallbackBusinessPanelHeight : undefined }}
+                    >
+                        {businessSideArticles.length === 0 ? (
+                            <div className="flex flex-1 items-center justify-center px-3 py-4 text-center text-[11px] font-semibold text-gray-400">
+                                Bharat Opinion updates coming soon.
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="business-brief-viewport min-h-0 flex-1 overflow-hidden bg-[#f8fafc]">
+                                <div className="business-brief-track flex flex-col">
+                                    {businessSideArticles.map((article, index) => {
+                                        const articlePath = getArticlePath(article);
+                                        return (
+                                            <button
+                                                key={article?.id || article?.slug || index}
+                                                type="button"
+                                                onClick={() => articlePath && navigate(articlePath)}
+                                                className="business-brief-card w-full px-3 py-2.5 text-left transition"
+                                                style={{ fontFamily: "Poppins, sans-serif" }}
+                                            >
+                                                <div className="flex gap-2.5">
+                                                    <span className="business-brief-bullet" aria-hidden="true" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="m-0 line-clamp-2 text-[12px] font-black leading-snug text-[#111827]">
+                                                            {getArticleTitle(article)}
+                                                        </h3>
+                                                        <p className="m-0 mt-1.5 line-clamp-2 text-[10px] font-semibold leading-[1.45] text-gray-500">
+                                                            {getArticleSummary(article, 115)}
+                                                        </p>
+                                                        {formatArticleDateTime(article) ? (
+                                                            <p className="business-brief-date">
+                                                                {formatArticleDateTime(article)}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
             </div>

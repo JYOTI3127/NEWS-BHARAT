@@ -148,7 +148,7 @@ function ContactForm() {
     const timer = window.setTimeout(() => {
       setSubmitted(false);
       setSubmitResult(null);
-    }, 1800);
+    }, 5000);
 
     return () => window.clearTimeout(timer);
   }, [submitted]);
@@ -207,24 +207,14 @@ function ContactForm() {
   return (
     <div className="ct-form-wrap">
       {submitted && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "12px 14px",
-            borderRadius: 8,
-            background: "#eefaf4",
-            color: "#146c43",
-            fontSize: 13,
-            lineHeight: 1.5,
-            border: "1px solid #bfe8d2",
-          }}
-        >
-          <CheckCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>
-            {submitResult?.message || "Message sent successfully. The form is ready for another message."}
+        <div className="ct-submit-success" role="status" aria-live="polite">
+          <span className="ct-submit-success-icon">
+            <CheckCircle size={20} />
           </span>
+          <div className="ct-submit-success-copy">
+            <strong>Message received</strong>
+            <span>{submitResult?.message || "Thank you for reaching out. Our team will get back to you soon."}</span>
+          </div>
         </div>
       )}
       <div className="ct-form-row">

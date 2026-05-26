@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Clock3, RefreshCw } from "lucide-react";
 import { getArticlePath } from "../lib/articleUrl";
+import { getArticleDateValue } from "../lib/api";
 
 const DESK_STATUS_ITEMS = [
   "Newest headlines are shown first",
@@ -11,7 +11,11 @@ const DESK_STATUS_ITEMS = [
 ];
 
 const getTimeLabel = (article) => {
-  const value = article?.published_at || article?.updated_at || article?.created_at || article?.date;
+  const displayValue = String(article?.updated_display || "").trim();
+  const displayTime = displayValue.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/i)?.[0];
+  if (displayTime) return displayTime.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+
+  const value = getArticleDateValue(article);
   if (!value) return "";
 
   try {
@@ -28,7 +32,25 @@ const getTimeLabel = (article) => {
   }
 };
 
-export default function LatestUpdatesRail({ articles = [] }) {
+const getTickerText = (article) =>
+  String(
+    article?.title ||
+      article?.headline ||
+      article?.summary ||
+      article?.subtitle ||
+      article?.sub_heading ||
+      article?.subheading ||
+      article?.description ||
+      article?.excerpt ||
+      ""
+  )
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export default function LatestUpdatesRail({ articles = [], tickerArticles = [] }) {
   const updates = useMemo(() => {
     const list = (Array.isArray(articles) ? articles : [])
       .filter((article) => article?.title || article?.headline)
@@ -43,42 +65,45 @@ export default function LatestUpdatesRail({ articles = [] }) {
     return list;
   }, [articles]);
 
+  const tickerItems = useMemo(() => {
+    const seen = new Set();
+    const items = [];
+
+    (Array.isArray(tickerArticles) ? tickerArticles : []).forEach((article) => {
+      const text = getTickerText(article);
+      const key = text.toLowerCase();
+      if (!text || seen.has(key)) return;
+      seen.add(key);
+      items.push(text);
+    });
+
+    return items.length > 0 ? items.slice(0, 6) : DESK_STATUS_ITEMS;
+  }, [tickerArticles]);
+  const tickerTrackItems = useMemo(
+    () => (tickerItems.length > 1 ? [...tickerItems, ...tickerItems] : tickerItems),
+    [tickerItems]
+  );
+
   if (updates.length === 0) return null;
-  const latestTime = updates[0]?.time || "Latest";
 
   return (
     <section className="latest-updates-rail" aria-labelledby="latest-updates-title">
       <div className="latest-updates-rail__signal" aria-hidden="true" />
-      <div className="latest-updates-rail__header">
-        <div>
-          <span className="latest-updates-rail__eyebrow">
-            <span className="latest-updates-rail__live-dot" aria-hidden="true" />
-            <Clock3 size={13} />
-            Latest News Wire
-            <span className="latest-updates-rail__bars" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </span>
-          </span>
-          <h2 id="latest-updates-title">Latest News</h2>
-        </div>
-        <span className="latest-updates-rail__updated">Updated {latestTime}</span>
-        <button
-          type="button"
-          className="latest-updates-rail__refresh"
-          aria-label="Refresh latest updates"
-          onClick={() => window.location.reload()}
-        >
-          <RefreshCw size={14} />
-        </button>
-      </div>
+      <h2 id="latest-updates-title" className="sr-only">Latest News</h2>
 
       <div className="latest-updates-rail__ticker" aria-label="Latest updates status ticker">
-        <span className="latest-updates-rail__ticker-label">Just In</span>
+        <span className="latest-updates-rail__ticker-label">
+          <span className="latest-updates-rail__ticker-live-dot" aria-hidden="true" />
+          <span>Live</span>
+          <span className="latest-updates-rail__ticker-live-bars" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </span>
         <div className="latest-updates-rail__ticker-window">
-          <div className="latest-updates-rail__ticker-track">
-            {[...DESK_STATUS_ITEMS, ...DESK_STATUS_ITEMS].map((item, index) => (
+          <div className={`latest-updates-rail__ticker-track${tickerItems.length === 1 ? " latest-updates-rail__ticker-track--single" : ""}`}>
+            {tickerTrackItems.map((item, index) => (
               <span className="latest-updates-rail__ticker-item" key={`${item}-${index}`}>
                 {item}
               </span>

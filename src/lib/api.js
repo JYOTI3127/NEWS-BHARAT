@@ -182,6 +182,12 @@ export const fetchHomepageLatestNewsCurrent = () =>
 export const getLatestNewsArticlesFromResponse = (data) =>
   Array.isArray(data?.articles) ? data.articles : getListFromResponse(data);
 
+export const fetchLiveUpdates = () =>
+  fetchJson("/live-updates/");
+
+export const getLiveUpdatesFromResponse = (data) =>
+  getListFromResponse(data).filter((item) => item?.is_active !== false);
+
 // ─── FreshPopularShowcase ─────────────────────────────────────────────────────
 // Endpoint: GET /homepage/latest_news/current/
 // Response: { slot, display_count: 12, articles: [...] }

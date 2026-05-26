@@ -7,6 +7,7 @@ const SHARE_TITLE = "News4Bharat Newsletter";
 const SHARE_TEXT = "News4Bharat newsletter section dekhne ke liye yeh link open karein.";
 
 export default function Newsletter() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
@@ -45,6 +46,7 @@ export default function Newsletter() {
   const handleSubmit = () => {
     if (!email.trim()) return;
     setSubmitted(true);
+    setName("");
     setEmail("");
   };
 
@@ -90,15 +92,15 @@ export default function Newsletter() {
             </div>
 
             <p className="text-white text-xs min-[426px]:text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base font-medium tracking-widest uppercase self-start m-0">
-              Our Newsletter
+              News4Bharat Daily Brief
             </p>
 
-            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[2rem] min-[1441px]:text-[2.1rem] min-[1800px]:text-[1.9rem] leading-tight m-0 self-start">
-              Subscribe To Our Newsletter!
+            <h2 className="text-white font-bold text-xl min-[376px]:text-2xl min-[769px]:text-3xl min-[1025px]:text-[1.5rem] min-[1441px]:text-[2.1rem] min-[1800px]:text-[1.9rem] leading-tight m-0 self-start">
+              Subscribe to News4Bharat Daily Brief
             </h2>
 
             <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base min-[1441px]:text-[1rem] min-[1800px]:text-[1.06rem] leading-relaxed min-[1441px]:leading-7 m-0 self-start max-w-[62ch]">
-              Sign up for our weekly newsletter to stay informed about exciting offers, our latest products, and industry updates.
+              Get the top Bharat stories, explainers and sharp analysis in your inbox every weekly.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -142,27 +144,43 @@ export default function Newsletter() {
             </div>
           </div>
 
-          <div className="flex flex-col min-[426px]:flex-row items-stretch min-[426px]:items-center gap-3 min-[1441px]:gap-4 min-[1025px]:min-w-[380px] min-[1441px]:min-w-[520px] min-[1800px]:min-w-[620px]">
+          <div className="flex flex-col items-stretch gap-3 min-[1441px]:gap-4 min-[1025px]:min-w-[420px] min-[1441px]:min-w-[560px] min-[1800px]:min-w-[660px]">
             {submitted ? (
               <p className="text-[#7dd3a8] text-sm min-[769px]:text-base min-[1441px]:text-[1rem] font-medium m-0">
                 Thank you for subscribing!
               </p>
             ) : (
               <>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="
-                    flex-1 bg-white/10 border border-white
-                    rounded-full px-5 py-3 min-[769px]:py-3.5 min-[1441px]:px-6 min-[1441px]:py-3.5 min-[1800px]:px-7 min-[1800px]:py-4 max-[425px]:px-4
-                    text-white text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base placeholder:text-white/40
-                    outline-none font-[Poppins,sans-serif]
-                    focus:border-blue-400 transition-colors duration-200
-                  "
-                />
+                <div className="grid grid-cols-1 min-[640px]:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="
+                      bg-white/10 border border-white/80
+                      rounded-full px-5 py-3 min-[769px]:py-3.5 min-[1441px]:px-6 min-[1441px]:py-3.5 min-[1800px]:px-7 min-[1800px]:py-4 max-[425px]:px-4
+                      text-white text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base placeholder:text-white/45
+                      outline-none font-[Poppins,sans-serif]
+                      focus:border-blue-300 transition-colors duration-200
+                    "
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="
+                      bg-white/10 border border-white/80
+                      rounded-full px-5 py-3 min-[769px]:py-3.5 min-[1441px]:px-6 min-[1441px]:py-3.5 min-[1800px]:px-7 min-[1800px]:py-4 max-[425px]:px-4
+                      text-white text-sm min-[1441px]:text-[0.95rem] min-[1800px]:text-base placeholder:text-white/45
+                      outline-none font-[Poppins,sans-serif]
+                      focus:border-blue-300 transition-colors duration-200
+                    "
+                  />
+                </div>
                 <button
+                  type="button"
                   onClick={handleSubmit}
                   className="
                     bg-blue-500 hover:bg-blue-600 active:scale-95
@@ -173,7 +191,7 @@ export default function Newsletter() {
                     font-[Poppins,sans-serif]
                   "
                 >
-                  Subscribe
+                  Get the Brief
                 </button>
               </>
             )}

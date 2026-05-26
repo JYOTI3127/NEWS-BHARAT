@@ -5,7 +5,9 @@ import {
   fetchPaginatedArticles,
   fetchCategories,
   fetchFreshPopularShowcase,
+  fetchLiveUpdates,
   getFreshPopularArticlesFromResponse,
+  getLiveUpdatesFromResponse,
 } from '../lib/api';
 
 import BreakingNewsSection from '../components/BreakingNewsSection';
@@ -24,7 +26,9 @@ const Newsletter = lazy(() => import('../components/Newsletter'));
 const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
 const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
 const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
-const EDITORIAL_CATEGORY_SLUGS = ['bharat-opinions'];
+const BREAKING_NEWS_SLUGS = ['breaking-news'];
+const EDITORIAL_CATEGORY_SLUGS = ['business', 'bharat-economy'];
+const LATEST_NEWS_TAG = 'Us-Iran War';
 
 const getPrerenderData = () => {
   if (typeof window === 'undefined') return {};
@@ -86,6 +90,60 @@ const dedupeArticleList = (articles) => {
   });
 };
 
+const normalizeTag = (value) =>
+  String(value || '')
+    .replace(/\+/g, ' ')
+    .replace(/^#+/, '')
+    .replace(/&/g, ' and ')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const normalizeTagKey = (value) =>
+  normalizeTag(value).replace(/[^a-z0-9]+/g, '');
+
+const getArticleTags = (article) => {
+  const tags = [];
+  const pushTokens = (value) => {
+    if (!value) return;
+    String(value)
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .forEach((tag) => tags.push(tag));
+  };
+
+  if (Array.isArray(article?.tags_list)) {
+    article.tags_list
+      .map((tag) =>
+        typeof tag === 'string'
+          ? tag.trim()
+          : String(tag?.name || tag?.tag || tag?.title || '').trim()
+      )
+      .filter(Boolean)
+      .forEach((tag) => tags.push(tag));
+  }
+
+  pushTokens(article?.tags);
+  pushTokens(article?.focus_keyword);
+  pushTokens(article?.secondary_keywords);
+
+  return Array.from(new Set(tags));
+};
+
+const filterArticlesByTag = (articles, tagName) => {
+  const normalizedTag = normalizeTag(tagName);
+  const tagFingerprint = normalizeTagKey(tagName);
+
+  return (Array.isArray(articles) ? articles : []).filter((article) =>
+    getArticleTags(article).some((tag) => {
+      if (normalizeTag(tag) === normalizedTag) return true;
+      return normalizeTagKey(tag) === tagFingerprint;
+    })
+  );
+};
+
 const fetchArticlesForCategorySlugs = async (slugs) => {
   const settled = await Promise.allSettled(
     slugs.map((slug) =>
@@ -96,6 +154,11 @@ const fetchArticlesForCategorySlugs = async (slugs) => {
     result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
   );
   return dedupeArticleList(combined);
+};
+
+const fetchArticlesForTag = async (tagName) => {
+  const articles = await fetchPaginatedArticles({ limit: 200, maxPages: 10, full: true });
+  return dedupeArticleList(filterArticlesByTag(articles, tagName));
 };
 
 const WhatsAppFloatingIcon = () => (
@@ -271,6 +334,30 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: latestNewsTagArticlesData, isLoading: latestNewsTagLoading } = useQuery({
+    queryKey: ['latest-updates-tag-home', LATEST_NEWS_TAG],
+    queryFn: () => fetchArticlesForTag(LATEST_NEWS_TAG),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: breakingArticlesData, isLoading: breakingLoading } = useQuery({
+    queryKey: ['latest-updates-breaking-home'],
+    queryFn: () => fetchArticlesForCategorySlugs(BREAKING_NEWS_SLUGS),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: liveUpdatesData, isLoading: liveUpdatesLoading } = useQuery({
+    queryKey: ['live-updates-home'],
+    queryFn: fetchLiveUpdates,
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const q4Articles = React.useMemo(
     () => (Array.isArray(q4ArticlesData) ? q4ArticlesData : []),
     [q4ArticlesData]
@@ -279,6 +366,21 @@ const Home = () => {
   const editorialArticles = React.useMemo(
     () => (Array.isArray(editorialArticlesData) ? editorialArticlesData : []),
     [editorialArticlesData]
+  );
+
+  const latestNewsTagArticles = React.useMemo(
+    () => (Array.isArray(latestNewsTagArticlesData) ? latestNewsTagArticlesData : []),
+    [latestNewsTagArticlesData]
+  );
+
+  const breakingArticles = React.useMemo(
+    () => (Array.isArray(breakingArticlesData) ? breakingArticlesData : []),
+    [breakingArticlesData]
+  );
+
+  const liveUpdates = React.useMemo(
+    () => getLiveUpdatesFromResponse(liveUpdatesData),
+    [liveUpdatesData]
   );
 
   const renderQ4Section = React.useCallback(() => (
@@ -302,6 +404,9 @@ const Home = () => {
     !freshPopularLoading &&
     !q4Loading &&
     !editorialLoading &&
+    !latestNewsTagLoading &&
+    !breakingLoading &&
+    !liveUpdatesLoading &&
     allArticles.length > 0 &&
     freshPopularArticles.length > 0;
 
@@ -364,22 +469,11 @@ const Home = () => {
           <WhatsAppFloatingIcon />
         </a>
 
-        <AdvertisementSlot
-          page="home"
-          placement="home_top"
-          variant="leaderboard"
-          className="home-top-ad home-top-ad--desktop"
-          minWidth={768}
-        />
-        <AdvertisementSlot
-          page="home"
-          placement="home_top_mobile"
-          variant="mobileStrip"
-          className="home-top-ad home-top-ad--mobile"
-          maxWidth={768}
-        />
         <div className="home-section-align home-section-align--latest-updates">
-          <LatestUpdatesRail articles={allArticles.length > 0 ? allArticles : freshPopularArticles} />
+          <LatestUpdatesRail
+            articles={latestNewsTagArticles.length > 0 ? latestNewsTagArticles : allArticles}
+            tickerArticles={liveUpdates.length > 0 ? liveUpdates : breakingArticles}
+          />
         </div>
 
         <div className="home-section-align home-section-align--fresh-popular">
@@ -397,9 +491,9 @@ const Home = () => {
             <BreakingNewsSection
               articles={editorialArticles}
               mode="q4"
-              sectionEyebrow="Bharat Opinion"
-              sectionTitle="Editorials"
-              viewAllPath="/category/bharat-opinions"
+              sectionEyebrow="Business"
+              sectionTitle="Business"
+              viewAllPath="/category/business"
               sectionId="editorials-heading"
             />
           </Profiler>

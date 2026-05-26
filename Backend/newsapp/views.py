@@ -4712,7 +4712,7 @@ def newsletter_view(request):
 import logging
 from django.core.mail import EmailMultiAlternatives, get_connection
 from email.mime.image import MIMEImage
-from email.utils import formataddr
+from email.utils import formataddr, make_msgid
 from datetime import datetime
 from urllib.parse import quote
 from django.core import signing
@@ -4884,6 +4884,17 @@ def _get_newsletter_subscribe_base_url():
 
 def _get_newsletter_site_home_url():
     return str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
+
+
+def _get_newsletter_message_id_domain():
+    configured_url = str(
+        getattr(settings, 'NEWSLETTER_SITE_URL', '')
+        or getattr(settings, 'SEO_SITE_URL', '')
+        or 'https://news4bharat.com'
+    ).strip()
+    parsed = urlparse(configured_url if '://' in configured_url else f'https://{configured_url}')
+    host = (parsed.hostname or 'news4bharat.com').strip().lower()
+    return host or 'news4bharat.com'
 
 
 def _render_subscribe_form_html(request, email='', error=''):
@@ -5083,6 +5094,7 @@ Website: https://news4bharat.com
         'X-SIB-Track-Clicks': '0',
         'X-SIB-Track-Opens': '0',
     }
+    message_id_domain = _get_newsletter_message_id_domain()
     transport = _newsletter_transport_config()
     send_provider = transport['provider']
     newsletter_log = None
@@ -5154,6 +5166,7 @@ Website: https://news4bharat.com
                             **brevo_no_tracking_headers,
                         },
                     )
+                    msg.extra_headers['Message-ID'] = make_msgid(domain=message_id_domain)
                     if inline_images:
                         msg.mixed_subtype = 'related'
                     msg.attach_alternative(personalized_html, "text/html")

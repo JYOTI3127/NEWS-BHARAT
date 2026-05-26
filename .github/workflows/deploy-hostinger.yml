@@ -109,7 +109,7 @@ jobs:
 
       - name: Deploy build output to Hostinger over SSH
         if: steps.dispatch_mode.outputs.should_build == 'true'
-        uses: appleboy/scp-action@v1
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}

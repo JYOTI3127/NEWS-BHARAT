@@ -4861,33 +4861,15 @@ def _newsletter_transport_config():
             'smtp_use_tls': bool(getattr(settings, 'MAILERCLOUD_SMTP_USE_TLS', True)),
             'smtp_user': getattr(settings, 'MAILERCLOUD_SMTP_USER', '') or getattr(settings, 'NEWSLETTER_SMTP_USER', ''),
             'smtp_password': getattr(settings, 'MAILERCLOUD_SMTP_PASSWORD', '') or getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', ''),
-            'brevo_api_key': '',
-            'use_brevo_api': False,
         }
 
-    if provider in {'brevo_smtp'}:
-        return {
-            'provider': 'brevo_smtp',
-            'smtp_host': getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', ''),
-            'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or getattr(settings, 'EMAIL_PORT', 587) or 587),
-            'smtp_use_tls': bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True)),
-            'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', '') or getattr(settings, 'EMAIL_HOST_USER', ''),
-            'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '') or getattr(settings, 'EMAIL_HOST_PASSWORD', ''),
-            'brevo_api_key': '',
-            'use_brevo_api': False,
-        }
-
-    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
-    use_brevo_api = bool(brevo_api_key) and provider in {'brevo', 'brevo_api'}
     return {
-        'provider': 'brevo_api' if use_brevo_api else 'newsletter_smtp',
+        'provider': 'brevo_smtp' if provider == 'brevo_smtp' else 'newsletter_smtp',
         'smtp_host': getattr(settings, 'NEWSLETTER_SMTP_HOST', '') or getattr(settings, 'EMAIL_HOST', ''),
-        'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or 587),
+        'smtp_port': int(getattr(settings, 'NEWSLETTER_SMTP_PORT', 587) or getattr(settings, 'EMAIL_PORT', 587) or 587),
         'smtp_use_tls': bool(getattr(settings, 'NEWSLETTER_SMTP_USE_TLS', True)),
         'smtp_user': getattr(settings, 'NEWSLETTER_SMTP_USER', '') or getattr(settings, 'EMAIL_HOST_USER', ''),
         'smtp_password': getattr(settings, 'NEWSLETTER_SMTP_PASSWORD', '') or getattr(settings, 'EMAIL_HOST_PASSWORD', ''),
-        'brevo_api_key': brevo_api_key,
-        'use_brevo_api': use_brevo_api,
     }
 
 
@@ -4902,61 +4884,6 @@ def _get_newsletter_subscribe_base_url():
 
 def _get_newsletter_site_home_url():
     return str(getattr(settings, 'NEWSLETTER_SITE_URL', '') or getattr(settings, 'SEO_SITE_URL', '') or 'https://news4bharat.com').rstrip('/')
-
-
-def _send_newsletter_via_brevo_api(
-    *,
-    email,
-    subject,
-    sender_email,
-    plain_text,
-    personalized_html,
-    brevo_api_key,
-    newsletter_log,
-    trace_id,
-    is_test,
-    brevo_no_tracking_headers,
-):
-    payload = {
-        'sender': {
-            'name': getattr(settings, 'NEWSLETTER_FROM_NAME', 'News4Bharat'),
-            'email': sender_email,
-        },
-        'to': [{'email': email}],
-        'subject': subject,
-        'htmlContent': personalized_html,
-        'textContent': plain_text,
-        'trackOpens': False,
-        'trackClicks': False,
-        'headers': {
-            'X-News4Bharat-Newsletter-Trace': trace_id,
-            'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
-            **brevo_no_tracking_headers,
-        },
-        'tags': ['newsletter', 'test' if is_test else 'newsletter-send'],
-    }
-    response = requests.post(
-        'https://api.brevo.com/v3/smtp/email',
-        headers={
-            'accept': 'application/json',
-            'api-key': brevo_api_key,
-            'content-type': 'application/json',
-        },
-        json=payload,
-        timeout=30,
-    )
-    try:
-        response_data = response.json()
-    except Exception:
-        response_data = {'raw': response.text}
-    if not 200 <= response.status_code < 300:
-        return False, {
-            'email': email,
-            'error': response_data,
-            'status_code': response.status_code,
-        }, ''
-    message_id = response_data.get('messageId') or response_data.get('message_id') or ''
-    return True, None, message_id
 
 
 def _render_subscribe_form_html(request, email='', error=''):
@@ -5157,8 +5084,6 @@ Website: https://news4bharat.com
         'X-SIB-Track-Opens': '0',
     }
     transport = _newsletter_transport_config()
-    brevo_api_key = transport['brevo_api_key']
-    use_brevo_api = transport['use_brevo_api']
     send_provider = transport['provider']
     newsletter_log = None
     try:
@@ -5175,251 +5100,81 @@ Website: https://news4bharat.com
     except Exception as e:
         logger.warning(f"Could not create newsletter history: {e}")
 
-    if use_brevo_api:
-        for email in recipients:
-            try:
-                personalized_html = html_content.replace(
-                    NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                    _build_subscribe_url(request, email),
-                )
-                personalized_html = personalized_html.replace(
-                    NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                    _get_newsletter_subscribe_base_url(),
-                )
-                if not debug_urls['images'] and not debug_urls['links']:
-                    debug_urls = _newsletter_html_debug_urls(personalized_html)
-                accepted, error_payload, message_id = _send_newsletter_via_brevo_api(
-                    email=email,
-                    subject=subject,
-                    sender_email=sender_email,
-                    plain_text=plain_text,
-                    personalized_html=personalized_html,
-                    brevo_api_key=brevo_api_key,
-                    newsletter_log=newsletter_log,
-                    trace_id=trace_id,
-                    is_test=is_test,
-                    brevo_no_tracking_headers=brevo_no_tracking_headers,
-                )
-                if not accepted:
-                    failed.append(error_payload)
-                    logger.error(f"Newsletter Brevo API failed for {email}: {error_payload}")
-                    continue
-                success.append(email)
-                brevo_message_ids.append({'email': email, 'message_id': message_id})
-                logger.info(f"Newsletter Brevo API accepted for {email}: {message_id}")
-            except Exception as e:
-                failed.append({'email': email, 'error': str(e)})
-                logger.error(f"Newsletter Brevo API exception for {email}: {e}")
-    else:
-        smtp_host = transport['smtp_host']
-        smtp_port = transport['smtp_port']
-        smtp_use_tls = transport['smtp_use_tls']
-        smtp_user = transport['smtp_user']
-        smtp_password = transport['smtp_password']
+    smtp_host = transport['smtp_host']
+    smtp_port = transport['smtp_port']
+    smtp_use_tls = transport['smtp_use_tls']
+    smtp_user = transport['smtp_user']
+    smtp_password = transport['smtp_password']
 
-        if not smtp_host or not smtp_user or not smtp_password:
-            failed = [{
-                'email': email,
-                'error': (
-                    'Newsletter SMTP is not configured. '
-                    'Please set Brevo SMTP credentials in EMAIL_HOST/USER/PASSWORD '
-                    'or NEWSLETTER_SMTP_HOST/USER/PASSWORD.'
-                ),
-            } for email in recipients]
-            logger.error("Newsletter SMTP is not configured")
-        else:
-            connection = get_connection(
-                host=smtp_host,
-                port=smtp_port,
-                username=smtp_user,
-                password=smtp_password,
-                use_tls=smtp_use_tls,
-                fail_silently=False,
-            )
-            effective_provider = send_provider
-            using_brevo_api_fallback = False
-            try:
-                connection.open()
-                for index, email in enumerate(recipients):
-                    try:
-                        personalized_html = html_content.replace(
-                            NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                            _build_subscribe_url(request, email),
-                        )
-                        personalized_html = personalized_html.replace(
-                            NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                            _get_newsletter_subscribe_base_url(),
-                        )
-                        if not debug_urls['images'] and not debug_urls['links']:
-                            debug_urls = _newsletter_html_debug_urls(personalized_html)
-                        inline_images = []
-                        if bool(getattr(settings, 'NEWSLETTER_EMBED_IMAGES', False)):
-                            personalized_html, inline_images = _embed_newsletter_images(personalized_html)
-                        msg = EmailMultiAlternatives(
-                            subject=subject,
-                            body=plain_text,
-                            from_email=from_email,
-                            to=[email],
-                            connection=connection,
-                            headers={
-                                'X-News4Bharat-Newsletter-Trace': trace_id,
-                                'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
-                                **brevo_no_tracking_headers,
-                            },
-                        )
-                        if inline_images:
-                            msg.mixed_subtype = 'related'
-                        msg.attach_alternative(personalized_html, "text/html")
-                        for inline_image in inline_images:
-                            msg.attach(inline_image)
-                        msg.send(fail_silently=False)
-                        success.append(email)
-                        logger.info(f"Newsletter sent to {email}")
-                    except Exception as e:
-                        error_text = str(e)
-                        should_retry_via_api = (
-                            send_provider == 'brevo_smtp'
-                            and bool(brevo_api_key)
-                            and 'maximum sending limit exceeded' in error_text.lower()
-                        )
-                        if should_retry_via_api:
-                            try:
-                                accepted, error_payload, message_id = _send_newsletter_via_brevo_api(
-                                    email=email,
-                                    subject=subject,
-                                    sender_email=sender_email,
-                                    plain_text=plain_text,
-                                    personalized_html=personalized_html,
-                                    brevo_api_key=brevo_api_key,
-                                    newsletter_log=newsletter_log,
-                                    trace_id=trace_id,
-                                    is_test=is_test,
-                                    brevo_no_tracking_headers=brevo_no_tracking_headers,
-                                )
-                                if accepted:
-                                    using_brevo_api_fallback = True
-                                    effective_provider = 'brevo_smtp+brevo_api'
-                                    success.append(email)
-                                    brevo_message_ids.append({'email': email, 'message_id': message_id})
-                                    logger.warning(
-                                        f"Newsletter SMTP limit hit for {email}; switching remaining recipients to Brevo API. "
-                                        f"Current resend succeeded: {message_id}"
-                                    )
-                                    remaining_recipients = recipients[index + 1:]
-                                    for remaining_email in remaining_recipients:
-                                        try:
-                                            remaining_html = html_content.replace(
-                                                NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                                                _build_subscribe_url(request, remaining_email),
-                                            )
-                                            remaining_html = remaining_html.replace(
-                                                NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                                                _get_newsletter_subscribe_base_url(),
-                                            )
-                                            accepted, error_payload, message_id = _send_newsletter_via_brevo_api(
-                                                email=remaining_email,
-                                                subject=subject,
-                                                sender_email=sender_email,
-                                                plain_text=plain_text,
-                                                personalized_html=remaining_html,
-                                                brevo_api_key=brevo_api_key,
-                                                newsletter_log=newsletter_log,
-                                                trace_id=trace_id,
-                                                is_test=is_test,
-                                                brevo_no_tracking_headers=brevo_no_tracking_headers,
-                                            )
-                                            if accepted:
-                                                success.append(remaining_email)
-                                                brevo_message_ids.append({'email': remaining_email, 'message_id': message_id})
-                                                logger.info(
-                                                    f"Newsletter Brevo API accepted for {remaining_email}: {message_id}"
-                                                )
-                                            else:
-                                                failed.append(error_payload)
-                                                logger.error(
-                                                    f"Newsletter Brevo API failed for {remaining_email}: {error_payload}"
-                                                )
-                                        except Exception as remaining_error:
-                                            failed.append({'email': remaining_email, 'error': str(remaining_error)})
-                                            logger.error(
-                                                f"Newsletter Brevo API exception for {remaining_email}: {remaining_error}"
-                                            )
-                                    break
-                                failed.append(error_payload)
-                                logger.error(
-                                    f"Newsletter SMTP limit hit for {email}; Brevo API fallback failed: {error_payload}"
-                                )
-                                continue
-                            except Exception as fallback_error:
-                                failed.append({
-                                    'email': email,
-                                    'error': f'{error_text} | Brevo API fallback failed: {fallback_error}',
-                                })
-                                logger.error(
-                                    f"Newsletter SMTP limit hit for {email}; Brevo API fallback exception: {fallback_error}"
-                                )
-                                continue
-                        failed.append({'email': email, 'error': error_text})
-                        logger.error(f"Newsletter failed for {email}: {e}")
-            except Exception as e:
-                error_text = str(e)
-                should_retry_via_api = (
-                    send_provider == 'brevo_smtp'
-                    and bool(brevo_api_key)
-                    and 'maximum sending limit exceeded' in error_text.lower()
-                )
-                if should_retry_via_api:
-                    using_brevo_api_fallback = True
-                    effective_provider = 'brevo_smtp+brevo_api'
-                    logger.warning(
-                        'Newsletter SMTP connection limit hit before send loop; '
-                        'switching recipients to Brevo API fallback.'
-                    )
-                    for email in recipients:
-                        try:
-                            personalized_html = html_content.replace(
-                                NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
-                                _build_subscribe_url(request, email),
-                            )
-                            personalized_html = personalized_html.replace(
-                                NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
-                                _get_newsletter_subscribe_base_url(),
-                            )
-                            accepted, error_payload, message_id = _send_newsletter_via_brevo_api(
-                                email=email,
-                                subject=subject,
-                                sender_email=sender_email,
-                                plain_text=plain_text,
-                                personalized_html=personalized_html,
-                                brevo_api_key=brevo_api_key,
-                                newsletter_log=newsletter_log,
-                                trace_id=trace_id,
-                                is_test=is_test,
-                                brevo_no_tracking_headers=brevo_no_tracking_headers,
-                            )
-                            if accepted:
-                                success.append(email)
-                                brevo_message_ids.append({'email': email, 'message_id': message_id})
-                                logger.info(f"Newsletter Brevo API accepted for {email}: {message_id}")
-                            else:
-                                failed.append(error_payload)
-                                logger.error(f"Newsletter Brevo API failed for {email}: {error_payload}")
-                        except Exception as fallback_error:
-                            failed.append({'email': email, 'error': str(fallback_error)})
-                            logger.error(
-                                f"Newsletter Brevo API exception for {email}: {fallback_error}"
-                            )
-                else:
-                    if not success and not failed:
-                        failed = [{'email': email, 'error': error_text} for email in recipients]
-                    logger.error(f"Newsletter SMTP connection failed: {e}")
-            finally:
+    if not smtp_host or not smtp_user or not smtp_password:
+        failed = [{
+            'email': email,
+            'error': (
+                'Newsletter SMTP is not configured. '
+                'Please set Brevo SMTP credentials in EMAIL_HOST/USER/PASSWORD '
+                'or NEWSLETTER_SMTP_HOST/USER/PASSWORD.'
+            ),
+        } for email in recipients]
+        logger.error("Newsletter SMTP is not configured")
+    else:
+        connection = get_connection(
+            host=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            use_tls=smtp_use_tls,
+            fail_silently=False,
+        )
+        try:
+            connection.open()
+            for email in recipients:
                 try:
-                    connection.close()
-                except Exception:
-                    pass
-            if using_brevo_api_fallback:
-                send_provider = effective_provider
+                    personalized_html = html_content.replace(
+                        NEWSLETTER_SUBSCRIBE_URL_PLACEHOLDER,
+                        _build_subscribe_url(request, email),
+                    )
+                    personalized_html = personalized_html.replace(
+                        NEWSLETTER_SUBSCRIBE_FORM_URL_PLACEHOLDER,
+                        _get_newsletter_subscribe_base_url(),
+                    )
+                    if not debug_urls['images'] and not debug_urls['links']:
+                        debug_urls = _newsletter_html_debug_urls(personalized_html)
+                    inline_images = []
+                    if bool(getattr(settings, 'NEWSLETTER_EMBED_IMAGES', False)):
+                        personalized_html, inline_images = _embed_newsletter_images(personalized_html)
+                    msg = EmailMultiAlternatives(
+                        subject=subject,
+                        body=plain_text,
+                        from_email=from_email,
+                        to=[email],
+                        connection=connection,
+                        headers={
+                            'X-News4Bharat-Newsletter-Trace': trace_id,
+                            'X-News4Bharat-Newsletter-Log': str(getattr(newsletter_log, 'id', '') or ''),
+                            **brevo_no_tracking_headers,
+                        },
+                    )
+                    if inline_images:
+                        msg.mixed_subtype = 'related'
+                    msg.attach_alternative(personalized_html, "text/html")
+                    for inline_image in inline_images:
+                        msg.attach(inline_image)
+                    msg.send(fail_silently=False)
+                    success.append(email)
+                    logger.info(f"Newsletter sent to {email}")
+                except Exception as e:
+                    failed.append({'email': email, 'error': str(e)})
+                    logger.error(f"Newsletter failed for {email}: {e}")
+        except Exception as e:
+            error_text = str(e)
+            if not success and not failed:
+                failed = [{'email': email, 'error': error_text} for email in recipients]
+            logger.error(f"Newsletter SMTP connection failed: {e}")
+        finally:
+            try:
+                connection.close()
+            except Exception:
+                pass
  
     try:
         if newsletter_log:
@@ -5472,9 +5227,8 @@ Website: https://news4bharat.com
         'skipped_recipients': skipped_recipient_count,
         'warning': recipient_limit_warning,
         'note': (
-            'Brevo API accepted means Brevo created a message id. '
-            'Delivered/bounced updates require Brevo webhook events. '
-            'If provider is brevo_smtp+brevo_api, SMTP limit was hit and the remaining recipients were retried via Brevo API.'
+            'SMTP accepted means the email was handed off to the configured SMTP provider. '
+            'Delivered/bounced updates still depend on downstream provider events.'
         ),
     }, status=response_status)
  

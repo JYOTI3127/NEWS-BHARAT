@@ -4295,6 +4295,22 @@ function nbInsertBlockquote(){
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
+  const anchorNode=range.commonAncestorContainer;
+  const anchorElement=anchorNode&&anchorNode.nodeType===1?anchorNode:anchorNode&&anchorNode.parentElement;
+  const parentBlockquote=anchorElement&&anchorElement.closest?anchorElement.closest('blockquote'):null;
+  if(parentBlockquote&&nbEditor.contains(parentBlockquote)){
+    const p=document.createElement('p');
+    p.innerHTML=parentBlockquote.innerHTML&&parentBlockquote.innerHTML.trim()?parentBlockquote.innerHTML:'<br>';
+    parentBlockquote.parentNode.replaceChild(p,parentBlockquote);
+    const resetRange=document.createRange();
+    resetRange.selectNodeContents(p);
+    resetRange.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(resetRange);
+    nbSaveSelection();
+    setTimeout(nbSaveHistory,50);
+    return;
+  }
   let block=range.commonAncestorContainer;
   if(block&&block.nodeType===3)block=block.parentNode;
   while(block&&block!==nbEditor){

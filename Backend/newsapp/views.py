@@ -3167,7 +3167,6 @@ def search_api(request):
         "search_engine": search_engine,
     })
 
-
 @require_GET
 def live_category_search_api(request):
     query = request.GET.get('q', '').strip()
@@ -3347,7 +3346,6 @@ def send_regeneration_email(user, new_uid, new_pass):
         recipient_list=[user.email],
         fail_silently=True,
     )
-
 
 def secure_login_view(request):
     if request.user.is_authenticated:
@@ -5536,6 +5534,21 @@ def newsletter_history(request):
         return JsonResponse({'history': logs})
     except Exception as e:
         return JsonResponse({'history': [], 'note': str(e)})
+
+
+@api_view(['GET'])
+def live_updates_api(request):
+    try:
+        limit = min(max(int(request.GET.get('limit', 50)), 1), 100)
+    except (TypeError, ValueError):
+        limit = 50
+
+    queryset = LiveUpdate.objects.filter(is_active=True).order_by('-published_at', '-created_at')[:limit]
+    serializer = LiveUpdateSerializer(queryset, many=True)
+    return Response({
+        'count': len(serializer.data),
+        'results': serializer.data,
+    })
 
 
 def _append_unique_email(items, email):

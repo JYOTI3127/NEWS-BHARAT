@@ -188,6 +188,72 @@ class NewsletterLogAdmin(admin.ModelAdmin):
     )
 
 
+class LiveUpdateAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/newsapp/liveupdate/change_list.html'
+    list_display = ('title', 'published_at', 'is_active', 'created_at')
+    list_filter = ('is_active', 'published_at', 'created_at')
+    search_fields = ('title', 'summary')
+    ordering = ('-published_at', '-created_at')
+    readonly_fields = ('created_at', 'updated_at')
+
+    class LiveUpdateQuickForm(forms.ModelForm):
+        class Meta:
+            model = LiveUpdate
+            fields = ['published_at', 'title', 'summary', 'is_active']
+            widgets = {
+                'published_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+                'title': forms.TextInput(attrs={'placeholder': 'Enter short headline'}),
+                'summary': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Add the short live update summary here...'}),
+            }
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            if not self.initial.get('published_at'):
+                self.initial['published_at'] = timezone.localtime(timezone.now()).strftime('%Y-%m-%dT%H:%M')
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        form = self.LiveUpdateQuickForm()
+
+        if request.method == 'POST':
+            if '_delete_live_update' in request.POST:
+                update_id = request.POST.get('live_update_id')
+                if str(update_id).isdigit():
+                    update = LiveUpdate.objects.filter(pk=int(update_id)).first()
+                    if update:
+                        update.delete()
+                        self.message_user(request, "Live update deleted successfully.", level=messages.SUCCESS)
+                return redirect('/admin/newsapp/liveupdate/')
+
+            if '_save_live_update' in request.POST:
+                update_id = request.POST.get('live_update_id')
+                instance = None
+                success_message = "Live update added successfully."
+                if str(update_id).isdigit():
+                    instance = LiveUpdate.objects.filter(pk=int(update_id)).first()
+                    if instance:
+                        success_message = "Live update updated successfully."
+
+                form = self.LiveUpdateQuickForm(request.POST, instance=instance)
+                if form.is_valid():
+                    form.save()
+                    self.message_user(request, success_message, level=messages.SUCCESS)
+                    return redirect('/admin/newsapp/liveupdate/')
+
+        updates_qs = LiveUpdate.objects.all().order_by('-published_at', '-created_at')
+        paginator = Paginator(updates_qs, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        extra_context.update({
+            'live_update_form': form,
+            'live_updates_page_obj': page_obj,
+            'live_updates_total': updates_qs.count(),
+            'live_updates_active_total': updates_qs.filter(is_active=True).count(),
+            'latest_live_update_at': updates_qs.first().published_at if updates_qs.exists() else None,
+        })
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 # ══════════════════════════════════════════════════════════════
 #  INLINES
 # ══════════════════════════════════════════════════════════════
@@ -1577,6 +1643,8 @@ class NewsAdminSite(AdminSite):
             top_reporters   = ReporterMonthlyPerformance.objects.filter(
                 month=now.month, year=now.year
             ).select_related('reporter').order_by('-articles_published')[:5]
+            latest_live_update = LiveUpdate.objects.order_by('-published_at', '-created_at').first()
+            live_updates_total = LiveUpdate.objects.count()
 
             monthly_data_qs = (
                 Article.objects
@@ -1619,6 +1687,8 @@ class NewsAdminSite(AdminSite):
                 'recent_articles':       recent_articles,
                 'recent_logs':           recent_logs,
                 'top_reporters':         top_reporters,
+                'live_updates_total':    live_updates_total,
+                'latest_live_update':    latest_live_update,
                 'monthly_labels':        monthly_labels,
                 'monthly_pub':           monthly_pub,
                 'monthly_draft':         monthly_draft,
@@ -2369,5 +2439,6 @@ admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)
 admin_site.register(NewsletterCard,              NewsletterCardAdmin)
+admin_site.register(LiveUpdate,                  LiveUpdateAdmin)
 admin_site.register(PushSubscription,            PushSubscriptionAdmin)
 admin_site.register(PushNotificationLog,         PushNotificationLogAdmin)

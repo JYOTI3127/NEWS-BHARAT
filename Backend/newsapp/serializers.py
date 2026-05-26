@@ -711,3 +711,32 @@ class NewsletterCardSerializer(serializers.ModelSerializer):
 
     def get_created_at(self, obj):
         return obj.created_at.date().isoformat() if obj.created_at else None
+
+
+class LiveUpdateSerializer(serializers.ModelSerializer):
+    date = serializers.SerializerMethodField()
+    time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LiveUpdate
+        fields = [
+            'id',
+            'title',
+            'summary',
+            'is_active',
+            'published_at',
+            'date',
+            'time',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_date(self, obj):
+        if not obj.published_at:
+            return ''
+        return timezone.localtime(obj.published_at).strftime('%d %b %Y')
+
+    def get_time(self, obj):
+        if not obj.published_at:
+            return ''
+        return timezone.localtime(obj.published_at).strftime('%I:%M %p')

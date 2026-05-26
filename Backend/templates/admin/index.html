@@ -12,6 +12,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 /* KPI cards — full block clickable */
+.kpi-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 .kpi-card.kpi-card--link {
   display: block;
   text-decoration: none;
@@ -22,6 +25,61 @@
 .kpi-card.kpi-card--link:hover {
   box-shadow: 0 4px 20px rgba(184,1,0,0.13);
   transform: translateY(-2px);
+}
+.kpi-card--live-updates .kpi-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.kpi-card--live-updates .kpi-label::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e11d48;
+  box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.45);
+  animation: livePulseDot 1.6s infinite;
+}
+.kpi-card--live-updates .kpi-value {
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.kpi-card--live-updates .kpi-trend {
+  margin-top: 10px;
+}
+@keyframes livePulseDot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.45);
+    transform: scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(225, 29, 72, 0);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+    transform: scale(1);
+  }
+}
+@media (max-width: 1280px) {
+  .kpi-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
 }
 .ad-size-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -102,6 +160,29 @@
      ROW 1 — 4 FULLY CLICKABLE KPI CARDS
 ══════════════════════════════════════════ -->
 <div class="kpi-row">
+
+  <a href="/admin/newsapp/liveupdate/" class="kpi-card kpi-card--link kpi-card--live-updates">
+    <div class="kpi-card-header">
+      <span class="kpi-label">Live Updates</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+    <div class="kpi-value">
+      {% if latest_live_update %}
+        {{ latest_live_update.title|truncatechars:46 }}
+      {% else %}
+        No live update yet
+      {% endif %}
+    </div>
+    <div class="kpi-trend">
+      <span class="trend-neutral">
+        {% if latest_live_update %}
+          {{ latest_live_update.published_at|date:"d M Y, h:i A" }}
+        {% else %}
+          {{ live_updates_total }} saved updates
+        {% endif %}
+      </span>
+    </div>
+  </a>
 
   <a href="/admin/newsapp/article/" class="kpi-card kpi-card--link">
     <div class="kpi-card-header">

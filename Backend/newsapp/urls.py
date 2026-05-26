@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path('categories/', category_list),
+    path('live-updates/', views.live_updates_api, name='api_live_updates'),
     path('newsletters/', views.newsletters_api, name='api_newsletters'),
     path('newsletters', views.newsletters_api, name='api_newsletters_no_slash'),
     path('newsletters/<int:newsletter_id>/', views.newsletter_detail_api, name='api_newsletter_detail'),

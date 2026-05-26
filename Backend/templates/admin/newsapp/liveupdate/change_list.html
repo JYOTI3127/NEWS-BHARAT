@@ -1,0 +1,769 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block title %}Live Updates Management{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+  <style>
+    #changelist-filter,
+    #toolbar,
+    .actions,
+    .object-tools,
+    .results,
+    .paginator,
+    .change-list .xfull {
+      display: none !important;
+    }
+
+    .live-admin-page {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .live-admin-hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 24px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #102f6f 0%, #184596 52%, #275ec9 100%);
+      color: #fff;
+      box-shadow: 0 22px 48px rgba(16, 47, 111, 0.2);
+    }
+
+    .live-admin-hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.78);
+    }
+
+    .live-admin-hero__eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 0 5px rgba(52, 211, 153, .18);
+    }
+
+    .live-admin-hero h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .live-admin-hero p {
+      max-width: 760px;
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.65;
+      color: rgba(255,255,255,.82);
+    }
+
+    .live-admin-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      min-width: 360px;
+    }
+
+    .live-admin-stat {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(12px);
+    }
+
+    .live-admin-stat span {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.7);
+    }
+
+    .live-admin-stat strong {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .live-admin-stat small {
+      display: block;
+      margin-top: 7px;
+      font-size: 11px;
+      color: rgba(255,255,255,.68);
+      line-height: 1.45;
+    }
+
+    .live-admin-compose {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap: 18px;
+      padding: 20px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+    }
+
+    .live-admin-compose__head {
+      margin-bottom: 18px;
+    }
+
+    .live-admin-compose__head h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .live-admin-compose__head p {
+      margin: 0;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .live-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .live-admin-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .live-admin-field--wide {
+      grid-column: 1 / -1;
+    }
+
+    .live-admin-field label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: #334155;
+    }
+
+    .live-admin-field input,
+    .live-admin-field textarea,
+    .live-admin-field select {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid #dbe3ef;
+      background: #f8fafc;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+      box-sizing: border-box;
+    }
+
+    .live-admin-field textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .live-admin-field input:focus,
+    .live-admin-field textarea:focus,
+    .live-admin-field select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      background: #fff;
+    }
+
+    .live-admin-field .helptext {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .live-admin-field .errorlist {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: #b91c1c;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .live-admin-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .live-admin-toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: #1d4ed8;
+    }
+
+    .live-admin-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+      border: 1px solid #dbe7ff;
+    }
+
+    .live-admin-side__card {
+      padding: 14px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid #dbe7ff;
+    }
+
+    .live-admin-side__label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .live-admin-side__value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+
+    .live-admin-side__copy {
+      margin: 10px 0 0;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .live-admin-submit,
+    .live-admin-cancel {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 16px;
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .live-admin-submit {
+      border: none;
+      background: linear-gradient(135deg, #d80100 0%, #ef4444 100%);
+      color: #fff;
+      box-shadow: 0 18px 34px rgba(216, 1, 0, 0.16);
+    }
+
+    .live-admin-cancel {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #334155;
+    }
+
+    .live-admin-submit:hover,
+    .live-admin-cancel:hover {
+      transform: translateY(-1px);
+    }
+
+    .live-admin-table-wrap {
+      padding: 18px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+    }
+
+    .live-admin-table-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .live-admin-table-head h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .live-admin-table-head p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .live-admin-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #1e3a8a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .live-admin-table-scroll {
+      overflow-x: auto;
+    }
+
+    .live-admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    .live-admin-table th {
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #64748b;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+    }
+
+    .live-admin-table td {
+      padding: 16px;
+      vertical-align: top;
+      border-bottom: 1px solid #eef2f7;
+      color: #0f172a;
+      font-size: 14px;
+    }
+
+    .live-admin-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .live-admin-headline {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+
+    .live-admin-summary {
+      margin: 0;
+      color: #475569;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .live-admin-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .live-admin-status.is-active {
+      background: rgba(34, 197, 94, 0.12);
+      color: #15803d;
+    }
+
+    .live-admin-status.is-inactive {
+      background: rgba(148, 163, 184, 0.16);
+      color: #475569;
+    }
+
+    .live-admin-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .live-admin-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      border: 1px solid #dbe3ef;
+      background: #fff;
+      color: #1e293b;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .live-admin-btn--edit {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+
+    .live-admin-btn--delete {
+      background: #fff1f2;
+      color: #be123c;
+      border-color: #fecdd3;
+    }
+
+    .live-admin-empty {
+      padding: 34px 26px;
+      text-align: center;
+      border-radius: 20px;
+      border: 1px dashed #cbd5e1;
+      background: #fff;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .live-admin-pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .live-admin-pagination a,
+    .live-admin-pagination span {
+      min-width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid #dbe3ef;
+      background: #fff;
+      color: #1e293b;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .live-admin-pagination .is-active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+
+    @media (max-width: 1200px) {
+      .live-admin-hero {
+        flex-direction: column;
+      }
+
+      .live-admin-stats {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .live-admin-compose {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .live-admin-stats,
+      .live-admin-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .live-admin-table-wrap {
+        padding: 16px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+{% block search %}{% endblock %}
+{% block result_list %}{% endblock %}
+{% block pagination %}{% endblock %}
+{% block filters %}{% endblock %}
+
+{% block content %}
+<div class="live-admin-page">
+  <section class="live-admin-hero">
+    <div>
+      <div class="live-admin-hero__eyebrow">Live Desk</div>
+      <h1>Live Updates Management</h1>
+      <p>
+        Create, edit, and manage short live updates with a timestamp, headline, and summary. Use the table below to keep the feed accurate and current.
+      </p>
+    </div>
+
+    <div class="live-admin-stats">
+      <div class="live-admin-stat">
+        <span>Total Updates</span>
+        <strong>{{ live_updates_total }}</strong>
+        <small>Total live update records currently stored.</small>
+      </div>
+      <div class="live-admin-stat">
+        <span>Active Updates</span>
+        <strong>{{ live_updates_active_total }}</strong>
+        <small>These entries remain available for the public API.</small>
+      </div>
+      <div class="live-admin-stat">
+        <span>Latest Update</span>
+        <strong>{% if latest_live_update_at %}{{ latest_live_update_at|date:"d M Y" }}{% else %}No updates{% endif %}</strong>
+        <small>{% if latest_live_update_at %}{{ latest_live_update_at|date:"h:i A" }}{% else %}Create the first live update to begin{% endif %}</small>
+      </div>
+    </div>
+  </section>
+
+  <form method="post" class="live-admin-compose" id="liveUpdateForm">
+    {% csrf_token %}
+    <input type="hidden" name="_save_live_update" value="1">
+    <input type="hidden" name="live_update_id" id="liveUpdateId" value="">
+
+    <div>
+      <div class="live-admin-compose__head">
+        <h2 id="liveUpdateFormTitle">Create Live Update</h2>
+        <p id="liveUpdateFormCopy">Set the time, enter the headline, and add a short summary.</p>
+      </div>
+
+      {% if live_update_form.non_field_errors %}
+        <div class="live-admin-field live-admin-field--wide">
+          {{ live_update_form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="live-admin-grid">
+        <div class="live-admin-field">
+          <label for="{{ live_update_form.published_at.id_for_label }}">Time</label>
+          {{ live_update_form.published_at }}
+          {{ live_update_form.published_at.errors }}
+        </div>
+
+        <div class="live-admin-field">
+          <label>Visibility</label>
+          <label class="live-admin-toggle">
+            {{ live_update_form.is_active }}
+            <span>Keep This Update Active</span>
+          </label>
+          {{ live_update_form.is_active.errors }}
+        </div>
+
+        <div class="live-admin-field live-admin-field--wide">
+          <label for="{{ live_update_form.title.id_for_label }}">Headline</label>
+          {{ live_update_form.title }}
+          {{ live_update_form.title.errors }}
+        </div>
+
+        <div class="live-admin-field live-admin-field--wide">
+          <label for="{{ live_update_form.summary.id_for_label }}">Summary</label>
+          {{ live_update_form.summary }}
+          {{ live_update_form.summary.errors }}
+        </div>
+      </div>
+    </div>
+
+    <aside class="live-admin-side">
+      <div class="live-admin-side__card">
+        <span class="live-admin-side__label">Publishing Panel</span>
+        <div class="live-admin-side__value" id="liveUpdateSideTitle">Add a New Update</div>
+        <p class="live-admin-side__copy" id="liveUpdateSideCopy">
+          Save a new update here, or choose Edit from the table to load an existing item into this form.
+        </p>
+      </div>
+
+      <button type="submit" class="live-admin-submit" id="liveUpdateSubmitBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add Update
+      </button>
+
+      <button type="button" class="live-admin-cancel" id="liveUpdateCancelBtn" style="display:none;">
+        Cancel Editing
+      </button>
+    </aside>
+  </form>
+
+  <section class="live-admin-table-wrap">
+    <div class="live-admin-table-head">
+      <div>
+        <h3>Saved Live Updates</h3>
+        <p>Use the action buttons to edit or delete any existing update.</p>
+      </div>
+      <span class="live-admin-chip">{{ live_updates_total }} saved updates</span>
+    </div>
+
+    {% if live_updates_page_obj and live_updates_page_obj.object_list %}
+      <div class="live-admin-table-scroll">
+        <table class="live-admin-table">
+          <thead>
+            <tr>
+              <th style="width: 16%;">Published</th>
+              <th style="width: 22%;">Headline</th>
+              <th>Summary</th>
+              <th style="width: 12%;">Status</th>
+              <th style="width: 18%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in live_updates_page_obj %}
+              <tr>
+                <td>
+                  <strong>{{ item.published_at|date:"d M Y" }}</strong><br>
+                  <span style="color:#64748b;">{{ item.published_at|date:"h:i A" }}</span>
+                </td>
+                <td>
+                  <div class="live-admin-headline">{{ item.title }}</div>
+                </td>
+                <td>
+                  <p class="live-admin-summary">{{ item.summary|truncatechars:220 }}</p>
+                </td>
+                <td>
+                  <span class="live-admin-status {% if item.is_active %}is-active{% else %}is-inactive{% endif %}">
+                    {% if item.is_active %}Active{% else %}Inactive{% endif %}
+                  </span>
+                </td>
+                <td>
+                  <div class="live-admin-actions">
+                    <button
+                      type="button"
+                      class="live-admin-btn live-admin-btn--edit"
+                      data-edit-id="{{ item.id }}"
+                      data-edit-time="{{ item.published_at|date:'Y-m-d\\TH:i' }}"
+                      data-edit-title="{{ item.title|escapejs }}"
+                      data-edit-summary="{{ item.summary|escapejs }}"
+                      data-edit-active="{% if item.is_active %}1{% else %}0{% endif %}"
+                    >
+                      Edit
+                    </button>
+
+                    <form method="post" onsubmit="return confirm('Delete this live update?');" style="margin:0;">
+                      {% csrf_token %}
+                      <input type="hidden" name="_delete_live_update" value="1">
+                      <input type="hidden" name="live_update_id" value="{{ item.id }}">
+                      <button type="submit" class="live-admin-btn live-admin-btn--delete">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if live_updates_page_obj.paginator.num_pages > 1 %}
+        <div class="live-admin-pagination">
+          {% if live_updates_page_obj.has_previous %}
+            <a href="?page={{ live_updates_page_obj.previous_page_number }}">&lsaquo;</a>
+          {% endif %}
+
+          {% for num in live_updates_page_obj.paginator.page_range %}
+            {% if num == live_updates_page_obj.number %}
+              <span class="is-active">{{ num }}</span>
+            {% elif num >= live_updates_page_obj.number|add:'-2' and num <= live_updates_page_obj.number|add:'2' %}
+              <a href="?page={{ num }}">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+
+          {% if live_updates_page_obj.has_next %}
+            <a href="?page={{ live_updates_page_obj.next_page_number }}">&rsaquo;</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="live-admin-empty">No live updates have been created yet.</div>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+  (function () {
+    var form = document.getElementById('liveUpdateForm');
+    if (!form) return;
+
+    var idField = document.getElementById('liveUpdateId');
+    var timeField = document.getElementById('id_published_at');
+    var titleField = document.getElementById('id_title');
+    var summaryField = document.getElementById('id_summary');
+    var activeField = document.getElementById('id_is_active');
+    var formTitle = document.getElementById('liveUpdateFormTitle');
+    var formCopy = document.getElementById('liveUpdateFormCopy');
+    var sideTitle = document.getElementById('liveUpdateSideTitle');
+    var sideCopy = document.getElementById('liveUpdateSideCopy');
+    var submitBtn = document.getElementById('liveUpdateSubmitBtn');
+    var cancelBtn = document.getElementById('liveUpdateCancelBtn');
+
+    var defaultTime = timeField ? timeField.value : '';
+
+    function setCreateMode() {
+      idField.value = '';
+      if (timeField) timeField.value = defaultTime;
+      if (titleField) titleField.value = '';
+      if (summaryField) summaryField.value = '';
+      if (activeField) activeField.checked = true;
+      if (formTitle) formTitle.textContent = 'Create Live Update';
+      if (formCopy) formCopy.textContent = 'Set the time, enter the headline, and add a short summary.';
+      if (sideTitle) sideTitle.textContent = 'Add a New Update';
+      if (sideCopy) sideCopy.textContent = 'Save a new update here, or choose Edit from the table to load an existing item into this form.';
+      if (submitBtn) submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Update';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
+    function setEditMode(button) {
+      idField.value = button.getAttribute('data-edit-id') || '';
+      if (timeField) timeField.value = button.getAttribute('data-edit-time') || '';
+      if (titleField) titleField.value = button.getAttribute('data-edit-title') || '';
+      if (summaryField) summaryField.value = button.getAttribute('data-edit-summary') || '';
+      if (activeField) activeField.checked = button.getAttribute('data-edit-active') === '1';
+      if (formTitle) formTitle.textContent = 'Edit Live Update';
+      if (formCopy) formCopy.textContent = 'Review the selected update, make changes, and save the latest version.';
+      if (sideTitle) sideTitle.textContent = 'Editing Existing Update';
+      if (sideCopy) sideCopy.textContent = 'The selected row has been loaded into the form. Save your changes to update the record.';
+      if (submitBtn) submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Update Live Update';
+      if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.querySelectorAll('[data-edit-id]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setEditMode(button);
+      });
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        setCreateMode();
+      });
+    }
+  })();
+</script>
+{% endblock %}

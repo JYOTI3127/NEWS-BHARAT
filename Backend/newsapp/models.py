@@ -1266,6 +1266,23 @@ class Newsletter(models.Model):
         return self.email
 
 
+class LiveUpdate(models.Model):
+    title = models.CharField(max_length=220)
+    summary = models.TextField(help_text="Short live update, ideally 1-2 lines.")
+    is_active = models.BooleanField(default=True)
+    published_at = models.DateTimeField(default=timezone.now, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-published_at', '-created_at']
+        verbose_name = 'Live Update'
+        verbose_name_plural = 'Live Updates'
+
+    def __str__(self):
+        return f"{self.title} ({self.published_at:%d %b %Y %I:%M %p})"
+
+
 class JobOpening(models.Model):
     EMPLOYMENT_TYPE_CHOICES = [
         ('full_time', 'Full-Time'),

@@ -74,6 +74,25 @@ class ArticleStatusFlowTests(TestCase):
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Article.objects.get(slug='working-draft').status, 'draft')
 
+    def test_new_article_can_be_saved_from_json_payload(self):
+        response = self.client.post(
+            '/api/articles/',
+            {
+                'title': 'JSON working draft',
+                'subtitle': '',
+                'content': 'Draft body from JSON',
+                'status': 'draft',
+                'slug': 'json-working-draft',
+                'categories': [],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        article = Article.objects.get(slug='json-working-draft')
+        self.assertEqual(article.status, 'draft')
+        self.assertEqual(article.content, 'Draft body from JSON')
+
     def test_republish_from_draft_with_original_date_restores_old_timestamps(self):
         article = Article.objects.create(
             author=self.user,

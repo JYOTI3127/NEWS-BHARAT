@@ -952,19 +952,45 @@ def newsletter_detail_api(request, newsletter_id):
 
 
 def _save_article_from_request(request, article=None):
-    data  = request.POST
+    data = getattr(request, 'data', None)
+    if data is None:
+        data = request.POST
     files = request.FILES
+
+    def _data_get(key, default=''):
+        value = data.get(key, default) if hasattr(data, 'get') else default
+        if value is None:
+            return default
+        return value
+
+    def _data_getlist(key):
+        if hasattr(data, 'getlist'):
+            return data.getlist(key)
+        value = _data_get(key, [])
+        if value in (None, ''):
+            return []
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        return [value]
+
+    def _has_key(key):
+        if hasattr(data, '__contains__'):
+            try:
+                return key in data
+            except TypeError:
+                return False
+        return False
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
     old_published_at = None if is_new else article.published_at
     old_updated_at = None if is_new else article.updated_at
     previous_status = None if is_new else article.status
-    publish_date_mode = str(data.get('publish_date_mode', 'now') or 'now').strip().lower()
+    publish_date_mode = str(_data_get('publish_date_mode', 'now') or 'now').strip().lower()
     keep_original_publish_date = publish_date_mode == 'original' and old_published_at is not None
     restore_previous_timestamps = keep_original_publish_date and previous_status != 'published'
 
-    category_ids_raw = data.get('categories', '')
-    category_list_raw = data.getlist('categories')
+    category_ids_raw = _data_get('categories', '')
+    category_list_raw = _data_getlist('categories')
 
     cat_ids = []
     if len(category_list_raw) > 1:
@@ -986,7 +1012,7 @@ def _save_article_from_request(request, article=None):
                     pass
 
     primary_category_id = None
-    raw_primary_category = str(data.get('primary_category', '')).strip()
+    raw_primary_category = str(_data_get('primary_category', '')).strip()
     if raw_primary_category:
         try:
             primary_category_id = int(raw_primary_category)
@@ -999,9 +1025,9 @@ def _save_article_from_request(request, article=None):
     else:
         primary_category_id = None
 
-    title = data.get('title', '').strip()
-    subtitle = data.get('subtitle', '').strip()
-    content_raw = data.get('content', '').strip()
+    title = str(_data_get('title', '')).strip()
+    subtitle = str(_data_get('subtitle', '')).strip()
+    content_raw = str(_data_get('content', '')).strip()
     content_clean = sanitize_article_html(content_raw)
 
     if not title or not content_raw:
@@ -1019,7 +1045,7 @@ def _save_article_from_request(request, article=None):
     article.clean_version = ARTICLE_CLEAN_VERSION
     article.content = content_clean
 
-    requested_status = data.get('status', article.status if not is_new else 'draft')
+    requested_status = _data_get('status', article.status if not is_new else 'draft')
     if previous_status == 'published' and requested_status not in {'archived', 'review'}:
         # Published articles may be sent back to review for editorial changes,
         # but stale editor requests must not silently downgrade them to draft
@@ -1035,14 +1061,14 @@ def _save_article_from_request(request, article=None):
         return None, {'error': status_error}
 
     article.status   = requested_status
-    article.priority = int(data.get('priority', article.priority if not is_new else 5))
-    article.is_paid  = data.get('is_paid', 'false').lower() in ('true', '1', 'on')
+    article.priority = int(_data_get('priority', article.priority if not is_new else 5))
+    article.is_paid  = str(_data_get('is_paid', 'false')).lower() in ('true', '1', 'on')
 
-    deadline_val = data.get('deadline', '')
+    deadline_val = str(_data_get('deadline', ''))
     fallback_deadline = _parse_ist_datetime(deadline_val) if deadline_val else None
     article.deadline = fallback_deadline
 
-    scheduled_at_val = data.get('scheduled_at', '').strip()
+    scheduled_at_val = str(_data_get('scheduled_at', '')).strip()
     if article.status == 'scheduled':
         if not scheduled_at_val:
             return None, {'error': 'Scheduled publish time is required for scheduled articles.'}
@@ -1074,9 +1100,9 @@ def _save_article_from_request(request, article=None):
         else:
             article.published_at = timezone.now()
 
-    reporter_assignments = _normalize_reporter_assignments(data.get('reporter_assignments', ''))
-    assignment_message = str(data.get('assignment_message', '') or '').strip()
-    assigned_id = data.get('assigned_to', '')
+    reporter_assignments = _normalize_reporter_assignments(_data_get('reporter_assignments', ''))
+    assignment_message = str(_data_get('assignment_message', '') or '').strip()
+    assigned_id = _data_get('assigned_to', '')
     if reporter_assignments:
         article.assigned_to_id = reporter_assignments[0]['user_id']
     elif assigned_id:
@@ -1092,7 +1118,7 @@ def _save_article_from_request(request, article=None):
     else:
         article.assigned_to = None
 
-    raw_slug = data.get('slug', '').strip()
+    raw_slug = str(_data_get('slug', '')).strip()
     normalized_slug = slugify(raw_slug.strip('/').split('/')[-1])
     if not getattr(request.user, 'is_superuser', False):
         if is_new:
@@ -1102,33 +1128,33 @@ def _save_article_from_request(request, article=None):
         else:
             normalized_slug = old_slug
     article.slug = normalized_slug
-    article.canonical_url      = normalize_article_canonical(data.get('canonical_url', ''), article.slug)
-    article.meta_title         = _normalize_meta_title(data.get('meta_title', ''))
-    article.meta_description   = data.get('meta_description', '').strip()
-    article.focus_keyword      = data.get('focus_keyword', '').strip()
-    article.secondary_keywords = data.get('secondary_keywords', '').strip()
-    article.noindex            = data.get('noindex', 'false').lower() in ('true', '1', 'on')
-    article.nofollow           = data.get('nofollow', 'false').lower() in ('true', '1', 'on')
-    article.in_sitemap         = data.get('in_sitemap', 'true').lower() in ('true', '1', 'on')
-    article.schema_types       = data.get('schema_types', 'NewsArticle,Article').strip() or 'NewsArticle,Article'
-    article.schema_headline    = data.get('schema_headline', '').strip()
-    article.schema_alternative_headline = data.get('schema_alternative_headline', '').strip()
-    article.schema_description = data.get('schema_description', '').strip()
-    article.schema_article_section = data.get('schema_article_section', '').strip()
-    article.schema_keywords    = data.get('schema_keywords', '').strip()
-    article.schema_author_name = data.get('schema_author_name', '').strip()
-    article.schema_author_url  = data.get('schema_author_url', '').strip()
-    article.schema_image_url   = data.get('schema_image_url', '').strip()
-    article.schema_publisher_name = data.get('schema_publisher_name', '').strip()
-    article.schema_publisher_logo_url = data.get('schema_publisher_logo_url', '').strip()
-    article.schema_organization_type = data.get('schema_organization_type', '').strip()
-    article.schema_custom_jsonld = data.get('schema_custom_jsonld', '').strip()
-    article.faq_schema_enabled = data.get('faq_schema_enabled', 'false').lower() in ('true', '1', 'on')
-    article.faq_schema_title = data.get('faq_schema_title', '').strip()
-    article.faq_schema_description = data.get('faq_schema_description', '').strip()
-    article.faq_schema_items = _normalize_faq_schema_items(data.get('faq_schema_items', '[]'))
+    article.canonical_url      = normalize_article_canonical(_data_get('canonical_url', ''), article.slug)
+    article.meta_title         = _normalize_meta_title(_data_get('meta_title', ''))
+    article.meta_description   = str(_data_get('meta_description', '')).strip()
+    article.focus_keyword      = str(_data_get('focus_keyword', '')).strip()
+    article.secondary_keywords = str(_data_get('secondary_keywords', '')).strip()
+    article.noindex            = str(_data_get('noindex', 'false')).lower() in ('true', '1', 'on')
+    article.nofollow           = str(_data_get('nofollow', 'false')).lower() in ('true', '1', 'on')
+    article.in_sitemap         = str(_data_get('in_sitemap', 'true')).lower() in ('true', '1', 'on')
+    article.schema_types       = str(_data_get('schema_types', 'NewsArticle,Article')).strip() or 'NewsArticle,Article'
+    article.schema_headline    = str(_data_get('schema_headline', '')).strip()
+    article.schema_alternative_headline = str(_data_get('schema_alternative_headline', '')).strip()
+    article.schema_description = str(_data_get('schema_description', '')).strip()
+    article.schema_article_section = str(_data_get('schema_article_section', '')).strip()
+    article.schema_keywords    = str(_data_get('schema_keywords', '')).strip()
+    article.schema_author_name = str(_data_get('schema_author_name', '')).strip()
+    article.schema_author_url  = str(_data_get('schema_author_url', '')).strip()
+    article.schema_image_url   = str(_data_get('schema_image_url', '')).strip()
+    article.schema_publisher_name = str(_data_get('schema_publisher_name', '')).strip()
+    article.schema_publisher_logo_url = str(_data_get('schema_publisher_logo_url', '')).strip()
+    article.schema_organization_type = str(_data_get('schema_organization_type', '')).strip()
+    article.schema_custom_jsonld = str(_data_get('schema_custom_jsonld', '')).strip()
+    article.faq_schema_enabled = str(_data_get('faq_schema_enabled', 'false')).lower() in ('true', '1', 'on')
+    article.faq_schema_title = str(_data_get('faq_schema_title', '')).strip()
+    article.faq_schema_description = str(_data_get('faq_schema_description', '')).strip()
+    article.faq_schema_items = _normalize_faq_schema_items(_data_get('faq_schema_items', '[]'))
 
-    schema_sameas_raw = data.get('schema_organization_sameas', '[]')
+    schema_sameas_raw = _data_get('schema_organization_sameas', '[]')
     try:
         parsed_sameas = json.loads(schema_sameas_raw) if isinstance(schema_sameas_raw, str) else schema_sameas_raw
     except (TypeError, ValueError):
@@ -1138,27 +1164,27 @@ def _save_article_from_request(request, article=None):
         if item
     ]
 
-    schema_date_published_val = data.get('schema_date_published', '').strip()
+    schema_date_published_val = str(_data_get('schema_date_published', '')).strip()
     article.schema_date_published = _parse_ist_datetime(schema_date_published_val) if schema_date_published_val else None
-    schema_date_modified_val = data.get('schema_date_modified', '').strip()
+    schema_date_modified_val = str(_data_get('schema_date_modified', '')).strip()
     article.schema_date_modified = _parse_ist_datetime(schema_date_modified_val) if schema_date_modified_val else None
 
-    article.image_alt    = data.get('image_alt', '').strip()
-    article.image_source = data.get('image_source', '').strip()
-    article.tags         = data.get('tags', '').strip()
+    article.image_alt    = str(_data_get('image_alt', '')).strip()
+    article.image_source = str(_data_get('image_source', '')).strip()
+    article.tags         = str(_data_get('tags', '')).strip()
 
-    article.author_display_name      = data.get('editor_name',      data.get('author_display_name', '')).strip()
-    article.author_display_position  = data.get('editor_position',  data.get('author_display_position', '')).strip()
-    article.author_display_bio       = data.get('editor_bio',       data.get('author_display_bio', '')).strip()
-    article.author_display_photo     = data.get('editor_photo',     data.get('author_display_photo', '')).strip()
-    article.author_display_twitter   = data.get('editor_twitter',   data.get('author_display_twitter', '')).strip()
-    article.author_display_linkedin  = data.get('editor_linkedin',  data.get('author_display_linkedin', '')).strip()
-    article.author_display_instagram = data.get('editor_instagram', data.get('author_display_instagram', '')).strip()
-    article.author_display_facebook  = data.get('editor_facebook',  data.get('author_display_facebook', '')).strip()
-    article.author_display_youtube   = data.get('editor_youtube',   data.get('author_display_youtube', '')).strip()
-    article.author_display_reddit    = data.get('editor_reddit',    data.get('author_display_reddit', '')).strip()
+    article.author_display_name      = str(_data_get('editor_name', _data_get('author_display_name', ''))).strip()
+    article.author_display_position  = str(_data_get('editor_position', _data_get('author_display_position', ''))).strip()
+    article.author_display_bio       = str(_data_get('editor_bio', _data_get('author_display_bio', ''))).strip()
+    article.author_display_photo     = str(_data_get('editor_photo', _data_get('author_display_photo', ''))).strip()
+    article.author_display_twitter   = str(_data_get('editor_twitter', _data_get('author_display_twitter', ''))).strip()
+    article.author_display_linkedin  = str(_data_get('editor_linkedin', _data_get('author_display_linkedin', ''))).strip()
+    article.author_display_instagram = str(_data_get('editor_instagram', _data_get('author_display_instagram', ''))).strip()
+    article.author_display_facebook  = str(_data_get('editor_facebook', _data_get('author_display_facebook', ''))).strip()
+    article.author_display_youtube   = str(_data_get('editor_youtube', _data_get('author_display_youtube', ''))).strip()
+    article.author_display_reddit    = str(_data_get('editor_reddit', _data_get('author_display_reddit', ''))).strip()
 
-    articles_count = data.get('editor_articles', data.get('author_display_articles_count', 0))
+    articles_count = _data_get('editor_articles', _data_get('author_display_articles_count', 0))
     try:
         article.author_display_articles_count = int(articles_count) if articles_count else 0
     except (ValueError, TypeError):
@@ -1196,7 +1222,7 @@ def _save_article_from_request(request, article=None):
             article.image     = uploaded_file
             article.image_url = ''
     else:
-        url_val = data.get('image_url', '').strip()
+        url_val = str(_data_get('image_url', '')).strip()
         if url_val and not url_val.startswith('blob:'):
             if not _is_current_article_image_url(article, url_val, request):
                 article.image = None
@@ -1204,7 +1230,7 @@ def _save_article_from_request(request, article=None):
             elif article.image_url:
                 article.image_url = ''
 
-    subcategories_raw = data.get('subcategories', '{}')
+    subcategories_raw = _data_get('subcategories', '{}')
     try:
         subcategories_dict = json.loads(subcategories_raw)
         article.selected_subcategories = subcategories_dict if isinstance(subcategories_dict, dict) else {}
@@ -1229,7 +1255,7 @@ def _save_article_from_request(request, article=None):
                 if article.primary_category_id != primary_category_id:
                     article.primary_category_id = primary_category_id
                     article.save(update_fields=['primary_category'])
-            elif 'categories' in data:
+            elif _has_key('categories'):
                 article.categories.clear()
                 if article.primary_category_id is not None:
                     article.primary_category = None

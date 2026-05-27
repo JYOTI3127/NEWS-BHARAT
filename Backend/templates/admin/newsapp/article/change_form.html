@@ -5134,6 +5134,9 @@ function getFriendlyArticleSaveError(err){
   if(err&&typeof err.error==='string'){
     var raw=String(err.error||'');
     var lower=raw.toLowerCase();
+    if(lower.indexOf('google cloud storage credentials')!==-1||lower.indexOf('server could not authenticate with google cloud storage')!==-1||lower.indexOf('invalid_grant')!==-1||lower.indexOf('invalid jwt signature')!==-1){
+      return raw;
+    }
     if(lower.indexOf('image')!==-1||lower.indexOf('pillow')!==-1||lower.indexOf('cannot identify image file')!==-1){
       return 'Image did not meet the requirements or could not be processed. Please use a valid JPG image under 1 MB, ideally 1200 x 675 in 16:9 ratio.';
     }

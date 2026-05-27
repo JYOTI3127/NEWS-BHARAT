@@ -75,8 +75,8 @@
           <!-- Article -->
           <td>
             <div class="art-title-cell">
-              {% if article.image %}
-                <img src="{{ article.image.url }}" class="art-thumb" alt="">
+              {% if article.get_image %}
+                <img src="{{ article.get_image }}" class="art-thumb" alt="">
               {% elif article.image_url %}
                 <img src="{{ article.image_url }}" class="art-thumb" alt="">
               {% else %}
@@ -304,10 +304,10 @@
       {% for article in articles_with_images %}
         <div class="art-img-card">
           <!-- FIX: image pe click karo toh lightbox mein badi hogi -->
-          <img src="{% if article.image %}{{ article.image.url }}{% else %}{{ article.image_url }}{% endif %}"
+          <img src="{{ article.get_image }}"
                alt="{{ article.title }}"
                class="art-img-card__img"
-               data-image-src="{% if article.image %}{{ article.image.url|escape }}{% else %}{{ article.image_url|escape }}{% endif %}"
+               data-image-src="{{ article.get_image|escape }}"
                data-image-title="{{ article.title|truncatechars:60|escape }}"
                onclick="openLightbox(this.dataset.imageSrc, this.dataset.imageTitle)"
                style="cursor:zoom-in;">

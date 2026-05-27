@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import base64
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -156,9 +157,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
-    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -171,8 +169,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-# MEDIA_URL = "/media/"
-# MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 CORS_ALLOWED_ORIGINS = [
     "https://news4bharat.cloud",
@@ -296,19 +294,116 @@ GS_OBJECT_PARAMETERS = {
 import json
 from google.oauth2 import service_account
 
-import os
 
-GCS_JSON = os.environ.get("GCS_CREDENTIALS", "")
-if GCS_JSON:
+def _normalize_gcs_service_account_payload(raw_value):
+    candidate = (raw_value or "").strip()
+    if not candidate:
+        return None
+
+    # Allow a file path in env for deployments that mount the JSON key as a file.
+    if os.path.exists(candidate):
+        with open(candidate, "r", encoding="utf-8") as handle:
+            return json.load(handle)
+
     try:
-        GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
-            json.loads(GCS_JSON)
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        parsed = None
+
+    # Some panels store the JSON as base64 to avoid quote/newline escaping issues.
+    if parsed is None:
+        try:
+            decoded = base64.b64decode(candidate).decode("utf-8")
+            parsed = json.loads(decoded)
+        except Exception:
+            parsed = None
+
+    if not isinstance(parsed, dict):
+        return None
+
+    private_key = parsed.get("private_key")
+    if isinstance(private_key, str):
+        parsed["private_key"] = private_key.replace("\\n", "\n").strip()
+
+    client_email = parsed.get("client_email")
+    if isinstance(client_email, str):
+        parsed["client_email"] = client_email.strip()
+
+    project_id = parsed.get("project_id")
+    if isinstance(project_id, str):
+        parsed["project_id"] = project_id.strip()
+
+    return parsed
+
+
+def _load_service_account_payload_from_file(file_path):
+    if not file_path:
+        return None
+    try:
+        candidate = Path(file_path)
+        if not candidate.exists() or not candidate.is_file():
+            return None
+        with candidate.open("r", encoding="utf-8") as handle:
+            parsed = json.load(handle)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception as e:
+        print(f"GCS credentials file load failed from {file_path}: {e}")
+        return None
+
+
+def _load_bundled_gcs_service_account_payload():
+    explicit_file = BASE_DIR / "news" / "news4bharat-490809-450e05d7fce9.json"
+    payload = _load_service_account_payload_from_file(explicit_file)
+    if payload:
+        return payload
+
+    for candidate in sorted((BASE_DIR / "news").glob("news4bharat-490809-*.json"), reverse=True):
+        payload = _load_service_account_payload_from_file(candidate)
+        if payload:
+            return payload
+    return None
+
+
+def _load_gcs_credentials():
+    payload = _normalize_gcs_service_account_payload(
+        os.environ.get("GCS_CREDENTIALS", "")
+    )
+    if not payload:
+        payload = _load_service_account_payload_from_file(
+            os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
         )
+    if not payload:
+        payload = _load_bundled_gcs_service_account_payload()
+    if not payload:
+        return None
+
+    try:
+        return service_account.Credentials.from_service_account_info(payload)
     except Exception as e:
         print(f"GCS credentials load failed: {e}")
-        GS_CREDENTIALS = None
+        return None
+
+
+GS_CREDENTIALS = _load_gcs_credentials()
+
+USE_GCS_MEDIA_STORAGE = os.environ.get(
+    "USE_GCS_MEDIA_STORAGE",
+    "True",
+).strip().lower() in {"1", "true", "yes", "on"}
+
+if USE_GCS_MEDIA_STORAGE and GS_CREDENTIALS:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    }
 else:
-    GS_CREDENTIALS = None
+    if USE_GCS_MEDIA_STORAGE and not GS_CREDENTIALS:
+        print(
+            "USE_GCS_MEDIA_STORAGE is enabled but valid GCS credentials were not "
+            "loaded. Falling back to local FileSystemStorage."
+        )
+    STORAGES["default"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    }
 
 SEO_SITE_URL = os.environ.get("SEO_SITE_URL", "https://news4bharat.com").rstrip("/")
 SEO_SITE_NAME = os.environ.get("SEO_SITE_NAME", "news4bharat")

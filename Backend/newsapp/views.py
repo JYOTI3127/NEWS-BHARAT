@@ -980,6 +980,22 @@ def _save_article_from_request(request, article=None):
             except TypeError:
                 return False
         return False
+
+    def _friendly_storage_error_message(exc):
+        raw = str(exc or '').strip()
+        lowered = raw.lower()
+        if 'invalid_grant' in lowered or 'invalid jwt signature' in lowered:
+            return (
+                'Image upload failed because the Google Cloud Storage credentials '
+                'configured on the server are invalid or outdated. Please refresh '
+                'the GCS service-account key in the server environment and try again.'
+            )
+        if 'google' in lowered and 'credentials' in lowered:
+            return (
+                'Image upload failed because the server could not authenticate with '
+                'Google Cloud Storage. Please verify the configured GCS credentials.'
+            )
+        return raw
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
     old_published_at = None if is_new else article.published_at
@@ -1269,7 +1285,7 @@ def _save_article_from_request(request, article=None):
                 fallback_deadline=fallback_deadline,
             )
     except Exception as e:
-        return None, {'error': str(e)}
+        return None, {'error': _friendly_storage_error_message(e)}
 
     # Cache invalidate
     _invalidate_article_caches(article, old_slug=old_slug)

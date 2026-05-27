@@ -107,7 +107,11 @@ class Article(models.Model):
  
     def get_image(self):
         if self.image:
-            return self.image.url
+            try:
+                if getattr(self.image, 'name', ''):
+                    return self.image.url
+            except Exception:
+                pass
         return self.image_url
  
     # ── Multi-category (ManyToMany) ──

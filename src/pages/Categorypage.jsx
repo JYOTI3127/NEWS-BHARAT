@@ -90,6 +90,39 @@ const getListFromArticlesResponse = (data) => {
   return [];
 };
 
+const getArticlesResponseTotalCount = (data) => {
+  if (Array.isArray(data)) return data.length;
+
+  const countCandidates = [
+    data?.count,
+    data?.total,
+    data?.total_count,
+    data?.totalCount,
+    data?.pagination?.count,
+    data?.pagination?.total,
+  ];
+
+  for (const value of countCandidates) {
+    const count = Number(value);
+    if (Number.isFinite(count) && count >= 0) return count;
+  }
+
+  return getListFromArticlesResponse(data).length;
+};
+
+const getCombinedArticlesTotalCount = (responses = [], fallbackCount = 0) => {
+  const counts = responses
+    .filter(Boolean)
+    .map(getArticlesResponseTotalCount)
+    .filter((count) => Number.isFinite(count) && count >= 0);
+
+  if (counts.length === 0) return fallbackCount;
+  if (counts.length === 1) return Math.max(counts[0], fallbackCount);
+
+  // Alias slugs can point to the same logical category, so avoid double-counting.
+  return Math.max(...counts, fallbackCount);
+};
+
 const getListFromCategoriesResponse = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
@@ -382,6 +415,7 @@ export default function CategoryPage() {
 
   const [category, setCategory] = useState(null);
   const [articles, setArticles] = useState([]);
+  const [articleTotalCount, setArticleTotalCount] = useState(0);
   const [stateOptions, setStateOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(6);
@@ -391,6 +425,7 @@ export default function CategoryPage() {
     const fetchData = async () => {
       setLoading(true);
       setVisibleCount(6);
+      setArticleTotalCount(0);
       const isStateCategory = isStateCategorySlug(slug);
       const stateSubFilter = isStateCategory
         ? canonicalizeRegionName(subFilter)
@@ -420,6 +455,7 @@ export default function CategoryPage() {
         }));
 
         setArticles(normalized);
+        setArticleTotalCount(normalized.length);
         setLoading(false);
 
         if (typeof window !== "undefined" && /HeadlessChrome|prerender/i.test(window.navigator?.userAgent || "")) {
@@ -512,9 +548,13 @@ export default function CategoryPage() {
         }));
 
         setArticles(normalized);
+        setArticleTotalCount(
+          getCombinedArticlesTotalCount(articlesResult.value, normalized.length)
+        );
       } else {
         console.error("Articles fetch error:", articlesResult.reason);
         setArticles([]);
+        setArticleTotalCount(0);
       }
 
       setLoading(false);
@@ -653,7 +693,7 @@ export default function CategoryPage() {
           )}
           <span className="inline-flex items-center text-[12px] text-[#D80100] font-semibold">
             <BookOpen size={13} className="mr-1.5 align-middle" />
-            {articles.length} Articles
+            {articleTotalCount || articles.length} Articles
           </span>
           {isStateCategoryPage && visibleStateOptions.length > 0 && (
             <div className="mt-4 relative" ref={stateScrollRef}>

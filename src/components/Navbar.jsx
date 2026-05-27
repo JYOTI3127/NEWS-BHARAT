@@ -421,7 +421,14 @@ const getCategorySearchHref = (item) => {
   return `/category/${getFinalSlug(slug, title)}`;
 };
 
+const compareByLabel = (a, b) =>
+  String(a?.label || "").localeCompare(String(b?.label || ""), "en", { sensitivity: "base" });
+
 const NAV_SECTIONS = [
+  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
+  { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
+  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
   {
     label: "Business",
     Icon: TrendingUp,
@@ -434,28 +441,23 @@ const NAV_SECTIONS = [
       { label: "MSME & Entrepreneurship", topics: ["MSME Policies", "Small Business Stories"] },
     ],
   },
-  { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Technology", slug: "technology", Icon: Cpu },
-  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
-  { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
 ];
 
 const navLinks = [
-  { label: "Breaking News", path: "/category/breaking-news" },
+  { label: "BFSI", path: "/category/bfsi" },
   { label: "Bharat Explainers", path: "/category/bharat-explainers" },
+  { label: "Breaking News", path: "/category/breaking-news" },
   { label: "Business", path: "/category/business" },
-  { label: "Politics", path: "/category/politics" },
-
-  { label: "Stock Market", path: "/category/stock-market" },
-  { label: "Technology", path: "/category/technology" },
-  { label: "States of Bharat", path: "/category/state-of-bharat" },
-  { label: "World News", path: "/category/world-news" },
-  { label: "Sports", path: "/category/sports" },
   { label: "Education", path: "/category/education" },
   { label: "Health", path: "/category/health" },
-  { label: "BFSI", path: "/category/bfsi" },
   { label: "National", path: "/category/national" },
+  { label: "Politics", path: "/category/politics" },
+  { label: "Sports", path: "/category/sports" },
+  { label: "States of Bharat", path: "/category/state-of-bharat" },
+  { label: "Stock Market", path: "/category/stock-market" },
+  { label: "Technology", path: "/category/technology" },
+  { label: "World News", path: "/category/world-news" },
 ];
 
 const NAV_EDGE_HOVER_DELAY_MS = 220;
@@ -1121,7 +1123,7 @@ const Header = () => {
           };
         });
 
-        setNavSections(sections.length > 0 ? sections : NAV_SECTIONS);
+        setNavSections(sections.length > 0 ? [...sections].sort(compareByLabel) : NAV_SECTIONS);
         setNavSectionsLoaded(true);
       } catch (err) {
         console.error("Categories API fail:", err.message);
@@ -1142,7 +1144,7 @@ const Header = () => {
           };
         });
 
-        setNavSections(fallbackSections);
+        setNavSections([...fallbackSections].sort(compareByLabel));
         setNavSectionsLoaded(true);
       }
     };

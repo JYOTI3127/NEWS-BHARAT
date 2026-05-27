@@ -627,20 +627,32 @@ export default function FreshPopularShowcase({
                 className="relative block min-h-[320px] overflow-hidden border border-[#dfdfdf] bg-[#555] no-underline max-[320px]:min-h-[196px] min-[375px]:min-h-[360px] min-[425px]:min-h-[400px] min-[768px]:min-h-[460px] min-[1024px]:min-h-[390px] min-[1440px]:min-h-[500px] min-[1920px]:min-h-[560px]"
               >
                 {getArticleImage(hero) ? (
-                  <img
-                    src={getArticleImage(hero)}
-                    alt={getArticleTitle(hero)}
-                    className={`fps-hero-media absolute left-0 right-0 top-0 h-[82%] w-full ${
-                      is375Viewport ? "object-cover object-center" : "object-cover object-center"
-                    } max-[320px]:object-cover max-[320px]:object-top`}
-                    style={{
-                      objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
-                    }}
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <>
+                    <img
+                      src={getArticleImage(hero)}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full scale-105 object-cover object-center blur-[14px]"
+                      style={{
+                        objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
+                        opacity: 0.42,
+                      }}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <img
+                      src={getArticleImage(hero)}
+                      alt={getArticleTitle(hero)}
+                      className="fps-hero-media absolute inset-0 h-full w-full object-contain object-center max-[375px]:object-cover max-[320px]:object-cover max-[320px]:object-top"
+                      style={{
+                        objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
+                      }}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </>
                 ) : (
-                  <div className="absolute left-0 right-0 top-0 flex h-[65%] w-full items-center justify-center bg-[#ddd] text-xs font-semibold text-[#777]">
+                  <div className="absolute inset-0 flex w-full items-center justify-center bg-[#ddd] text-xs font-semibold text-[#777]">
                     No image
                   </div>
                 )}
@@ -715,7 +727,7 @@ export default function FreshPopularShowcase({
               {middleStoryCards.map((article, idx) => (
                 (() => {
                   const mobileStoryHeightClass =
-                    "max-[320px]:h-[199px]";
+                    "max-[320px]:h-[168px]";
 
                   return (
                 <StoryLink
@@ -727,7 +739,7 @@ export default function FreshPopularShowcase({
                     <img
                       src={getArticleImage(article)}
                       alt={getArticleTitle(article)}
-                      className={`fps-card-media block h-[96px] w-full object-cover object-center max-[375px]:h-[230px] max-[375px]:object-cover ${mobileStoryHeightClass} max-[320px]:object-cover min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}
+                      className={`fps-card-media block h-[197px] w-full bg-[#f4f4f4] object-cover object-center max-[375px]:h-[230px] max-[375px]:object-cover ${mobileStoryHeightClass} max-[320px]:object-cover min-[425px]:h-[128px] min-[768px]:max-[1023px]:h-[169px] min-[1024px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}
                       style={{
                         objectPosition: getArticleImageFocus(article),
                       }}
@@ -735,7 +747,7 @@ export default function FreshPopularShowcase({
                       decoding="async"
                     />
                   ) : (
-                    <div className={`flex h-[96px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[230px] ${mobileStoryHeightClass} min-[425px]:h-[128px] min-[768px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}>
+                    <div className={`flex h-[96px] w-full items-center justify-center bg-[#ebebeb] text-[10px] text-[#7a7a7a] max-[375px]:h-[230px] ${mobileStoryHeightClass} min-[425px]:h-[128px] min-[768px]:max-[1023px]:h-[169px] min-[1024px]:h-[116px] min-[1440px]:h-[130px] min-[1920px]:h-[146px]`}>
                       No image
                     </div>
                   )}

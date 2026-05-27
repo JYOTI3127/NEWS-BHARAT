@@ -5,6 +5,8 @@ import { API_BASE } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 const CATEGORY_SLUG = "bharat-opinions";
 const CATEGORY_FETCH_SLUGS = ["bharat-opinions"];
+const SIXTY_SECONDS_SLUG = "60-second-read";
+const SIXTY_SECONDS_FETCH_SLUGS = ["60-second-read"];
 const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 
 const useBreakpoint = () => {
@@ -41,9 +43,9 @@ const STORY_COLUMNS_MAP = {
     l: 2,
     mobile: 2,
     tablet: 4,
-    laptop: 6,
-    "laptop-l": 6,
-    "4k": 6,
+    laptop: 5,
+    "laptop-l": 5,
+    "4k": 5,
 };
 
 const getArticleTimeValue = (article) => {
@@ -211,11 +213,6 @@ const getArticleSummary = (article, limit = 92) => {
     if (!text) return "Sharp context and reporting from the News4Bharat editorial desk.";
     return text.length > limit ? `${text.slice(0, limit).trim()}...` : text;
 };
-
-const getBusinessStoryKey = (article, index = "") =>
-    String(article?.id || article?.slug || article?.public_url || article?.url || article?.title || index)
-        .trim()
-        .toLowerCase();
 
 const normalizeCricketPayload = (payload) => {
     const source = payload?.data || payload;
@@ -424,13 +421,24 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
 
     const [offset, setOffset] = useState(0);
     const [stories, setStories] = useState([]);
+    const [sixtySecondArticles, setSixtySecondArticles] = useState([]);
+    const [sixtySecondLoading, setSixtySecondLoading] = useState(true);
     const [storiesLoading, setStoriesLoading] = useState(true);
-    const [businessRailHeight, setBusinessRailHeight] = useState(null);
+    const [sixtySecondPanelHeight, setSixtySecondPanelHeight] = useState(null);
     const storiesRailRef = useRef(null);
 
     const seededStories = useMemo(() => {
         if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
         const slugSet = new Set(CATEGORY_FETCH_SLUGS.map((value) => value.toLowerCase()));
+        const filtered = passedArticles.filter((article) =>
+            getCategorySlugsFromArticle(article).some((slug) => slugSet.has(slug))
+        );
+        return [...filtered].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
+    }, [passedArticles]);
+
+    const seededSixtySecondArticles = useMemo(() => {
+        if (!Array.isArray(passedArticles) || passedArticles.length === 0) return [];
+        const slugSet = new Set(SIXTY_SECONDS_FETCH_SLUGS.map((value) => value.toLowerCase()));
         const filtered = passedArticles.filter((article) =>
             getCategorySlugsFromArticle(article).some((slug) => slugSet.has(slug))
         );
@@ -485,28 +493,70 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
         };
     }, [seededStories]);
 
+    useEffect(() => {
+        let ignore = false;
+
+        if (seededSixtySecondArticles.length > 0) {
+            setSixtySecondArticles(seededSixtySecondArticles);
+            setSixtySecondLoading(false);
+            if (isPrerenderUserAgent()) return () => { ignore = true; };
+        }
+
+        Promise.all(
+            SIXTY_SECONDS_FETCH_SLUGS.map((slug) =>
+                fetch(`${API_BASE}/articles/?category=${encodeURIComponent(slug)}&page=1&limit=20`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+            )
+        )
+            .then((responses) => {
+                if (ignore) return;
+                const seen = new Set();
+                const all = responses.flatMap((data) =>
+                    Array.isArray(data)
+                        ? data
+                        : Array.isArray(data?.value)
+                            ? data.value
+                            : (data?.results || [])
+                );
+                const unique = all.filter((article) => {
+                    const key = article?.id || article?.slug || article?.url || article?.title;
+                    if (!key) return true;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                const sorted = [...unique].sort((a, b) => getArticleTimeValue(b) - getArticleTimeValue(a));
+                setSixtySecondArticles(sorted);
+                setSixtySecondLoading(false);
+            })
+            .catch(() => {
+                if (ignore) return;
+                setSixtySecondLoading(false);
+            });
+
+        return () => {
+            ignore = true;
+        };
+    }, [seededSixtySecondArticles]);
+
     useEffect(() => { setOffset(0); }, [VISIBLE, stories.length]);
 
     useEffect(() => {
-        if (isMobile) {
-            setBusinessRailHeight(null);
-            return undefined;
-        }
-
-        const node = storiesRailRef.current;
-        if (!node) return undefined;
+        const rail = storiesRailRef.current;
+        if (!rail) return undefined;
 
         let rafId = 0;
         const updateHeight = () => {
             window.cancelAnimationFrame(rafId);
             rafId = window.requestAnimationFrame(() => {
-                setBusinessRailHeight(Math.ceil(node.getBoundingClientRect().height));
+                setSixtySecondPanelHeight(Math.ceil(rail.getBoundingClientRect().height));
             });
         };
 
         updateHeight();
         const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateHeight) : null;
-        resizeObserver?.observe(node);
+        resizeObserver?.observe(rail);
         window.addEventListener("resize", updateHeight);
 
         return () => {
@@ -514,7 +564,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
             resizeObserver?.disconnect();
             window.removeEventListener("resize", updateHeight);
         };
-    }, [VISIBLE, bp, isMobile, offset, stories.length, storiesLoading]);
+    }, [VISIBLE, bp, offset, stories.length, storiesLoading]);
 
     const canPrev = offset > 0;
     const maxOffset = Math.max(0, stories.length - VISIBLE);
@@ -530,14 +580,17 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
         "laptop-l": "220px",
         "4k": "220px",
     }[bp] || "220px";
-    const fallbackBusinessPanelHeight = isMobile ? "360px" : is4K ? "520px" : is2K ? "450px" : "398px";
-    const matchedBusinessPanelHeight = businessRailHeight ? `${businessRailHeight}px` : fallbackBusinessPanelHeight;
-
+    const fallbackRailHeight = isMobile
+        ? "300px"
+        : is4K
+            ? "430px"
+            : is2K
+                ? "430px"
+                : "398px";
+    const matchedRailHeight = sixtySecondPanelHeight ? `${sixtySecondPanelHeight}px` : fallbackRailHeight;
     const visibleStories = stories.slice(offset, offset + VISIBLE);
     const renderedStories = isMobile ? stories : visibleStories;
-    const renderedStoryKeys = new Set(renderedStories.map((article, index) => getBusinessStoryKey(article, index)));
-    const businessSideArticles = stories
-        .filter((article, index) => !renderedStoryKeys.has(getBusinessStoryKey(article, index)));
+    const sixtySecondSideArticles = sixtySecondArticles.slice(0, 8);
 
     const scrollStories = (direction) => {
         if (isMobile && storiesRailRef.current) {
@@ -568,10 +621,10 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
     const desktopLayoutStyle = isMobile
         ? undefined
         : is2K
-            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: "18px", alignItems: "stretch" }
+            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: "18px", alignItems: "start" }
             : { display: "flex", alignItems: "flex-start", gap: "16px" };
     const storiesWrapStyle = is2K
-        ? { padding: "12px", borderRadius: "18px", minHeight: "430px", flexWrap: "wrap", alignContent: "flex-start" }
+        ? { padding: "12px", borderRadius: "18px", flexWrap: "wrap", alignContent: "flex-start" }
         : { padding: "10px", borderRadius: "18px", flexWrap: "wrap", alignContent: "flex-start" };
     const mobileStoriesWrapStyle = isMobile
         ? {
@@ -609,6 +662,13 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                             Bharat Opinion
                         </span>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/category/${CATEGORY_SLUG}`)}
+                            className="business-brief-readmore"
+                        >
+                            Read More
+                        </button>
                     </div>
 
                     <div className="relative">
@@ -773,37 +833,52 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                     </div>
                 </div>
 
-                {/* Right: Bharat Opinion summary */}
+                {/* Right: 60 Second Read */}
                 <div
                     className="business-brief-wrap relative flex flex-shrink-0 flex-col"
                     style={{
                         width: is2K ? "320px" : scoreCardWidth,
-                        marginTop: isMobile ? "12px" : is2K ? "30px" : "35px",
-                        height: isMobile ? undefined : matchedBusinessPanelHeight,
+                        marginTop: isMobile ? "12px" : 0,
                         alignSelf: isMobile ? "stretch" : "flex-start",
                     }}
                 >
-                    <div className="business-brief-actions">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <div
+                                className="bg-red-600 rounded-sm"
+                                style={{ width: is4K ? "6px" : "4px", height: is4K ? "28px" : "20px" }}
+                            />
+                            <span
+                                className="font-bold text-[#111] uppercase"
+                                style={{ fontSize: is4K ? "22px" : "14px", fontFamily: "Poppins, sans-serif" }}
+                            >
+                                60 Second Read
+                            </span>
+                        </div>
                         <button
                             type="button"
-                            onClick={() => navigate(`/category/${CATEGORY_SLUG}`)}
+                            onClick={() => navigate(`/category/${SIXTY_SECONDS_SLUG}`)}
                             className="business-brief-readmore"
                         >
                             Read More
                         </button>
                     </div>
                     <div
-                        className="business-brief-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
-                        style={{ height: isMobile ? fallbackBusinessPanelHeight : undefined }}
+                        className="business-brief-panel flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
+                        style={{ height: matchedRailHeight, flex: "0 0 auto" }}
                     >
-                        {businessSideArticles.length === 0 ? (
+                        {sixtySecondLoading ? (
                             <div className="flex flex-1 items-center justify-center px-3 py-4 text-center text-[11px] font-semibold text-gray-400">
-                                Bharat Opinion updates coming soon.
+                                Loading 60 Second Read...
+                            </div>
+                        ) : sixtySecondSideArticles.length === 0 ? (
+                            <div className="flex flex-1 items-center justify-center px-3 py-4 text-center text-[11px] font-semibold text-gray-400">
+                                60 Second Read updates coming soon.
                             </div>
                         ) : (
                             <div className="business-brief-viewport min-h-0 flex-1 overflow-hidden bg-[#f8fafc]">
                                 <div className="business-brief-track flex flex-col">
-                                    {businessSideArticles.map((article, index) => {
+                                    {sixtySecondSideArticles.map((article, index) => {
                                         const articlePath = getArticlePath(article);
                                         return (
                                             <button

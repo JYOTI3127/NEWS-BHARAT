@@ -492,7 +492,7 @@ const Home = () => {
               articles={editorialArticles}
               mode="q4"
               sectionEyebrow="Business"
-              sectionTitle="Business"
+              sectionTitle=""
               viewAllPath="/category/business"
               sectionId="editorials-heading"
             />

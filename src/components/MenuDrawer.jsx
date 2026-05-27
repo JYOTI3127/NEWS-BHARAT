@@ -195,8 +195,15 @@ const isStateParentGroupLabel = (categorySlug, subcategoryLabel) =>
   STATE_CATEGORY_SLUGS.has(String(categorySlug || "").trim().toLowerCase()) &&
   NON_NAVIGABLE_STATE_PARENT_LABELS.has(String(subcategoryLabel || "").trim().toLowerCase());
 
+const compareByLabel = (a, b) =>
+  String(a?.label || "").localeCompare(String(b?.label || ""), "en", { sensitivity: "base" });
+
 // ── NAV_SECTIONS (fallback) ──
 const NAV_SECTIONS = [
+  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu, links: ["Artificial Intelligence"] },
+  { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame, links: ["Bharat By 2047"] },
+  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
   {
     label: "Business",
     slug: "business",
@@ -209,27 +216,23 @@ const NAV_SECTIONS = [
       { label: "MSME & Entrepreneurship", topics: ["MSME Policies", "Small Business Stories"] },
     ],
   },
-  { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Technology", slug: "technology", Icon: Cpu, links: ["Technology"] },
-  { label: "Artificial Intelligence", slug: "ai", Icon: Cpu, links: ["Artificial Intelligence"] },
-  { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame, links: ["Bharat By 2047"] },
 ];
 
 // ── Nav links ──
 const navLinks = [
+  { label: "Automobile", path: "/category/automobile" },
   { label: "Breaking News", path: "/category/breaking-news", isBreaking: true },
-  { label: "World News", path: "/category/world-news" },
   { label: "Business", path: "/category/business" },
-  { label: "Technology", path: "/category/technology" },
-  { label: "Sports", path: "/category/sports" },
+  { label: "Education", path: "/category/education" },
   { label: "Entertainment", path: "/category/entertainment" },
   { label: "Health", path: "/category/health" },
-  { label: "Education", path: "/category/education" },
-  { label: "Automobile", path: "/category/automobile" },
   { label: "National", path: "/category/national" },
   { label: "Politics", path: "/category/politics" },
+  { label: "Sports", path: "/category/sports" },
+  { label: "Technology", path: "/category/technology" },
   { label: "Trending", path: "/category/trending" },
+  { label: "World News", path: "/category/world-news" },
   { label: "About Us", path: "/about-us" },
   { label: "Founder's Note", path: "/founders-note" },
   { label: "Editorial Policy", path: "/editorial-policy" },
@@ -343,10 +346,10 @@ export default function MenuDrawer({ open, onClose }) {
           };
         });
 
-        setNavSections(sections.length > 0 ? sections : NAV_SECTIONS);
+        setNavSections(sections.length > 0 ? [...sections].sort(compareByLabel) : NAV_SECTIONS);
         setNavSectionsLoaded(true);
       } catch {
-        setNavSections(NAV_SECTIONS);
+        setNavSections([...NAV_SECTIONS].sort(compareByLabel));
         setNavSectionsLoaded(true);
       }
     };

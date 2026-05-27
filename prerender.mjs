@@ -536,6 +536,132 @@ const buildBreadcrumbSchemaJson = (article, route, meta) => {
   }
 }
 
+const STRUCTURED_DATA_CONTAINER_KEYS = [
+  'schemas',
+  'schema',
+  'schema_list',
+  'structured_data',
+  'structured_datakey',
+  'faq_schema',
+  'faq_schemas',
+  'faqpage',
+  'faq_page',
+  'faq',
+  'json_ld',
+  'jsonld',
+  'custom_json_ld',
+  'custom_schema',
+  'custom_schemas',
+  'payload',
+  'data',
+  'result',
+  'results',
+  'items',
+]
+
+const parseJsonMaybe = (value) => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return value
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+const looksLikeSchemaObject = (value) =>
+  isPlainObject(value) &&
+  (Object.prototype.hasOwnProperty.call(value, '@type') ||
+    Object.prototype.hasOwnProperty.call(value, '@context'))
+
+const extractStructuredDataSchemas = (input, depth = 0, seen = new Set()) => {
+  if (depth > 10 || input == null) return []
+
+  const parsed = parseJsonMaybe(input)
+  if (parsed !== input) {
+    return extractStructuredDataSchemas(parsed, depth + 1, seen)
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.flatMap((item) => extractStructuredDataSchemas(item, depth + 1, seen))
+  }
+
+  if (!isPlainObject(parsed)) return []
+  if (seen.has(parsed)) return []
+  seen.add(parsed)
+
+  if (looksLikeSchemaObject(parsed)) return [parsed]
+
+  const prioritized = STRUCTURED_DATA_CONTAINER_KEYS.flatMap((key) =>
+    Object.prototype.hasOwnProperty.call(parsed, key)
+      ? extractStructuredDataSchemas(parsed[key], depth + 1, seen)
+      : []
+  )
+  if (prioritized.length > 0) return prioritized
+
+  return Object.values(parsed).flatMap((value) =>
+    extractStructuredDataSchemas(value, depth + 1, seen)
+  )
+}
+
+const normalizeStructuredSchemaObject = (schema) => {
+  if (!looksLikeSchemaObject(schema)) return null
+  return {
+    ...schema,
+    '@context': schema['@context'] || 'https://schema.org',
+  }
+}
+
+const dedupeStructuredSchemas = (schemas) => {
+  const seen = new Set()
+  const unique = []
+
+  schemas.forEach((schema) => {
+    const normalized = normalizeStructuredSchemaObject(schema)
+    if (!normalized) return
+    const key = JSON.stringify(normalized)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    unique.push(normalized)
+  })
+
+  return unique
+}
+
+const getSchemaTypeTokens = (schema) => {
+  const raw = schema?.['@type']
+  if (Array.isArray(raw)) return raw.map((item) => String(item || '').trim()).filter(Boolean)
+  const one = String(raw || '').trim()
+  return one ? [one] : []
+}
+
+const schemaHasType = (schema, expectedType) =>
+  getSchemaTypeTokens(schema).some(
+    (type) => type.toLowerCase() === String(expectedType || '').toLowerCase()
+  )
+
+const htmlHasSchemaType = (html, expectedType) => {
+  const pattern = new RegExp(
+    `"@type"\\s*:\\s*(?:"${expectedType}"|\\[[^\\]]*"${expectedType}")`,
+    'i'
+  )
+  return pattern.test(String(html || ''))
+}
+
+const getBackendArticleSchemas = (article) =>
+  dedupeStructuredSchemas(
+    extractStructuredDataSchemas({
+      seo_endpoint: article?.seo_endpoint,
+      structured_datakey: article?.structured_datakey,
+      structured_data: article?.structured_data,
+      schema: article?.schema,
+      schemas: article?.schemas,
+      seo: article?.seo,
+    })
+  )
+
 // Main fix: build titles and meta directly from API data.
 function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   const DEFAULT_IMAGE = 'https://news4bharat.com/news4bharat-share.png'
@@ -978,10 +1104,12 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       /class=["'][^"']*article-summary[^"']*["']/i.test(cleaned) ||
       /class=["'][^"']*min-w-0[^"']*["']/i.test(cleaned) ||
       /data-prerender-article-body/i.test(cleaned)
-    const hasNewsArticleSchema =
-      /"@type"\s*:\s*"NewsArticle"/i.test(cleaned) ||
-      /"@type"\s*:\s*\[\s*"NewsArticle"/i.test(cleaned)
-    const hasBreadcrumbSchema = /"@type"\s*:\s*"BreadcrumbList"/i.test(cleaned)
+    const hasNewsArticleSchema = htmlHasSchemaType(cleaned, 'NewsArticle')
+    const hasBreadcrumbSchema = htmlHasSchemaType(cleaned, 'BreadcrumbList')
+    const backendSchemas = article ? getBackendArticleSchemas(article) : []
+    const missingBackendSchemas = backendSchemas.filter((schema) =>
+      getSchemaTypeTokens(schema).every((type) => !htmlHasSchemaType(cleaned, type))
+    )
 
     if (ENABLE_ARTICLE_BODY_FALLBACK && article && !hasArticleBodyMarkup) {
       const fallbackArticleHtml = buildArticleFallbackHtml(article, route, meta)
@@ -991,8 +1119,14 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       }
     }
 
-    if (article && (!hasNewsArticleSchema || !hasBreadcrumbSchema)) {
+    if (article && (!hasNewsArticleSchema || !hasBreadcrumbSchema || missingBackendSchemas.length > 0)) {
       const schemaChunks = []
+
+      missingBackendSchemas.forEach((schema) => {
+        schemaChunks.push(
+          `<script type="application/ld+json">${JSON.stringify(schema)}</script>`
+        )
+      })
 
       if (!hasNewsArticleSchema) {
         const articleSchema = buildArticleSchemaJson(article, route, meta)

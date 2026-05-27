@@ -198,12 +198,14 @@ export default function BreakingNewsSection({
           <span className="mb-2 inline-flex items-center gap-2 font-[Poppins,sans-serif] text-[0.76rem] font-bold uppercase tracking-[0.18em] text-[#b91c1c] before:h-[9px] before:w-[9px] before:rounded-full before:bg-[#d90429] before:shadow-[0_0_0_4px_rgba(217,4,41,0.12)] before:content-['']">
             {sectionEyebrow}
           </span>
-          <h2
-            id={sectionId}
-            className="m-0 font-[Poppins,sans-serif] text-[18px] font-bold leading-none text-[#111] min-[1441px]:text-[20px] max-[425px]:text-[17px]"
-          >
-            {sectionTitle}
-          </h2>
+          {sectionTitle ? (
+            <h2
+              id={sectionId}
+              className="m-0 font-[Poppins,sans-serif] text-[18px] font-bold leading-none text-[#111] min-[1441px]:text-[20px] max-[425px]:text-[17px]"
+            >
+              {sectionTitle}
+            </h2>
+          ) : null}
           {sectionDescription ? (
             <p className="mt-2 max-w-[620px] font-[Poppins,sans-serif] text-[13px] font-medium leading-[1.55] text-slate-600 max-[425px]:text-[12px]">
               {sectionDescription}

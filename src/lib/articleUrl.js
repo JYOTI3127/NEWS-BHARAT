@@ -44,6 +44,31 @@ const getValidSiteUrl = (value) => {
   }
 };
 
+const getArticleCategorySlug = (article) => {
+  const directCandidates = [
+    article?.category_slug,
+    article?.primary_category_slug,
+    article?.category?.slug,
+    article?.primary_category?.slug,
+  ]
+    .map((value) => String(value || "").trim().replace(/^\/+|\/+$/g, ""))
+    .filter(Boolean);
+
+  if (directCandidates[0]) return directCandidates[0];
+
+  const categoryDetails = Array.isArray(article?.category_details)
+    ? article.category_details
+    : article?.category_details
+      ? [article.category_details]
+      : [];
+
+  const fromDetails = categoryDetails
+    .map((item) => String(item?.slug || item?.category_slug || "").trim().replace(/^\/+|\/+$/g, ""))
+    .find(Boolean);
+
+  return fromDetails || "";
+};
+
 export const isArticlePath = (value) => {
   const segments = getCleanSegments(value);
   return (
@@ -53,19 +78,30 @@ export const isArticlePath = (value) => {
 };
 
 export const getArticlePath = (article) => {
-  const parsed = getValidSiteUrl(article?.public_url);
-  if (!parsed) return "";
+  const publicUrl = getValidSiteUrl(article?.public_url);
+  if (publicUrl) {
+    const cleanPath = `/${getCleanSegments(publicUrl.pathname).join("/")}/`;
+    if (isArticlePath(cleanPath)) return cleanPath;
+  }
 
-  const cleanPath = `/${getCleanSegments(parsed.pathname).join("/")}/`;
-  return isArticlePath(cleanPath) ? cleanPath : "";
+  const canonicalUrl = getValidSiteUrl(article?.canonical_url);
+  if (canonicalUrl) {
+    const cleanPath = `/${getCleanSegments(canonicalUrl.pathname).join("/")}/`;
+    if (isArticlePath(cleanPath)) return cleanPath;
+  }
+
+  const slug = String(article?.slug || article?.article_slug || article?.articleSlug || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+  const categorySlug = getArticleCategorySlug(article);
+  const derivedPath = categorySlug && slug ? `/${categorySlug}/${slug}/` : "";
+
+  return isArticlePath(derivedPath) ? derivedPath : "";
 };
 
 export const getAbsoluteArticleUrl = (article) => {
-  const parsed = getValidSiteUrl(article?.public_url);
-  if (!parsed) return "";
-
   const path = getArticlePath(article);
-  return path ? `${parsed.origin}${path}` : "";
+  return path ? `${SITE_URL}${path}` : "";
 };
 
 export const getCanonicalArticleUrl = (article) => {

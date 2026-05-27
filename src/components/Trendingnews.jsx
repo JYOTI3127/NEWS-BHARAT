@@ -278,7 +278,7 @@ const LatestNews = memo(({ articles, loading, is2K }) => {
                 style={{ display: "block", textDecoration: "none", color: "inherit" }}
                 onClick={(event) => { if (!articlePath) event.preventDefault(); }}
               >
-                <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: 800, color: "#111", lineHeight: "1.35", fontSize: is2K ? 18 : undefined }}>
+                <div className="news-ticker-title tn-latest-item-title" style={{ fontWeight: 800, color: "#111", lineHeight: "1.35", fontSize: is2K ? 16 : undefined }}>
                   {article.title || "Untitled"}
                 </div>
                 {desc ? (

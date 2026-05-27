@@ -4170,6 +4170,7 @@ def inbox_view(request):
         other_member_ids = [member_id for member_id in member_ids if member_id != request.user.id]
         messages_data = [
             {
+                'id': msg.id,
                 'from': msg.sender_id,
                 'text': msg.text or '',
                 'time': timezone.localtime(msg.created_at).strftime('%H:%M'),
@@ -4191,6 +4192,7 @@ def inbox_view(request):
         'staff_users':         staff_users,
         'conversations':       conversations,
         'active_conversation': active_conversation,
+        'active_conversation_id': active_conversation.id if active_conversation else None,
         'messages':            conv_messages,
         'staff_users_json':    json.dumps(staff_users_data),
         'conversations_json':  json.dumps(conversations_data),
@@ -4251,6 +4253,66 @@ def send_message(request):
         )
 
     return JsonResponse({"status": "ok", "msg_id": msg.id, "time": msg.created_at.strftime("%H:%M")})
+
+
+@staff_member_required
+@require_POST
+def edit_message(request):
+    message_id = request.POST.get("message_id")
+    text = request.POST.get("text", "").strip()
+
+    if not message_id or not text:
+        return JsonResponse({"error": "Missing data"}, status=400)
+
+    try:
+        msg = Message.objects.select_related("conversation").get(id=message_id, sender=request.user)
+    except Message.DoesNotExist:
+        return JsonResponse({"error": "Message not found"}, status=404)
+
+    if not ConversationMember.objects.filter(conversation=msg.conversation, user=request.user).exists():
+        return JsonResponse({"error": "Not a member"}, status=403)
+
+    msg.text = text
+    msg.save(update_fields=["text"])
+
+    msg.conversation.updated_at = timezone.now()
+    msg.conversation.save(update_fields=["updated_at"])
+
+    return JsonResponse({
+        "status": "ok",
+        "message_id": msg.id,
+        "text": msg.text,
+        "time": timezone.localtime(msg.created_at).strftime("%H:%M"),
+    })
+
+
+@staff_member_required
+@require_POST
+def delete_message(request):
+    message_id = request.POST.get("message_id")
+
+    if not message_id:
+        return JsonResponse({"error": "Missing data"}, status=400)
+
+    try:
+        msg = Message.objects.select_related("conversation").get(id=message_id, sender=request.user)
+    except Message.DoesNotExist:
+        return JsonResponse({"error": "Message not found"}, status=404)
+
+    conversation = msg.conversation
+    if not ConversationMember.objects.filter(conversation=conversation, user=request.user).exists():
+        return JsonResponse({"error": "Not a member"}, status=403)
+
+    msg.delete()
+
+    last_message = conversation.messages.order_by("-created_at").first()
+    conversation.updated_at = last_message.created_at if last_message else timezone.now()
+    conversation.save(update_fields=["updated_at"])
+
+    return JsonResponse({
+        "status": "ok",
+        "message_id": int(message_id),
+    })
 
 
 @staff_member_required

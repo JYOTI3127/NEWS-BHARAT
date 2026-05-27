@@ -519,6 +519,148 @@ html {
   font-size: 0.78rem;
 }
 
+@media (min-width: 1024px) and (max-width: 1280px) {
+  .admin-topbar {
+    height: 63px;
+    padding: 0 18px;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .topbar-left,
+  .topbar-right {
+    width: auto;
+  }
+
+  .topbar-left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .topbar-title {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    font-size: 0.96rem;
+    min-width: 0;
+  }
+
+  #topbarPresenceBadge,
+  #topbarAttendanceTimer {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+    gap: 5px !important;
+    white-space: nowrap;
+  }
+
+  .topbar-right {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .topbar-search {
+    min-width: 0 !important;
+    width: 180px !important;
+    max-width: 180px !important;
+    flex: 0 0 180px !important;
+    padding: 6px 10px 6px 32px !important;
+  }
+
+  .sidebar-user {
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .search-icon {
+    left: 12px;
+  }
+
+  .topbar-search input {
+    font-size: 0.78rem;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .sidebar-user .user-info {
+    max-width: 74px;
+  }
+
+  .sidebar-user .user-email {
+    display: none;
+  }
+
+  .topbar-add-btn {
+    padding: 7px 10px;
+    font-size: 0.74rem;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .topbar-icon-btn {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .kpi-row .kpi-card:last-child {
+    grid-column: span 1 !important;
+  }
+
+  .dash-mid-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-card--articles,
+  .dash-mid-row > .dash-card:last-child {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1281px) and (max-width: 1440px) {
+  .admin-topbar {
+    padding: 14px 24px;
+    gap: 14px;
+  }
+
+  .topbar-left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .topbar-right {
+    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .topbar-search {
+    min-width: 220px !important;
+    width: 250px !important;
+    max-width: 250px !important;
+    flex: 0 0 250px !important;
+  }
+
+  .user-info {
+    max-width: 130px;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .dash-mid-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .status-badge {
   font-size: 0.68rem;
   font-weight: 700;
@@ -3825,6 +3967,20 @@ text-decoration: none;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 28px;
+}
+
+@media (min-width: 1024px) and (max-width: 1440px) {
+  .art-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .art-activity-section {
+    order: 1;
+  }
+
+  .art-images-section {
+    order: 2;
+  }
 }
 
 @media (max-width: 900px) {
@@ -14543,6 +14699,44 @@ body {
   align-items: flex-end;
 }
 
+.ms-mactions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ms-maction {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #dbe2f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.ms-maction:hover {
+  color: #1e3a8a;
+  border-color: #c7d6ff;
+  background: #eef4ff;
+}
+
+.ms-maction--danger:hover {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.ms-maction svg {
+  pointer-events: none;
+}
+
 /* Sender name + time meta */
 .ms-mmeta {
   display: flex;
@@ -21146,6 +21340,53 @@ tr.art-row td:has(.art-cat-text) {
 @media (max-width: 1200px) {
   .edcal-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1440px) {
+  .edcal-hero {
+    padding: 18px 22px;
+    border-radius: 22px;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .edcal-title {
+    font-size: 28px;
+  }
+
+  .edcal-subtitle {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .edcal-hero-card {
+    min-width: 200px;
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
+
+  .edcal-hero-value {
+    font-size: 22px;
+    margin-top: 6px;
+  }
+
+  .edcal-hero-note {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .edcal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .edcal-board {
+    order: 1;
+  }
+
+  .edcal-sidebar {
+    order: 2;
   }
 }
 

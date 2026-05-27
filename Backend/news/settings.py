@@ -350,7 +350,6 @@ def _load_service_account_payload_from_file(file_path):
         print(f"GCS credentials file load failed from {file_path}: {e}")
         return None
 
-
 def _load_bundled_gcs_service_account_payload():
     explicit_file = BASE_DIR / "news" / "news4bharat-490809-450e05d7fce9.json"
     payload = _load_service_account_payload_from_file(explicit_file)

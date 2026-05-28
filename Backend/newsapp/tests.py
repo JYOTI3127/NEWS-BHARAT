@@ -327,6 +327,49 @@ class SitemapDateFormattingTests(TestCase):
 
         self.assertEqual(_iso(dt), "2026-05-28T18:18:31+05:30")
 
+
+class SitemapImageOrderingTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='image-sitemap-author',
+            password='testpass123',
+        )
+
+    def test_image_sitemap_prioritizes_recent_updates(self):
+        older_but_updated = Article.objects.create(
+            author=self.author,
+            title='Older image article',
+            content='Body',
+            status='published',
+            image_url='https://example.com/older.webp',
+        )
+        newer_but_not_updated = Article.objects.create(
+            author=self.author,
+            title='Newer image article',
+            content='Body',
+            status='published',
+            image_url='https://example.com/newer.webp',
+        )
+
+        now = timezone.now()
+        Article.objects.filter(pk=older_but_updated.pk).update(
+            published_at=now - timezone.timedelta(days=10),
+            updated_at=now,
+        )
+        Article.objects.filter(pk=newer_but_not_updated.pk).update(
+            published_at=now - timezone.timedelta(days=1),
+            updated_at=now - timezone.timedelta(days=2),
+        )
+
+        sitemap_xml = SitemapEngine._build_images()
+
+        older_loc = f"<loc>https://news4bharat.com/article/{older_but_updated.slug}/</loc>"
+        newer_loc = f"<loc>https://news4bharat.com/article/{newer_but_not_updated.slug}/</loc>"
+
+        self.assertIn(older_loc, sitemap_xml)
+        self.assertIn(newer_loc, sitemap_xml)
+        self.assertLess(sitemap_xml.index(older_loc), sitemap_xml.index(newer_loc))
+
 class ArticleAdminPermissionTests(TestCase):
     def setUp(self):
         self.client = APIClient()

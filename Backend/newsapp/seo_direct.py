@@ -61,7 +61,7 @@ CACHE_FEED    = 300    # 5 min
 SITEMAP_INDEX_CACHE_KEY = "seo:sitemap:index:v3"
 SITEMAP_NEWS_CACHE_KEY = "seo:sitemap:news:v2"
 SITEMAP_ARTICLES_CACHE_PREFIX = "seo:sitemap:articles:v2"
-SITEMAP_IMAGES_CACHE_KEY = "seo:sitemap:images:v1"
+SITEMAP_IMAGES_CACHE_KEY = "seo:sitemap:images:v2"
 SITEMAP_BHARAT_OPINIONS_CACHE_KEY = "seo:sitemap:bharat-opinions:v1"
 
 
@@ -620,7 +620,7 @@ class SitemapEngine:
             Article.objects
             .filter(status="published", in_sitemap=True)
             .prefetch_related("categories")
-            .order_by("-published_at")[:5000]
+            .order_by("-updated_at", "-published_at", "-created_at")[:5000]
         )
 
         ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")

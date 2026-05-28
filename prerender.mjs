@@ -198,6 +198,7 @@ const getLegacyArticleRoutes = (article) => {
   const routes = new Set()
   const slug = normalizeSlugToken(article?.slug || article?.article_slug || article?.articleSlug)
   if (!slug) return []
+  if (!IMPORTANT_LEGACY_ARTICLE_SLUGS.has(slug)) return []
 
   routes.add(`/article/${slug}`)
 
@@ -328,6 +329,9 @@ const SITE_NAME = 'News4Bharat'
 const ENABLE_ARTICLE_BODY_FALLBACK = true 
 const MAX_TAG_ROUTES = 200
 const IMPORTANT_TAG_ROUTES = ['/tag/Us-Iran%20War']
+const IMPORTANT_LEGACY_ARTICLE_SLUGS = new Set([
+  'air-india-fuel-surcharge-hike-april-2026',
+])
 
 const escapeHtml = (value) =>
   String(value || '')

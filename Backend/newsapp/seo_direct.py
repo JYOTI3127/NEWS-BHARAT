@@ -31,6 +31,7 @@ import bleach
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -261,10 +262,19 @@ def _extract_article_image_entries(article, base: str = None) -> list[dict]:
 
 def _iso(dt) -> str:
     if dt is None:
-        return datetime.utcnow().isoformat() + "Z"
-    if isinstance(dt, str):
-        return dt
-    return dt.isoformat()
+        dt = timezone.now()
+    elif isinstance(dt, str):
+        parsed = parse_datetime(dt.strip())
+        if parsed is None:
+            return dt
+        dt = parsed
+
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_default_timezone())
+    else:
+        dt = timezone.localtime(dt, timezone.get_default_timezone())
+
+    return dt.replace(microsecond=0).isoformat(timespec="seconds")
 
 
 def _cached(key, fn, ttl):
@@ -275,6 +285,33 @@ def _cached(key, fn, ttl):
     result = fn()
     cache.set(key, result, ttl)
     return result
+
+
+def invalidate_seo_caches():
+    from newsapp.models import Article
+
+    total_articles = Article.objects.filter(status="published", in_sitemap=True).count()
+    article_pages = max(1, (total_articles + 999) // 1000)
+
+    keys = [
+        "seo:sitemap:news",
+        "seo:sitemap:index",
+        "seo:sitemap:index:v2",
+        "seo:sitemap:images",
+        "seo:sitemap:bharat-opinions:v1",
+        "seo:rss:all",
+    ]
+    keys.extend(f"seo:sitemap:articles:{page}" for page in range(1, article_pages + 1))
+
+    for key in keys:
+        cache.delete(key)
+
+    try:
+        if hasattr(cache, "delete_pattern"):
+            cache.delete_pattern("seo:rss:*")
+            cache.delete_pattern("seo:sitemap:*")
+    except Exception:
+        pass
 
 
 def primary_category(article):
@@ -507,7 +544,7 @@ class SitemapEngine:
         articles = (
             Article.objects
             .filter(status="published", in_sitemap=True)
-            .order_by("-published_at")[offset: offset + limit]
+            .order_by("-updated_at", "-published_at", "-created_at")[offset: offset + limit]
         )
 
         ET.register_namespace("", "http://www.sitemaps.org/schemas/sitemap/0.9")
@@ -1237,11 +1274,7 @@ def submit_article_everywhere(article) -> dict:
     indexnow = IndexNow.submit([article_url(article, base)])
     pings    = ping_search_engines()
 
-    # Sitemap cache invalidate
-    for key in ["seo:sitemap:news", "seo:sitemap:index", "seo:sitemap:index:v2",
-                 "seo:sitemap:images", "seo:sitemap:articles:1",
-                 "seo:sitemap:bharat-opinions:v1", f"seo:rss:all"]:
-        cache.delete(key)
+    invalidate_seo_caches()
 
     logger.info(f"[SEO] Submitted '{slug}' | google={google} | indexnow={indexnow}")
     return {"google": google, "indexnow": indexnow, "pings": pings}

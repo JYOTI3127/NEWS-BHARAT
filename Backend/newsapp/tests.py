@@ -8,12 +8,13 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 from rest_framework.test import APIClient
 import json
+from datetime import datetime
 from io import StringIO
 from unittest.mock import patch
 
 from .admin import _build_editorial_calendar_events
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Role
-from .seo_direct import SitemapEngine
+from .seo_direct import SitemapEngine, _iso
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
@@ -277,6 +278,54 @@ class HomepageFreshPublishOrderingTests(TestCase):
 
         self.assertEqual(_hero_slot_queryset(hero_slot).first().pk, recent_article.pk)
         self.assertEqual(_latest_news_queryset(latest_slot).first().pk, recent_article.pk)
+
+
+class SitemapArticleOrderingTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='sitemap-author',
+            password='testpass123',
+        )
+
+    def test_article_sitemap_prioritizes_recent_updates(self):
+        older_but_updated = Article.objects.create(
+            author=self.author,
+            title='Older but updated',
+            content='Body',
+            status='published',
+        )
+        newer_but_not_updated = Article.objects.create(
+            author=self.author,
+            title='Newer publish',
+            content='Body',
+            status='published',
+        )
+
+        now = timezone.now()
+        Article.objects.filter(pk=older_but_updated.pk).update(
+            published_at=now - timezone.timedelta(days=10),
+            updated_at=now,
+        )
+        Article.objects.filter(pk=newer_but_not_updated.pk).update(
+            published_at=now - timezone.timedelta(days=1),
+            updated_at=now - timezone.timedelta(days=2),
+        )
+
+        sitemap_xml = SitemapEngine._build_articles(1)
+
+        older_loc = f"<loc>https://news4bharat.com/article/{older_but_updated.slug}/</loc>"
+        newer_loc = f"<loc>https://news4bharat.com/article/{newer_but_not_updated.slug}/</loc>"
+
+        self.assertIn(older_loc, sitemap_xml)
+        self.assertIn(newer_loc, sitemap_xml)
+        self.assertLess(sitemap_xml.index(older_loc), sitemap_xml.index(newer_loc))
+
+
+class SitemapDateFormattingTests(TestCase):
+    def test_iso_dates_use_local_offset_without_microseconds(self):
+        dt = datetime.fromisoformat("2026-05-28T12:48:31.123456+00:00")
+
+        self.assertEqual(_iso(dt), "2026-05-28T18:18:31+05:30")
 
 class ArticleAdminPermissionTests(TestCase):
     def setUp(self):

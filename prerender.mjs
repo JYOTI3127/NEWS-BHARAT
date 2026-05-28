@@ -79,6 +79,26 @@ const getCleanPathSegments = (value) =>
 const getArticleSlugFromRoute = (route) =>
   getCleanPathSegments(route).pop() || ''
 
+const isLegacyArticleRoute = (route) => {
+  const segments = getCleanPathSegments(route)
+  return (
+    (segments[0] === 'article' || segments[0] === 'news') &&
+    (segments.length === 2 || segments.length === 3) &&
+    Boolean(segments[segments.length - 1])
+  )
+}
+
+const isSeoArticleRoute = (route) => isArticlePath(route) || isLegacyArticleRoute(route)
+
+const getTagRoute = (tag) => {
+  const normalized = String(tag || '')
+    .trim()
+    .replace(/^#+/, '')
+    .replace(/\s+/g, ' ')
+
+  return normalized ? `/tag/${encodeURIComponent(normalized)}` : ''
+}
+
 const toArticleRouteFromUrl = (value) => {
   const normalized = String(value || '').trim()
   if (!normalized) return ''
@@ -170,6 +190,16 @@ const getArticleRoutes = (article) => {
       routes.add(derivedPath)
     }
   }
+
+  return [...routes]
+}
+
+const getLegacyArticleRoutes = (article) => {
+  const routes = new Set()
+  const slug = normalizeSlugToken(article?.slug || article?.article_slug || article?.articleSlug)
+  if (!slug) return []
+
+  routes.add(`/article/${slug}`)
 
   return [...routes]
 }
@@ -296,6 +326,8 @@ const stripLazyChunkPreloads = (html) =>
 const BASE_URL = 'https://news4bharat.com'
 const SITE_NAME = 'News4Bharat'
 const ENABLE_ARTICLE_BODY_FALLBACK = true 
+const MAX_TAG_ROUTES = 200
+const IMPORTANT_TAG_ROUTES = ['/tag/Us-Iran%20War']
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -348,12 +380,22 @@ const getArticleCategory = (article) => {
 }
 
 const getArticleTags = (article) => {
-  const fromArray = Array.isArray(article?.tags_list)
-    ? article.tags_list
-    : String(article?.tags || '')
+  const values = []
+
+  if (Array.isArray(article?.tags_list)) {
+    values.push(...article.tags_list)
+  }
+
+  values.push(article?.tags)
+  values.push(article?.focus_keyword)
+  values.push(article?.secondary_keywords)
+
+  const fromArray = values
+    .filter(Boolean)
+    .flatMap((value) => String(value || '')
         .split(',')
         .map((value) => value.trim())
-        .filter(Boolean)
+        .filter(Boolean))
 
   return Array.from(
     new Set(fromArray.map((value) => String(value || '').trim()).filter(Boolean))
@@ -749,7 +791,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
   }
 
   // Article page
-  if (isArticlePath(route)) {
+  if (isSeoArticleRoute(route)) {
     const article = articleMap.get(route)
 
     if (article) {
@@ -888,6 +930,30 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
     }
   }
 
+  // Tag page
+  if (route.startsWith('/tag/')) {
+    const rawTag = route.replace('/tag/', '').trim()
+    const decodedTag = (() => {
+      try {
+        return decodeURIComponent(rawTag)
+      } catch {
+        return rawTag
+      }
+    })()
+    const tagName = toTitleCase(decodedTag.replace(/[-_+]+/g, ' '))
+    const title = `${tagName} News, Latest Updates & Explainers | ${SITE_NAME}`
+
+    return {
+      title,
+      description: `Read the latest ${tagName} news, updates, analysis and explainers on ${SITE_NAME}.`,
+      canonical: `${BASE_URL}${route}`,
+      ogImage: DEFAULT_IMAGE,
+      ogType: 'website',
+      robots: 'index,follow,max-image-preview:large',
+      twitterSite: TWITTER_HANDLE,
+    }
+  }
+
   // Fallback
   return {
     title: `${SITE_NAME} - News As It Is`,
@@ -963,7 +1029,7 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
     }
   }
 
-  if (isArticlePath(route)) {
+  if (isSeoArticleRoute(route)) {
     const currentArticle = articleMap.get(route)
     const seedArticles = currentArticle ? [currentArticle, ...allArticles.slice(0, 24)] : allArticles.slice(0, 24)
 
@@ -984,6 +1050,45 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
     return {
       articles: uniqueArticlesByRoute([...categoryArticles.slice(0, 80), ...allArticles.slice(0, 18)]),
+      categories,
+      homepageHeroImage: siteData?.homepageHeroImage || '',
+    }
+  }
+
+  if (route.startsWith('/tag/')) {
+    const rawTag = route.replace('/tag/', '').trim()
+    const normalizedTag = (() => {
+      try {
+        return decodeURIComponent(rawTag)
+      } catch {
+        return rawTag
+      }
+    })()
+      .replace(/\+/g, ' ')
+      .replace(/^#+/, '')
+      .replace(/&/g, ' and ')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+    const tagFingerprint = normalizedTag.replace(/[^a-z0-9]+/g, '')
+    const taggedArticles = allArticles.filter((article) =>
+      getArticleTags(article).some((tag) => {
+        const articleTag = String(tag || '')
+          .replace(/\+/g, ' ')
+          .replace(/^#+/, '')
+          .replace(/&/g, ' and ')
+          .replace(/[_-]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+
+        return articleTag === normalizedTag || articleTag.replace(/[^a-z0-9]+/g, '') === tagFingerprint
+      })
+    )
+
+    return {
+      articles: uniqueArticlesByRoute([...taggedArticles.slice(0, 80), ...allArticles.slice(0, 18)]),
       categories,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
@@ -1096,7 +1201,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     cleaned = cleaned.replace('</head>', `\n${buildWebsiteSchemaTag()}\n</head>`)
   }
 
-  if (isArticlePath(route)) {
+  if (isSeoArticleRoute(route)) {
     const article = articleMap.get(route)
     const hasArticleBodyMarkup =
       /data-prerender-fallback=["']article-body["']/i.test(cleaned) ||
@@ -1188,14 +1293,36 @@ async function getRoutesAndData() {
       'https://news4bharat.com/news4bharat-share.png'
 
     let added = 0
+    let legacyAdded = 0
+    let tagAdded = 0
+    const tagRoutes = new Set()
     const detailTasks = []
-    articles.forEach((a) => {
+    IMPORTANT_TAG_ROUTES.forEach((route) => {
+      routeSet.add(route)
+      tagRoutes.add(route)
+    })
+    const routeArticles = sortedArticles.length > 0 ? sortedArticles : articles
+
+    routeArticles.forEach((a) => {
       const articleRoutes = getArticleRoutes(a)
       if (articleRoutes.length > 0) {
         const articleSlug = getArticleSlugFromRoute(articleRoutes[0])
         articleRoutes.forEach((route) => {
           routeSet.add(route)
           articleMap.set(route, a)
+        })
+        getLegacyArticleRoutes(a).forEach((route) => {
+          routeSet.add(route)
+          articleMap.set(route, a)
+          legacyAdded++
+        })
+        getArticleTags(a).forEach((tag) => {
+          if (tagAdded >= MAX_TAG_ROUTES) return
+          const tagRoute = getTagRoute(tag)
+          if (!tagRoute || tagRoutes.has(tagRoute)) return
+          tagRoutes.add(tagRoute)
+          routeSet.add(tagRoute)
+          tagAdded++
         })
         if (articleSlug) {
           detailTasks.push(
@@ -1216,6 +1343,9 @@ async function getRoutesAndData() {
                   articleRoutes.forEach((route) => {
                     articleMap.set(route, articleWithSeo)
                   })
+                  getLegacyArticleRoutes(articleWithSeo).forEach((route) => {
+                    articleMap.set(route, articleWithSeo)
+                  })
                 }
               })
               .catch(() => {})
@@ -1226,6 +1356,8 @@ async function getRoutesAndData() {
     })
     await Promise.allSettled(detailTasks)
     console.log(`Added ${added}/${articles.length} article routes`)
+    console.log(`Added ${legacyAdded} legacy article routes`)
+    console.log(`Added ${tagRoutes.size} tag routes`)
 
     if (dispatchPayload?.slug) {
       try {
@@ -1251,6 +1383,14 @@ async function getRoutesAndData() {
           forcedRoutes.forEach((route) => routeSet.add(route))
           forcedRoutes.forEach((route) => {
             articleMap.set(route, forcedArticleWithSeo)
+          })
+          getLegacyArticleRoutes(forcedArticleWithSeo).forEach((route) => {
+            routeSet.add(route)
+            articleMap.set(route, forcedArticleWithSeo)
+          })
+          getArticleTags(forcedArticleWithSeo).forEach((tag) => {
+            const tagRoute = getTagRoute(tag)
+            if (tagRoute) routeSet.add(tagRoute)
           })
 
           console.log(

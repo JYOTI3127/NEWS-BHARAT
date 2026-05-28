@@ -100,7 +100,7 @@ export default function Newsletter() {
             </h2>
 
             <p className="text-white/55 text-xs min-[376px]:text-sm min-[769px]:text-base min-[1441px]:text-[1rem] min-[1800px]:text-[1.06rem] leading-relaxed min-[1441px]:leading-7 m-0 self-start max-w-[62ch]">
-              Get the top Bharat stories, explainers and sharp analysis in your inbox every weekly.
+              Get the top Bharat stories, explainers and sharp analysis in your inbox weekly.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">

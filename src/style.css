@@ -16780,6 +16780,13 @@ img {
     font-size: 8px !important;
     line-height: 1.35 !important;
   }
+
+  .fps-layout .fps-middle-image-only-media,
+  .fps-layout .fps-card-media {
+    background-color: #fff !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
 }
 
 /* FreshPopular top rail: L-1440 (1440-1799) par 3-line title clamp */
@@ -16799,6 +16806,13 @@ img {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .fps-layout .fps-middle-image-only-media,
+  .fps-layout .fps-card-media {
+    background-color: #fff !important;
+    object-fit: contain !important;
+    object-position: center center !important;
   }
 }
 

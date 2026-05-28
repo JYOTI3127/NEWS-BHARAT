@@ -2241,6 +2241,7 @@ export default function ArticleDetails() {
   const normalizedCategorySlug = isBfsiCategory
     ? ""
     : normalizeSlugValue(primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || "");
+  const isWorldNewsArticle = ["world-news", "worldnews"].includes(normalizedCategorySlug);
   const routeCanonicalUrl = buildCanonicalFromRoute(normalizedCategorySlug || categorySlug, article?.slug || articleSlug);
   const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
   const articlePath = getArticlePath(article) || (routeCanonicalUrl ? new URL(routeCanonicalUrl).pathname : "");
@@ -2269,7 +2270,12 @@ export default function ArticleDetails() {
   const heroImageCardClassName = is2K
     ? "article-hero-image-card w-fit max-w-full mr-auto rounded-xl overflow-hidden mb-7 shadow-sm"
     : "article-hero-image-card w-full rounded-xl overflow-hidden mb-7 shadow-sm";
-  const heroImageStyle = is2K ? { width: "min(100%, 1480px)", height: "auto", maxWidth: "100%", maxHeight: "min(72vh, 820px)", objectFit: "contain", objectPosition: "left center", margin: "0" } : undefined;
+  const heroImageClassName = is2K
+    ? "block"
+    : `w-full max-h-[480px] ${isWorldNewsArticle ? "object-contain bg-[#f4f7fb]" : "object-cover"}`;
+  const heroImageStyle = is2K
+    ? { width: "min(100%, 1480px)", height: "auto", maxWidth: "100%", maxHeight: "min(72vh, 820px)", objectFit: "contain", objectPosition: "left center", margin: "0" }
+    : undefined;
 
   const articleSummaryText = getPlainText(article.subtitle) || getPlainText(article.description) || getPlainText(article.summary) || getPlainText(article.excerpt);
   const visibleSummary = articleSummaryText || truncateText(plainArticleContent, 220) || article.title;
@@ -2536,7 +2542,7 @@ export default function ArticleDetails() {
                 <img
                   src={imageUrl}
                   alt={imageAlt}
-                  className={is2K ? "block" : "w-full object-cover max-h-[480px]"}
+                  className={heroImageClassName}
                   style={heroImageStyle}
                   loading="eager"
                   decoding="async"

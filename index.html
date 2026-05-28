@@ -29,6 +29,11 @@
 
   <!-- DNS prefetch for faster third party resolution -->
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+  <link rel="dns-prefetch" href="https://news.google.com">
+
+  <!-- Google News SWG Basic -->
+  <script async type="application/javascript"
+    src="https://news.google.com/swg/js/v1/swg-basic.js"></script>
 
   <!-- Fonts: load asynchronously so the Google Fonts stylesheet does not block first paint -->
   <link rel="stylesheet"
@@ -43,10 +48,11 @@
   <!-- GA: load after first paint/idle so analytics does not compete with LCP resources -->
   <script>
     window.dataLayer = window.dataLayer || [];
+    window.N4B_GA_ID = 'G-NR6G1PPS6N';
     window.gtag = function gtag(){ window.dataLayer.push(arguments); };
 
     (function () {
-      var GA_ID = 'G-NR6G1PPS6N';
+      var GA_ID = window.N4B_GA_ID;
       var loaded = false;
       var listenersAttached = false;
       var fallbackTimer = 0;
@@ -64,7 +70,7 @@
         document.head.appendChild(script);
 
         window.gtag('js', new Date());
-        window.gtag('config', GA_ID);
+        window.gtag('config', GA_ID, { send_page_view: false });
       }
 
       function cleanupListeners() {

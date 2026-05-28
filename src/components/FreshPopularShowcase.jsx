@@ -624,26 +624,14 @@ export default function FreshPopularShowcase({
             {hero && (
               <StoryLink
                 article={hero}
-                className="relative block min-h-[320px] overflow-hidden border border-[#dfdfdf] bg-[#555] no-underline max-[320px]:min-h-[196px] min-[375px]:min-h-[360px] min-[425px]:min-h-[400px] min-[768px]:min-h-[460px] min-[1024px]:min-h-[390px] min-[1440px]:min-h-[500px] min-[1920px]:min-h-[560px]"
+                className="relative block aspect-[16/9] overflow-hidden border border-[#dfdfdf] bg-[#f4f4f4] no-underline"
               >
                 {getArticleImage(hero) ? (
                   <>
                     <img
                       src={getArticleImage(hero)}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full scale-105 object-cover object-center blur-[14px]"
-                      style={{
-                        objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
-                        opacity: 0.42,
-                      }}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <img
-                      src={getArticleImage(hero)}
                       alt={getArticleTitle(hero)}
-                      className="fps-hero-media absolute inset-0 h-full w-full object-contain object-center max-[375px]:object-cover max-[320px]:object-cover max-[320px]:object-top"
+                      className="fps-hero-media absolute inset-0 h-full w-full object-contain object-center"
                       style={{
                         objectPosition: is375Viewport ? "center center" : getArticleImageFocus(hero),
                       }}

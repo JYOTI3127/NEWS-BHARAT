@@ -16687,8 +16687,8 @@ img {
     width: 100% !important;
     height: auto !important;
     max-height: 300px !important;
-    aspect-ratio: 16 / 8.6 !important;
-    object-fit: cover !important;
+    aspect-ratio: 16 / 9 !important;
+    object-fit: contain !important;
   }
 
   .fps-layout > div > a:first-child > div:last-child {
@@ -16737,8 +16737,16 @@ img {
   .fps-middle-image-only-media,
   .fps-card-media {
     background-color: #ffffff !important;
-    object-fit: cover !important;
     object-position: center center !important;
+  }
+
+  .fps-hero-media {
+    object-fit: contain !important;
+  }
+
+  .fps-middle-image-only-media,
+  .fps-card-media {
+    object-fit: cover !important;
   }
 
   .fps-middle-image-only-media,

@@ -187,6 +187,66 @@ function TopLevelCategoryRedirect() {
   return <Navigate to={`/category/${canonicalSlug}`} replace />;
 }
 
+function AnalyticsPageView() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pagePath = `${location.pathname}${location.search}${location.hash}`;
+    const pageLocation = window.location.href;
+    const pageTitle = document.title || "News4Bharat";
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "n4b_page_view",
+      page_path: pagePath,
+      page_location: pageLocation,
+      page_title: pageTitle,
+    });
+
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "page_view", {
+        page_path: pagePath,
+        page_location: pageLocation,
+        page_title: pageTitle,
+        send_to: window.N4B_GA_ID || "G-NR6G1PPS6N",
+      });
+    }
+  }, [location.hash, location.pathname, location.search]);
+
+  return null;
+}
+
+const shouldInitSwgBasic = (pathname) => {
+  const parts = String(pathname || "/").split("/").filter(Boolean);
+  if (parts.length === 0) return true;
+  if (parts[0] === "tag" && parts.length >= 2) return true;
+  if (parts.length === 2 && !["category", "author", "article", "news", "60-seconds"].includes(parts[0])) return true;
+  return false;
+};
+
+function SwgBasicInit() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!shouldInitSwgBasic(location.pathname)) return;
+
+    window.SWG_BASIC = window.SWG_BASIC || [];
+    window.SWG_BASIC.push(function (basicSubscriptions) {
+      basicSubscriptions.init({
+        type: "NewsArticle",
+        isPartOfType: ["Product"],
+        isPartOfProductId: "CAow6K_GDA:openaccess",
+        clientOptions: { theme: "light", lang: "en-GB" },
+      });
+    });
+  }, [location.pathname]);
+
+  return null;
+}
+
 function Layout() {
   const location = useLocation();
   const hideLayout = location.pathname === "/CommingSoon";
@@ -316,6 +376,8 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <AnalyticsPageView />
+      <SwgBasicInit />
       <Layout />
     </BrowserRouter>
   );

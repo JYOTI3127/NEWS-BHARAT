@@ -90,6 +90,15 @@ const getArticleSummary = (article) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const explainerImageStyle = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
+  objectPosition: "center",
+  display: "block",
+  background: "#f4f7fb",
+};
+
 const useIs4K = () => {
   const getValue = () => (typeof window !== "undefined" ? window.innerWidth > 2560 : false);
   const [is4K, setIs4K] = useState(getValue);
@@ -268,7 +277,7 @@ export function EntertainmentSection({ articles: passedArticles = [] }) {
                     src={imgSrc(featured)}
                     alt={featured.title}
                     className="w-full h-full object-cover"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    style={explainerImageStyle}
                     priority={true}
                   />
                   <div className="hs-featured-overlay">
@@ -328,7 +337,7 @@ export function EntertainmentSection({ articles: passedArticles = [] }) {
                           src={imgSrc(card)}
                           alt={card.title}
                           className="w-full h-full object-cover"
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          style={explainerImageStyle}
                         />
                       </div>
                       <div className="hs-small-text">
@@ -384,7 +393,7 @@ export function EntertainmentSection({ articles: passedArticles = [] }) {
                         src={imgSrc(card)}
                         alt={card.title}
                         className="w-full h-full object-cover"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={explainerImageStyle}
                       />
                     </div>
                     <div className="hs-mid-text">

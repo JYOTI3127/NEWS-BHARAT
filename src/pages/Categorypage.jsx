@@ -586,6 +586,9 @@ export default function CategoryPage() {
       .filter((group) => group.articles.length > 0)
     : [];
   const isWorldNewsCategory = ["world-news", "worldnews"].includes(String(slug || "").trim().toLowerCase());
+  const categoryImageFitClass = isWorldNewsCategory
+    ? "object-contain bg-[#f4f7fb]"
+    : "object-cover";
   const shouldClampWorldNewsHeader = isWorldNewsCategory && viewportWidth <= 1440;
   const shouldClampWorldNewsParagraph = isWorldNewsCategory && viewportWidth >= 768 && viewportWidth <= 1440;
   const categoryDisplayName = normalizeCategoryDisplayName(category?.name, slug);
@@ -780,7 +783,7 @@ export default function CategoryPage() {
                   style={heroMediaStyle}
                 >
                   {heroArticle.image
-                    ? <img src={heroArticle.image} alt={heroArticle.title} className="w-full h-full object-cover" loading="eager" fetchPriority="high" decoding="async" width={1280} height={720} />
+                    ? <img src={heroArticle.image} alt={heroArticle.title} className={`w-full h-full ${categoryImageFitClass}`} loading="eager" fetchPriority="high" decoding="async" width={1280} height={720} />
                     : <div className="w-full h-full flex items-center justify-center bg-[#f0ece8]"><Newspaper size={40} color="#ccc" /></div>
                   }
                   <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[rgba(0,0,0,0.3)] to-transparent" />
@@ -885,7 +888,7 @@ export default function CategoryPage() {
                   <div className="group bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.07)] hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.11)] transition-transform duration-200 ease-out overflow-hidden h-full">
                     <div className="relative aspect-[16/9] w-full overflow-hidden">
                       {article.image ? (
-                        <img src={article.image} alt={article.title} className="w-full h-full object-cover" loading="lazy" decoding="async" width={640} height={360} />
+                        <img src={article.image} alt={article.title} className={`w-full h-full ${categoryImageFitClass}`} loading="lazy" decoding="async" width={640} height={360} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-slate-100">
                           <Newspaper size={28} color="#ccc" />

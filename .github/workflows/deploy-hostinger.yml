@@ -12,8 +12,8 @@ on:
       - rebuild-frontend
 
 concurrency:
-  group: hostinger-production-deploy
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'push' && format('hostinger-production-push-{0}', github.ref) || 'hostinger-production-dispatch' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   build-and-deploy:
@@ -31,12 +31,16 @@ jobs:
           EVENT_NAME="${{ github.event_name }}"
           DISPATCH_TYPE="${{ github.event.action }}"
           REASON="${{ github.event.client_payload.reason }}"
+          FORCE_DEPLOY="${{ github.event.client_payload.force_deploy }}"
 
           echo "event_name=$EVENT_NAME" >> "$GITHUB_OUTPUT"
           echo "dispatch_type=$DISPATCH_TYPE" >> "$GITHUB_OUTPUT"
           echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "force_deploy=$FORCE_DEPLOY" >> "$GITHUB_OUTPUT"
 
           if [ "$EVENT_NAME" = "repository_dispatch" ] && [ "$REASON" = "scheduled-batch" ]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "repository_dispatch" ] && [ "$DISPATCH_TYPE" = "article-updated" ] && [ "$FORCE_DEPLOY" != "true" ]; then
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
             echo "should_build=true" >> "$GITHUB_OUTPUT"
@@ -46,6 +50,7 @@ jobs:
         run: |
           echo "event_name=${{ github.event_name }}"
           echo "dispatch_type=${{ github.event.action }}"
+          echo "should_build=${{ steps.dispatch_mode.outputs.should_build }}"
           cat <<'EOF'
           client_payload=${{ toJson(github.event.client_payload) }}
           EOF
@@ -59,6 +64,8 @@ jobs:
           echo "window_end=${{ github.event.client_payload.window_end }}"
           echo "latest_slug=${{ github.event.client_payload.latest_slug }}"
           echo "latest_title=${{ github.event.client_payload.latest_title }}"
+          echo "reason=${{ steps.dispatch_mode.outputs.reason }}"
+          echo "dispatch_type=${{ steps.dispatch_mode.outputs.dispatch_type }}"
 
       - name: Setup Node.js
         if: steps.dispatch_mode.outputs.should_build == 'true'

@@ -58,6 +58,11 @@ SEO = {
 CACHE_SITEMAP = 1800   # 30 min
 CACHE_NEWS    = 300    # 5 min
 CACHE_FEED    = 300    # 5 min
+SITEMAP_INDEX_CACHE_KEY = "seo:sitemap:index:v3"
+SITEMAP_NEWS_CACHE_KEY = "seo:sitemap:news:v2"
+SITEMAP_ARTICLES_CACHE_PREFIX = "seo:sitemap:articles:v2"
+SITEMAP_IMAGES_CACHE_KEY = "seo:sitemap:images:v1"
+SITEMAP_BHARAT_OPINIONS_CACHE_KEY = "seo:sitemap:bharat-opinions:v1"
 
 
 # ─────────────────────────────────────────────
@@ -298,10 +303,14 @@ def invalidate_seo_caches():
         "seo:sitemap:index",
         "seo:sitemap:index:v2",
         "seo:sitemap:images",
-        "seo:sitemap:bharat-opinions:v1",
+        SITEMAP_NEWS_CACHE_KEY,
+        SITEMAP_INDEX_CACHE_KEY,
+        SITEMAP_IMAGES_CACHE_KEY,
+        SITEMAP_BHARAT_OPINIONS_CACHE_KEY,
         "seo:rss:all",
     ]
     keys.extend(f"seo:sitemap:articles:{page}" for page in range(1, article_pages + 1))
+    keys.extend(f"{SITEMAP_ARTICLES_CACHE_PREFIX}:{page}" for page in range(1, article_pages + 1))
 
     for key in keys:
         cache.delete(key)
@@ -434,7 +443,7 @@ class SitemapEngine:
 
     @classmethod
     def index(cls) -> str:
-        return _cached("seo:sitemap:index:v2", cls._build_index, CACHE_SITEMAP)
+        return _cached(SITEMAP_INDEX_CACHE_KEY, cls._build_index, CACHE_SITEMAP)
 
     @staticmethod
     def _build_index() -> str:
@@ -472,7 +481,7 @@ class SitemapEngine:
     # ── Google News Sitemap (last 48 hrs) ────────────────────
     @classmethod
     def news(cls) -> str:
-        return _cached("seo:sitemap:news", cls._build_news, CACHE_NEWS)
+        return _cached(SITEMAP_NEWS_CACHE_KEY, cls._build_news, CACHE_NEWS)
 
     @staticmethod
     def _build_news() -> str:
@@ -531,7 +540,7 @@ class SitemapEngine:
     # ── Articles Sitemap ─────────────────────────────────────
     @classmethod
     def articles(cls, page: int = 1) -> str:
-        return _cached(f"seo:sitemap:articles:{page}",
+        return _cached(f"{SITEMAP_ARTICLES_CACHE_PREFIX}:{page}",
                        lambda: cls._build_articles(page), CACHE_SITEMAP)
 
     @staticmethod
@@ -565,7 +574,7 @@ class SitemapEngine:
     @classmethod
     def bharat_opinions(cls) -> str:
         return _cached(
-            "seo:sitemap:bharat-opinions:v1",
+            SITEMAP_BHARAT_OPINIONS_CACHE_KEY,
             lambda: cls._build_category_articles("bharat-opinions"),
             CACHE_SITEMAP,
         )
@@ -600,7 +609,7 @@ class SitemapEngine:
 
     @classmethod
     def images(cls) -> str:
-        return _cached("seo:sitemap:images", cls._build_images, CACHE_SITEMAP)
+        return _cached(SITEMAP_IMAGES_CACHE_KEY, cls._build_images, CACHE_SITEMAP)
 
     @staticmethod
     def _build_images() -> str:

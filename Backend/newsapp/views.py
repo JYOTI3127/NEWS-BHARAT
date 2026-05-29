@@ -1136,13 +1136,6 @@ def _save_article_from_request(request, article=None):
 
     raw_slug = str(_data_get('slug', '')).strip()
     normalized_slug = slugify(raw_slug.strip('/').split('/')[-1])
-    if not getattr(request.user, 'is_superuser', False):
-        if is_new:
-            normalized_slug = ''
-        elif normalized_slug and normalized_slug != old_slug:
-            return None, {'error': 'Only superadmins can change article slug.'}
-        else:
-            normalized_slug = old_slug
     article.slug = normalized_slug
     article.canonical_url      = normalize_article_canonical(_data_get('canonical_url', ''), article.slug)
     article.meta_title         = _normalize_meta_title(_data_get('meta_title', ''))

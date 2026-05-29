@@ -2010,10 +2010,7 @@ class ArticleAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_fields = list(super().get_readonly_fields(request, obj))
-        if not request.user.is_superuser and 'slug' not in readonly_fields:
-            readonly_fields.append('slug')
-        return readonly_fields
+        return super().get_readonly_fields(request, obj)
 
     def get_queryset(self, request):
         qs = (
@@ -2140,7 +2137,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        extra_context['can_edit_slug'] = bool(getattr(request.user, 'is_superuser', False))
+        extra_context['can_edit_slug'] = True
         article = None
         publish_history = []
         version_preview = None

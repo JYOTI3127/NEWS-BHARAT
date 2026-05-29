@@ -110,6 +110,35 @@ label.image-drop {
   line-height: 1.5;
   padding: 4px 0;
 }
+.readability-analysis__copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.readability-analysis__info {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.readability-analysis__info:hover {
+  border-color: #2563eb;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+}
+.readability-analysis__info:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+  outline-offset: 2px;
+}
 .readability-analysis__dot {
   width: 9px;
   height: 9px;
@@ -121,6 +150,120 @@ label.image-drop {
 .readability-analysis__item.is-good .readability-analysis__dot { background: #22c55e; }
 .readability-analysis__item.is-ok .readability-analysis__dot { background: #f59e0b; }
 .readability-analysis__item.is-bad .readability-analysis__dot { background: #ef4444; }
+.readability-detail-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  z-index: 2500;
+}
+.readability-detail-modal.show {
+  display: flex;
+}
+.readability-detail-panel {
+  width: min(760px, 100%);
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+.readability-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.readability-detail-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.readability-detail-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.readability-detail-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.readability-detail-body {
+  padding: 18px 20px 20px;
+  overflow: auto;
+}
+.readability-detail-summary {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.readability-detail-section {
+  margin-top: 16px;
+}
+.readability-detail-section h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.readability-detail-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.readability-detail-card {
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  margin-top: 10px;
+}
+.readability-detail-card__meta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #2563eb;
+  margin-bottom: 6px;
+}
+.readability-detail-card__text {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #0f172a;
+  white-space: pre-wrap;
+}
+.readability-detail-empty {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 13px;
+}
 @media (max-width: 860px) {
   .readability-grid { grid-template-columns: 1fr; }
 }
@@ -1449,6 +1592,18 @@ grammarly-button,
             <span>Start writing to view analysis.</span>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="readability-detail-modal" id="readability_detail_modal">
+      <div class="readability-detail-panel">
+        <div class="readability-detail-head">
+          <div>
+            <div class="readability-detail-title" id="readability_detail_title">Readability Detail</div>
+            <div class="readability-detail-sub" id="readability_detail_sub">Live explanation for this check.</div>
+          </div>
+          <button type="button" class="readability-detail-close" id="readability_detail_close_btn">&times;</button>
+        </div>
+        <div class="readability-detail-body" id="readability_detail_body"></div>
       </div>
     </div>
   </div>
@@ -5354,9 +5509,6 @@ function _readabilityScoreLabel(score){
   if(score>=35)return 'A bit complex. Shorter sentences would help.';
   return 'Hard to read. Simplify wording and sentence length.';
 }
-function _analysisItem(status, text){
-  return '<div class="readability-analysis__item is-'+status+'"><span class="readability-analysis__dot"></span><span>'+text+'</span></div>';
-}
 function _escapeHtml(text){
   return String(text||'')
     .replace(/&/g,'&amp;')
@@ -5364,6 +5516,52 @@ function _escapeHtml(text){
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
+}
+function _readabilitySentenceList(text){
+  return String(text||'').replace(/\s+/g,' ').match(/[^.!?]+[.!?]?/g)||[];
+}
+function _readabilitySentenceWordCount(sentence){
+  return _readabilityWordList(sentence).length;
+}
+var readabilityDetailState={};
+function _analysisItem(status, key, text){
+  return '<div class="readability-analysis__item is-'+status+'"><span class="readability-analysis__dot"></span><span class="readability-analysis__copy">'+text+'</span><button type="button" class="readability-analysis__info" data-detail-key="'+_escapeHtml(key)+'" title="View detail">i</button></div>';
+}
+function _renderReadabilityDetailContent(detail){
+  if(!detail)return '<div class="readability-detail-empty">No detail available right now.</div>';
+  var html='<div class="readability-detail-summary">'+_escapeHtml(detail.summary||'No summary available.')+'</div>';
+  if(Array.isArray(detail.bullets)&&detail.bullets.length){
+    html+='<div class="readability-detail-section"><h4>What this means</h4><ul class="readability-detail-list">';
+    detail.bullets.forEach(function(item){ html+='<li>'+_escapeHtml(item)+'</li>'; });
+    html+='</ul></div>';
+  }
+  if(Array.isArray(detail.cards)&&detail.cards.length){
+    html+='<div class="readability-detail-section"><h4>Live breakdown</h4>';
+    detail.cards.forEach(function(card){
+      html+='<div class="readability-detail-card">';
+      if(card.meta)html+='<div class="readability-detail-card__meta">'+_escapeHtml(card.meta)+'</div>';
+      html+='<div class="readability-detail-card__text">'+_escapeHtml(card.text||'')+'</div></div>';
+    });
+    html+='</div>';
+  }
+  if(detail.empty)html+='<div class="readability-detail-empty">'+_escapeHtml(detail.empty)+'</div>';
+  return html;
+}
+function showReadabilityDetail(key){
+  var modal=document.getElementById('readability_detail_modal');
+  var body=document.getElementById('readability_detail_body');
+  var title=document.getElementById('readability_detail_title');
+  var sub=document.getElementById('readability_detail_sub');
+  var detail=readabilityDetailState[key];
+  if(!modal||!body||!detail)return;
+  if(title)title.textContent=detail.title||'Readability Detail';
+  if(sub)sub.textContent=detail.sub||'Live explanation for this check.';
+  body.innerHTML=_renderReadabilityDetailContent(detail);
+  modal.classList.add('show');
+}
+function hideReadabilityDetail(){
+  var modal=document.getElementById('readability_detail_modal');
+  if(modal)modal.classList.remove('show');
 }
 function updateReadabilityAnalysis(metrics){
   var listEl=document.getElementById('readability_analysis_list');
@@ -5379,55 +5577,205 @@ function updateReadabilityAnalysis(metrics){
   var normalizedText=text.toLowerCase();
   var firstHundredWords=metrics.words.slice(0,100).join(' ').toLowerCase();
   var avgSentenceLength=sentenceCount?Math.round(wordCount/sentenceCount):0;
+  var sentences=_readabilitySentenceList(text).map(function(sentence, index){
+    var cleaned=String(sentence||'').trim();
+    return {index:index+1,text:cleaned,wordCount:_readabilitySentenceWordCount(cleaned)};
+  }).filter(function(item){ return item.text.length>0; });
+  var longSentences=sentences.filter(function(item){ return item.wordCount>20; });
   var items=[];
+  readabilityDetailState={};
+
+  readabilityDetailState.content_length={
+    title:'Content Length',
+    sub:'Checks whether the article has enough depth for search and readers.',
+    summary:'Current body has '+wordCount+' words. Target is at least 300 words for a fuller article.',
+    bullets:[
+      '300+ words usually gives enough room for context, examples, and supporting detail.',
+      'If this is a short update, add background, quotes, timeline, or why-it-matters context.',
+      'Word count is calculated only from the article editor text.'
+    ],
+    cards:[
+      {meta:'Current count', text:String(wordCount)+' words'},
+      {meta:'Gap to target', text:wordCount>=300?'Target reached.':String(300-wordCount)+' more words recommended'}
+    ]
+  };
 
   items.push(wordCount>=300
-    ? _analysisItem('good','Content length is solid with '+wordCount+' words.')
+    ? _analysisItem('good','content_length','Content length is solid with '+wordCount+' words.')
     : wordCount>=150
-      ? _analysisItem('ok','Content has '+wordCount+' words. Try reaching at least 300 words.')
-      : _analysisItem('bad','Content is too short right now. Add more detail and context.'));
+      ? _analysisItem('ok','content_length','Content has '+wordCount+' words. Try reaching at least 300 words.')
+      : _analysisItem('bad','content_length','Content is too short right now. Add more detail and context.'));
+
+  readabilityDetailState.readability_score={
+    title:'Readability Score',
+    sub:'This is a live ease-of-reading estimate based on sentence length and word complexity.',
+    summary:'Current readability score is '+score+'. '+_readabilityScoreLabel(score),
+    bullets:[
+      'Higher score usually means simpler, easier-to-scan writing.',
+      'Longer sentences and complex words bring the score down.',
+      'Breaking dense paragraphs into shorter sentences usually improves this fastest.'
+    ],
+    cards:[
+      {meta:'Current score', text:String(score)+' / 100'},
+      {meta:'Sentence count', text:String(sentenceCount)+' sentence'+(sentenceCount===1?'':'s')},
+      {meta:'Average length', text:avgSentenceLength?String(avgSentenceLength)+' words per sentence':'No full sentence detected yet'}
+    ]
+  };
 
   items.push(score>=60
-    ? _analysisItem('good','Readability score is healthy at '+score+'.')
+    ? _analysisItem('good','readability_score','Readability score is healthy at '+score+'.')
     : score>=40
-      ? _analysisItem('ok','Readability score is '+score+'. A few shorter sentences would help.')
-      : _analysisItem('bad','Readability score is low at '+score+'. Simplify wording and sentence length.'));
+      ? _analysisItem('ok','readability_score','Readability score is '+score+'. A few shorter sentences would help.')
+      : _analysisItem('bad','readability_score','Readability score is low at '+score+'. Simplify wording and sentence length.'));
+
+  readabilityDetailState.sentence_length={
+    title:'Sentence Length',
+    sub:'This highlights whether sentences are getting too long to scan comfortably.',
+    summary:'Average sentence length is about '+(avgSentenceLength||0)+' words. Ideal target is around 20 words or less.',
+    bullets:[
+      'Any sentence above 20 words may start to feel dense on screen.',
+      'Very long sentences are best split into two lines around commas, conjunctions, or clauses.',
+      'The list below shows exactly which sentences crossed the limit.'
+    ],
+    cards:longSentences.map(function(item){
+      return {meta:'Sentence '+item.index+' - '+item.wordCount+' words', text:item.text};
+    }),
+    empty:'No sentence is above 20 words right now.'
+  };
 
   items.push(avgSentenceLength && avgSentenceLength<=20
-    ? _analysisItem('good','Average sentence length is under control at about '+avgSentenceLength+' words.')
+    ? _analysisItem('good','sentence_length','Average sentence length is under control at about '+avgSentenceLength+' words.')
     : avgSentenceLength && avgSentenceLength<=28
-      ? _analysisItem('ok','Average sentence length is about '+avgSentenceLength+' words. Slightly shorter is better.')
-      : _analysisItem('bad','Sentences are long on average. Break them into smaller lines.'));
+      ? _analysisItem('ok','sentence_length','Average sentence length is about '+avgSentenceLength+' words. Slightly shorter is better.')
+      : _analysisItem('bad','sentence_length','Sentences are long on average. Break them into smaller lines.'));
 
   if(focusKeyword){
+    var escapedKeyword=focusKeyword.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    var matches=(normalizedText.match(new RegExp(escapedKeyword,'g'))||[]).length;
+    readabilityDetailState.keyword_headline={
+      title:'Focus Keyword in Headline',
+      sub:'Checks whether the main keyword appears in the article title.',
+      summary:title.toLowerCase().indexOf(focusKeyword)!==-1?'The focus keyword "'+focusKeyword+'" is already present in the headline.':'The focus keyword "'+focusKeyword+'" is missing from the headline.',
+      bullets:[
+        'Keeping the keyword in the headline helps search engines and readers quickly match the topic.',
+        'It should appear naturally, not stuffed awkwardly.',
+        'You can often place it near the beginning of the title.'
+      ],
+      cards:[
+        {meta:'Current headline', text:title||'No headline entered yet'},
+        {meta:'Focus keyword', text:focusKeyword}
+      ]
+    };
     items.push(title.toLowerCase().indexOf(focusKeyword)!==-1
-      ? _analysisItem('good','Focus keyword appears in the headline.')
-      : _analysisItem('bad','Add the focus keyword to the headline.'));
+      ? _analysisItem('good','keyword_headline','Focus keyword appears in the headline.')
+      : _analysisItem('bad','keyword_headline','Add the focus keyword to the headline.'));
+
+    readabilityDetailState.keyword_meta={
+      title:'Focus Keyword in Meta Description',
+      sub:'Checks whether the keyword is used in the search snippet description.',
+      summary:metaDescription.toLowerCase().indexOf(focusKeyword)!==-1?'The focus keyword appears in the meta description.':'The focus keyword is missing from the meta description.',
+      bullets:[
+        'Using the keyword here can improve topic relevance in search snippets.',
+        'Keep the description natural and click-worthy.',
+        'Try using the keyword once, preferably near the first half.'
+      ],
+      cards:[
+        {meta:'Current meta description', text:metaDescription||'No meta description entered yet'},
+        {meta:'Focus keyword', text:focusKeyword}
+      ]
+    };
     items.push(metaDescription.toLowerCase().indexOf(focusKeyword)!==-1
-      ? _analysisItem('good','Focus keyword appears in the meta description.')
-      : _analysisItem('ok','Consider using the focus keyword in the meta description.'));
+      ? _analysisItem('good','keyword_meta','Focus keyword appears in the meta description.')
+      : _analysisItem('ok','keyword_meta','Consider using the focus keyword in the meta description.'));
+
+    readabilityDetailState.keyword_opening={
+      title:'Focus Keyword in Opening Section',
+      sub:'Checks the first 100 words of the body for the keyword.',
+      summary:firstHundredWords.indexOf(focusKeyword)!==-1?'The focus keyword appears in the first 100 words.':'The focus keyword is missing from the first 100 words.',
+      bullets:[
+        'Search engines and readers both expect the topic to appear early.',
+        'Using the keyword in the introduction helps align headline, snippet, and body.',
+        'The preview below shows the opening section being checked.'
+      ],
+      cards:[
+        {meta:'First 100 words preview', text:metrics.words.slice(0,100).join(' ')||'No opening text yet'},
+        {meta:'Focus keyword', text:focusKeyword}
+      ]
+    };
     items.push(firstHundredWords.indexOf(focusKeyword)!==-1
-      ? _analysisItem('good','Focus keyword appears in the first 100 words.')
-      : _analysisItem('ok','Try using the focus keyword in the opening section.'));
-    var matches=(normalizedText.match(new RegExp(focusKeyword.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length;
+      ? _analysisItem('good','keyword_opening','Focus keyword appears in the first 100 words.')
+      : _analysisItem('ok','keyword_opening','Try using the focus keyword in the opening section.'));
+
+    readabilityDetailState.keyword_body={
+      title:'Focus Keyword in Article Body',
+      sub:'Checks whether the keyword is being used naturally across the article.',
+      summary:'The focus keyword "'+focusKeyword+'" appears '+matches+' time'+(matches===1?'':'s')+' in the current body text.',
+      bullets:[
+        'One mention may be enough for very short stories, but longer pieces usually need a few natural uses.',
+        'Avoid stuffing. Spread mentions across intro, body, and supporting sections.',
+        'This count is a simple exact-match check on the current editor text.'
+      ],
+      cards:[
+        {meta:'Keyword usage count', text:String(matches)+' exact match'+(matches===1?'':'es')},
+        {meta:'Focus keyword', text:focusKeyword}
+      ]
+    };
     items.push(matches>=2
-      ? _analysisItem('good','Focus keyword is used naturally in the article body.')
-      : _analysisItem('ok','Use the focus keyword a bit more naturally in the body.'));
+      ? _analysisItem('good','keyword_body','Focus keyword is used naturally in the article body.')
+      : _analysisItem('ok','keyword_body','Use the focus keyword a bit more naturally in the body.'));
   }else{
-    items.push(_analysisItem('ok','Add a focus keyword to unlock keyword-based checks.'));
+    readabilityDetailState.keyword_missing={
+      title:'Focus Keyword Needed',
+      sub:'Keyword-based SEO checks stay limited until a focus keyword is set.',
+      summary:'Add one clear focus keyword or phrase to unlock title, opening, and body relevance checks.',
+      bullets:[
+        'Choose the main search phrase this article should rank for.',
+        'Keep it specific, like a real search query.',
+        'Once added, this panel will show exactly where it is missing.'
+      ]
+    };
+    items.push(_analysisItem('ok','keyword_missing','Add a focus keyword to unlock keyword-based checks.'));
   }
 
+  readabilityDetailState.meta_title_length={
+    title:'Meta Title Length',
+    sub:'Checks whether the search title is in a good length range.',
+    summary:'Current meta title length is '+metaTitle.length+' characters. Ideal range is 50 to 70 characters.',
+    bullets:[
+      'Too short can waste ranking space.',
+      'Too long can get truncated in search results.',
+      'Try to keep the main keyword and the important context inside the visible limit.'
+    ],
+    cards:[
+      {meta:'Current length', text:String(metaTitle.length)+' / 70 characters'},
+      {meta:'Current meta title', text:metaTitle||'No meta title entered yet'}
+    ]
+  };
   items.push(metaTitle.length>=50&&metaTitle.length<=70
-    ? _analysisItem('good','Meta title length looks good.')
+    ? _analysisItem('good','meta_title_length','Meta title length looks good.')
     : metaTitle.length
-      ? _analysisItem('ok','Meta title should ideally stay between 50 and 70 characters.')
-      : _analysisItem('bad','Add a meta title for stronger search presentation.'));
+      ? _analysisItem('ok','meta_title_length','Meta title should ideally stay between 50 and 70 characters.')
+      : _analysisItem('bad','meta_title_length','Add a meta title for stronger search presentation.'));
 
+  readabilityDetailState.meta_description_length={
+    title:'Meta Description Length',
+    sub:'Checks whether the search snippet description is long enough but not too long.',
+    summary:'Current meta description length is '+metaDescription.length+' characters. Ideal range is 120 to 160 characters.',
+    bullets:[
+      'This text often appears in Google snippets.',
+      'Too short may look incomplete; too long may get cut off.',
+      'A good description usually includes the topic, value, and one strong reason to click.'
+    ],
+    cards:[
+      {meta:'Current length', text:String(metaDescription.length)+' / 160 characters'},
+      {meta:'Current meta description', text:metaDescription||'No meta description entered yet'}
+    ]
+  };
   items.push(metaDescription.length>=120&&metaDescription.length<=160
-    ? _analysisItem('good','Meta description length looks good.')
+    ? _analysisItem('good','meta_description_length','Meta description length looks good.')
     : metaDescription.length
-      ? _analysisItem('ok','Meta description should ideally stay between 120 and 160 characters.')
-      : _analysisItem('bad','Add a meta description for stronger search presentation.'));
+      ? _analysisItem('ok','meta_description_length','Meta description should ideally stay between 120 and 160 characters.')
+      : _analysisItem('bad','meta_description_length','Add a meta description for stronger search presentation.'));
 
   listEl.innerHTML=items.join('');
 }
@@ -5465,6 +5813,24 @@ function updateReadabilityStats(){
     wordCount:wordCount,
     sentenceCount:sentenceCount,
     score:score
+  });
+}
+var readabilityAnalysisList=document.getElementById('readability_analysis_list');
+if(readabilityAnalysisList){
+  readabilityAnalysisList.addEventListener('click',function(e){
+    var btn=e.target.closest('.readability-analysis__info');
+    if(!btn)return;
+    showReadabilityDetail(btn.getAttribute('data-detail-key')||'');
+  });
+}
+var readabilityDetailCloseBtn=document.getElementById('readability_detail_close_btn');
+if(readabilityDetailCloseBtn){
+  readabilityDetailCloseBtn.addEventListener('click',hideReadabilityDetail);
+}
+var readabilityDetailModal=document.getElementById('readability_detail_modal');
+if(readabilityDetailModal){
+  readabilityDetailModal.addEventListener('click',function(e){
+    if(e.target===readabilityDetailModal)hideReadabilityDetail();
   });
 }
 function jumpToField(fieldId){

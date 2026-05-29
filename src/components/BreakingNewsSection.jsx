@@ -49,6 +49,7 @@ const getArticleImage = (article) => article?.image_url || article?.image || '';
 const getArticleTitle = (article) => article?.title || article?.headline || 'Untitled';
 const getArticleDescription = (article, limit = 120) => {
   const text = String(
+    article?.subtitle ||
     article?.short_description ||
     article?.summary ||
     article?.excerpt ||

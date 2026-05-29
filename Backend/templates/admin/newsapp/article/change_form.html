@@ -11,6 +11,7 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 #nb_toolbar {
   position: sticky !important;
@@ -1284,6 +1285,7 @@ grammarly-button,
     onchange="nbItRestoreSelection();nbSetFontFamily(this.value);">
     <option value="">Font</option>
     <option value="Poppins">Poppins</option>
+    <option value="DM Sans">DM Sans</option>
     <option value="Arial">Arial</option>
     <option value="Georgia">Georgia</option>
     <option value="Times New Roman">Times New Roman</option>
@@ -1439,6 +1441,7 @@ grammarly-button,
         <select class="nb-font-select" id="nb_fontFamilySelect" onchange="nbSetFontFamily(this.value)" title="Font Family">
           <option value="">Font</option>
           <option value="Poppins" style="font-family:Poppins">Poppins</option>
+          <option value="DM Sans" style="font-family:'DM Sans'">DM Sans</option>
           <option value="Arial" style="font-family:Arial">Arial</option>
           <option value="Georgia" style="font-family:Georgia">Georgia</option>
           <option value="Times New Roman" style="font-family:'Times New Roman'">Times New Roman</option>

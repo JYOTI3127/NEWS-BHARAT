@@ -199,13 +199,19 @@ const getArticleTitle = (article) =>
     String(article?.title || article?.headline || "News4Bharat story").trim();
 
 const getArticleSummary = (article, limit = 92) => {
-    const text = String(
-        article?.short_description ||
-        article?.summary ||
-        article?.excerpt ||
-        article?.description ||
-        ""
-    )
+    const candidates = [
+        article?.short_description,
+        article?.summary,
+        article?.excerpt,
+        article?.description,
+        article?.subtitle,
+        article?.lede,
+        article?.lead,
+        article?.content,
+        article?.body,
+    ];
+
+    const text = String(candidates.find((v) => v !== undefined && v !== null && String(v).trim() !== "") || "")
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, " ")
         .trim();

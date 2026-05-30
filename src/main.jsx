@@ -20,8 +20,10 @@ if (typeof window !== "undefined" && isPrerenderContext()) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
+      staleTime: 0,
+      gcTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
     }
   }
 })

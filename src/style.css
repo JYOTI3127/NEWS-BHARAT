@@ -877,21 +877,10 @@ img {
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.latest-updates-rail__time::before {
-  content: "NEW";
-  border-radius: 999px;
-  background: #d80100;
-  color: #ffffff;
-  padding: 3px 6px;
-  font-size: 8px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .latest-updates-rail__title-row {

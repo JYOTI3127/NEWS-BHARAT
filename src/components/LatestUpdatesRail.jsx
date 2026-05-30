@@ -10,23 +10,38 @@ const DESK_STATUS_ITEMS = [
   "Refresh to pull the newest wire",
 ];
 
+const formatDateLabel = (value) => {
+  if (!value) return "";
+  try {
+    const date = new Date(value);
+    const day = date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
+    const time = date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })
+      .replace(/\b(am|pm)\b/g, (m) => m.toUpperCase());
+    return `${day} at ${time} IST`;
+  } catch {
+    return "";
+  }
+};
+
 const getTimeLabel = (article) => {
   const displayValue = String(article?.updated_display || "").trim();
-  const displayTime = displayValue.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/i)?.[0];
-  if (displayTime) return displayTime.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+  if (displayValue) {
+    // "Updated on May 26, 2026 at 5:58 PM" → "May 26, 2026 at 5:58 PM"
+   return displayValue.replace(/^Updated on\s*/i, "Updated on ").trim();
+  }
 
   const value = getArticleDateValue(article);
   if (!value) return "";
 
   try {
-    return new Date(value)
-      .toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: "Asia/Kolkata",
-      })
-      .replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+    const date = new Date(value);
+    const day = date.toLocaleDateString("en-IN", {
+      day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata"
+    });
+    const time = date.toLocaleTimeString("en-IN", {
+      hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata"
+    }).replace(/\b(am|pm)\b/g, (m) => m.toUpperCase());
+    return `${day} at ${time} IST`;
   } catch {
     return "";
   }

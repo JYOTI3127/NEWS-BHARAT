@@ -129,3 +129,16 @@ jobs:
           tar_dereference: true
           timeout: 120s
           command_timeout: 20m
+
+      - name: Bust asset cache headers
+        if: steps.dispatch_mode.outputs.should_build == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          command_timeout: 20m
+          script: |
+            TARGET_DIR="${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
+            touch "$TARGET_DIR/index.html"

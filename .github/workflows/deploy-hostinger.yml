@@ -1,6 +1,9 @@
 name: Full Build and Deploy to Hostinger
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '30 16 * * *'  # 10:00 PM IST (UTC 16:30)
   workflow_dispatch:
@@ -9,7 +12,7 @@ on:
       - rebuild-frontend
 
 concurrency:
-  group: full-build
+  group: ${{ github.event_name == 'push' && format('full-build-push-{0}', github.ref) || 'full-build' }}
   cancel-in-progress: true
 
 jobs:
@@ -32,8 +35,15 @@ jobs:
       - name: Clear Vite cache
         run: rm -rf node_modules/.vite
 
-      - name: Build and prerender
-        run: npm run build
+      - name: Build (push = Vite only, others = full prerender)
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "Push detected — running Vite build only (no prerender)"
+            npm run build:vite
+          else
+            echo "Schedule/dispatch detected — running full prerender build"
+            npm run build
+          fi
         env:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}

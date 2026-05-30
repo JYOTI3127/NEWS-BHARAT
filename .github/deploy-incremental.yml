@@ -1,6 +1,12 @@
 name: Incremental Article Deploy
 
 on:
+  workflow_dispatch:
+    inputs:
+      article_slug:
+        description: 'Article slug (khali chodo = latest article automatic)'
+        required: false
+        default: ''
   repository_dispatch:
     types:
       - article-published
@@ -30,6 +36,42 @@ jobs:
       - name: Clear Vite cache
         run: rm -rf node_modules/.vite
 
+      - name: Resolve article slug
+        id: resolve_slug
+        shell: bash
+        run: |
+          # Backend se aaya slug
+          DISPATCH_SLUG="${{ github.event.client_payload.slug }}"
+          # Manually dala slug
+          MANUAL_SLUG="${{ github.event.inputs.article_slug }}"
+
+          if [ -n "$DISPATCH_SLUG" ]; then
+            echo "slug=$DISPATCH_SLUG" >> "$GITHUB_OUTPUT"
+            echo "Source: backend dispatch → $DISPATCH_SLUG"
+          elif [ -n "$MANUAL_SLUG" ]; then
+            echo "slug=$MANUAL_SLUG" >> "$GITHUB_OUTPUT"
+            echo "Source: manual input → $MANUAL_SLUG"
+          else
+            echo "Slug nahi mila — API se latest article fetch kar rahe hain..."
+            LATEST_SLUG=$(curl -s "https://news4bharat.cloud/api/articles/?page=1&limit=1" | node -e "
+              const chunks = [];
+              process.stdin.on('data', c => chunks.push(c));
+              process.stdin.on('end', () => {
+                try {
+                  const data = JSON.parse(chunks.join(''));
+                  const articles = Array.isArray(data) ? data : (data.results || []);
+                  console.log(articles[0]?.slug || '');
+                } catch { console.log(''); }
+              });
+            ")
+            if [ -z "$LATEST_SLUG" ]; then
+              echo "ERROR: Koi bhi slug nahi mila!"
+              exit 1
+            fi
+            echo "slug=$LATEST_SLUG" >> "$GITHUB_OUTPUT"
+            echo "Source: API latest → $LATEST_SLUG"
+          fi
+
       - name: Build React app (no prerender)
         run: npm run build:vite
         env:
@@ -39,7 +81,7 @@ jobs:
       - name: Prerender only changed article + homepage + category
         run: node prerender-incremental.mjs
         env:
-          ARTICLE_SLUG: ${{ github.event.client_payload.slug }}
+          ARTICLE_SLUG: ${{ steps.resolve_slug.outputs.slug }}
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
       - name: Deploy only changed pages

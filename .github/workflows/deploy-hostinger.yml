@@ -12,8 +12,8 @@ on:
       - rebuild-frontend
 
 concurrency:
-  group: ${{ github.event_name == 'push' && format('hostinger-production-push-{0}', github.ref) || 'hostinger-production-dispatch' }}
-  cancel-in-progress: ${{ github.event_name != 'push' }}
+  group: ${{ github.event_name == 'push' && format('hostinger-production-push-{0}', github.ref) || format('hostinger-production-dispatch-{0}', github.run_id) }}
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:

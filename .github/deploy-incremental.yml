@@ -1,0 +1,69 @@
+name: Incremental Article Deploy
+
+on:
+  repository_dispatch:
+    types:
+      - article-published
+      - article-updated
+
+concurrency:
+  group: incremental-build
+  cancel-in-progress: false
+
+jobs:
+  incremental-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Clear Vite cache
+        run: rm -rf node_modules/.vite
+
+      - name: Build React app (no prerender)
+        run: npm run build:vite
+        env:
+          CI: "true"
+          VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
+
+      - name: Prerender only changed article + homepage + category
+        run: node prerender-incremental.mjs
+        env:
+          ARTICLE_SLUG: ${{ github.event.client_payload.slug }}
+          VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
+
+      - name: Deploy only changed pages
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          source: "build-incremental/*"
+          target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
+          strip_components: 1
+          overwrite: true
+          tar_dereference: true
+          timeout: 60s
+          command_timeout: 10m
+
+      - name: Bust cache
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          command_timeout: 10m
+          script: |
+            touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"

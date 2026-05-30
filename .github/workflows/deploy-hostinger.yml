@@ -1,101 +1,49 @@
-name: Build and Deploy to Hostinger
+name: Full Build and Deploy to Hostinger
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '30 16 * * *'  # 10:00 PM IST (UTC 16:30)
   workflow_dispatch:
   repository_dispatch:
     types:
-      - article-published
-      - article-updated
       - rebuild-frontend
 
 concurrency:
-  group: ${{ github.event_name == 'push' && format('hostinger-production-push-{0}', github.ref) || format('hostinger-production-dispatch-{0}', github.run_id) }}
-  cancel-in-progress: false
+  group: full-build
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Classify dispatch mode
-        id: dispatch_mode
-        shell: bash
-        run: |
-          EVENT_NAME="${{ github.event_name }}"
-          DISPATCH_TYPE="${{ github.event.action }}"
-          REASON="${{ github.event.client_payload.reason }}"
-          FORCE_DEPLOY="${{ github.event.client_payload.force_deploy }}"
-
-          echo "event_name=$EVENT_NAME" >> "$GITHUB_OUTPUT"
-          echo "dispatch_type=$DISPATCH_TYPE" >> "$GITHUB_OUTPUT"
-          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-          echo "force_deploy=$FORCE_DEPLOY" >> "$GITHUB_OUTPUT"
-
-          if [ "$EVENT_NAME" = "repository_dispatch" ] && [ "$REASON" = "scheduled-batch" ]; then
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT_NAME" = "repository_dispatch" ] && [ "$DISPATCH_TYPE" = "article-updated" ] && [ "$FORCE_DEPLOY" != "true" ]; then
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Log trigger context
-        run: |
-          echo "event_name=${{ github.event_name }}"
-          echo "dispatch_type=${{ github.event.action }}"
-          echo "should_build=${{ steps.dispatch_mode.outputs.should_build }}"
-          cat <<'EOF'
-          client_payload=${{ toJson(github.event.client_payload) }}
-          EOF
-
-      - name: Log scheduled batch notification
-        if: steps.dispatch_mode.outputs.should_build == 'false'
-        run: |
-          echo "Articles have been queued for the next frontend build window"
-          echo "article_count=${{ github.event.client_payload.article_count }}"
-          echo "window_start=${{ github.event.client_payload.window_start }}"
-          echo "window_end=${{ github.event.client_payload.window_end }}"
-          echo "latest_slug=${{ github.event.client_payload.latest_slug }}"
-          echo "latest_title=${{ github.event.client_payload.latest_title }}"
-          echo "reason=${{ steps.dispatch_mode.outputs.reason }}"
-          echo "dispatch_type=${{ steps.dispatch_mode.outputs.dispatch_type }}"
-
       - name: Setup Node.js
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install dependencies
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         run: npm ci
 
       - name: Clear Vite cache
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         run: rm -rf node_modules/.vite
 
       - name: Build and prerender
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         run: npm run build
         env:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
       - name: Keep server-managed files out of deploy
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         run: |
           rm -f build/.htaccess
           rm -f build/robots.txt
 
       - name: Ensure Hostinger target directory exists
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
@@ -115,7 +63,6 @@ jobs:
             rm -f "$TARGET_DIR/sitemap-static.xml"
 
       - name: Deploy build output to Hostinger over SSH
-        if: steps.dispatch_mode.outputs.should_build == 'true'
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
@@ -130,8 +77,7 @@ jobs:
           timeout: 120s
           command_timeout: 20m
 
-      - name: Bust asset cache headers
-        if: steps.dispatch_mode.outputs.should_build == 'true'
+      - name: Bust asset cache
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
@@ -140,5 +86,4 @@ jobs:
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
           command_timeout: 20m
           script: |
-            TARGET_DIR="${{ secrets.HOSTINGER_SSH_TARGET_DIR }}"
-            touch "$TARGET_DIR/index.html"
+            touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"

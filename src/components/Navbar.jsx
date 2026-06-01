@@ -9,7 +9,7 @@ import {
   Trophy, Cpu, Film, Heart, PenLine, Zap, GraduationCap,
   Leaf, Video, Camera, MoreHorizontal, Newspaper, CloudSun,
   Bell, CalendarDays, Clock3, Languages, Linkedin, Instagram, Youtube,
-  Car, Shield, MapPin, Hash, Target, Brain, Flag, BookOpen, Clock, AlertCircle,
+  Car, Shield, MapPin, Hash, Target, Brain, Flag, BookOpen, Clock, AlertCircle, ExternalLink,
 } from "lucide-react";
 
 import "../Navbar.css";
@@ -421,8 +421,53 @@ const getCategorySearchHref = (item) => {
   return `/category/${getFinalSlug(slug, title)}`;
 };
 
-const compareByLabel = (a, b) =>
-  String(a?.label || "").localeCompare(String(b?.label || ""), "en", { sensitivity: "base" });
+const normalizeNavCategoryKey = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const NAV_CATEGORY_ORDER = [
+  { label: "BFSI", slug: "bfsi", keys: ["bfsi", "bharat-bfsi", "bharats-bfsi"] },
+  { label: "Bharat Explainers", slug: "bharat-explainers", keys: ["bharat-explainers"] },
+  { label: "Breaking News", slug: "breaking-news", keys: ["breaking-news"] },
+  { label: "Business", slug: "business", keys: ["business"] },
+  { label: "Education", slug: "education", keys: ["education"] },
+  { label: "Health", slug: "health", keys: ["health"] },
+  { label: "National", slug: "national", keys: ["national"] },
+  { label: "Politics", slug: "politics", keys: ["politics", "political"] },
+  { label: "Sports", slug: "sports", keys: ["sports"] },
+  { label: "Stock Market", slug: "stock-market", keys: ["stock-market"] },
+  { label: "States of Bharat", slug: "state-of-bharat", keys: ["state-of-bharat", "states-of-bharat"] },
+  { label: "Technology", slug: "technology", keys: ["technology"] },
+  { label: "World News", slug: "world-news", keys: ["world-news"] },
+];
+
+const getNavCategoryConfig = (section) => {
+  const slugKey = normalizeNavCategoryKey(getFinalSlug(section?.slug, section?.label));
+  const labelKey = normalizeNavCategoryKey(section?.label);
+  return NAV_CATEGORY_ORDER.find((item) =>
+    item.keys.some((key) => key === slugKey || key === labelKey)
+  );
+};
+
+const orderAllowedNavSections = (sections = []) => {
+  const sectionMap = new Map();
+
+  sections.forEach((section) => {
+    const config = getNavCategoryConfig(section);
+    if (!config || sectionMap.has(config.slug)) return;
+    sectionMap.set(config.slug, {
+      ...section,
+      label: config.label,
+      slug: config.slug,
+    });
+  });
+
+  return NAV_CATEGORY_ORDER.map((item) => sectionMap.get(item.slug)).filter(Boolean);
+};
 
 const NAV_SECTIONS = [
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
@@ -454,8 +499,8 @@ const navLinks = [
   { label: "National", path: "/category/national" },
   { label: "Politics", path: "/category/politics" },
   { label: "Sports", path: "/category/sports" },
-  { label: "States of Bharat", path: "/category/state-of-bharat" },
   { label: "Stock Market", path: "/category/stock-market" },
+  { label: "States of Bharat", path: "/category/state-of-bharat" },
   { label: "Technology", path: "/category/technology" },
   { label: "World News", path: "/category/world-news" },
 ];
@@ -930,10 +975,26 @@ const Header = () => {
   const navLastSlideAtRef = useRef(0);
   const navPointerInsideRef = useRef(false);
   const navPointerPosRef = useRef({ x: 0, y: 0 });
+  const desktopDropdownCloseTimerRef = useRef(null);
   const navigate = useNavigate();
+  const [desktopDropdown, setDesktopDropdown] = useState(null);
 
   const extra2KNavLinks = [];
-  const visibleNavLinks = uniqueNavLinksByPath([...navLinks, ...extra2KNavLinks]);
+  const visibleNavLinks = uniqueNavLinksByPath([
+    ...(navSectionsLoaded
+      ? navSections.map(({ label, slug, links, subcategories }) => {
+        const finalSlug = getFinalSlug(slug, label);
+        return {
+          label,
+          path: `/category/${finalSlug}`,
+          slug: finalSlug,
+          links,
+          subcategories,
+        };
+      })
+      : navLinks),
+    ...extra2KNavLinks,
+  ]);
   const updateNavScrollState = useCallback(() => {
     const navEl = navLinksRef.current;
     if (!navEl) {
@@ -1035,6 +1096,44 @@ const Header = () => {
     clearNavEdgeRepeatTimer();
   }, [clearNavEdgeHoverTimer, clearNavEdgeRepeatTimer]);
 
+  const clearDesktopDropdownCloseTimer = useCallback(() => {
+    if (desktopDropdownCloseTimerRef.current) {
+      window.clearTimeout(desktopDropdownCloseTimerRef.current);
+      desktopDropdownCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const closeDesktopDropdownSoon = useCallback(() => {
+    clearDesktopDropdownCloseTimer();
+    desktopDropdownCloseTimerRef.current = window.setTimeout(() => {
+      desktopDropdownCloseTimerRef.current = null;
+      setDesktopDropdown(null);
+    }, 160);
+  }, [clearDesktopDropdownCloseTimer]);
+
+  const showDesktopDropdown = useCallback((link, event) => {
+    const hasDropdown =
+      (Array.isArray(link?.subcategories) && link.subcategories.length > 0) ||
+      (Array.isArray(link?.links) && link.links.length > 0);
+
+    if (!hasDropdown || isMobile || isCompactNav) {
+      setDesktopDropdown(null);
+      return;
+    }
+
+    clearDesktopDropdownCloseTimer();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 300;
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - menuWidth - 12));
+
+    setDesktopDropdown({
+      ...link,
+      left,
+      top: rect.bottom + 6,
+      width: menuWidth,
+    });
+  }, [clearDesktopDropdownCloseTimer, isCompactNav, isMobile]);
+
   // ✅ FIX: Sirf date fetch karo — time LiveClock mein hai
   useEffect(() => {
     if (isMobile) return;
@@ -1058,7 +1157,7 @@ const Header = () => {
 
   // Categories — sirf jab drawer open ho
   useEffect(() => {
-    if (!isOpen || navSectionsLoaded) return;
+    if (navSectionsLoaded) return;
     const fetchCategories = async () => {
       try {
         const [categoriesResult, byStateResult] = await Promise.allSettled([
@@ -1123,7 +1222,8 @@ const Header = () => {
           };
         });
 
-        setNavSections(sections.length > 0 ? [...sections].sort(compareByLabel) : NAV_SECTIONS);
+        const orderedSections = orderAllowedNavSections(sections);
+        setNavSections(orderedSections.length > 0 ? orderedSections : orderAllowedNavSections(NAV_SECTIONS));
         setNavSectionsLoaded(true);
       } catch (err) {
         console.error("Categories API fail:", err.message);
@@ -1144,13 +1244,13 @@ const Header = () => {
           };
         });
 
-        setNavSections([...fallbackSections].sort(compareByLabel));
+        setNavSections(orderAllowedNavSections(fallbackSections));
         setNavSectionsLoaded(true);
       }
     };
     const cancelDeferred = deferNonCritical(fetchCategories, 800);
     return () => cancelDeferred();
-  }, [isOpen, navSectionsLoaded]);
+  }, [navSectionsLoaded]);
 
   // Search
   const fetchSearchResults = useCallback(async (query) => {
@@ -1941,6 +2041,14 @@ const Header = () => {
                   <Link to="/about-us" className="top-page-link">About Us</Link>
                   <Link to="/contact-us" className="top-page-link">Contact Us</Link>
                   <Link to="/careers" className="top-page-link">Careers</Link>
+                  <a href="https://bharat360.news4bharat.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="top-page-link top-bharat360-btn"
+                  >
+                    <ExternalLink size={12} aria-hidden="true" />
+                    Bharat360
+                  </a>
                 </div>
               </div>
 
@@ -2083,16 +2191,86 @@ const Header = () => {
               onPointerMove={handleNavLinksPointerMove}
               onPointerLeave={handleNavLinksPointerLeave}
             >
-              {visibleNavLinks.map((link, idx) => (
-                <Link
-                  key={`${link.path}-${idx}`}
-                  to={link.path}
-                  className="nav-link"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {visibleNavLinks.map((link, idx) => {
+                const hasDropdown =
+                  (Array.isArray(link.subcategories) && link.subcategories.length > 0) ||
+                  (Array.isArray(link.links) && link.links.length > 0);
+
+                return (
+                  <li
+                    key={`${link.path}-${idx}`}
+                    className={`nav-item${hasDropdown ? " has-dropdown" : ""}`}
+                    onMouseEnter={(event) => showDesktopDropdown(link, event)}
+                    onMouseLeave={closeDesktopDropdownSoon}
+                    onFocus={(event) => showDesktopDropdown(link, event)}
+                  >
+                    <Link
+                      to={link.path}
+                      className="nav-link"
+                      onClick={() => setDesktopDropdown(null)}
+                    >
+                      {link.label}
+                      {hasDropdown && <ChevronDown size={12} aria-hidden="true" />}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
+            {desktopDropdown && (
+              <div
+                className="nav-dropdown-menu"
+                style={{
+                  left: `${desktopDropdown.left}px`,
+                  top: `${desktopDropdown.top}px`,
+                  width: `${desktopDropdown.width}px`,
+                }}
+                onMouseEnter={clearDesktopDropdownCloseTimer}
+                onMouseLeave={closeDesktopDropdownSoon}
+              >
+                {Array.isArray(desktopDropdown.subcategories) &&
+                  desktopDropdown.subcategories.map((sub) => {
+                    const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
+                    const subcategoryPath = `${desktopDropdown.path}?subcategory=${encodeURIComponent(sub.label)}`;
+
+                    return (
+                      <div className="nav-dropdown-group" key={sub.label}>
+                        <Link
+                          to={subcategoryPath}
+                          className="nav-dropdown-link nav-dropdown-group-link"
+                          onClick={() => setDesktopDropdown(null)}
+                        >
+                          {sub.label}
+                        </Link>
+                        {hasTopics && (
+                          <div className="nav-dropdown-topics">
+                            {sub.topics.map((topic) => (
+                              <Link
+                                key={topic}
+                                to={`${desktopDropdown.path}?subcategory=${encodeURIComponent(topic)}`}
+                                className="nav-dropdown-link nav-dropdown-topic-link"
+                                onClick={() => setDesktopDropdown(null)}
+                              >
+                                {topic}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                {Array.isArray(desktopDropdown.links) &&
+                  desktopDropdown.links.map((linkLabel) => (
+                    <Link
+                      key={linkLabel}
+                      to={`${desktopDropdown.path}?subcategory=${encodeURIComponent(linkLabel)}`}
+                      className="nav-dropdown-link"
+                      onClick={() => setDesktopDropdown(null)}
+                    >
+                      {linkLabel}
+                    </Link>
+                  ))}
+              </div>
+            )}
             {!isMobile && !isCompactNav && canScrollNavRight && (
               <button
                 type="button"

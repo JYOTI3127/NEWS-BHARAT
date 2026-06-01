@@ -402,13 +402,12 @@ const doesArticleMatchSubcategory = (article, subFilter) => {
 
 
 export default function CategoryPage() {
-  const stateScrollRef = useRef(null); 
-  const { slug } = useParams();
+  const stateScrollRef = useRef(null);
+  const { slug, stateName } = useParams();
   const location = useLocation();
   const viewportWidth = useViewportWidth();
 
-  const searchParams = new URLSearchParams(location.search);
-  const rawSubFilter = searchParams.get("subcategory") || "";
+  const rawSubFilter = decodeURIComponent(stateName || "");
   const subFilter = isStateCategorySlug(slug) && isStateParentGroupLabel(rawSubFilter)
     ? ""
     : rawSubFilter;
@@ -725,7 +724,7 @@ export default function CategoryPage() {
                 {visibleStateOptions.map((stateName) => (
                   <Link
                     key={stateName}
-                    to={`/category/${slug}?subcategory=${encodeURIComponent(stateName)}`}
+                    to={`/category/${slug}/${encodeURIComponent(stateName)}`}
                     className={`flex-shrink-0 px-5 py-2.5 text-[13px] font-bold no-underline transition-colors rounded-full whitespace-nowrap ${normalizeRegionKey(activeStateName) === normalizeRegionKey(stateName) ? "bg-white text-[#002765]" : "text-white hover:text-slate-200"}`}
                     style={{ textDecoration: "none" }}
                   >
@@ -829,7 +828,7 @@ export default function CategoryPage() {
                   <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
                     <h2 className="m-0 text-[17px] font-extrabold text-slate-900">{group.stateName}</h2>
                     <Link
-                      to={`/category/${slug}?subcategory=${encodeURIComponent(group.stateName)}`}
+                      to={`/category/${slug}/${encodeURIComponent(group.stateName)}`}
                       className="text-[12px] font-bold text-[#D80100] no-underline hover:underline"
                       style={{ textDecoration: "none" }}
                     >

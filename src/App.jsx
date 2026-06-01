@@ -306,7 +306,6 @@ function Layout() {
             <Route path="/CommingSoon" element={<CommingSoon />} />
             <Route path="/category/bharats-startups" element={<Navigate to="/category/bharat-startups" replace />} />
             <Route path="/category/viral-fact-check" element={<Navigate to="/category/viral-and-fact-check" replace />} />
-            <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/more-articles" element={<MoreArticlesPage />} />
             <Route path="/tag/:tagName" element={<TagPage />} />
             <Route path="/author/:slug" element={<AuthorPage />} />
@@ -314,6 +313,8 @@ function Layout() {
             <Route path="/market" element={<MarketPage />} />
             <Route path="/metal" element={<MetalPage />} />
             <Route path="/cricket" element={<CricketPage />} /> */}
+            <Route path="/category/:slug/:stateName" element={<CategoryPage />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/news/:categorySlug/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/news/:slug" element={<LegacyArticleRedirect />} />
             <Route path="/article/:categorySlug/:slug" element={<LegacyArticleRedirect />} />

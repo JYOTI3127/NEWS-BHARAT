@@ -883,6 +883,20 @@ img {
   max-width: 100%;
 }
 
+.top-bharat360-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #D80100;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.top-bharat360-btn:hover { background: #aa0000; }
+
 .latest-updates-rail__title-row {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);

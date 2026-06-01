@@ -421,6 +421,9 @@ const getCategorySearchHref = (item) => {
   return `/category/${getFinalSlug(slug, title)}`;
 };
 
+const getSubcategoryPath = (categoryPath, subcategoryLabel) =>
+  `${String(categoryPath || "").replace(/\/$/, "")}/${encodeURIComponent(subcategoryLabel)}`;
+
 const normalizeNavCategoryKey = (value) =>
   String(value || "")
     .trim()
@@ -1900,7 +1903,8 @@ const Header = () => {
                     subcategories.map((sub) => {
                       const subcatKey = `${label}__${sub.label}`;
                       const subcatOpen = expandedSubcat === subcatKey;
-                      const subcategoryPath = `/category/${finalSlug}?subcategory=${encodeURIComponent(sub.label)}`;
+                      const categoryPath = `/category/${finalSlug}`;
+                      const subcategoryPath = getSubcategoryPath(categoryPath, sub.label);
                       const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
                       const isParentOnlyGroup = isStateParentGroupLabel(finalSlug, sub.label);
                       return (
@@ -1939,7 +1943,7 @@ const Header = () => {
                                 <span
                                   key={topic}
                                   className="drawer-topic-link block px-4 py-1.5 pl-11 text-[12.5px] text-slate-600 no-underline border-b border-slate-100 transition-colors duration-150 font-sans hover:text-red-600 hover:bg-red-50 cursor-pointer"
-                                  onClick={() => goTo(`/category/${finalSlug}?subcategory=${encodeURIComponent(topic)}`)}
+                                  onClick={() => goTo(getSubcategoryPath(categoryPath, topic))}
                                 >
                                   › {topic}
                                 </span>
@@ -1954,7 +1958,7 @@ const Header = () => {
                       <span
                         key={link}
                         className="drawer-sub-link cursor-pointer"
-                        onClick={() => goTo(`/category/${finalSlug}?subcategory=${encodeURIComponent(link)}`)}
+                        onClick={() => goTo(getSubcategoryPath(`/category/${finalSlug}`, link))}
                       >
                         {link}
                       </span>
@@ -2230,7 +2234,7 @@ const Header = () => {
                 {Array.isArray(desktopDropdown.subcategories) &&
                   desktopDropdown.subcategories.map((sub) => {
                     const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
-                    const subcategoryPath = `${desktopDropdown.path}?subcategory=${encodeURIComponent(sub.label)}`;
+                    const subcategoryPath = getSubcategoryPath(desktopDropdown.path, sub.label);
 
                     return (
                       <div className="nav-dropdown-group" key={sub.label}>
@@ -2246,7 +2250,7 @@ const Header = () => {
                             {sub.topics.map((topic) => (
                               <Link
                                 key={topic}
-                                to={`${desktopDropdown.path}?subcategory=${encodeURIComponent(topic)}`}
+                                to={getSubcategoryPath(desktopDropdown.path, topic)}
                                 className="nav-dropdown-link nav-dropdown-topic-link"
                                 onClick={() => setDesktopDropdown(null)}
                               >
@@ -2262,7 +2266,7 @@ const Header = () => {
                   desktopDropdown.links.map((linkLabel) => (
                     <Link
                       key={linkLabel}
-                      to={`${desktopDropdown.path}?subcategory=${encodeURIComponent(linkLabel)}`}
+                      to={getSubcategoryPath(desktopDropdown.path, linkLabel)}
                       className="nav-dropdown-link"
                       onClick={() => setDesktopDropdown(null)}
                     >

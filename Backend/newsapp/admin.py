@@ -9,11 +9,13 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.safestring import mark_safe
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
+from django.http import HttpResponse
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Case, When, F
 from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
+import csv
 from datetime import timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
@@ -22,9 +24,10 @@ from django.urls import path
 from django.templatetags.static import static
 from django.conf import settings
 from urllib.parse import quote
+from calendar import monthrange
 from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
-from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
+from .attendance import clock_in_attendance, get_attendance_snapshot, pause_attendance
 from .seo_direct import article_url
 
 
@@ -167,6 +170,62 @@ def _build_editorial_calendar_events(year):
         }
         for month, day, title, category, tag, note in seed_rows
     ]
+
+
+def _build_public_holiday_rows(year):
+    holiday_titles = {
+        "New Year's Day",
+        "Makar Sankranti / Pongal",
+        "Republic Day",
+        "Holi",
+        "Id-ul-Fitr",
+        "Ram Navami",
+        "Mahavir Jayanti",
+        "Good Friday",
+        "Baisakhi",
+        "Ambedkar Jayanti",
+        "Labour Day / Buddha Purnima",
+        "Bakrid (Id-ul-Zuha)",
+        "Muharram",
+        "Independence Day",
+        "Onam / Milad-un-Nabi",
+        "Raksha Bandhan",
+        "Janmashtami",
+        "Ganesh Chaturthi / Hindi Diwas",
+        "Gandhi Jayanti",
+        "Dussehra",
+        "Diwali",
+        "Chhath Puja",
+        "Guru Nanak Jayanti",
+        "Christmas Day",
+    }
+    holiday_rows = []
+    for item in _build_editorial_calendar_events(year):
+        if item["title"] not in holiday_titles:
+            continue
+        holiday_rows.append({
+            "date": item["date"],
+            "title": item["title"],
+            "tag": item["tag"],
+            "note": item["note"],
+        })
+    return holiday_rows
+
+
+def _build_month_off_dates(year, month):
+    _, total_days = monthrange(year, month)
+    off_dates = set()
+    for day in range(1, total_days + 1):
+        current_day = date(year, month, day)
+        if current_day.weekday() == 6:
+            off_dates.add(current_day)
+
+    for holiday in _build_public_holiday_rows(year):
+        holiday_date = holiday["date"]
+        if holiday_date.month == month:
+            off_dates.add(holiday_date)
+
+    return off_dates
 
 admin.site.site_header = "News Bharat Admin Panel"
 admin.site.site_title  = "News Bharat Admin"
@@ -1044,19 +1103,30 @@ class NewsAdminSite(AdminSite):
         return custom_urls + urls
 
     def attendance_view(self, request):
-        _ensure_superuser(request)
-        touch_attendance(request.user)
+        if request.method == 'POST':
+            action = (request.POST.get('attendance_action') or '').strip()
+            if action == 'clock_in':
+                clock_in_attendance(request.user)
+                messages.success(request, 'Attendance clock-in recorded successfully.')
+            elif action == 'clock_out':
+                pause_attendance(request.user)
+                messages.success(request, 'Attendance clock-out recorded successfully.')
+            return redirect(request.get_full_path())
+
         today = timezone.localdate()
         search = (request.GET.get('q') or '').strip()
         selected_month = (request.GET.get('month') or str(today.month)).strip()
         selected_status = (request.GET.get('status') or 'all').strip()
         selected_scope = (request.GET.get('scope') or 'today').strip()
         selected_columns = (request.GET.get('columns') or 'full').strip()
+        current_user_snapshot = get_attendance_snapshot(request.user)
         user_rows = []
         active_now = 0
         total_seconds_today = 0
 
         users = User.objects.filter(is_staff=True).select_related('profile').order_by('first_name', 'username')
+        if not request.user.is_superuser:
+            users = users.filter(pk=request.user.pk)
         if search:
             users = users.filter(
                 Q(username__icontains=search) |
@@ -1101,20 +1171,24 @@ class NewsAdminSite(AdminSite):
                 'is_active': is_active,
                 'seconds_today': seconds_today,
                 'duration_today': _format_duration(seconds_today),
-                'started_at': started_at,
+                'clock_in_at': snapshot['clock_in_at'] or started_at,
+                'clock_out_at': snapshot['clock_out_at'],
                 'last_activity_at': last_activity_at,
+                'attendance_date': snapshot['date'],
             })
 
         return TemplateResponse(request, 'admin/attendance.html', {
             **self.each_context(request),
             'title': 'Attendance',
             'attendance_rows': user_rows,
+            'public_holidays': _build_public_holiday_rows(today.year),
             'search': search,
             'today': today,
             'staff_count': users.count(),
             'active_now_count': active_now,
             'total_hours_today': round(total_seconds_today / 3600, 1),
             'total_duration_today': _format_duration(total_seconds_today),
+            'current_user_snapshot': current_user_snapshot,
             'selected_month': selected_month,
             'selected_status': selected_status,
             'selected_scope': selected_scope,
@@ -1128,47 +1202,124 @@ class NewsAdminSite(AdminSite):
 
     def attendance_records_view(self, request):
         _ensure_superuser(request)
-        touch_attendance(request.user)
-        records = AttendanceRecord.objects.select_related('user').order_by('-date', 'user__username')
         search = (request.GET.get('q') or '').strip()
-        selected_date = (request.GET.get('date') or '').strip()
-
-        if search:
-            records = records.filter(
-                Q(user__username__icontains=search) |
-                Q(user__first_name__icontains=search) |
-                Q(user__last_name__icontains=search) |
-                Q(user__email__icontains=search)
-            )
-        if selected_date:
-            records = records.filter(date=selected_date)
-
-        paginator = Paginator(records, 20)
-        page_obj = paginator.get_page(request.GET.get('page', 1))
-        record_rows = []
+        export_format = (request.GET.get('export') or '').strip().lower()
         today = timezone.localdate()
-        for record in page_obj.object_list:
-            seconds = record.total_active_seconds
+        selected_month = (request.GET.get('month') or str(today.month)).strip()
+        selected_month_int = int(selected_month) if selected_month.isdigit() and 1 <= int(selected_month) <= 12 else today.month
+        selected_year = today.year
+        _, total_days_in_month = monthrange(selected_year, selected_month_int)
+        month_start = date(selected_year, selected_month_int, 1)
+        month_end = date(selected_year, selected_month_int, total_days_in_month)
+        period_end = today if selected_month_int == today.month and selected_year == today.year else month_end
+        off_dates = _build_month_off_dates(selected_year, selected_month_int)
+        elapsed_off_dates = {off_day for off_day in off_dates if month_start <= off_day <= period_end}
+
+        users = User.objects.filter(is_staff=True).select_related('profile').order_by('first_name', 'username')
+        if search:
+            users = users.filter(
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+
+        records = AttendanceRecord.objects.filter(
+            date__gte=month_start,
+            date__lte=month_end,
+            user__in=users,
+        ).select_related('user').order_by('user__username', '-date')
+
+        records_by_user = {}
+        for record in records:
+            records_by_user.setdefault(record.user_id, []).append(record)
+
+        summary_rows = []
+        for member in users:
+            user_records = records_by_user.get(member.id, [])
+            present_dates = set()
+            total_seconds = 0
             is_active = False
-            if record.date == today:
-                snapshot = get_attendance_snapshot(record.user)
-                seconds = snapshot['display_seconds']
-                is_active = snapshot['is_active']
-            record_rows.append({
-                'record': record,
-                'duration': _format_duration(seconds),
-                'seconds': seconds,
+
+            for record in user_records:
+                seconds = record.total_active_seconds
+                if record.date == today:
+                    snapshot = get_attendance_snapshot(record.user)
+                    seconds = snapshot['display_seconds']
+                    is_active = snapshot['is_active']
+                if seconds > 0 or record.last_clock_in_at or record.last_clock_out_at:
+                    present_dates.add(record.date)
+                total_seconds += seconds
+
+            elapsed_days = (period_end - month_start).days + 1
+            present_days = len([day for day in present_dates if month_start <= day <= period_end])
+            monthly_offs = len(elapsed_off_dates)
+            working_days = max(elapsed_days - monthly_offs, 0)
+            absent_days = max(working_days - present_days, 0)
+            attendance_rate = round((present_days / working_days) * 100, 1) if working_days else 0
+
+            summary_rows.append({
+                'user': member,
+                'present_days': present_days,
+                'absent_days': absent_days,
+                'monthly_offs': monthly_offs,
+                'working_days': working_days,
+                'attendance_rate': attendance_rate,
+                'duration': _format_duration(total_seconds),
                 'is_active': is_active,
             })
+
+        paginator = Paginator(summary_rows, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        if export_format in {'excel', 'sheets'}:
+            filename_prefix = 'attendance_report_excel' if export_format == 'excel' else 'attendance_report_google_sheets'
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{filename_prefix}_{selected_year}_{selected_month_int:02d}.csv"'
+            response.write('\ufeff')
+            writer = csv.writer(response)
+            writer.writerow([
+                'Month',
+                'User',
+                'Email',
+                'Days Present',
+                'Days Absent',
+                'Monthly Offs',
+                'Working Days',
+                'Total Active Time',
+                'Attendance Percentage',
+                'Live Status',
+            ])
+            for row in summary_rows:
+                writer.writerow([
+                    date(selected_year, selected_month_int, 1).strftime('%B %Y'),
+                    row['user'].get_full_name() or row['user'].username,
+                    row['user'].email or row['user'].username,
+                    row['present_days'],
+                    row['absent_days'],
+                    row['monthly_offs'],
+                    row['working_days'],
+                    row['duration'],
+                    f"{row['attendance_rate']}%",
+                    'Online' if row['is_active'] else 'Closed',
+                ])
+            return response
 
         return TemplateResponse(request, 'admin/attendance_records.html', {
             **self.each_context(request),
             'title': 'Attendance Records',
-            'records': record_rows,
+            'records': page_obj.object_list,
             'page_obj': page_obj,
             'search': search,
-            'selected_date': selected_date,
-            'total_records': records.count(),
+            'selected_month': str(selected_month_int),
+            'selected_year': selected_year,
+            'month_label': date(selected_year, selected_month_int, 1).strftime('%B %Y'),
+            'total_records': len(summary_rows),
+            'month_options': [
+                ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
+                ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'),
+                ('9', 'September'), ('10', 'October'), ('11', 'November'), ('12', 'December'),
+            ],
         })
 
     def contact_queries_view(self, request):
@@ -1317,6 +1468,26 @@ class NewsAdminSite(AdminSite):
         return redirect(request.POST.get('next') or '/admin/career-applications/')
 
     def newsletter_view(self, request):
+        _ensure_superuser(request)
+        export_format = (request.GET.get('export') or '').strip().lower()
+        subscribers = Newsletter.objects.filter(is_active=True).order_by('-subscribed_at')
+
+        if export_format == 'excel':
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="newsletter_subscribers_{timezone.localdate().isoformat()}.csv"'
+            response.write('\ufeff')
+            writer = csv.writer(response)
+            writer.writerow(['Email', 'Status', 'Source', 'Subscribed At', 'Updated At'])
+            for subscriber in subscribers:
+                writer.writerow([
+                    subscriber.email,
+                    'Active' if subscriber.is_active else 'Inactive',
+                    subscriber.source,
+                    timezone.localtime(subscriber.subscribed_at).strftime('%d %b %Y %I:%M %p') if subscriber.subscribed_at else '',
+                    timezone.localtime(subscriber.updated_at).strftime('%d %b %Y %I:%M %p') if subscriber.updated_at else '',
+                ])
+            return response
+
         category_qs = Category.objects.only('id', 'name', 'slug')
         articles = (
             Article.objects.filter(status='published')
@@ -1357,6 +1528,7 @@ class NewsAdminSite(AdminSite):
             **self.each_context(request),
             'title': 'Newsletter',
             'articles_json': articles_json,
+            'subscriber_count': subscribers.count(),
             'newsletter_asset_version': timezone.now().strftime('%Y%m%d%H%M'),
             'newsletter_logo_url': str(getattr(settings, 'NEWSLETTER_LOGO_URL', '') or '').strip() or request.build_absolute_uri(static('images/NEWS4BHARAT_LOGO.png')),
         }
@@ -1398,7 +1570,6 @@ class NewsAdminSite(AdminSite):
         return TemplateResponse(request, 'admin/editorial_calendar.html', context)
 
     def my_assignments_view(self, request):
-        touch_attendance(request.user)
         search = (request.GET.get('q') or '').strip()
         status_filter = (request.GET.get('status') or '').strip()
         role_filter = (request.GET.get('role') or '').strip()

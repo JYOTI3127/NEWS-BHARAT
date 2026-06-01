@@ -1,5 +1,4 @@
 from django.utils import timezone
-from .attendance import touch_attendance
 from .scheduling import maybe_publish_due_articles
 
 class ActiveUserMiddleware:
@@ -24,7 +23,6 @@ class ActiveUserMiddleware:
         if request.user.is_authenticated:
             try:
                 if request.path not in self.PASSIVE_PATHS:
-                    touch_attendance(request.user)
                     profile = request.user.profile
                     profile.last_seen = timezone.now()
                     profile.save(update_fields=['last_seen'])

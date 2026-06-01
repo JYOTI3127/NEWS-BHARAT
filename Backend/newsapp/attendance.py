@@ -1,13 +1,7 @@
-from datetime import timedelta
-
 from django.utils import timezone
 from django.db.utils import OperationalError, ProgrammingError
 
 from .models import AttendanceRecord
-
-
-ATTENDANCE_IDLE_SECONDS = 300
-
 
 def format_duration(total_seconds):
     total_seconds = max(int(total_seconds or 0), 0)
@@ -22,20 +16,15 @@ def _today(now=None):
 
 def _current_session_seconds(record, now=None):
     now = now or timezone.now()
-    if not record.current_session_started_at or not record.last_activity_at:
+    if not record.current_session_started_at:
         return 0
 
-    idle_deadline = record.last_activity_at + timedelta(seconds=ATTENDANCE_IDLE_SECONDS)
-    session_end = min(now, idle_deadline)
-    seconds = int((session_end - record.current_session_started_at).total_seconds())
+    seconds = int((now - record.current_session_started_at).total_seconds())
     return max(seconds, 0)
 
 
 def is_record_active(record, now=None):
-    now = now or timezone.now()
-    if not record.current_session_started_at or not record.last_activity_at:
-        return False
-    return (now - record.last_activity_at).total_seconds() < ATTENDANCE_IDLE_SECONDS
+    return bool(record.current_session_started_at)
 
 
 def get_or_create_attendance_record(user, now=None):
@@ -44,13 +33,30 @@ def get_or_create_attendance_record(user, now=None):
         return AttendanceRecord.objects.get_or_create(
             user=user,
             date=_today(now),
-            defaults={
-                'current_session_started_at': now,
-                'last_activity_at': now,
-            },
+            defaults={},
         )
     except (ProgrammingError, OperationalError):
         return None, False
+
+
+def clock_in_attendance(user, now=None):
+    if not getattr(user, 'is_authenticated', False):
+        return None
+
+    now = now or timezone.now()
+    record, _ = get_or_create_attendance_record(user, now)
+    if record is None:
+        return None
+
+    if record.current_session_started_at:
+        return record
+
+    record.current_session_started_at = now
+    record.last_clock_in_at = now
+    record.last_clock_out_at = None
+    record.last_activity_at = now
+    record.save(update_fields=['current_session_started_at', 'last_clock_in_at', 'last_clock_out_at', 'last_activity_at', 'updated_at'])
+    return record
 
 
 def touch_attendance(user, now=None):
@@ -58,27 +64,15 @@ def touch_attendance(user, now=None):
         return None
 
     now = now or timezone.now()
-    record, created = get_or_create_attendance_record(user, now)
+    record, _ = get_or_create_attendance_record(user, now)
     if record is None:
         return None
 
-    if created:
+    if not record.current_session_started_at:
         return record
 
-    fields_to_update = ['updated_at']
-    if record.last_activity_at and record.current_session_started_at:
-        gap = max(int((now - record.last_activity_at).total_seconds()), 0)
-        if gap > 0:
-            record.total_active_seconds += min(gap, ATTENDANCE_IDLE_SECONDS)
-            fields_to_update.append('total_active_seconds')
-
-    if not is_record_active(record, now):
-        record.current_session_started_at = now
-        fields_to_update.append('current_session_started_at')
-
     record.last_activity_at = now
-    fields_to_update.append('last_activity_at')
-    record.save(update_fields=list(dict.fromkeys(fields_to_update)))
+    record.save(update_fields=['last_activity_at', 'updated_at'])
     return record
 
 
@@ -94,14 +88,15 @@ def pause_attendance(user, now=None):
     except (ProgrammingError, OperationalError):
         return None
 
-    if record.current_session_started_at and record.last_activity_at:
-        extra_seconds = max(int((now - record.last_activity_at).total_seconds()), 0)
+    if record.current_session_started_at:
+        extra_seconds = _current_session_seconds(record, now)
         if extra_seconds:
-            record.total_active_seconds += min(extra_seconds, ATTENDANCE_IDLE_SECONDS)
+            record.total_active_seconds += extra_seconds
 
+    record.last_clock_out_at = now
     record.current_session_started_at = None
     record.last_activity_at = now
-    record.save(update_fields=['total_active_seconds', 'current_session_started_at', 'last_activity_at', 'updated_at'])
+    record.save(update_fields=['total_active_seconds', 'current_session_started_at', 'last_clock_out_at', 'last_activity_at', 'updated_at'])
     return record
 
 
@@ -115,6 +110,8 @@ def get_attendance_snapshot(user, now=None):
             'display_seconds': 0,
             'display_duration': format_duration(0),
             'started_at': None,
+            'clock_in_at': None,
+            'clock_out_at': None,
             'last_activity_at': None,
             'date': _today(now),
         }
@@ -129,6 +126,8 @@ def get_attendance_snapshot(user, now=None):
             'display_seconds': 0,
             'display_duration': format_duration(0),
             'started_at': None,
+            'clock_in_at': None,
+            'clock_out_at': None,
             'last_activity_at': None,
             'date': _today(now),
         }
@@ -140,6 +139,8 @@ def get_attendance_snapshot(user, now=None):
             'display_seconds': 0,
             'display_duration': format_duration(0),
             'started_at': None,
+            'clock_in_at': None,
+            'clock_out_at': None,
             'last_activity_at': None,
             'date': _today(now),
         }
@@ -153,6 +154,8 @@ def get_attendance_snapshot(user, now=None):
         'display_seconds': total_seconds,
         'display_duration': format_duration(total_seconds),
         'started_at': record.current_session_started_at,
+        'clock_in_at': record.last_clock_in_at,
+        'clock_out_at': record.last_clock_out_at,
         'last_activity_at': record.last_activity_at,
         'date': record.date,
     }

@@ -1000,6 +1000,8 @@ class AttendanceRecord(models.Model):
     date = models.DateField()
     total_active_seconds = models.PositiveIntegerField(default=0)
     current_session_started_at = models.DateTimeField(null=True, blank=True)
+    last_clock_in_at = models.DateTimeField(null=True, blank=True)
+    last_clock_out_at = models.DateTimeField(null=True, blank=True)
     last_activity_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

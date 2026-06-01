@@ -4431,6 +4431,8 @@ def notification_status_api(request):
             "is_active": attendance_snapshot["is_active"],
             "display_seconds": attendance_snapshot["display_seconds"],
             "started_at": attendance_snapshot["started_at"].isoformat() if attendance_snapshot["started_at"] else None,
+            "clock_in_at": attendance_snapshot["clock_in_at"].isoformat() if attendance_snapshot["clock_in_at"] else None,
+            "clock_out_at": attendance_snapshot["clock_out_at"].isoformat() if attendance_snapshot["clock_out_at"] else None,
             "last_activity_at": attendance_snapshot["last_activity_at"].isoformat() if attendance_snapshot["last_activity_at"] else None,
         },
     })
@@ -4459,7 +4461,7 @@ def online_status_view(request):
     data  = []
     for u in users:
         try:
-            online = get_attendance_snapshot(u)["is_active"] or u.profile.is_online()
+            online = get_attendance_snapshot(u)["is_active"]
         except Exception:
             online = False
         data.append({'id': u.id, 'online': online})
@@ -4473,6 +4475,8 @@ def attendance_status_api(request):
         "is_active": snapshot["is_active"],
         "display_seconds": snapshot["display_seconds"],
         "started_at": snapshot["started_at"].isoformat() if snapshot["started_at"] else None,
+        "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
+        "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
         "last_activity_at": snapshot["last_activity_at"].isoformat() if snapshot["last_activity_at"] else None,
     })
 
@@ -4488,6 +4492,8 @@ def attendance_heartbeat_api(request):
         "status": "ok",
         "is_active": snapshot["is_active"],
         "display_seconds": snapshot["display_seconds"],
+        "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
+        "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
     })
 
 
@@ -4502,6 +4508,8 @@ def attendance_disconnect_api(request):
         "status": "paused",
         "is_active": snapshot["is_active"],
         "display_seconds": snapshot["display_seconds"],
+        "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
+        "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
     })
 
 

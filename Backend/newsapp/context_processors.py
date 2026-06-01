@@ -18,7 +18,7 @@ def admin_badges(request):
         current_user_online = False
         attendance_snapshot = get_attendance_snapshot(request.user)
         try:
-            current_user_online = attendance_snapshot["is_active"] or request.user.profile.is_online()
+            current_user_online = attendance_snapshot["is_active"]
         except Exception:
             current_user_online = False
 

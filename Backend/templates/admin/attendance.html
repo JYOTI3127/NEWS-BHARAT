@@ -11,19 +11,21 @@
       <div>
         <div class="perm-breadcrumb">Dashboard / Team / <span>Attendance</span></div>
         <h2 class="attendance-hero-title">Attendance Overview</h2>
-        <p class="attendance-hero-copy">Track who is active in the admin panel, when the session started, and how long each team member has worked today.</p>
+        <p class="attendance-hero-copy">Use manual clock in and clock out to record attendance, then review saved timings and daily work hours for the team.</p>
       </div>
       <div class="attendance-hero-actions">
         <div class="attendance-live-pill">
           <span class="attendance-live-dot"></span>
-          Live newsroom tracker
+          Manual attendance tracker
         </div>
+        {% if request.user.is_superuser %}
         <a href="/admin/attendance/records/" class="btn-perm-add">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15">
             <path d="M9 17v-6"/><path d="M13 17V7"/><path d="M17 17v-3"/><path d="M5 21h14"/><path d="M5 3h14"/>
           </svg>
           Records
         </a>
+        {% endif %}
       </div>
     </div>
 
@@ -37,8 +39,17 @@
         <strong class="attendance-kpi-value">{{ active_now_count }}</strong>
       </div>
       <div class="attendance-kpi-card">
-        <span class="attendance-kpi-label">Combined Active Time</span>
-        <strong class="attendance-kpi-value">{{ total_duration_today }}</strong>
+        <span class="attendance-kpi-label">Your Attendance</span>
+        <form method="post" class="attendance-action-form">
+          {% csrf_token %}
+          {% if current_user_snapshot.is_active %}
+            <input type="hidden" name="attendance_action" value="clock_out">
+            <button type="submit" class="attendance-action-btn is-stop">Clock Out</button>
+          {% else %}
+            <input type="hidden" name="attendance_action" value="clock_in">
+            <button type="submit" class="attendance-action-btn">Clock In</button>
+          {% endif %}
+        </form>
       </div>
       <div class="attendance-kpi-card">
         <span class="attendance-kpi-label">Attendance Date</span>
@@ -127,9 +138,9 @@
                 </div>
               </div>
             </td>
-            {% if selected_columns != "basic" %}<td>{{ today|date:"d M Y" }}</td>{% endif %}
-            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.started_at %}{{ row.started_at|date:"h:i A" }}{% else %}-{% endif %}</td>{% endif %}
-            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.last_activity_at %}{{ row.last_activity_at|date:"h:i A" }}{% else %}-{% endif %}</td>{% endif %}
+            {% if selected_columns != "basic" %}<td>{{ row.attendance_date|date:"d M Y" }}</td>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.clock_in_at %}{{ row.clock_in_at|date:"h:i A" }}{% else %}-{% endif %}</td>{% endif %}
+            {% if selected_columns == "full" or selected_columns == "timing" %}<td>{% if row.clock_out_at %}{{ row.clock_out_at|date:"h:i A" }}{% elif row.is_active %}In progress{% else %}-{% endif %}</td>{% endif %}
             <td><strong class="attendance-hours">{{ row.duration_today }}</strong></td>
             <td>
               <span class="attendance-status-pill {% if row.is_active %}is-online{% else %}is-offline{% endif %}">
@@ -139,11 +150,13 @@
             {% if selected_columns == "full" or selected_columns == "basic" %}<td>
               <span class="attendance-note">
                 {% if row.is_active %}
-                  Working in admin panel
-                {% elif row.last_activity_at %}
-                  Last activity recorded
+                  Clocked in
+                {% elif row.clock_out_at %}
+                  Clocked out
+                {% elif row.clock_in_at %}
+                  Waiting for clock out
                 {% else %}
-                  No activity yet
+                  No attendance yet
                 {% endif %}
               </span>
             </td>{% endif %}
@@ -151,6 +164,43 @@
           {% empty %}
           <tr>
             <td colspan="{% if selected_columns == 'full' %}8{% elif selected_columns == 'timing' %}7{% else %}6{% endif %}" class="attendance-empty">No attendance data found for the selected filter.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="attendance-holidays-card">
+    <div class="attendance-holidays-head">
+      <div>
+        <div class="attendance-holidays-eyebrow">Public Holidays</div>
+        <h3 class="attendance-holidays-title">{{ today|date:"Y" }} holiday calendar</h3>
+      </div>
+      <div class="attendance-holidays-badge">{{ public_holidays|length }} holidays</div>
+    </div>
+
+    <div class="attendance-holidays-table-wrap">
+      <table class="attendance-holidays-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Holiday</th>
+            <th>Type</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for holiday in public_holidays %}
+          <tr>
+            <td>{{ holiday.date|date:"d M Y" }}</td>
+            <td><strong>{{ holiday.title }}</strong></td>
+            <td><span class="attendance-holiday-pill">{{ holiday.tag }}</span></td>
+            <td>{{ holiday.note }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="attendance-empty">No public holidays available.</td>
           </tr>
           {% endfor %}
         </tbody>

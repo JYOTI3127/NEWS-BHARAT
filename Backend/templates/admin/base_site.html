@@ -102,12 +102,14 @@
       </div>
     </div>
 
+    {% if user.is_superuser %}
     <div class="media-btn-wrap" id="newsletterBtnWrap">
       <a href="/admin/newsletter/" class="media-post-btn" style="background:linear-gradient(135deg,rgba(25,80,223,0.14),rgba(254,173,23,0.12));text-decoration:none;" data-tooltip="Newsletter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="m22 8-10 6L2 8"/></svg>
         <span>Newsletter</span>
       </a>
     </div>
+    {% endif %}
 
     <div class="media-btn-wrap" id="editorialCalendarBtnWrap">
       <a href="/admin/editorial-calendar/" class="media-post-btn" style="background:linear-gradient(135deg,rgba(15,118,110,0.14),rgba(59,130,246,0.14));text-decoration:none;" data-tooltip="Editorial Calendar">
@@ -132,7 +134,7 @@
           {% if model.object_name == "MetalRates" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Metal Rates"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="nav-label">Metal Rates</span></a></li>{% endif %}
           {% if model.object_name == "HomepageSlots" %}<li class="nav-item"><a href="{{ model.admin_url }}" class="nav-link" data-tooltip="Homepage Slots"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="nav-label">Homepage Slots</span></a></li>{% endif %}
         {% endfor %}{% endfor %}
-        {% if user.is_superuser %}<li class="nav-item"><a href="/admin/attendance/" class="nav-link" data-tooltip="Attendance"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/></svg></span><span class="nav-label">Attendance</span></a></li>{% endif %}
+        {% if user.is_staff %}<li class="nav-item"><a href="/admin/attendance/" class="nav-link" data-tooltip="Attendance"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/></svg></span><span class="nav-label">Attendance</span></a></li>{% endif %}
         <li class="nav-item has-submenu">
           <div class="nav-link" onclick="toggleSub(this)" data-tooltip="Article">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
@@ -193,7 +195,7 @@
             <span id="topbarPresenceText">{% if current_user_online %}Online{% else %}Offline{% endif %}</span>
           </span>
           <span id="topbarAttendanceTimer" class="{% if attendance_snapshot.is_active %}is-online{% else %}is-offline{% endif %}" data-seconds="{{ attendance_snapshot.display_seconds|default:0 }}" data-active="{% if attendance_snapshot.is_active %}1{% else %}0{% endif %}" data-last-activity="{% if attendance_snapshot.last_activity_at %}{{ attendance_snapshot.last_activity_at|date:'c' }}{% endif %}" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;background:{% if attendance_snapshot.is_active %}rgba(29,78,216,.12){% else %}rgba(148,163,184,.16){% endif %};color:{% if attendance_snapshot.is_active %}#1d4ed8{% else %}#475569{% endif %};">
-            <span id="topbarAttendanceLabel">{% if attendance_snapshot.is_active %}Active For{% else %}Paused At{% endif %}</span>
+            <span id="topbarAttendanceLabel">{% if attendance_snapshot.is_active %}Active For{% else %}Worked Today{% endif %}</span>
             <span id="topbarAttendanceValue">{{ attendance_snapshot.display_duration|default:"00:00:00" }}</span>
           </span>
         </h1>
@@ -583,7 +585,6 @@ document.addEventListener('click', function(e){
   var attendanceIsActive = !!(attendanceTimer && attendanceTimer.getAttribute('data-active') === '1');
   var lastActivityMs = attendanceTimer && attendanceTimer.getAttribute('data-last-activity') ? Date.parse(attendanceTimer.getAttribute('data-last-activity')) : Date.now();
   var lastHeartbeatAt = 0;
-  var idleLimitMs = 300000;
 
   function formatDuration(totalSeconds){
     totalSeconds = Math.max(parseInt(totalSeconds || 0, 10) || 0, 0);
@@ -649,7 +650,7 @@ document.addEventListener('click', function(e){
     attendanceTimer.classList.toggle('is-offline', !attendanceIsActive);
     attendanceTimer.style.background = attendanceIsActive ? 'rgba(29,78,216,.12)' : 'rgba(148,163,184,.16)';
     attendanceTimer.style.color = attendanceIsActive ? '#1d4ed8' : '#475569';
-    attendanceLabel.textContent = attendanceIsActive ? 'Active For' : 'Paused At';
+    attendanceLabel.textContent = attendanceIsActive ? 'Active For' : 'Worked Today';
     attendanceValue.textContent = formatDuration(attendanceSeconds);
   }
 
@@ -667,22 +668,11 @@ document.addEventListener('click', function(e){
   }
 
   function pauseAttendanceSilently(){
-    if(!attendanceIsActive){ return Promise.resolve(); }
-    attendanceIsActive = false;
-    renderAttendanceTimer();
-    setPresenceState(false);
-    return fetch('/api/attendance/disconnect/', {
-      method:'POST',
-      credentials:'same-origin',
-      keepalive:true,
-      headers:{
-        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '',
-        'Content-Type':'application/json'
-      }
-    }).catch(function(){});
+    return Promise.resolve();
   }
 
   function sendAttendanceHeartbeat(force){
+    if(!attendanceIsActive){ return; }
     var now = Date.now();
     if(!force && now - lastHeartbeatAt < 45000){ return; }
     lastHeartbeatAt = now;
@@ -706,12 +696,7 @@ document.addEventListener('click', function(e){
 
   function registerActivity(){
     lastActivityMs = Date.now();
-    if(!attendanceIsActive){
-      attendanceIsActive = true;
-      setPresenceState(true);
-      renderAttendanceTimer();
-    }
-    sendAttendanceHeartbeat(false);
+    if(attendanceIsActive){ sendAttendanceHeartbeat(false); }
   }
 
   function markNotificationsReadSilently(){
@@ -808,28 +793,26 @@ document.addEventListener('click', function(e){
     renderAttendanceTimer();
     pollNotificationStatus();
     pollPresenceStatus();
-    sendAttendanceHeartbeat(true);
+    if(attendanceIsActive){ sendAttendanceHeartbeat(true); }
     ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(function(evt){
       window.addEventListener(evt, registerActivity, {passive:true});
     });
     document.addEventListener('visibilitychange', function(){
-      if(document.visibilityState === 'visible'){
+      if(document.visibilityState === 'visible' && attendanceIsActive){
         registerActivity();
       }
     });
-    window.addEventListener('beforeunload', function(){
-      pauseAttendanceSilently();
-    });
     window.setInterval(function(){
       if(attendanceIsActive){
-        if(Date.now() - lastActivityMs >= idleLimitMs){
-          pauseAttendanceSilently();
-        }else{
-          attendanceSeconds += 1;
-          renderAttendanceTimer();
-        }
+        attendanceSeconds += 1;
+        renderAttendanceTimer();
       }
     }, 1000);
+    window.setInterval(function(){
+      if(attendanceIsActive){
+        sendAttendanceHeartbeat(false);
+      }
+    }, 60000);
     window.setInterval(pollNotificationStatus, 15000);
     window.setInterval(pollPresenceStatus, 20000);
   });

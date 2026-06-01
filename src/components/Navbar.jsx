@@ -25,7 +25,7 @@ import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 const LiveClock = memo(() => {
   const [time, setTime] = useState(
     () => new Date().toLocaleTimeString("en-IN", {
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: true,
     })
   );
 
@@ -33,10 +33,10 @@ const LiveClock = memo(() => {
     const iv = setInterval(() => {
       setTime(
         new Date().toLocaleTimeString("en-IN", {
-          hour: "2-digit", minute: "2-digit", second: "2-digit",
+          hour: "2-digit", minute: "2-digit", hour12: true,
         })
       );
-    }, 1000);
+    }, 60000);
     return () => clearInterval(iv);
   }, []);
 
@@ -88,6 +88,17 @@ const getWeatherCondition = (weather) =>
   "";
 
 // ✅ NAYA (yeh paste karo)
+const getNavbarDateLabel = (value = null) => {
+  const parsedDate = value ? new Date(value) : new Date();
+  const dateValue = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  return dateValue.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 const CATEGORY_ICON_MAP = {
   "Breaking News": Flame,
   "World News": Globe,
@@ -937,11 +948,7 @@ const Header = () => {
   const [weather, setWeather] = useState(null);
 
   // ✅ FIX: date alag state — time LiveClock handle karega
-  const [date, setDate] = useState(
-    () => new Date().toLocaleDateString("en-IN", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric",
-    })
-  );
+  const [date, setDate] = useState(() => getNavbarDateLabel());
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -1126,14 +1133,23 @@ const Header = () => {
 
     clearDesktopDropdownCloseTimer();
     const rect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 300;
+    const subcategoryCount = Array.isArray(link?.subcategories) ? link.subcategories.length : 0;
+    const topicCount = Array.isArray(link?.subcategories)
+      ? link.subcategories.reduce((count, sub) => count + (Array.isArray(sub?.topics) ? sub.topics.length : 0), 0)
+      : 0;
+    const linkCount = Array.isArray(link?.links) ? link.links.length : 0;
+    const totalDropdownItems = subcategoryCount + topicCount + linkCount;
+    const menuWidth = totalDropdownItems > 12 ? 760 : 360;
     const left = Math.max(12, Math.min(rect.left, window.innerWidth - menuWidth - 12));
+    const maxHeight = Math.max(260, window.innerHeight - rect.bottom - 18);
 
     setDesktopDropdown({
       ...link,
       left,
       top: rect.bottom + 6,
       width: menuWidth,
+      maxHeight,
+      isMega: totalDropdownItems > 12,
     });
   }, [clearDesktopDropdownCloseTimer, isCompactNav, isMobile]);
 
@@ -1144,12 +1160,7 @@ const Header = () => {
       try {
         const res = await fetch(apiUrl("/datetime/"));
         const data = await res.json();
-        setDate(
-          data.date || data.formatted_date ||
-          new Date().toLocaleDateString("en-IN", {
-            weekday: "long", day: "numeric", month: "long", year: "numeric",
-          })
-        );
+        setDate(getNavbarDateLabel(data.date || data.formatted_date));
       } catch (error) {
         void error;
       }
@@ -2050,8 +2061,8 @@ const Header = () => {
                     rel="noreferrer"
                     className="top-page-link top-bharat360-btn"
                   >
+                    <span className="top-bharat360-name">Bharat360</span>
                     <ExternalLink size={12} aria-hidden="true" />
-                    Bharat360
                   </a>
                 </div>
               </div>
@@ -2222,57 +2233,43 @@ const Header = () => {
             </ul>
             {desktopDropdown && (
               <div
-                className="nav-dropdown-menu"
+                className={`nav-dropdown-menu${desktopDropdown.isMega ? " is-mega" : ""}`}
                 style={{
                   left: `${desktopDropdown.left}px`,
                   top: `${desktopDropdown.top}px`,
                   width: `${desktopDropdown.width}px`,
+                  maxHeight: `${desktopDropdown.maxHeight}px`,
                 }}
                 onMouseEnter={clearDesktopDropdownCloseTimer}
                 onMouseLeave={closeDesktopDropdownSoon}
               >
-                {Array.isArray(desktopDropdown.subcategories) &&
-                  desktopDropdown.subcategories.map((sub) => {
-                    const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
-                    const subcategoryPath = getSubcategoryPath(desktopDropdown.path, sub.label);
-
-                    return (
-                      <div className="nav-dropdown-group" key={sub.label}>
-                        <Link
-                          to={subcategoryPath}
-                          className="nav-dropdown-link nav-dropdown-group-link"
-                          onClick={() => setDesktopDropdown(null)}
-                        >
-                          {sub.label}
-                        </Link>
-                        {hasTopics && (
-                          <div className="nav-dropdown-topics">
-                            {sub.topics.map((topic) => (
-                              <Link
-                                key={topic}
-                                to={getSubcategoryPath(desktopDropdown.path, topic)}
-                                className="nav-dropdown-link nav-dropdown-topic-link"
-                                onClick={() => setDesktopDropdown(null)}
-                              >
-                                {topic}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                {Array.isArray(desktopDropdown.links) &&
-                  desktopDropdown.links.map((linkLabel) => (
-                    <Link
-                      key={linkLabel}
-                      to={getSubcategoryPath(desktopDropdown.path, linkLabel)}
-                      className="nav-dropdown-link"
-                      onClick={() => setDesktopDropdown(null)}
-                    >
-                      {linkLabel}
-                    </Link>
-                  ))}
+                <div className="nav-dropdown-content">
+                  {Array.isArray(desktopDropdown.subcategories) &&
+                    desktopDropdown.subcategories.flatMap((sub) => {
+                      const topics = Array.isArray(sub.topics) ? sub.topics : [];
+                      return topics.length > 0 ? topics : [sub.label];
+                    }).map((subcategoryLabel) => (
+                      <Link
+                        key={subcategoryLabel}
+                        to={getSubcategoryPath(desktopDropdown.path, subcategoryLabel)}
+                        className="nav-dropdown-link"
+                        onClick={() => setDesktopDropdown(null)}
+                      >
+                        {subcategoryLabel}
+                      </Link>
+                    ))}
+                  {Array.isArray(desktopDropdown.links) &&
+                    desktopDropdown.links.map((linkLabel) => (
+                      <Link
+                        key={linkLabel}
+                        to={getSubcategoryPath(desktopDropdown.path, linkLabel)}
+                        className="nav-dropdown-link"
+                        onClick={() => setDesktopDropdown(null)}
+                      >
+                        {linkLabel}
+                      </Link>
+                    ))}
+                </div>
               </div>
             )}
             {!isMobile && !isCompactNav && canScrollNavRight && (

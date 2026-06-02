@@ -375,41 +375,54 @@ function totalSubCount(cat) {
     return count;
 }
 
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /* ================================================================
    BUILD the expanded sub-row HTML
    Works for both single-section (default) and multi-section dicts
 ================================================================ */
-function buildSubsHtml(subs) {
-    if (!subs || typeof subs !== 'object') return '';
+function buildSubsHtml(cat) {
+    const sections = Array.isArray(cat.subcategory_stats) ? cat.subcategory_stats : [];
+    if (!sections.length) return '';
 
-    const entries  = Object.entries(subs);
-    if (!entries.length) return '';
+    return sections.map(function(section) {
+        const items = Array.isArray(section.items) ? section.items : [];
+        if (!items.length) return '';
 
-    const isDefault = entries.length === 1 && entries[0][0] === 'default';
-    let html = '';
+        const heading = section.label
+            ? escapeHtml(section.label)
+            : 'Sub-categories';
+        const sectionArticleCount = Number(section.article_count || 0);
 
-    if (isDefault) {
-        // ── Simple flat list — no section heading ──
-        const items = entries[0][1] || [];
-        html = items.map(function(item) {
-            const label = (item && typeof item === 'object') ? (item.name || JSON.stringify(item)) : String(item);
-            return `<span class="cm-sub-tag">${label}</span>`;
+        const rows = items.map(function(item) {
+            const itemName = escapeHtml(item.name || '');
+            const articleCount = Number(item.article_count || 0);
+            return `
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 126px;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16)">
+                    <div style="font-size:13px;font-weight:600;color:#e5eefc;line-height:1.45">${itemName}</div>
+                    <div style="font-size:12px;color:#f8fbff;text-align:center;font-weight:600">${articleCount} article${articleCount === 1 ? '' : 's'}</div>
+                    <div style="display:flex;justify-content:flex-end">
+                        <button class="cm-btn cm-btn--view" style="padding:6px 10px;font-size:11px" onclick='openPanel(${cat.id}, ${JSON.stringify(item.name || "")})'>View Articles</button>
+                    </div>
+                </div>`;
         }).join('');
-    } else {
-        // ── Multi-section — show each section heading + its tags ──
-        entries.forEach(function([heading, items]) {
-            if (!Array.isArray(items) || !items.length) return;
-            html += `<div class="cm-subrow__section">`;
-            html += `<div class="cm-subrow__heading">${heading}</div>`;
-            html += `<div>`;
-            html += items.map(function(item) {
-                const label = (item && typeof item === 'object') ? (item.name || JSON.stringify(item)) : String(item);
-                return `<span class="cm-sub-tag">${label}</span>`;
-            }).join('');
-            html += `</div></div>`;
-        });
-    }
-    return html;
+
+        return `
+            <div style="border:1px solid rgba(96,165,250,.18);border-radius:14px;background:rgba(15,23,42,.36);overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(15,23,42,.58);border-bottom:1px solid rgba(148,163,184,.12)">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--g300)">${heading}</div>
+                    <div style="font-size:12px;color:#f8fbff;font-weight:600">${sectionArticleCount} mapped article${sectionArticleCount === 1 ? '' : 's'}</div>
+                </div>
+                <div>${rows}</div>
+            </div>`;
+    }).join('<div style="height:12px"></div>');
 }
 
 /* ================================================================
@@ -493,7 +506,7 @@ function render() {
         if (isExp && subCount > 0) {
             const subTr = document.createElement('tr');
             subTr.className = 'cm-subrow';
-            const subsHtml = buildSubsHtml(cat.subs);
+            const subsHtml = buildSubsHtml(cat);
             subTr.innerHTML = `<td></td><td colspan="5"><div class="cm-subrow__inner">${subsHtml}</div></td>`;
             tbody.appendChild(subTr);
         }
@@ -830,16 +843,18 @@ async function doRestore(catId) {
 /* ================================================================
    VIEW POSTS PANEL
 ================================================================ */
-async function openPanel(catId) {
+async function openPanel(catId, subcategory = '') {
     panelCatId = catId;
     const cat  = CATS.find(c => c.id === catId);
-    document.getElementById('panelTitle').textContent = `${cat.name} (loading…)`;
+    const panelLabel = subcategory ? `${cat.name} / ${subcategory}` : cat.name;
+    document.getElementById('panelTitle').textContent = `${panelLabel} (loading…)`;
     document.getElementById('postsPanel').classList.add('open');
     document.getElementById('panelBg').classList.add('open');
 
-    const data  = await apiFetch(`/api/categories/${catId}/posts/`);
+    const query = subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : '';
+    const data  = await apiFetch(`/api/categories/${catId}/posts/${query}`);
     const posts = data.posts || [];
-    document.getElementById('panelTitle').textContent = `${cat.name} (${data.total || 0} posts)`;
+    document.getElementById('panelTitle').textContent = `${panelLabel} (${data.total || 0} posts)`;
 
     const body = document.getElementById('panelBody');
 

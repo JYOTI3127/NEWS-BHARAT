@@ -629,6 +629,121 @@ def _normalize_category_tree(value):
     return text if text else ''
 
 
+def _normalize_subcategory_sections(value):
+    if value in (None, ''):
+        return {}
+
+    if isinstance(value, list):
+        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        return {'default': cleaned} if cleaned else {}
+
+    if not isinstance(value, dict):
+        return {}
+
+    normalized = {}
+    for key, items in value.items():
+        section_key = str(key).strip() or 'default'
+        if isinstance(items, list):
+            cleaned = [str(item).strip() for item in items if str(item).strip()]
+        elif items in (None, ''):
+            cleaned = []
+        else:
+            item = str(items).strip()
+            cleaned = [item] if item else []
+        if cleaned:
+            normalized[section_key] = cleaned
+    return normalized
+
+
+def _normalize_selected_subcategory_map(value):
+    if not isinstance(value, dict):
+        return {}
+
+    raw_map = value.get('subs') if isinstance(value.get('subs'), dict) else value
+    normalized = {}
+    for key, items in raw_map.items():
+        cat_key = str(key).strip()
+        if not cat_key:
+            continue
+        if isinstance(items, list):
+            cleaned = [str(item).strip() for item in items if str(item).strip()]
+        elif items in (None, ''):
+            cleaned = []
+        else:
+            item = str(items).strip()
+            cleaned = [item] if item else []
+        if cleaned:
+            normalized[cat_key] = cleaned
+    return normalized
+
+
+def _build_category_subcategory_stats(categories):
+    categories = list(categories)
+    if not categories:
+        return {}
+
+    sections_by_category = {
+        category.id: _normalize_subcategory_sections(category.sub_categories)
+        for category in categories
+    }
+    tracked_category_ids = {category.id for category in categories}
+
+    counts = {
+        category_id: {
+            section: {item: 0 for item in items}
+            for section, items in sections.items()
+        }
+        for category_id, sections in sections_by_category.items()
+    }
+
+    if tracked_category_ids:
+        articles = (
+            Article.objects.filter(status='published', categories__in=categories)
+            .prefetch_related(Prefetch('categories', queryset=Category.objects.only('id')))
+            .only('id', 'selected_subcategories')
+            .distinct()
+        )
+
+        for article in articles:
+            selected_map = _normalize_selected_subcategory_map(article.selected_subcategories)
+            if not selected_map:
+                continue
+
+            article_category_ids = [
+                category.id
+                for category in article.categories.all()
+                if category.id in tracked_category_ids
+            ]
+            for category_id in article_category_ids:
+                selected_items = set(selected_map.get(str(category_id), []))
+                if not selected_items:
+                    continue
+                for section, items in sections_by_category.get(category_id, {}).items():
+                    for item in items:
+                        if item in selected_items:
+                            counts[category_id][section][item] += 1
+
+    return {
+        category.id: [
+            {
+                'section': section,
+                'label': '' if section == 'default' else section,
+                'article_count': sum(section_counts.get(item, 0) for item in items),
+                'items': [
+                    {
+                        'name': item,
+                        'article_count': section_counts.get(item, 0),
+                    }
+                    for item in items
+                ],
+            }
+            for section, items in sections_by_category.get(category.id, {}).items()
+            for section_counts in [counts.get(category.id, {}).get(section, {})]
+        ]
+        for category in categories
+    }
+
+
 def _validate_article_status_change(*, user, previous_status, requested_status):
     if getattr(user, 'is_superuser', False):
         return None
@@ -798,13 +913,13 @@ def _is_current_article_image_url(article, url_value, request=None):
 
 @api_view(['GET'])
 def category_list(request):
-    cache_key = 'categories:all:v4'
+    cache_key = 'categories:all:v5'
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
     now = timezone.now()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    categories = Category.objects.annotate(
+    categories = list(Category.objects.annotate(
         article_count=Count(
             'articles',
             filter=Q(articles__status='published'),
@@ -823,10 +938,15 @@ def category_list(request):
             ),
             distinct=True,
         ),
-    )
-    serializer = CategorySerializer(categories, many=True)
-    cache.set(cache_key, serializer.data, 3600)  # 1 hour
-    return Response(serializer.data)
+    ))
+    serialized_categories = CategorySerializer(categories, many=True).data
+    subcategory_stats = _build_category_subcategory_stats(categories)
+
+    for item in serialized_categories:
+        item['subcategory_stats'] = subcategory_stats.get(item['id'], [])
+
+    cache.set(cache_key, serialized_categories, 3600)  # 1 hour
+    return Response(serialized_categories)
 
 
 def _ensure_category_manager(request):
@@ -966,15 +1086,46 @@ def category_restore(request, cat_id):
 def category_posts(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
  
-    # select_related + prefetch_related → N+1 queries khatam
-    articles = Article.objects.filter(
-        categories=cat, status='published'
-    ).select_related('author').prefetch_related('categories').order_by('-created_at')[:10]
- 
+    requested_subcategory = str(request.GET.get('subcategory', '') or '').strip()
+    articles_qs = (
+        Article.objects.filter(categories=cat, status='published')
+        .select_related('author')
+        .prefetch_related('categories')
+        .only(
+            'id',
+            'title',
+            'slug',
+            'image',
+            'image_url',
+            'published_at',
+            'created_at',
+            'author__username',
+            'author__first_name',
+            'author__last_name',
+            'selected_subcategories',
+        )
+        .order_by('-published_at', '-created_at')
+        .distinct()
+    )
+
+    if requested_subcategory:
+        category_key = str(cat.id)
+        matching_articles = []
+        for article in articles_qs:
+            selected_map = _normalize_selected_subcategory_map(article.selected_subcategories)
+            if requested_subcategory in selected_map.get(category_key, []):
+                matching_articles.append(article)
+        total = len(matching_articles)
+        articles = matching_articles[:10]
+    else:
+        total = articles_qs.count()
+        articles = list(articles_qs[:10])
+
     serializer = ArticleMinSerializer(articles, many=True, context={'request': request})
     return Response({
         'posts': serializer.data,
-        'total': articles.count()
+        'total': total,
+        'subcategory': requested_subcategory,
     })
 
 

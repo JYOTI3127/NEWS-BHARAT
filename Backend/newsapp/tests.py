@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.test import TestCase
@@ -1079,6 +1080,73 @@ class SlugPermissionTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         category.refresh_from_db()
         self.assertEqual(category.slug, 'bharat-business')
+
+
+class CategorySubcategoryStatsTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        cache.clear()
+        self.user = User.objects.create_user(
+            username='category-editor',
+            password='testpass123',
+        )
+        self.category = Category.objects.create(
+            name='Sports',
+            slug='sports',
+            sub_categories={
+                'default': ['Cricket', 'Football'],
+                'Tournaments': ['IPL'],
+            },
+        )
+
+    def _make_article(self, title, selected_items):
+        article = Article.objects.create(
+            author=self.user,
+            title=title,
+            content=f'{title} body',
+            status='published',
+            selected_subcategories={
+                'subs': {
+                    str(self.category.id): selected_items,
+                }
+            },
+        )
+        article.categories.add(self.category)
+        return article
+
+    def test_category_list_includes_subcategory_article_counts(self):
+        self._make_article('Cricket story', ['Cricket'])
+        self._make_article('Tournament story', ['Cricket', 'IPL'])
+        self._make_article('Football story', ['Football'])
+
+        response = self.client.get('/api/categories/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        category_row = next(item for item in response.json() if item['id'] == self.category.id)
+        stats = category_row['subcategory_stats']
+
+        default_section = next(section for section in stats if section['section'] == 'default')
+        tournaments_section = next(section for section in stats if section['section'] == 'Tournaments')
+
+        self.assertEqual(default_section['items'][0]['name'], 'Cricket')
+        self.assertEqual(default_section['items'][0]['article_count'], 2)
+        self.assertEqual(default_section['items'][1]['name'], 'Football')
+        self.assertEqual(default_section['items'][1]['article_count'], 1)
+        self.assertEqual(tournaments_section['items'][0]['name'], 'IPL')
+        self.assertEqual(tournaments_section['items'][0]['article_count'], 1)
+
+    def test_category_posts_can_be_filtered_by_subcategory(self):
+        cricket_article = self._make_article('Cricket story', ['Cricket'])
+        self._make_article('Football story', ['Football'])
+
+        response = self.client.get(f'/api/categories/{self.category.pk}/posts/?subcategory=Cricket')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['subcategory'], 'Cricket')
+        self.assertEqual(len(payload['posts']), 1)
+        self.assertEqual(payload['posts'][0]['id'], cricket_article.id)
 
 
 @override_settings(SEO_SITE_URL='https://news4bharat.com')

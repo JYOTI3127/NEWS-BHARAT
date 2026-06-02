@@ -39,9 +39,10 @@
             <option value="{{ value }}" {% if selected_month == value %}selected{% endif %}>{{ label }} {{ selected_year }}</option>
           {% endfor %}
         </select>
+        <input type="date" name="date" value="{{ selected_date }}" class="attendance-date-input">
         <button type="submit" class="btn-perm-add attendance-search-btn">Apply</button>
-        <a href="?month={{ selected_month }}{% if search %}&q={{ search }}{% endif %}&export=excel" class="btn-perm-add attendance-export-btn">Download for Excel</a>
-        <a href="?month={{ selected_month }}{% if search %}&q={{ search }}{% endif %}&export=sheets" class="btn-perm-add attendance-export-btn is-light">Download for Google Sheets</a>
+        <a href="?month={{ selected_month }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if search %}&q={{ search }}{% endif %}&export=excel" class="btn-perm-add attendance-export-btn">Download for Excel</a>
+        <a href="?month={{ selected_month }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if search %}&q={{ search }}{% endif %}&export=sheets" class="btn-perm-add attendance-export-btn is-light">Download for Google Sheets</a>
       </form>
     </div>
 
@@ -55,7 +56,7 @@
             <th>Days Absent</th>
             <th>Monthly Offs</th>
             <th>Working Days</th>
-            <th>Total Active Time</th>
+            <th>{{ active_time_label }}</th>
             <th>Attendance %</th>
             <th>Live Status</th>
           </tr>
@@ -101,13 +102,13 @@
       </div>
       <div class="perm-page-btns">
         {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}&month={{ selected_month }}" class="perm-page-btn">&#8249;</a>
+          <a href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}&month={{ selected_month }}{% if selected_date %}&date={{ selected_date }}{% endif %}" class="perm-page-btn">&#8249;</a>
         {% else %}
           <button class="perm-page-btn" disabled>&#8249;</button>
         {% endif %}
         <button class="perm-page-btn active">{{ page_obj.number }}</button>
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}&month={{ selected_month }}" class="perm-page-btn">&#8250;</a>
+          <a href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}&month={{ selected_month }}{% if selected_date %}&date={{ selected_date }}{% endif %}" class="perm-page-btn">&#8250;</a>
         {% else %}
           <button class="perm-page-btn" disabled>&#8250;</button>
         {% endif %}

@@ -13,8 +13,8 @@ from datetime import datetime
 from io import StringIO
 from unittest.mock import patch
 
-from .admin import _build_editorial_calendar_events
-from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Role
+from .admin import ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
+from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
 from .seo_direct import SitemapEngine, _iso
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
@@ -1180,6 +1180,107 @@ class CategorySubcategoryStatsTests(TestCase):
         self.assertEqual(payload['total_pages'], 0)
         self.assertFalse(payload['has_next'])
         self.assertEqual(payload['results'], [])
+
+
+class ReportAdminActionTests(TestCase):
+    def setUp(self):
+        self.superuser = User.objects.create_superuser(
+            username='boss',
+            email='boss@example.com',
+            password='testpass123',
+        )
+        self.staff_user = User.objects.create_user(
+            username='reporter',
+            email='reporter@example.com',
+            password='testpass123',
+            is_staff=True,
+        )
+        self.report = Report.objects.create(
+            user=self.staff_user,
+            period_type='daily',
+            report_date=timezone.localdate(),
+            report_time=datetime.strptime('16:30', '%H:%M').time(),
+            work_done='Initial work',
+            pending_work='Initial pending',
+            notes='Initial notes',
+        )
+
+    def test_staff_user_can_update_own_report_from_admin_page(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.post(
+            '/admin/newsapp/report/',
+            {
+                '_update_report': '1',
+                'report_id': str(self.report.pk),
+                'period_type': 'daily',
+                'report_date': self.report.report_date.isoformat(),
+                'report_time': '17:15',
+                'work_done': 'Updated work',
+                'pending_work': 'Updated pending',
+                'notes': 'Updated notes',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.work_done, 'Updated work')
+        self.assertEqual(self.report.pending_work, 'Updated pending')
+        self.assertEqual(self.report.notes, 'Updated notes')
+
+    def test_superuser_can_delete_report_from_admin_page(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.post(
+            '/admin/newsapp/report/',
+            {
+                '_delete_report': '1',
+                'report_id': str(self.report.pk),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Report.objects.filter(pk=self.report.pk).exists())
+
+
+class ArticleAssignmentAdminEmailTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.superuser = User.objects.create_superuser(
+            username='assign-admin',
+            email='assign-admin@example.com',
+            password='testpass123',
+        )
+        self.reporter = User.objects.create_user(
+            username='assignment-reporter',
+            email='assignment-reporter@example.com',
+            password='testpass123',
+            is_staff=True,
+        )
+        self.article = Article.objects.create(
+            author=self.superuser,
+            title='Assignment target article',
+            content='Article body',
+            status='draft',
+        )
+        self.assignment_admin = ArticleAssignmentAdmin(ArticleAssignment, admin_site)
+
+    def test_save_model_sends_assignment_email_for_new_assignment(self):
+        request = self.factory.post('/admin/newsapp/articleassignment/add/')
+        request.user = self.superuser
+
+        assignment = ArticleAssignment(
+            article=self.article,
+            user=self.reporter,
+            role_type='reporter',
+            assignment_message='Please cover this story.',
+        )
+
+        self.assignment_admin.save_model(request, assignment, form=None, change=False)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('New article assignment', mail.outbox[0].subject)
+        self.assertIn(self.reporter.email, mail.outbox[0].to)
 
 
 @override_settings(SEO_SITE_URL='https://news4bharat.com')

@@ -1210,9 +1210,15 @@ class NewsAdminSite(AdminSite):
         search = (request.GET.get('q') or '').strip()
         export_format = (request.GET.get('export') or '').strip().lower()
         today = timezone.localdate()
+        selected_date_raw = (request.GET.get('date') or '').strip()
+        selected_date = parse_date(selected_date_raw) if selected_date_raw else None
         selected_month = (request.GET.get('month') or str(today.month)).strip()
-        selected_month_int = int(selected_month) if selected_month.isdigit() and 1 <= int(selected_month) <= 12 else today.month
-        selected_year = today.year
+        if selected_date:
+            selected_month_int = selected_date.month
+            selected_year = selected_date.year
+        else:
+            selected_month_int = int(selected_month) if selected_month.isdigit() and 1 <= int(selected_month) <= 12 else today.month
+            selected_year = today.year
         _, total_days_in_month = monthrange(selected_year, selected_month_int)
         month_start = date(selected_year, selected_month_int, 1)
         month_end = date(selected_year, selected_month_int, total_days_in_month)
@@ -1235,9 +1241,24 @@ class NewsAdminSite(AdminSite):
             user__in=users,
         ).select_related('user').order_by('user__username', '-date')
 
+        specific_date_records = AttendanceRecord.objects.filter(
+            date=selected_date if selected_date else today,
+            user__in=users,
+        ).select_related('user')
+
         records_by_user = {}
         for record in records:
             records_by_user.setdefault(record.user_id, []).append(record)
+
+        specific_records_by_user = {}
+        for record in specific_date_records:
+            specific_records_by_user[record.user_id] = record
+
+        active_time_label = (
+            f"Active Time on {selected_date.strftime('%d %b %Y')}"
+            if selected_date
+            else "Total Active Time"
+        )
 
         summary_rows = []
         for member in users:
@@ -1256,6 +1277,17 @@ class NewsAdminSite(AdminSite):
                     present_dates.add(record.date)
                 total_seconds += seconds
 
+            duration_seconds = total_seconds
+            specific_record = specific_records_by_user.get(member.id)
+            if selected_date:
+                duration_seconds = 0
+                if specific_record:
+                    duration_seconds = specific_record.total_active_seconds
+                    if selected_date == today:
+                        today_snapshot = get_attendance_snapshot(member)
+                        duration_seconds = today_snapshot['display_seconds']
+                        is_active = today_snapshot['is_active']
+
             elapsed_days = (period_end - month_start).days + 1
             present_days = len([day for day in present_dates if month_start <= day <= period_end])
             monthly_offs = len(elapsed_off_dates)
@@ -1270,7 +1302,7 @@ class NewsAdminSite(AdminSite):
                 'monthly_offs': monthly_offs,
                 'working_days': working_days,
                 'attendance_rate': attendance_rate,
-                'duration': _format_duration(total_seconds),
+                'duration': _format_duration(duration_seconds),
                 'is_active': is_active,
             })
 
@@ -1291,7 +1323,7 @@ class NewsAdminSite(AdminSite):
                 'Days Absent',
                 'Monthly Offs',
                 'Working Days',
-                'Total Active Time',
+                active_time_label,
                 'Attendance Percentage',
                 'Live Status',
             ])
@@ -1319,6 +1351,8 @@ class NewsAdminSite(AdminSite):
             'selected_month': str(selected_month_int),
             'selected_year': selected_year,
             'month_label': date(selected_year, selected_month_int, 1).strftime('%B %Y'),
+            'selected_date': selected_date.isoformat() if selected_date else '',
+            'active_time_label': active_time_label,
             'total_records': len(summary_rows),
             'month_options': [
                 ('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'),
@@ -2065,9 +2099,7 @@ class ReportAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         if not self.has_module_permission(request):
             return False
-        if request.user.is_superuser:
-            return True
-        return bool(obj and obj.user_id == request.user.id)
+        return bool(request.user.is_superuser)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related('user', 'user__profile')
@@ -2080,6 +2112,19 @@ class ReportAdmin(admin.ModelAdmin):
         base_qs = self.get_queryset(request)
         today = timezone.localdate()
         now_local = timezone.localtime()
+
+        def _get_editable_report():
+            report_id_value = (request.GET.get('edit') or request.POST.get('report_id') or '').strip()
+            if not report_id_value.isdigit():
+                return None
+            report = base_qs.filter(pk=int(report_id_value)).first()
+            if report is None:
+                messages.error(request, 'The selected report was not found.')
+                return None
+            if not request.user.is_superuser and report.user_id != request.user.id:
+                messages.error(request, 'You can only update your own reports.')
+                return None
+            return report
 
         if request.method == 'POST' and '_create_report' in request.POST:
             period_type = (request.POST.get('period_type') or 'daily').strip().lower()
@@ -2124,11 +2169,71 @@ class ReportAdmin(admin.ModelAdmin):
             messages.success(request, f'Report saved for {target_user.get_full_name() or target_user.username}.')
             return redirect(request.path)
 
+        if request.method == 'POST' and '_update_report' in request.POST:
+            report = _get_editable_report()
+            if report is None:
+                return redirect(request.path)
+
+            period_type = (request.POST.get('period_type') or report.period_type).strip().lower()
+            if period_type not in {'daily', 'weekly', 'monthly'}:
+                messages.error(request, 'Please choose a valid report type.')
+                return redirect(request.path)
+
+            report_date_value = parse_date((request.POST.get('report_date') or '').strip())
+            report_time_value = parse_time((request.POST.get('report_time') or '').strip())
+            work_done = (request.POST.get('work_done') or '').strip()
+            pending_work = (request.POST.get('pending_work') or '').strip()
+            notes = (request.POST.get('notes') or '').strip()
+
+            if request.user.is_superuser:
+                user_id_value = (request.POST.get('user_id') or '').strip()
+                target_user = User.objects.filter(pk=user_id_value, is_staff=True).first() if user_id_value else None
+            else:
+                target_user = report.user
+
+            if target_user is None:
+                messages.error(request, 'Please select a valid staff user.')
+                return redirect(request.path)
+            if not report_date_value:
+                messages.error(request, 'Please select a report date.')
+                return redirect(request.path)
+            if not report_time_value:
+                messages.error(request, 'Please select a report time.')
+                return redirect(request.path)
+            if not work_done:
+                messages.error(request, 'Please add what work was completed.')
+                return redirect(request.path)
+
+            report.user = target_user
+            report.period_type = period_type
+            report.report_date = report_date_value
+            report.report_time = report_time_value
+            report.work_done = work_done
+            report.pending_work = pending_work
+            report.notes = notes
+            report.save()
+            messages.success(request, f'Report updated for {target_user.get_full_name() or target_user.username}.')
+            return redirect(request.path)
+
+        if request.method == 'POST' and '_delete_report' in request.POST:
+            if not request.user.is_superuser:
+                raise PermissionDenied("Only super admin can delete reports.")
+            report = _get_editable_report()
+            if report is None:
+                return redirect(request.path)
+            report_owner = report.user.get_full_name() or report.user.username
+            report.delete()
+            messages.success(request, f'Report deleted for {report_owner}.')
+            return redirect(request.path)
+
         search = (request.GET.get('q') or '').strip()
         period_type_filter = (request.GET.get('period_type') or '').strip().lower()
         window_filter = (request.GET.get('window') or 'all').strip().lower()
         selected_user_id = (request.GET.get('user_id') or '').strip()
         export_format = (request.GET.get('export') or '').strip().lower()
+        editing_report = None
+        if (request.GET.get('edit') or '').strip():
+            editing_report = _get_editable_report()
 
         qs = base_qs
         if search:
@@ -2195,6 +2300,14 @@ class ReportAdmin(admin.ModelAdmin):
 
         paginator = Paginator(qs.order_by('-report_date', '-report_time', '-created_at'), 20)
         page_obj = paginator.get_page(request.GET.get('page', 1))
+        for report in page_obj.object_list:
+            created_at = getattr(report, 'created_at', None)
+            updated_at = getattr(report, 'updated_at', None)
+            report.was_updated = bool(
+                created_at
+                and updated_at
+                and updated_at > (created_at + timedelta(seconds=2))
+            )
 
         user_choices = []
         if request.user.is_superuser:
@@ -2216,9 +2329,10 @@ class ReportAdmin(admin.ModelAdmin):
             'selected_user_id': selected_user_id,
             'user_choices': user_choices,
             'report_type_choices': Report.PERIOD_TYPE_CHOICES,
-            'default_report_date': today.isoformat(),
-            'default_report_time': now_local.strftime('%H:%M'),
+            'default_report_date': editing_report.report_date.isoformat() if editing_report else today.isoformat(),
+            'default_report_time': editing_report.report_time.strftime('%H:%M') if editing_report else now_local.strftime('%H:%M'),
             'can_export_reports': bool(request.user.is_superuser),
+            'editing_report': editing_report,
         })
 
         return TemplateResponse(
@@ -2682,6 +2796,41 @@ class ArticleAssignmentAdmin(admin.ModelAdmin):
     search_fields = ('article__title', 'user__username', 'assigned_by__username', 'assignment_message')
     list_filter = ('role_type', 'assigned_at', 'deadline')
     ordering = ('-assigned_at',)
+
+    def save_model(self, request, obj, form, change):
+        previous = None
+        if change and obj.pk:
+            previous = (
+                ArticleAssignment.objects.select_related('user', 'article', 'assigned_by')
+                .filter(pk=obj.pk)
+                .first()
+            )
+
+        if not getattr(obj, 'assigned_by_id', None):
+            obj.assigned_by = request.user
+
+        super().save_model(request, obj, form, change)
+
+        should_email = not change
+        if previous is not None:
+            should_email = any([
+                previous.user_id != obj.user_id,
+                previous.article_id != obj.article_id,
+                (previous.assignment_message or '') != (obj.assignment_message or ''),
+                previous.deadline != obj.deadline,
+                previous.role_type != obj.role_type,
+            ])
+
+        if should_email:
+            from .views import _send_assignment_email
+
+            _send_assignment_email(
+                article=obj.article,
+                reporter=obj.user,
+                assigned_by=obj.assigned_by or request.user,
+                assignment_message=obj.assignment_message,
+                deadline=obj.deadline,
+            )
 
     def has_module_permission(self, request):
         return bool(getattr(request.user, 'is_superuser', False))

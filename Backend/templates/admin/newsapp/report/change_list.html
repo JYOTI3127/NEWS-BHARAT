@@ -43,10 +43,15 @@
 
   <div class="perm-table-card" style="margin-bottom:20px;">
     <div class="perm-table-toolbar" style="display:block;">
-      <div class="perm-toolbar-title">Add New Report</div>
+      <div class="perm-toolbar-title">{% if editing_report %}Update Report{% else %}Add New Report{% endif %}</div>
       <form method="post" style="margin-top:16px;">
         {% csrf_token %}
+        {% if editing_report %}
+        <input type="hidden" name="_update_report" value="1">
+        <input type="hidden" name="report_id" value="{{ editing_report.pk }}">
+        {% else %}
         <input type="hidden" name="_create_report" value="1">
+        {% endif %}
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
           {% if request.user.is_superuser %}
           <div>
@@ -54,7 +59,7 @@
             <select id="reportUser" name="user_id" class="attendance-filter-select" required>
               <option value="">Select user</option>
               {% for member in user_choices %}
-                <option value="{{ member.pk }}">{{ member.get_full_name|default:member.username }}{% if member.profile.staff_id %} — {{ member.profile.staff_id }}{% endif %}</option>
+                <option value="{{ member.pk }}" {% if editing_report and editing_report.user_id == member.pk %}selected{% endif %}>{{ member.get_full_name|default:member.username }}{% if member.profile.staff_id %} - {{ member.profile.staff_id }}{% endif %}</option>
               {% endfor %}
             </select>
           </div>
@@ -63,7 +68,7 @@
             <label class="attendance-filter-label" for="reportType">Report Type</label>
             <select id="reportType" name="period_type" class="attendance-filter-select" required>
               {% for value, label in report_type_choices %}
-                <option value="{{ value }}">{{ label }}</option>
+                <option value="{{ value }}" {% if editing_report and editing_report.period_type == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
           </div>
@@ -77,19 +82,22 @@
           </div>
           <div style="grid-column:1 / -1;">
             <label class="attendance-filter-label" for="workDone">Work Done</label>
-            <textarea id="workDone" name="work_done" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Describe the work completed for today, this week, or this month." required></textarea>
+            <textarea id="workDone" name="work_done" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Describe the work completed for today, this week, or this month." required>{% if editing_report %}{{ editing_report.work_done }}{% endif %}</textarea>
           </div>
           <div>
             <label class="attendance-filter-label" for="pendingWork">Pending Work</label>
-            <textarea id="pendingWork" name="pending_work" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="List any pending tasks or unfinished work."></textarea>
+            <textarea id="pendingWork" name="pending_work" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="List any pending tasks or unfinished work.">{% if editing_report %}{{ editing_report.pending_work }}{% endif %}</textarea>
           </div>
           <div>
             <label class="attendance-filter-label" for="reportNotes">Notes</label>
-            <textarea id="reportNotes" name="notes" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Any blockers, dependency, follow-up..."></textarea>
+            <textarea id="reportNotes" name="notes" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Any blockers, dependency, follow-up...">{% if editing_report %}{{ editing_report.notes }}{% endif %}</textarea>
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-          <button type="submit" class="btn-perm-add">Save Report</button>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+          {% if editing_report %}
+          <a href="{{ request.path }}" class="btn-perm-add attendance-export-btn">Cancel Edit</a>
+          {% endif %}
+          <button type="submit" class="btn-perm-add">{% if editing_report %}Update Report{% else %}Save Report{% endif %}</button>
         </div>
       </form>
     </div>
@@ -148,6 +156,7 @@
             <th>Pending</th>
             <th>Notes</th>
             <th>Submitted</th>
+            <th style="text-align:right;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -168,11 +177,27 @@
             <td style="min-width:240px;">{{ report.work_done|linebreaksbr }}</td>
             <td style="min-width:220px;">{{ report.pending_work|default:"—"|linebreaksbr }}</td>
             <td style="min-width:180px;">{{ report.notes|default:"—"|linebreaksbr }}</td>
-            <td>{{ report.created_at|date:"d M Y, h:i A" }}</td>
+            <td>
+              <div>{{ report.created_at|date:"d M Y, h:i A" }}</div>
+              {% if report.was_updated %}
+              <div style="margin-top:4px;font-size:12px;color:#64748b;">Updated on {{ report.updated_at|date:"d M Y, h:i A" }}</div>
+              {% endif %}
+            </td>
+            <td style="text-align:right;white-space:nowrap;">
+              <a href="?edit={{ report.pk }}" class="btn-perm-add attendance-export-btn" style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;">Update</a>
+              {% if request.user.is_superuser %}
+              <form method="post" style="display:inline-block;margin-left:8px;" onsubmit="return confirm('Delete this report?');">
+                {% csrf_token %}
+                <input type="hidden" name="_delete_report" value="1">
+                <input type="hidden" name="report_id" value="{{ report.pk }}">
+                <button type="submit" class="btn-perm-add" style="background:#ef4444;">Delete</button>
+              </form>
+              {% endif %}
+            </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="attendance-empty">No reports found for the current filters.</td>
+            <td colspan="9" class="attendance-empty">No reports found for the current filters.</td>
           </tr>
           {% endfor %}
         </tbody>

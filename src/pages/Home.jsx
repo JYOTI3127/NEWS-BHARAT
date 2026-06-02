@@ -16,7 +16,9 @@ import AdvertisementSlot from '../components/AdvertisementSlot';
 import CategoryMiniCarousel from '../components/CategoryMiniCarousel';
 import FreshPopularShowcase from '../components/FreshPopularShowcase';
 import LatestUpdatesRail from '../components/LatestUpdatesRail';
+import { trackSocialFollow } from '../lib/analytics';
 
+const VideoSection = lazy(() => import('../components/Video'));
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
 const StateNews = lazy(() => import('../components/Statenews'));
@@ -465,6 +467,7 @@ const Home = () => {
           rel="noopener noreferrer"
           aria-label="Open News4Bharat on WhatsApp"
           title="WhatsApp"
+          onClick={() => trackSocialFollow("whatsapp", { placement: "home_float" })}
         >
           <WhatsAppFloatingIcon />
         </a>
@@ -485,6 +488,12 @@ const Home = () => {
             />
           </Profiler>
         </div>
+
+        <Suspense fallback={<div className="home-section-align" style={{ minHeight: 320 }} />}>
+          <div className="home-section-align">
+            <VideoSection />
+          </div>
+        </Suspense>
 
         <div className="home-section-align">
           <Profiler id="EditorialSection" onRender={onRenderCallback}>

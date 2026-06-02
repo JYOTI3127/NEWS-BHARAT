@@ -35,11 +35,11 @@ jobs:
       - name: Clear Vite cache
         run: rm -rf node_modules/.vite
 
-      - name: Build (push = Vite only, others = full prerender)
+      - name: Build with prerender
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "Push detected — running Vite build only (no prerender)"
-            npm run build:vite
+            echo "Push detected - running full prerender build"
+            npm run build
           else
             echo "Schedule/dispatch detected — running full prerender build"
             npm run build

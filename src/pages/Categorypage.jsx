@@ -466,12 +466,16 @@ export default function CategoryPage() {
         }
       }
 
+      const subcategoryQuery = !isStateCategory && subFilter
+        ? `&subcategory=${encodeURIComponent(subFilter)}`
+        : "";
+
       const articlesUrls = shouldFetchByState
         ? [`${API_BASE}/articles/by-state/?state=${encodeURIComponent(stateSubFilter)}&page=1&limit=${requestLimit}`]
         : isStateCategory
           ? [`${API_BASE}/articles/by-state/`]
           : categoryFetchSlugs.map((categorySlug) =>
-            `${API_BASE}/articles/?category=${encodeURIComponent(categorySlug)}&page=1&limit=${requestLimit}`
+            `${API_BASE}/articles/?category=${encodeURIComponent(categorySlug)}${subcategoryQuery}&page=1&limit=${requestLimit}`
           );
 
       const [categoryResult, articlesResult] = await Promise.allSettled([

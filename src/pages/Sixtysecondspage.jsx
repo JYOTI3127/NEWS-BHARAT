@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Twitter, Facebook, Link2, ArrowLeft, Clock, User } from "lucide-react";
 import { API_BASE } from "../lib/api";
+import { trackSocialShare } from "../lib/analytics";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", {
@@ -79,6 +80,11 @@ export default function SixtySecondsPage() {
   const handleShare = (platform) => {
     const url   = window.location.href;
     const title = article?.title || "";
+    trackSocialShare(platform, {
+      article_slug: article?.slug || slug || "",
+      article_title: title,
+      content_type: "60_second_read",
+    });
     if (platform === "twitter") {
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`, "_blank");
     } else if (platform === "facebook") {

@@ -18,6 +18,7 @@ import {
   getCanonicalArticleUrl,
   getArticlePath,
 } from "../lib/articleUrl";
+import { trackSocialShare } from "../lib/analytics";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 import AdvertisementSlot from "../components/AdvertisementSlot";
 
@@ -2028,11 +2029,16 @@ export default function ArticleDetails() {
     const isArticleRenderReady = () => {
       const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
       const hasStructuredData = jsonLdScripts.length > 0;
+      const canonicalLink = document.querySelector('link[rel="canonical"]');
+      const hasCanonical = Boolean(canonicalLink?.href);
+      const titleText = mainArticleRef.current?.querySelector("h1")?.textContent?.trim() || "";
+      const articleTitleStart = String(article?.title || "").trim().slice(0, 24);
+      const hasArticleTitle = Boolean(articleTitleStart && titleText.includes(articleTitleStart));
       const bodyText = articleContentRef.current?.textContent?.trim() || "";
       const hasBodyContent = bodyText.length >= 50;
       const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
-      if (articleHasNoContent) return hasStructuredData;
-      return hasBodyContent && hasStructuredData;
+      if (articleHasNoContent) return hasArticleTitle && hasStructuredData && hasCanonical;
+      return hasArticleTitle && hasBodyContent && hasStructuredData && hasCanonical;
     };
 
     const checkAndEmit = () => {
@@ -2109,6 +2115,11 @@ export default function ArticleDetails() {
   const handleShare = (platform) => {
     const url = window.location.href;
     const title = article?.title || "";
+    trackSocialShare(platform, {
+      article_slug: article?.slug || articleSlug || "",
+      article_title: title,
+      content_type: "article",
+    });
     if (platform === "twitter") window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`, "_blank");
     else if (platform === "facebook") window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
     else if (platform === "instagram") { navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); window.open("https://www.instagram.com/", "_blank"); }

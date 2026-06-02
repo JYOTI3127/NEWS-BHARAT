@@ -17,6 +17,7 @@ import { apiUrl } from "../lib/api";
 import { getArticlePath } from "../lib/articleUrl";
 import { canonicalizeRegionName, normalizeRegionKey } from "../lib/stateRegion";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
+import { trackSocialFollow } from "../lib/analytics";
 
 // ─────────────────────────────────────────────
 // ✅ FIX 1: LiveClock — alag component
@@ -2074,6 +2075,7 @@ const Header = () => {
                   rel="noreferrer"
                   className="top-social-link"
                   aria-label="LinkedIn"
+                  onClick={() => trackSocialFollow("linkedin", { placement: "navbar_top" })}
                 >
                   <Linkedin size={14} aria-hidden="true" />
                 </a>
@@ -2083,6 +2085,7 @@ const Header = () => {
                   rel="noreferrer"
                   className="top-social-link"
                   aria-label="Instagram"
+                  onClick={() => trackSocialFollow("instagram", { placement: "navbar_top" })}
                 >
                   <Instagram size={14} aria-hidden="true" />
                 </a>
@@ -2092,6 +2095,7 @@ const Header = () => {
                   rel="noreferrer"
                   className="top-social-link"
                   aria-label="YouTube"
+                  onClick={() => trackSocialFollow("youtube", { placement: "navbar_top" })}
                 >
                   <Youtube size={14} aria-hidden="true" />
                 </a>
@@ -2101,6 +2105,7 @@ const Header = () => {
                   rel="noreferrer"
                   className="top-social-link"
                   aria-label="X (Twitter)"
+                  onClick={() => trackSocialFollow("x", { placement: "navbar_top" })}
                 >
                   <span className="top-social-x" aria-hidden="true">X</span>
                 </a>

@@ -3,6 +3,7 @@ import "../Footer.css";
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Youtube, Linkedin, Mail, ArrowRight } from "lucide-react";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
+import { trackSocialFollow } from "../lib/analytics";
 
 const WhatsAppIcon = ({ size = 17 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="currentColor">
@@ -171,24 +172,24 @@ export default function Footer() {
           <div className="ft-follow-label">FOLLOW US</div>
 
           <div className="ft-social-row">
-            <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" className="ft-soc"><Facebook size={18} /></a>
-            <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" className="ft-soc"><Instagram size={18} /></a>
-            <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="ft-soc" title="X">
+            <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" className="ft-soc" onClick={() => trackSocialFollow("facebook", { placement: "footer" })}><Facebook size={18} /></a>
+            <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" className="ft-soc" onClick={() => trackSocialFollow("instagram", { placement: "footer" })}><Instagram size={18} /></a>
+            <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="ft-soc" title="X" onClick={() => trackSocialFollow("x", { placement: "footer" })}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M18.244 2H21l-6.56 7.5L22 22h-6.828l-5.35-7.002L3.5 22H1l7.02-8.02L2 2h6.9l4.86 6.41L18.244 2zm-2.39 18h1.885L8.15 4H6.2l9.654 16z" />
               </svg>
             </a>
-            <a href={YOUTUBE_CHANNEL_URL} className="ft-soc">
+            <a href={YOUTUBE_CHANNEL_URL} className="ft-soc" onClick={() => trackSocialFollow("youtube", { placement: "footer" })}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.7 31.7 0 000 12a31.7 31.7 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.7 31.7 0 0024 12a31.7 31.7 0 00-.5-5.8zM9.6 15.5v-7l6.2 3.5-6.2 3.5z" />
               </svg>
             </a>
-            <a href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx" className="ft-soc">
+            <a href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx" className="ft-soc" onClick={() => trackSocialFollow("whatsapp", { placement: "footer" })}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M20.52 3.48A11.91 11.91 0 0012.06 0C5.48 0 .16 5.32.16 11.9c0 2.1.55 4.16 1.6 5.98L0 24l6.27-1.64a11.9 11.9 0 005.8 1.48h.01c6.58 0 11.9-5.32 11.9-11.9 0-3.18-1.24-6.16-3.46-8.46zM12.07 21.4a9.5 9.5 0 01-4.84-1.32l-.35-.21-3.72.98.99-3.63-.23-.37a9.48 9.48 0 01-1.45-5.04c0-5.24 4.26-9.5 9.5-9.5a9.43 9.43 0 016.73 2.8 9.43 9.43 0 012.78 6.7c0 5.24-4.26 9.49-9.41 9.49zm5.2-7.12c-.28-.14-1.66-.82-1.92-.91-.26-.1-.45-.14-.64.14-.19.28-.73.91-.9 1.1-.17.19-.33.21-.61.07-.28-.14-1.19-.44-2.27-1.4-.84-.75-1.41-1.67-1.58-1.95-.17-.28-.02-.43.13-.57.13-.13.28-.33.42-.49.14-.17.19-.28.28-.47.09-.19.05-.35-.02-.49-.07-.14-.64-1.54-.88-2.11-.23-.55-.47-.47-.64-.48l-.55-.01c-.19 0-.49.07-.75.35-.26.28-1 1-1 2.43s1.03 2.81 1.17 3.01c.14.19 2.02 3.08 4.89 4.31.68.29 1.21.46 1.63.59.68.22 1.3.19 1.79.12.55-.08 1.66-.68 1.9-1.34.23-.66.23-1.22.16-1.34-.07-.12-.26-.19-.54-.33z" />
               </svg>
             </a>
-            <a href="https://www.linkedin.com/company/news4bharat" className="ft-soc"><Linkedin size={18} /></a>
+            <a href="https://www.linkedin.com/company/news4bharat" className="ft-soc" onClick={() => trackSocialFollow("linkedin", { placement: "footer" })}><Linkedin size={18} /></a>
           </div>
 
           <div className="ft-newsletter-block">

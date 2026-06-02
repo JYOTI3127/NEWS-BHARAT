@@ -1512,6 +1512,12 @@ function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
   Object.keys(STATIC_PAGE_META).forEach((route) => {
     const outputDir = path.join(__dirname, 'build', route)
     const outputPath = path.join(outputDir, 'index.html')
+
+    if (fs.existsSync(outputPath)) {
+      console.log(`  STATIC SEO skipped existing ${route}`)
+      return
+    }
+
     const staticHtml = cleanupPrerenderedHtml(
       shellHtml,
       route,

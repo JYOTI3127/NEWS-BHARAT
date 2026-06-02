@@ -3,6 +3,28 @@ import { Helmet } from "react-helmet-async";
 
 const SITE_URL = "https://news4bharat.com";
 
+const isPrerenderRequest = () => {
+  if (typeof window === "undefined") return false;
+  return /HeadlessChrome|prerender/i.test(window.navigator?.userAgent || "");
+};
+
+const READY_SELECTORS_BY_PATH = {
+  "/about-us": ".about-page",
+  "/privacy-policy": ".privacy-page .priv-content",
+  "/editorial-policy": ".ep-page .ep-section",
+  "/contact-us": ".contact-page .ct-main",
+  "/founders-note": ".founder-page, .founders-page, main, section",
+  "/disclaimer": ".disclaimer-page, main, section",
+  "/terms-and-conditions": ".terms-page, main, section",
+  "/careers": ".careers-page, main, section",
+};
+
+const dispatchPrerenderReady = () => {
+  if (typeof window === "undefined") return;
+  window.prerenderReady = true;
+  document.dispatchEvent(new Event("prerender-ready"));
+};
+
 export default function PageSeo({ title, description, keywords = "", path = "/" }) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const canonicalUrl = `${SITE_URL}${normalizedPath}`;
@@ -11,13 +33,46 @@ export default function PageSeo({ title, description, keywords = "", path = "/" 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
 
-    const readyTimer = window.setTimeout(() => {
-      window.prerenderReady = true;
-      document.dispatchEvent(new Event("prerender-ready"));
-    }, 100);
+    if (!isPrerenderRequest()) {
+      const readyTimer = window.requestAnimationFrame(dispatchPrerenderReady);
+      return () => window.cancelAnimationFrame(readyTimer);
+    }
 
-    return () => window.clearTimeout(readyTimer);
-  }, [canonicalUrl, description, keywordContent, title]);
+    const readySelector = READY_SELECTORS_BY_PATH[normalizedPath] || "main, section, #root > *";
+    let intervalId = 0;
+    let timeoutId = 0;
+    let rafId = 0;
+    let emitted = false;
+
+    const hasRouteContent = () => {
+      const routeNode = document.querySelector(readySelector);
+      if (!routeNode) return false;
+      const rootText = document.getElementById("root")?.textContent?.trim() || "";
+      return rootText.length > 80;
+    };
+
+    const emitReady = () => {
+      if (emitted) return;
+      emitted = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+      dispatchPrerenderReady();
+    };
+
+    const checkReady = () => {
+      if (hasRouteContent()) emitReady();
+    };
+
+    rafId = window.requestAnimationFrame(checkReady);
+    intervalId = window.setInterval(checkReady, 150);
+    timeoutId = window.setTimeout(emitReady, 15000);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [canonicalUrl, description, keywordContent, normalizedPath, title]);
 
   return (
     <Helmet>

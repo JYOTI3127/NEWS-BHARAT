@@ -471,13 +471,13 @@ const buildArticleFallbackHtml = (article, route, meta) => {
   const articleUrl = meta?.canonical || `${BASE_URL}${route}`
 
   return `
-  <main data-prerender-fallback="article-main" style="max-width:820px;margin:24px auto;padding:0 16px;font-family:Arial,sans-serif;color:#1f2937;line-height:1.7;">
-    <article data-prerender-fallback="article-body">
+  <main data-prerender-article="true" style="max-width:820px;margin:24px auto;padding:0 16px;font-family:Arial,sans-serif;color:#1f2937;line-height:1.7;">
+    <article data-prerender-article-body="true">
       <h1 style="font-size:2rem;line-height:1.25;font-weight:700;margin:0 0 12px;">${escapeHtml(title)}</h1>
       ${summary ? `<p style="font-size:1.06rem;color:#4b5563;margin:0 0 16px;">${escapeHtml(summary)}</p>` : ''}
       <p style="font-size:0.88rem;color:#6b7280;margin:0 0 18px;">By ${escapeHtml(authorName)}${publishedAt ? ` | ${escapeHtml(publishedAt)}` : ''}</p>
       ${imageUrl ? `<figure style="margin:0 0 18px;"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(imageAlt)}" style="width:100%;height:auto;border-radius:10px;"><figcaption style="font-size:0.75rem;color:#6b7280;margin-top:6px;">${escapeHtml(imageAlt)}</figcaption></figure>` : ''}
-      <section data-prerender-fallback="article-content">${bodyMarkup}</section>
+      <section class="article-content" data-prerender-article-body="true">${bodyMarkup}</section>
       <p style="font-size:0.82rem;color:#6b7280;margin-top:22px;">Source URL: <a href="${escapeHtml(articleUrl)}">${escapeHtml(articleUrl)}</a></p>
     </article>
   </main>`
@@ -1030,13 +1030,62 @@ const uniqueArticlesByRoute = (articles) => {
   })
 }
 
+const pickArticlePrerenderSeed = (article, { includeBody = false } = {}) => {
+  if (!article || typeof article !== 'object') return null
+
+  const seed = {
+    id: article.id ?? null,
+    title: article.title || '',
+    slug: article.slug || '',
+    subtitle: article.subtitle || article.summary || article.excerpt || '',
+    meta_description: article.meta_description || article.summary || article.excerpt || '',
+    image_url: article.image_url || article.image || '',
+    image_alt: article.image_alt || article.title || '',
+    primary_category: article.primary_category || article.category || '',
+    primary_category_details: article.primary_category_details || null,
+    category_details: article.category_details || null,
+    categories: Array.isArray(article.categories) ? article.categories : [],
+    tags: Array.isArray(article.tags) ? article.tags : [],
+    author_name: article.author_name || article.author_display_name || article.display_author_name || '',
+    author_display_name: article.author_display_name || article.display_author_name || article.author_name || '',
+    display_author_name: article.display_author_name || article.author_display_name || article.author_name || '',
+    posted_by_fullname: article.posted_by_fullname || '',
+    published_at: article.published_at || article.created_at || '',
+    updated_at: article.updated_at || '',
+    created_at: article.created_at || '',
+    is_updated: Boolean(article.is_updated),
+    updated_display: article.updated_display || '',
+    public_url: article.public_url || '',
+    canonical_url: article.canonical_url || '',
+  }
+
+  if (includeBody) {
+    seed.content_html = article.content_html || ''
+    seed.content_raw = article.content_raw || ''
+    seed.article_content_raw = article.article_content_raw || ''
+    seed.content = article.content || ''
+    seed.content_clean = article.content_clean || ''
+    seed.body_html = article.body_html || ''
+    seed.body = article.body || ''
+    seed.full_content = article.full_content || ''
+    seed.description_html = article.description_html || ''
+  }
+
+  return seed
+}
+
+const pickArticlePrerenderSeeds = (articles, options) =>
+  uniqueArticlesByRoute(articles)
+    .map((article) => pickArticlePrerenderSeed(article, options))
+    .filter(Boolean)
+
 const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
   const allArticles = Array.isArray(siteData?.articles) ? siteData.articles : []
   const categories = Array.isArray(siteData?.categories) ? siteData.categories : []
 
   if (route === '/') {
     return {
-      articles: allArticles,
+      articles: pickArticlePrerenderSeeds(allArticles.slice(0, 120)),
       categories,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
@@ -1044,10 +1093,9 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
   if (isSeoArticleRoute(route)) {
     const currentArticle = articleMap.get(route)
-    const seedArticles = currentArticle ? [currentArticle, ...allArticles.slice(0, 24)] : allArticles.slice(0, 24)
 
     return {
-      articles: uniqueArticlesByRoute(seedArticles),
+      articles: currentArticle ? [pickArticlePrerenderSeed(currentArticle, { includeBody: true })] : [],
       categories,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
@@ -1062,7 +1110,7 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
     )
 
     return {
-      articles: uniqueArticlesByRoute([...categoryArticles.slice(0, 80), ...allArticles.slice(0, 18)]),
+      articles: pickArticlePrerenderSeeds(categoryArticles.slice(0, 80)),
       categories,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
@@ -1101,14 +1149,14 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
     )
 
     return {
-      articles: uniqueArticlesByRoute([...taggedArticles.slice(0, 80), ...allArticles.slice(0, 18)]),
+      articles: pickArticlePrerenderSeeds(taggedArticles.slice(0, 80)),
       categories,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
   }
 
   return {
-    articles: allArticles.slice(0, 18),
+    articles: [],
     categories,
     homepageHeroImage: siteData?.homepageHeroImage || '',
   }
@@ -1130,6 +1178,26 @@ const replacePrerenderDataScript = (html, route, articleMap, siteData) => {
   }
 
   return cleaned.replace('</head>', `${dataScript}\n</head>`)
+}
+
+const injectArticleFallbackIntoRoot = (html, fallbackArticleHtml) => {
+  if (!fallbackArticleHtml) return html
+
+  const rootPlaceholderPattern =
+    /<div id=["']root["'][^>]*>\s*<div class=["']min-h-\[1px\]["']>\s*<\/div>\s*<\/div>/i
+
+  if (rootPlaceholderPattern.test(html)) {
+    return html.replace(rootPlaceholderPattern, (match) => {
+      const rootOpen = match.match(/<div id=["']root["'][^>]*>/i)?.[0] || '<div id="root">'
+      return `${rootOpen}\n${fallbackArticleHtml}\n</div>`
+    })
+  }
+
+  if (/<div id=["']root["'][^>]*>/i.test(html)) {
+    return html.replace(/<div id=["']root["'][^>]*>/i, (match) => `${match}\n${fallbackArticleHtml}`)
+  }
+
+  return html.replace(/<body([^>]*)>/i, `<body$1>\n${fallbackArticleHtml}`)
 }
 
 // Remove old tags and inject fresh tags from API data.
@@ -1223,9 +1291,9 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     const article = articleMap.get(route)
     const hasArticleBodyMarkup =
       /data-prerender-fallback=["']article-body["']/i.test(cleaned) ||
+      /data-prerender-fallback=["']article-content["']/i.test(cleaned) ||
       /class=["'][^"']*article-content[^"']*["']/i.test(cleaned) ||
       /class=["'][^"']*article-summary[^"']*["']/i.test(cleaned) ||
-      /class=["'][^"']*min-w-0[^"']*["']/i.test(cleaned) ||
       /data-prerender-article-body/i.test(cleaned)
     const hasNewsArticleSchema = htmlHasSchemaType(cleaned, 'NewsArticle')
     const hasBreadcrumbSchema = htmlHasSchemaType(cleaned, 'BreadcrumbList')
@@ -1237,8 +1305,8 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     if (ENABLE_ARTICLE_BODY_FALLBACK && article && !hasArticleBodyMarkup) {
       const fallbackArticleHtml = buildArticleFallbackHtml(article, route, meta)
       if (fallbackArticleHtml) {
-        cleaned = cleaned.replace(/<body([^>]*)>/i, `<body$1>\n${fallbackArticleHtml}`)
-        console.log(`    Injected article body fallback for ${route}`)
+        cleaned = injectArticleFallbackIntoRoot(cleaned, fallbackArticleHtml)
+        console.log(`    Injected crawlable article HTML for ${route}`)
       }
     }
 
@@ -1454,7 +1522,10 @@ function installPrerenderDataScript(siteData) {
   }
 
   const payload = {
-    articles: Array.isArray(siteData?.articles) ? siteData.articles : [],
+    articles: pickArticlePrerenderSeeds(
+      Array.isArray(siteData?.articles) ? siteData.articles : [],
+      { includeBody: true }
+    ),
     categories: Array.isArray(siteData?.categories) ? siteData.categories : [],
     homepageHeroImage: siteData?.homepageHeroImage || '',
   }

@@ -227,6 +227,12 @@ const fetchWithRetry = async (url, options, attempts = 3) => {
   throw lastError || new Error("Request failed");
 };
 
+const getPrerenderArticles = () => {
+  if (typeof window === "undefined") return [];
+  const articles = window.__N4B_PRERENDER_DATA__?.articles;
+  return Array.isArray(articles) ? articles : [];
+};
+
 const toCategoryArray = (categoryDetails) => {
   if (Array.isArray(categoryDetails)) return categoryDetails;
   return categoryDetails ? [categoryDetails] : [];
@@ -1758,10 +1764,32 @@ export default function ArticleDetails() {
     return collectSlugCandidates(lastSegment, fromRoute);
   }, [routeParam]);
   const articleSlug = articleLookupCandidates[0] || "";
+  const prerenderSeedArticles = useMemo(() => getPrerenderArticles(), []);
+  const prerenderArticle = useMemo(() => {
+    if (!isPrerenderRequest || prerenderSeedArticles.length === 0) return null;
+    const requestedPath = categorySlug && articleSlug ? `/${categorySlug}/${articleSlug}/` : "";
+    const lookupSet = new Set(
+      articleLookupCandidates.map((value) => normalizeSlugValue(value).toLowerCase())
+    );
+
+    return prerenderSeedArticles.find((candidate) => {
+      if (!candidate) return false;
+      const articlePath = getArticlePath(candidate);
+      const slugCandidates = collectSlugCandidates(
+        candidate?.slug,
+        getSlugFromUrlLikeValue(candidate?.public_url),
+        getSlugFromUrlLikeValue(candidate?.canonical_url),
+        getSlugFromUrlLikeValue(candidate?.url),
+        getSlugFromUrlLikeValue(candidate?.link)
+      ).map((value) => normalizeSlugValue(value).toLowerCase());
+
+      return (requestedPath && articlePath === requestedPath) || slugCandidates.some((slug) => lookupSet.has(slug));
+    }) || null;
+  }, [articleLookupCandidates, articleSlug, categorySlug, isPrerenderRequest, prerenderSeedArticles]);
   const is2K = useIs2K();
 
-  const [article, setArticle] = useState(null);
-  const [allArticles, setAllArticles] = useState([]);
+  const [article, setArticle] = useState(() => prerenderArticle);
+  const [allArticles, setAllArticles] = useState(() => prerenderSeedArticles);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [seoEndpointSchemaState, setSeoEndpointSchemaState] = useState({ slug: "", schemas: [], meta: {} });
@@ -1825,6 +1853,15 @@ export default function ArticleDetails() {
 
   useEffect(() => {
     const controller = new AbortController();
+    if (isPrerenderRequest && prerenderArticle && hasRenderableArticleBody(prerenderArticle)) {
+      setArticle(prerenderArticle);
+      setAllArticles(prerenderSeedArticles);
+      setCategoryMoreArticles([]);
+      setNotFound(false);
+      setLoadError(false);
+      return () => controller.abort();
+    }
+
     setArticle(null); setAllArticles([]); setCategoryMoreArticles([]);
     setNotFound(false); setLoadError(false);
     window.scrollTo(0, 0);
@@ -1839,6 +1876,31 @@ export default function ArticleDetails() {
           return null;
         };
         const detailResponse = await fetchArticleDetail();
+
+        if (isPrerenderRequest && detailResponse) {
+          const detailData = await detailResponse.json();
+          const found = Array.isArray(detailData) ? detailData[0] : detailData;
+          if (found && (found.slug || found.id)) {
+            if (!hasRenderableArticleBody(found) && found.id) {
+              try {
+                const idDetailResponse = await fetchWithRetry(apiUrl(`/articles/${encodeURIComponent(String(found.id))}/`), { signal: controller.signal, cache: "no-store" }, 3);
+                if (idDetailResponse.ok) {
+                  const idDetailData = await idDetailResponse.json();
+                  const hydratedArticle = Array.isArray(idDetailData) ? idDetailData[0] : idDetailData;
+                  if (hydratedArticle && (hydratedArticle.slug || hydratedArticle.id)) {
+                    setArticle({ ...found, ...hydratedArticle });
+                    return;
+                  }
+                }
+              } catch (error) {
+                if (error?.name === "AbortError") throw error;
+              }
+            }
+            setArticle(found);
+            return;
+          }
+        }
+
         let sortedList = [];
         let listFetchFailed = false;
         try {
@@ -1907,7 +1969,7 @@ export default function ArticleDetails() {
     };
     loadArticle();
     return () => controller.abort();
-  }, [articleLookupCandidates, articleSlug, categorySlug]);
+  }, [articleLookupCandidates, articleSlug, categorySlug, isPrerenderRequest, prerenderArticle, prerenderSeedArticles]);
 
   useEffect(() => {
     if (!article) return;
@@ -2037,7 +2099,7 @@ export default function ArticleDetails() {
       const bodyText = articleContentRef.current?.textContent?.trim() || "";
       const hasBodyContent = bodyText.length >= 50;
       const articleHasNoContent = !articleBodyHtml || articleBodyHtml.trim().length === 0;
-      if (articleHasNoContent) return hasArticleTitle && hasStructuredData && hasCanonical;
+      if (articleHasNoContent) return false;
       return hasArticleTitle && hasBodyContent && hasStructuredData && hasCanonical;
     };
 

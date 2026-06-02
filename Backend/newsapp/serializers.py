@@ -631,6 +631,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
     updated_display = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     canonical_url = serializers.SerializerMethodField()
+    selected_subcategories = serializers.JSONField(read_only=True)
+    matched_subcategory = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
@@ -648,6 +650,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'updated_display',
             'public_url',
             'canonical_url',
+            'selected_subcategories',
+            'matched_subcategory',
         ]
 
     def get_image_url(self, obj):
@@ -686,6 +690,9 @@ class ArticleListSerializer(serializers.ModelSerializer):
     def get_canonical_url(self, obj):
         final_url = article_url(obj)
         return normalized_canonical(obj, final_url)
+
+    def get_matched_subcategory(self, obj):
+        return getattr(obj, 'matched_subcategory', '')
 
 
 class NewsletterCardSerializer(serializers.ModelSerializer):

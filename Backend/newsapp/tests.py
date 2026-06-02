@@ -1148,6 +1148,39 @@ class CategorySubcategoryStatsTests(TestCase):
         self.assertEqual(len(payload['posts']), 1)
         self.assertEqual(payload['posts'][0]['id'], cricket_article.id)
 
+    def test_article_list_filters_by_category_and_subcategory(self):
+        matched_article = self._make_article('GDP story', ['Cricket'])
+        self._make_article('General sports story', ['Football'])
+
+        response = self.client.get(
+            f'/api/articles/?category={self.category.slug}&subcategory=Cricket&page=1&limit=10'
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload['count'], 1)
+        self.assertEqual(payload['total_pages'], 1)
+        self.assertFalse(payload['has_next'])
+        self.assertEqual(payload['subcategory'], 'Cricket')
+        self.assertEqual(len(payload['results']), 1)
+        self.assertEqual(payload['results'][0]['id'], matched_article.id)
+        self.assertEqual(payload['results'][0]['matched_subcategory'], 'Cricket')
+        self.assertIn('selected_subcategories', payload['results'][0])
+
+    def test_article_list_returns_empty_for_invalid_subcategory(self):
+        self._make_article('GDP story', ['Cricket'])
+
+        response = self.client.get(
+            f'/api/articles/?category={self.category.slug}&subcategory=UnknownTopic&page=1&limit=10'
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload['count'], 0)
+        self.assertEqual(payload['total_pages'], 0)
+        self.assertFalse(payload['has_next'])
+        self.assertEqual(payload['results'], [])
+
 
 @override_settings(SEO_SITE_URL='https://news4bharat.com')
 class SeoPageRenderTests(TestCase):

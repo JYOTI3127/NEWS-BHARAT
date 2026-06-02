@@ -1505,7 +1505,8 @@ def _save_article_from_request(request, article=None):
 @api_view(['GET', 'POST'])
 def article_list(request):
     if request.method == "GET":
-        category = request.GET.get('category')
+        category = str(request.GET.get('category') or '').strip()
+        subcategory = str(request.GET.get('subcategory') or '').strip()
         try:
             limit = max(1, min(int(request.GET.get('limit', 10)), 100))
         except (TypeError, ValueError):
@@ -1516,7 +1517,7 @@ def article_list(request):
             page = 1
         use_full_payload = str(request.GET.get('full', '')).lower() in {'1', 'true', 'yes'}
 
-        cache_key = f"articles:list:v5:{category or 'all'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
+        cache_key = f"articles:list:v6:{category or 'all'}:{subcategory or 'all-subcategories'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -1540,6 +1541,7 @@ def article_list(request):
                 'primary_category__id',
                 'primary_category__name',
                 'primary_category__slug',
+                'selected_subcategories',
                 'canonical_url',
                 'author__username',
                 'author__first_name',
@@ -1548,10 +1550,31 @@ def article_list(request):
             )
             .order_by('-updated_at', '-published_at', '-created_at')
         )
+
+        category_obj = None
         if category:
             articles = articles.filter(categories__slug=category).distinct()
+            category_obj = Category.objects.filter(slug=category).only('id', 'name', 'slug').first()
 
-        total = articles.count()
+        if subcategory:
+            filtered_articles = []
+            category_key = str(category_obj.id) if category_obj else ''
+            for article in articles:
+                selected_map = _normalize_selected_subcategory_map(article.selected_subcategories)
+                if category_key:
+                    matches = selected_map.get(category_key, [])
+                else:
+                    matches = [
+                        item
+                        for values in selected_map.values()
+                        for item in values
+                    ]
+                if subcategory in matches:
+                    article.matched_subcategory = subcategory
+                    filtered_articles.append(article)
+            articles = filtered_articles
+
+        total = len(articles) if isinstance(articles, list) else articles.count()
         start = (page - 1) * limit
         end = start + limit
         serializer_class = ArticleHomepageSerializer if use_full_payload else ArticleListSerializer
@@ -1563,6 +1586,8 @@ def article_list(request):
             'total_pages': (total + limit - 1) // limit if limit else 0,
             'has_next': end < total,
             'has_previous': page > 1,
+            'category': category,
+            'subcategory': subcategory,
             'results': serializer.data,
         }
         cache.set(cache_key, payload, 300)

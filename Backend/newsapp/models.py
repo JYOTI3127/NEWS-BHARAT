@@ -875,6 +875,45 @@ class ReporterMonthlyPerformance(models.Model):
         return f"{self.reporter.username} - {self.month}/{self.year}"
 
 
+class Report(models.Model):
+    PERIOD_TYPE_CHOICES = [
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("monthly", "Monthly"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="work_reports",
+    )
+    period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES, default="daily")
+    report_date = models.DateField()
+    report_time = models.TimeField()
+    work_done = models.TextField()
+    pending_work = models.TextField(blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-report_date", "-report_time", "-created_at"]
+        verbose_name = "Report"
+        verbose_name_plural = "Reports"
+        db_table = "reports"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_period_type_display()} - {self.report_date}"
+
+    @property
+    def period_label(self):
+        if self.period_type == "weekly":
+            return f"Week of {self.report_date.strftime('%d %b %Y')}"
+        if self.period_type == "monthly":
+            return self.report_date.strftime("%B %Y")
+        return self.report_date.strftime("%d %b %Y")
+
+
 import random
 import string
 import pyotp
@@ -909,6 +948,13 @@ class UserProfile(models.Model):
         ('male', 'Male'),
         ('female', 'Female'),
         ('other', 'Other'),
+    ]
+    DIGILOCKER_STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('pending', 'Pending'),
+        ('verified', 'Verified'),
+        ('failed', 'Failed'),
+        ('config_pending', 'Config Pending'),
     ]
 
     user = models.OneToOneField(
@@ -976,6 +1022,16 @@ class UserProfile(models.Model):
         ],
         default='active'
     )
+    digilocker_status = models.CharField(
+        max_length=20,
+        choices=DIGILOCKER_STATUS_CHOICES,
+        default='not_started',
+    )
+    digilocker_reference_id = models.CharField(max_length=120, blank=True)
+    digilocker_last_verified_at = models.DateTimeField(null=True, blank=True)
+    digilocker_last_error = models.TextField(blank=True)
+    digilocker_document_types = models.JSONField(default=list, blank=True)
+    digilocker_verified_payload = models.JSONField(default=dict, blank=True)
 
     last_seen = models.DateTimeField(null=True, blank=True)
 

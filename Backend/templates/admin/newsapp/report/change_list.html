@@ -1,0 +1,204 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Reports | News Admin{% endblock %}
+{% block content_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="attendance-page">
+  <div class="attendance-shell">
+    <div class="attendance-hero">
+      <div>
+        <div class="perm-breadcrumb">Dashboard / Team / <span>Reports</span></div>
+        <h2 class="attendance-hero-title">Team Work Reports</h2>
+        <p class="attendance-hero-copy">Staff members can add daily, weekly, and monthly work reports. Super admin can review everyone, filter by period, and download export files.</p>
+      </div>
+      <div class="attendance-hero-actions">
+        <div class="attendance-live-pill">
+          <span class="attendance-live-dot"></span>
+          {% if request.user.is_superuser %}Super admin review mode{% else %}Your report dashboard{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="attendance-kpi-grid">
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Total Reports</span>
+        <strong class="attendance-kpi-value">{{ total_reports }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Daily</span>
+        <strong class="attendance-kpi-value">{{ daily_count }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Weekly</span>
+        <strong class="attendance-kpi-value">{{ weekly_count }}</strong>
+      </div>
+      <div class="attendance-kpi-card">
+        <span class="attendance-kpi-label">Monthly</span>
+        <strong class="attendance-kpi-value">{{ monthly_count }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="perm-table-card" style="margin-bottom:20px;">
+    <div class="perm-table-toolbar" style="display:block;">
+      <div class="perm-toolbar-title">Add New Report</div>
+      <form method="post" style="margin-top:16px;">
+        {% csrf_token %}
+        <input type="hidden" name="_create_report" value="1">
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+          {% if request.user.is_superuser %}
+          <div>
+            <label class="attendance-filter-label" for="reportUser">Staff User</label>
+            <select id="reportUser" name="user_id" class="attendance-filter-select" required>
+              <option value="">Select user</option>
+              {% for member in user_choices %}
+                <option value="{{ member.pk }}">{{ member.get_full_name|default:member.username }}{% if member.profile.staff_id %} — {{ member.profile.staff_id }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div>
+            <label class="attendance-filter-label" for="reportType">Report Type</label>
+            <select id="reportType" name="period_type" class="attendance-filter-select" required>
+              {% for value, label in report_type_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="attendance-filter-label" for="reportDate">Date</label>
+            <input id="reportDate" type="date" name="report_date" value="{{ default_report_date }}" class="attendance-date-input" required>
+          </div>
+          <div>
+            <label class="attendance-filter-label" for="reportTime">Time</label>
+            <input id="reportTime" type="time" name="report_time" value="{{ default_report_time }}" class="attendance-date-input" required>
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label class="attendance-filter-label" for="workDone">Work Done</label>
+            <textarea id="workDone" name="work_done" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Aaj / is week / is month kya kaam kiya?" required></textarea>
+          </div>
+          <div>
+            <label class="attendance-filter-label" for="pendingWork">Pending Work</label>
+            <textarea id="pendingWork" name="pending_work" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Kya pending hai?"></textarea>
+          </div>
+          <div>
+            <label class="attendance-filter-label" for="reportNotes">Notes</label>
+            <textarea id="reportNotes" name="notes" rows="4" class="attendance-date-input" style="height:auto;min-height:110px;" placeholder="Any blockers, dependency, follow-up..."></textarea>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button type="submit" class="btn-perm-add">Save Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="perm-table-card">
+    <div class="perm-table-toolbar attendance-toolbar-stack">
+      <div class="perm-toolbar-title">
+        Reports List
+        <span>({{ total_reports }} entries)</span>
+      </div>
+
+      <form method="get" class="attendance-record-filters attendance-records-inline-form">
+        <div class="attendance-search-box">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" name="q" value="{{ search }}" placeholder="Search user or report text...">
+        </div>
+        <select name="period_type" class="attendance-date-input">
+          <option value="">All types</option>
+          {% for value, label in report_type_choices %}
+            <option value="{{ value }}" {% if selected_period_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="window" class="attendance-date-input">
+          <option value="all" {% if selected_window == 'all' %}selected{% endif %}>All time</option>
+          <option value="this_week" {% if selected_window == 'this_week' %}selected{% endif %}>This week</option>
+          <option value="this_month" {% if selected_window == 'this_month' %}selected{% endif %}>This month</option>
+        </select>
+        {% if request.user.is_superuser %}
+        <select name="user_id" class="attendance-date-input">
+          <option value="">All users</option>
+          {% for member in user_choices %}
+            <option value="{{ member.pk }}" {% if selected_user_id == member.pk|stringformat:'s' %}selected{% endif %}>{{ member.get_full_name|default:member.username }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="btn-perm-add attendance-search-btn">Apply</button>
+        {% if can_export_reports %}
+          <a href="?{% if search %}q={{ search|urlencode }}&{% endif %}{% if selected_period_type %}period_type={{ selected_period_type }}&{% endif %}window={{ selected_window }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}&export=excel" class="btn-perm-add attendance-export-btn">Download for Excel</a>
+          <a href="?{% if search %}q={{ search|urlencode }}&{% endif %}{% if selected_period_type %}period_type={{ selected_period_type }}&{% endif %}window={{ selected_window }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}&export=sheets" class="btn-perm-add attendance-export-btn is-light">Download for Google Sheets</a>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="perm-table-wrap">
+      <table class="perm-table attendance-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Work Done</th>
+            <th>Pending</th>
+            <th>Notes</th>
+            <th>Submitted</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in reports %}
+          <tr>
+            <td>
+              <div class="attendance-user-cell">
+                <div class="attendance-user-avatar">{{ report.user.get_full_name|default:report.user.username|slice:":1"|upper }}</div>
+                <div>
+                  <div class="attendance-user-name">{{ report.user.get_full_name|default:report.user.username }}</div>
+                  <div class="attendance-user-meta">{{ report.user.email|default:report.user.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="attendance-status-pill {% if report.period_type == 'daily' %}is-online{% else %}is-offline{% endif %}">{{ report.get_period_type_display }}</span></td>
+            <td><strong>{{ report.period_label }}</strong></td>
+            <td>{{ report.report_time|time:"h:i A" }}</td>
+            <td style="min-width:240px;">{{ report.work_done|linebreaksbr }}</td>
+            <td style="min-width:220px;">{{ report.pending_work|default:"—"|linebreaksbr }}</td>
+            <td style="min-width:180px;">{{ report.notes|default:"—"|linebreaksbr }}</td>
+            <td>{{ report.created_at|date:"d M Y, h:i A" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="attendance-empty">No reports found for the current filters.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="perm-pagination">
+      <div class="perm-page-info">
+        Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+      </div>
+      <div class="perm-page-btns">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search|urlencode }}{% endif %}{% if selected_period_type %}&period_type={{ selected_period_type }}{% endif %}&window={{ selected_window }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="perm-page-btn">&#8249;</a>
+        {% else %}
+          <button class="perm-page-btn" disabled>&#8249;</button>
+        {% endif %}
+        <button class="perm-page-btn active">{{ page_obj.number }}</button>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search|urlencode }}{% endif %}{% if selected_period_type %}&period_type={{ selected_period_type }}{% endif %}&window={{ selected_window }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="perm-page-btn">&#8250;</a>
+        {% else %}
+          <button class="perm-page-btn" disabled>&#8250;</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

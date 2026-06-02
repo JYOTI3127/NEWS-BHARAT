@@ -20,6 +20,16 @@ urlpatterns = [
     path('admin/inbox/create-group/',             views.create_group,       name='create_group'),
     path('admin/notifications/',                  views.notifications_view, name='admin_notifications'),
     path('admin/newsletter/',                     admin_site.admin_view(admin_site.newsletter_view),    name='admin_newsletter'),
+    path(
+        'admin/users/<int:user_id>/digilocker/start/',
+        admin_site.admin_view(views.admin_start_digilocker_verification),
+        name='admin_digilocker_start',
+    ),
+    path(
+        'admin/digilocker/callback/',
+        admin_site.admin_view(views.admin_digilocker_callback),
+        name='admin_digilocker_callback',
+    ),
 
     # ── Django Admin — BAAD MEIN ─────────────────────────────
     path('admin/', admin_site.urls),

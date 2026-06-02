@@ -100,6 +100,25 @@
               <input type="checkbox" name="locked" value="1" {% if request.GET.locked %}checked{% endif %}> Locked accounts
             </label>
           </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section">
+            <div class="dropdown-section-label">DigiLocker</div>
+            <label class="dropdown-option">
+              <input type="radio" name="digilocker_status" value="" {% if not request.GET.digilocker_status %}checked{% endif %}> All
+            </label>
+            <label class="dropdown-option">
+              <input type="radio" name="digilocker_status" value="verified" {% if request.GET.digilocker_status == 'verified' %}checked{% endif %}> Verified
+            </label>
+            <label class="dropdown-option">
+              <input type="radio" name="digilocker_status" value="pending" {% if request.GET.digilocker_status == 'pending' %}checked{% endif %}> Pending
+            </label>
+            <label class="dropdown-option">
+              <input type="radio" name="digilocker_status" value="failed" {% if request.GET.digilocker_status == 'failed' %}checked{% endif %}> Failed
+            </label>
+            <label class="dropdown-option">
+              <input type="radio" name="digilocker_status" value="config_pending" {% if request.GET.digilocker_status == 'config_pending' %}checked{% endif %}> Config pending
+            </label>
+          </div>
           <button type="submit" class="btn-apply-filter">Apply Filter</button>
         </div>
       </div>
@@ -159,6 +178,7 @@
               <th>Status</th>
               <th class="sortable" onclick="sortTable(5)">Failed ↕</th>
               <th>Staff</th>
+              <th>DigiLocker</th>
               <th>Profile</th>
               <th>Actions</th>
             </tr>
@@ -166,7 +186,7 @@
           <tbody id="table-body">
             {% for user in users %}
             {% with profile=user.profile %}
-            <tr data-username="{{ user.username }}" data-email="{{ user.email }}" data-staffid="{{ profile.staff_id }}">
+            <tr data-username="{{ user.username }}" data-email="{{ user.email }}" data-staffid="{{ profile.staff_id }}" data-digilocker="{{ profile.digilocker_status }}">
               <td class="col-check">
                 <input type="checkbox" name="_selected_action" value="{{ user.pk }}" class="row-cb" onchange="updateSelected()">
               </td>
@@ -226,6 +246,39 @@
                 {% endif %}
               </td>
               <td>
+                {% if profile.digilocker_status == 'verified' %}
+                  <span class="status-chip active"><span class="status-dot"></span>Verified</span>
+                  {% if profile.digilocker_document_types %}
+                    <div style="margin-top:6px;font-size:11px;color:#6b7280">
+                      {{ profile.digilocker_document_types|join:", " }}
+                    </div>
+                  {% endif %}
+                {% elif profile.digilocker_status == 'pending' %}
+                  <span class="status-chip" style="background:#fff7ed;color:#c2410c;border-color:#fdba74"><span class="status-dot" style="background:#f97316"></span>Pending</span>
+                  <div style="margin-top:6px">
+                    <a href="{% url 'admin_digilocker_start' user.pk %}" class="btn-profile">Resume</a>
+                  </div>
+                {% elif profile.digilocker_status == 'failed' %}
+                  <span class="status-chip suspended"><span class="status-dot"></span>Failed</span>
+                  <div style="margin-top:6px">
+                    <a href="{% url 'admin_digilocker_start' user.pk %}" class="btn-profile">Retry</a>
+                  </div>
+                {% elif profile.digilocker_status == 'config_pending' %}
+                  <span class="status-chip inactive"><span class="status-dot"></span>Config pending</span>
+                  <div style="margin-top:6px;font-size:11px;color:#6b7280">Add DigiLocker env keys</div>
+                {% else %}
+                  <span class="status-chip inactive"><span class="status-dot"></span>Not started</span>
+                  <div style="margin-top:6px">
+                    <a href="{% url 'admin_digilocker_start' user.pk %}" class="btn-profile">Start Verify</a>
+                  </div>
+                {% endif %}
+                {% if profile.digilocker_last_verified_at %}
+                  <div style="margin-top:6px;font-size:11px;color:#6b7280">
+                    {{ profile.digilocker_last_verified_at|date:"d M Y h:i A" }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
                 <a href="{% url 'newsadmin:user_profile' user.pk %}" class="btn-profile">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   View Profile
@@ -245,7 +298,7 @@
             {% endwith %}
             {% empty %}
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="empty-state">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   <p>No users found</p>

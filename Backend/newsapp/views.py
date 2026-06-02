@@ -42,7 +42,7 @@ import uuid
 import re
 import hashlib
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlparse, urlencode
 from openai import OpenAI
 from django.urls import reverse
 from django.templatetags.static import static
@@ -58,6 +58,7 @@ from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
 from django.utils.text import slugify
 from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
+from django.core import signing
 
 User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
@@ -78,6 +79,64 @@ def _parse_ist_datetime(raw_value):
         return timezone.make_aware(parsed_value, IST)
 
     return parsed_value.astimezone(IST)
+
+
+def _digilocker_credentials_configured():
+    return bool(
+        settings.DIGILOCKER_CLIENT_ID
+        and settings.DIGILOCKER_CLIENT_SECRET
+        and settings.DIGILOCKER_REDIRECT_URI
+        and settings.DIGILOCKER_AUTH_URL
+        and settings.DIGILOCKER_TOKEN_URL
+    )
+
+
+def _digilocker_build_state(user_id, reference_id, admin_id):
+    return signing.dumps(
+        {
+            "user_id": user_id,
+            "reference_id": reference_id,
+            "admin_id": admin_id,
+        },
+        salt="digilocker-admin-verification",
+    )
+
+
+def _digilocker_parse_state(state):
+    return signing.loads(
+        state,
+        salt="digilocker-admin-verification",
+        max_age=1800,
+    )
+
+
+def _digilocker_collect_document_types(payload):
+    if not isinstance(payload, dict):
+        return []
+
+    candidates = []
+    for key in ("documents", "items", "issued", "uris"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            candidates = value
+            break
+
+    document_types = []
+    for item in candidates:
+        if isinstance(item, dict):
+            value = (
+                item.get("docType")
+                or item.get("doctype")
+                or item.get("documentType")
+                or item.get("name")
+                or item.get("uri")
+            )
+        else:
+            value = str(item or "").strip()
+        value = str(value or "").strip()
+        if value and value not in document_types:
+            document_types.append(value)
+    return document_types
 
 
 def _can_manage_slug(user):
@@ -1003,7 +1062,7 @@ def _save_article_from_request(request, article=None):
     previous_status = None if is_new else article.status
     publish_date_mode = str(_data_get('publish_date_mode', 'now') or 'now').strip().lower()
     keep_original_publish_date = publish_date_mode == 'original' and old_published_at is not None
-    restore_previous_timestamps = keep_original_publish_date and previous_status != 'published'
+    restore_previous_timestamps = keep_original_publish_date and old_updated_at is not None
 
     category_ids_raw = _data_get('categories', '')
     category_list_raw = _data_getlist('categories')
@@ -1111,6 +1170,8 @@ def _save_article_from_request(request, article=None):
         article.scheduled_at = None
         if keep_original_publish_date:
             article.published_at = old_published_at
+        elif publish_date_mode == 'now':
+            article.published_at = timezone.now()
         elif old_published_at is not None:
             article.published_at = old_published_at
         else:
@@ -4466,6 +4527,172 @@ def online_status_view(request):
             online = False
         data.append({'id': u.id, 'online': online})
     return JsonResponse(data, safe=False)
+
+
+@staff_member_required
+@require_GET
+def admin_start_digilocker_verification(request, user_id):
+    target_user = get_object_or_404(User.objects.select_related('profile'), pk=user_id)
+    profile = target_user.profile
+    reference_id = uuid.uuid4().hex
+
+    profile.digilocker_status = 'pending'
+    profile.digilocker_reference_id = reference_id
+    profile.digilocker_last_error = ''
+    profile.save(update_fields=['digilocker_status', 'digilocker_reference_id', 'digilocker_last_error'])
+
+    if not _digilocker_credentials_configured():
+        profile.digilocker_status = 'config_pending'
+        profile.digilocker_last_error = 'DigiLocker credentials are not configured in environment settings.'
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.warning(
+            request,
+            f'DigiLocker config missing for {target_user.username}. Add DIGILOCKER_CLIENT_ID, DIGILOCKER_CLIENT_SECRET and DIGILOCKER_REDIRECT_URI first.'
+        )
+        return redirect('newsadmin:auth_user_changelist')
+
+    state = _digilocker_build_state(target_user.pk, reference_id, request.user.pk)
+    request.session['digilocker_state'] = state
+
+    auth_params = {
+        'response_type': 'code',
+        'client_id': settings.DIGILOCKER_CLIENT_ID,
+        'redirect_uri': settings.DIGILOCKER_REDIRECT_URI,
+        'state': state,
+    }
+    if settings.DIGILOCKER_SCOPE:
+        auth_params['scope'] = settings.DIGILOCKER_SCOPE
+
+    messages.info(
+        request,
+        f'Redirecting to DigiLocker for {target_user.get_full_name() or target_user.username}. After consent, status will update automatically.'
+    )
+    return redirect(f"{settings.DIGILOCKER_AUTH_URL}?{urlencode(auth_params)}")
+
+
+@staff_member_required
+@require_GET
+def admin_digilocker_callback(request):
+    state = request.GET.get('state', '')
+    code = request.GET.get('code', '')
+    error = request.GET.get('error', '') or request.GET.get('error_description', '')
+    session_state = request.session.get('digilocker_state')
+
+    if not state:
+        messages.error(request, 'DigiLocker callback missing state.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    if session_state and session_state != state:
+        messages.error(request, 'DigiLocker callback does not match the active verification session.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    try:
+        payload = _digilocker_parse_state(state)
+    except signing.BadSignature:
+        messages.error(request, 'DigiLocker callback validation failed. Please retry verification.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    target_user = get_object_or_404(User.objects.select_related('profile'), pk=payload.get('user_id'))
+    profile = target_user.profile
+
+    if payload.get('reference_id') != profile.digilocker_reference_id:
+        profile.digilocker_status = 'failed'
+        profile.digilocker_last_error = 'State mismatch while validating DigiLocker callback.'
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, f'DigiLocker state mismatch for {target_user.username}.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    if error:
+        profile.digilocker_status = 'failed'
+        profile.digilocker_last_error = str(error)[:500]
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, f'DigiLocker consent failed for {target_user.username}: {error}')
+        return redirect('newsadmin:auth_user_changelist')
+
+    if not code:
+        profile.digilocker_status = 'failed'
+        profile.digilocker_last_error = 'Authorization code missing in DigiLocker callback.'
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, f'DigiLocker callback did not return an authorization code for {target_user.username}.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    if not _digilocker_credentials_configured():
+        profile.digilocker_status = 'config_pending'
+        profile.digilocker_last_error = 'DigiLocker credentials are missing during token exchange.'
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, 'DigiLocker configuration is incomplete. Token exchange skipped.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    token_payload = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': settings.DIGILOCKER_REDIRECT_URI,
+        'client_id': settings.DIGILOCKER_CLIENT_ID,
+        'client_secret': settings.DIGILOCKER_CLIENT_SECRET,
+    }
+
+    try:
+        token_response = requests.post(
+            settings.DIGILOCKER_TOKEN_URL,
+            data=token_payload,
+            timeout=20,
+        )
+        token_response.raise_for_status()
+        token_data = token_response.json()
+    except Exception as exc:
+        profile.digilocker_status = 'failed'
+        profile.digilocker_last_error = str(exc)[:500]
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, f'DigiLocker token exchange failed for {target_user.username}.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    access_token = token_data.get('access_token') or token_data.get('token')
+    if not access_token:
+        profile.digilocker_status = 'failed'
+        profile.digilocker_last_error = 'Access token missing in DigiLocker token response.'
+        profile.save(update_fields=['digilocker_status', 'digilocker_last_error'])
+        messages.error(request, f'DigiLocker token response was incomplete for {target_user.username}.')
+        return redirect('newsadmin:auth_user_changelist')
+
+    headers = {'Authorization': f'Bearer {access_token}'}
+    verification_payload = {'token': token_data}
+    document_types = []
+
+    if settings.DIGILOCKER_USERINFO_URL:
+        try:
+            userinfo_response = requests.get(settings.DIGILOCKER_USERINFO_URL, headers=headers, timeout=20)
+            userinfo_response.raise_for_status()
+            verification_payload['userinfo'] = userinfo_response.json()
+        except Exception as exc:
+            verification_payload['userinfo_error'] = str(exc)[:300]
+
+    if settings.DIGILOCKER_DOCUMENTS_URL:
+        try:
+            documents_response = requests.get(settings.DIGILOCKER_DOCUMENTS_URL, headers=headers, timeout=20)
+            documents_response.raise_for_status()
+            documents_payload = documents_response.json()
+            verification_payload['documents'] = documents_payload
+            document_types = _digilocker_collect_document_types(documents_payload)
+        except Exception as exc:
+            verification_payload['documents_error'] = str(exc)[:300]
+
+    profile.digilocker_status = 'verified'
+    profile.digilocker_last_verified_at = timezone.now()
+    profile.digilocker_last_error = ''
+    profile.digilocker_document_types = document_types
+    profile.digilocker_verified_payload = verification_payload
+    profile.save(
+        update_fields=[
+            'digilocker_status',
+            'digilocker_last_verified_at',
+            'digilocker_last_error',
+            'digilocker_document_types',
+            'digilocker_verified_payload',
+        ]
+    )
+    request.session.pop('digilocker_state', None)
+    messages.success(request, f'DigiLocker verification completed for {target_user.get_full_name() or target_user.username}.')
+    return redirect('newsadmin:auth_user_changelist')
 
 
 @staff_member_required

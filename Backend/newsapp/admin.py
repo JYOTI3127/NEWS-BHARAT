@@ -25,6 +25,7 @@ from django.templatetags.static import static
 from django.conf import settings
 from urllib.parse import quote
 from calendar import monthrange
+from django.utils.dateparse import parse_date, parse_time
 from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
 from .attendance import clock_in_attendance, get_attendance_snapshot, pause_attendance
@@ -768,6 +769,10 @@ class UserAdmin(BaseUserAdmin):
             qs = qs.filter(is_staff=True)
         elif is_staff_val == '0':
             qs = qs.filter(is_staff=False)
+
+        digilocker_status = request.GET.get('digilocker_status')
+        if digilocker_status:
+            qs = qs.filter(profile__digilocker_status=digilocker_status)
 
         if request.GET.get('locked'):
             qs = qs.filter(profile__locked_until__gt=timezone.now())
@@ -2031,6 +2036,198 @@ class ReporterMonthlyPerformanceAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
+class ReportAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/newsapp/report/change_list.html'
+    list_display = ('user', 'period_type', 'report_date', 'report_time', 'created_at')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'work_done', 'pending_work', 'notes')
+    list_filter = ('period_type', 'report_date')
+
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_view_permission(self, request, obj=None):
+        if not self.has_module_permission(request):
+            return False
+        if obj is None or request.user.is_superuser:
+            return True
+        return obj.user_id == request.user.id
+
+    def has_add_permission(self, request):
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        if not self.has_module_permission(request):
+            return False
+        if obj is None or request.user.is_superuser:
+            return True
+        return obj.user_id == request.user.id
+
+    def has_delete_permission(self, request, obj=None):
+        if not self.has_module_permission(request):
+            return False
+        if request.user.is_superuser:
+            return True
+        return bool(obj and obj.user_id == request.user.id)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related('user', 'user__profile')
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(user=request.user)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        base_qs = self.get_queryset(request)
+        today = timezone.localdate()
+        now_local = timezone.localtime()
+
+        if request.method == 'POST' and '_create_report' in request.POST:
+            period_type = (request.POST.get('period_type') or 'daily').strip().lower()
+            if period_type not in {'daily', 'weekly', 'monthly'}:
+                messages.error(request, 'Please choose a valid report type.')
+                return redirect(request.path)
+
+            report_date_value = parse_date((request.POST.get('report_date') or '').strip())
+            report_time_value = parse_time((request.POST.get('report_time') or '').strip())
+            work_done = (request.POST.get('work_done') or '').strip()
+            pending_work = (request.POST.get('pending_work') or '').strip()
+            notes = (request.POST.get('notes') or '').strip()
+
+            if request.user.is_superuser:
+                user_id_value = (request.POST.get('user_id') or '').strip()
+                target_user = User.objects.filter(pk=user_id_value, is_staff=True).first() if user_id_value else None
+            else:
+                target_user = request.user
+
+            if target_user is None:
+                messages.error(request, 'Please select a valid staff user.')
+                return redirect(request.path)
+            if not report_date_value:
+                messages.error(request, 'Please select a report date.')
+                return redirect(request.path)
+            if not report_time_value:
+                messages.error(request, 'Please select a report time.')
+                return redirect(request.path)
+            if not work_done:
+                messages.error(request, 'Please add what work was completed.')
+                return redirect(request.path)
+
+            Report.objects.create(
+                user=target_user,
+                period_type=period_type,
+                report_date=report_date_value,
+                report_time=report_time_value,
+                work_done=work_done,
+                pending_work=pending_work,
+                notes=notes,
+            )
+            messages.success(request, f'Report saved for {target_user.get_full_name() or target_user.username}.')
+            return redirect(request.path)
+
+        search = (request.GET.get('q') or '').strip()
+        period_type_filter = (request.GET.get('period_type') or '').strip().lower()
+        window_filter = (request.GET.get('window') or 'all').strip().lower()
+        selected_user_id = (request.GET.get('user_id') or '').strip()
+        export_format = (request.GET.get('export') or '').strip().lower()
+
+        qs = base_qs
+        if search:
+            qs = qs.filter(
+                Q(user__username__icontains=search)
+                | Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+                | Q(user__email__icontains=search)
+                | Q(work_done__icontains=search)
+                | Q(pending_work__icontains=search)
+                | Q(notes__icontains=search)
+            )
+        if period_type_filter in {'daily', 'weekly', 'monthly'}:
+            qs = qs.filter(period_type=period_type_filter)
+        if request.user.is_superuser and selected_user_id.isdigit():
+            qs = qs.filter(user_id=int(selected_user_id))
+
+        week_start = today - timedelta(days=today.weekday())
+        month_start = today.replace(day=1)
+        if window_filter == 'this_week':
+            qs = qs.filter(report_date__gte=week_start, report_date__lte=today)
+        elif window_filter == 'this_month':
+            qs = qs.filter(report_date__gte=month_start, report_date__lte=today)
+
+        if export_format in {'excel', 'sheets'}:
+            if not request.user.is_superuser:
+                raise PermissionDenied("Only super admin can export reports.")
+            filename_prefix = 'reports_excel' if export_format == 'excel' else 'reports_google_sheets'
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{filename_prefix}_{today.isoformat()}.csv"'
+            response.write('\ufeff')
+            writer = csv.writer(response)
+            writer.writerow([
+                'User',
+                'Email',
+                'Staff ID',
+                'Report Type',
+                'Report Date',
+                'Report Time',
+                'Work Done',
+                'Pending Work',
+                'Notes',
+                'Created At',
+            ])
+            for item in qs.order_by('-report_date', '-report_time', '-created_at'):
+                writer.writerow([
+                    item.user.get_full_name() or item.user.username,
+                    item.user.email or item.user.username,
+                    getattr(getattr(item.user, 'profile', None), 'staff_id', '') or '',
+                    item.get_period_type_display(),
+                    item.report_date.strftime('%d %b %Y'),
+                    item.report_time.strftime('%I:%M %p'),
+                    item.work_done,
+                    item.pending_work,
+                    item.notes,
+                    timezone.localtime(item.created_at).strftime('%d %b %Y %I:%M %p'),
+                ])
+            return response
+
+        total_reports = qs.count()
+        daily_count = qs.filter(period_type='daily').count()
+        weekly_count = qs.filter(period_type='weekly').count()
+        monthly_count = qs.filter(period_type='monthly').count()
+
+        paginator = Paginator(qs.order_by('-report_date', '-report_time', '-created_at'), 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        user_choices = []
+        if request.user.is_superuser:
+            user_choices = list(
+                User.objects.filter(is_staff=True).select_related('profile').order_by('first_name', 'username')
+            )
+
+        extra_context.update({
+            'title': 'Reports',
+            'reports': page_obj.object_list,
+            'page_obj': page_obj,
+            'total_reports': total_reports,
+            'daily_count': daily_count,
+            'weekly_count': weekly_count,
+            'monthly_count': monthly_count,
+            'search': search,
+            'selected_period_type': period_type_filter,
+            'selected_window': window_filter,
+            'selected_user_id': selected_user_id,
+            'user_choices': user_choices,
+            'report_type_choices': Report.PERIOD_TYPE_CHOICES,
+            'default_report_date': today.isoformat(),
+            'default_report_time': now_local.strftime('%H:%M'),
+            'can_export_reports': bool(request.user.is_superuser),
+        })
+
+        return TemplateResponse(
+            request,
+            self.change_list_template,
+            {**self.admin_site.each_context(request), **extra_context},
+        )
+
+
 class FCRow:
     def __init__(self, id, article, checked_by, status, remarks, checked_at, is_legal_risk):
         self.id            = id
@@ -2605,6 +2802,7 @@ admin_site.register(CareerApplication,           CareerApplicationAdmin)
 admin_site.register(JobOpening,                  JobOpeningAdmin)
 admin_site.register(Reporter,                   ReporterAdmin)
 admin_site.register(ReporterMonthlyPerformance, ReporterMonthlyPerformanceAdmin)
+admin_site.register(Report,                     ReportAdmin)
 admin_site.register(NewsletterLog,               NewsletterLogAdmin)
 admin_site.register(NewsletterCard,              NewsletterCardAdmin)
 admin_site.register(LiveUpdate,                  LiveUpdateAdmin)

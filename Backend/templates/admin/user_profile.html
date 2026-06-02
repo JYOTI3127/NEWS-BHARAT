@@ -332,6 +332,66 @@
           </div>
         </div>
 
+        <div class="up-card">
+          <div class="up-card-header">
+            <div class="up-card-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Identity Documents
+            </div>
+            {% if request.user.is_superuser %}
+            <a href="{% url 'admin_digilocker_start' profile.user.pk %}" class="btn-admin-edit" style="background:#1d4ed8;box-shadow:0 2px 8px rgba(29,78,216,0.25)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              {% if profile.digilocker_status == 'verified' %}Re-verify{% else %}Verify{% endif %}
+            </a>
+            {% else %}
+            <span class="admin-only-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Admin action
+            </span>
+            {% endif %}
+          </div>
+          <div class="up-fields">
+            <div class="up-field">
+              <div class="up-field-label">DigiLocker Verification</div>
+              <div class="up-field-value">
+                {% if profile.digilocker_status == 'verified' %}
+                  <span style="color:var(--green);font-weight:600">✓ Verified</span>
+                {% elif profile.digilocker_status == 'pending' %}
+                  <span style="color:#c2410c;font-weight:600">◔ Pending</span>
+                {% elif profile.digilocker_status == 'failed' %}
+                  <span style="color:var(--red);font-weight:600">✗ Failed</span>
+                {% elif profile.digilocker_status == 'config_pending' %}
+                  <span style="color:var(--text-muted);font-weight:600">Config pending</span>
+                {% else %}
+                  <span style="color:var(--text-muted);font-weight:600">Not verified</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Verified Documents</div>
+              <div class="up-field-value {% if not profile.digilocker_document_types %}empty{% endif %}">
+                {% if profile.digilocker_document_types %}
+                  {{ profile.digilocker_document_types|join:", " }}
+                {% else %}
+                  No verified documents yet
+                {% endif %}
+              </div>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Last Verified At</div>
+              <div class="up-field-value {% if not profile.digilocker_last_verified_at %}empty{% endif %}">
+                {{ profile.digilocker_last_verified_at|date:"M d, Y — g:i A"|default:"Not verified yet" }}
+              </div>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Verification Notes</div>
+              <div class="up-field-value {% if not profile.digilocker_last_error %}empty{% endif %}">
+                {{ profile.digilocker_last_error|default:"No errors" }}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {# 2FA Card #}
         <div class="up-card">
           <div class="up-card-header">

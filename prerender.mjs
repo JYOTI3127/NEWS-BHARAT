@@ -60,6 +60,15 @@ const STATIC_PAGE_META = {
 
 Object.assign(STATIC_PAGE_META, SHARED_STATIC_PAGE_SEO)
 
+const normalizeStaticRoute = (route) => {
+  const normalized = String(route || '').trim().split('?')[0].split('#')[0]
+  if (!normalized || normalized === '/') return '/'
+  return `/${normalized.replace(/^\/+|\/+$/g, '')}`
+}
+
+const isStaticPageRoute = (route) =>
+  Object.prototype.hasOwnProperty.call(STATIC_PAGE_META, normalizeStaticRoute(route))
+
 const isValidSlug = (value) =>
   typeof value === 'string' &&
   value.trim().length > 0 &&
@@ -1106,10 +1115,15 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 }
 
 const replacePrerenderDataScript = (html, route, articleMap, siteData) => {
+  const cleaned = String(html || '').replace(PRERENDER_DATA_SCRIPT_PATTERN, '')
+
+  if (isStaticPageRoute(route)) {
+    return cleaned
+  }
+
   const payload = buildRoutePrerenderPayload(route, articleMap, siteData)
   const json = JSON.stringify(payload).replace(/</g, '\\u003c')
   const dataScript = `<script>window.__N4B_PRERENDER_DATA__=${json};</script>`
-  const cleaned = String(html || '').replace(PRERENDER_DATA_SCRIPT_PATTERN, '')
 
   if (/<script\b[^>]*type=["']module["'][^>]*>/i.test(cleaned)) {
     return cleaned.replace(/<script\b[^>]*type=["']module["'][^>]*>/i, `${dataScript}\n$&`)

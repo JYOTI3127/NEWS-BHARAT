@@ -130,8 +130,7 @@
           </div>
           <ul class="submenu">
             {% for app in available_apps %}{% for model in app.models %}
-              {% if model.object_name == "Reporter" %}<li><a href="{{ model.admin_url }}">Reporter</a></li>{% endif %}
-              {% if model.object_name == "ReporterMonthlyPerformance" %}<li><a href="{{ model.admin_url }}">Reporter Monthly Performance</a></li>{% endif %}
+              {% if model.object_name == "ReporterMonthlyPerformance" %}<li><a href="{{ model.admin_url }}">Monthly Performance</a></li>{% endif %}
             {% endfor %}{% endfor %}
           </ul>
         </li>

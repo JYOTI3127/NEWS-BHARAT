@@ -3402,6 +3402,7 @@ function onStatusChange(val){
   var mainLabel=document.getElementById('publish_main_label');
   var secBtn=document.getElementById('publish_secondary_btn');
   var secLabel=document.getElementById('publish_secondary_label');
+  var canPublishArticle={{ can_publish_article|yesno:"true,false" }};
   if(!mainBtn)return;
 
   mainBtn.classList.remove('btn-publish','btn-schedule','btn-draft');
@@ -3415,8 +3416,8 @@ function onStatusChange(val){
     if(secBtn)secBtn.onclick=function(){submitArticle('draft');};
   }else if(val==='draft'){
     mainBtn.classList.add('btn-publish');
-    mainBtn.onclick=function(){submitArticle('published');};
-    if(mainLabel)mainLabel.textContent='Publish Article';
+    mainBtn.onclick=function(){submitArticle(canPublishArticle?'published':'review');};
+    if(mainLabel)mainLabel.textContent=canPublishArticle?'Publish Article':'Save & Send for Review';
     if(secBtn)secBtn.style.display='flex';
     if(secLabel)secLabel.textContent='Save as Draft';
     if(secBtn)secBtn.onclick=function(){submitArticle('draft');};
@@ -3424,7 +3425,7 @@ function onStatusChange(val){
     mainBtn.classList.add('btn-publish');
     mainBtn.onclick=function(){submitArticle(val);};
     var labelMap={
-      published:'Update & Publish',
+      published:canPublishArticle?'Update & Publish':'Save & Send for Review',
       review:'Submit for Review',
       fact_check:'Send for Fact Check',
       legal:'Send for Legal Review',

@@ -406,6 +406,10 @@ class ArticleAdminPermissionTests(TestCase):
         role = Role.objects.create(name='Section Editor')
         role.permissions.set([create_article, edit_any_article, publish_article])
         self.section_editor.profile.roles.add(role)
+        self.edit_own_article = Permission.objects.create(
+            code='edit_own_article',
+            description='Can edit own article',
+        )
 
     def test_section_editor_can_open_article_admin_pages(self):
         self.client.force_login(self.section_editor)
@@ -427,6 +431,33 @@ class ArticleAdminPermissionTests(TestCase):
         self.assertEqual(response.status_code, 403, response.content)
         self.article.refresh_from_db()
         self.assertEqual(self.article.status, 'review')
+
+    def test_author_publish_attempt_saves_author_details_and_moves_to_review(self):
+        self.author.is_staff = True
+        self.author.save(update_fields=['is_staff'])
+        self.author.profile.extra_permissions.add(self.edit_own_article)
+        self.client.force_authenticate(self.author)
+
+        response = self.client.put(
+            f'/api/articles/{self.article.pk}/',
+            {
+                'title': self.article.title,
+                'content': self.article.content,
+                'status': 'published',
+                'editor_name': 'Reporter Display Name',
+                'editor_bio': 'Reporter can save their own byline details.',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.status, 'review')
+        self.assertEqual(self.article.author_display_name, 'Reporter Display Name')
+        self.assertEqual(
+            self.article.author_display_bio,
+            'Reporter can save their own byline details.',
+        )
 
 
 @override_settings(

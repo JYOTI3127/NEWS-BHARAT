@@ -68,8 +68,12 @@ def view_robots(request):
         )
     else:
         content = build_robots_txt()
-    
-    return HttpResponse(content, content_type="text/plain")
+
+    response = HttpResponse(content, content_type="text/plain")
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 @require_GET

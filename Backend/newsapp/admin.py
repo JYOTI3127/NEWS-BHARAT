@@ -2760,6 +2760,9 @@ class ArticleAdmin(admin.ModelAdmin):
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
         extra_context['can_edit_slug'] = True
+        extra_context['can_publish_article'] = bool(
+            request.user.is_superuser or has_permission(request.user, 'publish_article')
+        )
         article = None
         publish_history = []
         version_preview = None

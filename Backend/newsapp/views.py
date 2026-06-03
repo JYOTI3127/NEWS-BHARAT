@@ -762,6 +762,22 @@ def _validate_article_status_change(*, user, previous_status, requested_status):
     return None
 
 
+def _normalize_requested_article_status(*, user, previous_status, requested_status):
+    requested_status = (requested_status or '').strip()
+    previous_status = (previous_status or '').strip()
+
+    if getattr(user, 'is_superuser', False):
+        return requested_status
+
+    if requested_status == 'published' and not has_permission(user, 'publish_article'):
+        # Authors/reporters should still be able to save their article and
+        # author details. If they try to publish directly, move it into the
+        # review queue instead of rejecting the entire save.
+        return 'review'
+
+    return requested_status
+
+
 def _category_tree_matches(value, query):
     query = str(query or '').strip().lower()
     if not query:
@@ -1272,6 +1288,11 @@ def _save_article_from_request(request, article=None):
     article.content = content_clean
 
     requested_status = _data_get('status', article.status if not is_new else 'draft')
+    requested_status = _normalize_requested_article_status(
+        user=request.user,
+        previous_status=previous_status,
+        requested_status=requested_status,
+    )
     if previous_status == 'published' and requested_status not in {'archived', 'review'}:
         # Published articles may be sent back to review for editorial changes,
         # but stale editor requests must not silently downgrade them to draft

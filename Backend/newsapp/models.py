@@ -991,6 +991,7 @@ class UserProfile(models.Model):
 
     # ── Social links for editor profile ──
     position  = models.CharField(max_length=150, blank=True)
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
     photo     = models.URLField(blank=True)
     twitter   = models.CharField(max_length=200, blank=True)
     linkedin  = models.CharField(max_length=200, blank=True)
@@ -1046,6 +1047,15 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} | {self.staff_id or 'No Staff ID'}"
+
+    @property
+    def profile_photo_url(self):
+        if self.profile_image:
+            try:
+                return self.profile_image.url
+            except Exception:
+                pass
+        return self.photo or ''
 
 
 class AttendanceRecord(models.Model):

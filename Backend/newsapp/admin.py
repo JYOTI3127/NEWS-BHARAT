@@ -1022,6 +1022,68 @@ News4Bharat
             raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
         user    = get_object_or_404(User, pk=user_id)
         profile = get_object_or_404(UserProfile, user=user)
+        can_edit_personal = bool(request.user.is_superuser or request.user.pk == user.pk)
+
+        if request.method == 'POST':
+            if not can_edit_personal:
+                raise PermissionDenied("You do not have permission to edit this profile.")
+
+            first_name = str(request.POST.get('first_name', '') or '').strip()
+            last_name = str(request.POST.get('last_name', '') or '').strip()
+            email = str(request.POST.get('email', '') or '').strip()
+            phone = str(request.POST.get('phone', '') or '').strip()
+            gender = str(request.POST.get('gender', '') or '').strip()
+            position = str(request.POST.get('position', '') or '').strip()
+            bio = str(request.POST.get('bio', '') or '').strip()
+            twitter = str(request.POST.get('twitter', '') or '').strip()
+            linkedin = str(request.POST.get('linkedin', '') or '').strip()
+            instagram = str(request.POST.get('instagram', '') or '').strip()
+            facebook = str(request.POST.get('facebook', '') or '').strip()
+            youtube = str(request.POST.get('youtube', '') or '').strip()
+            reddit = str(request.POST.get('reddit', '') or '').strip()
+            uploaded_profile_image = request.FILES.get('profile_image')
+
+            if email and User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists():
+                messages.error(request, "This email is already being used by another user.")
+                return redirect(request.path)
+
+            if gender and gender not in dict(UserProfile.GENDER_CHOICES):
+                gender = ''
+
+            user.first_name = first_name
+            user.last_name = last_name
+            user.email = email
+            user.save(update_fields=['first_name', 'last_name', 'email'])
+
+            profile.phone = phone
+            profile.gender = gender or None
+            profile.position = position
+            profile.bio = bio
+            profile.twitter = twitter
+            profile.linkedin = linkedin
+            profile.instagram = instagram
+            profile.facebook = facebook
+            profile.youtube = youtube
+            profile.reddit = reddit
+            if uploaded_profile_image:
+                profile.profile_image = uploaded_profile_image
+            profile.save(update_fields=[
+                'phone',
+                'gender',
+                'position',
+                'bio',
+                'profile_image',
+                'twitter',
+                'linkedin',
+                'instagram',
+                'facebook',
+                'youtube',
+                'reddit',
+            ])
+
+            messages.success(request, "Personal info updated successfully.")
+            return redirect(request.path)
+
         now = timezone.now()
         today = timezone.localdate()
 
@@ -1084,6 +1146,8 @@ News4Bharat
             'profile': profile,
             'title':   f'Profile — {user.username}',
             'can_manage_users': bool(request.user.is_superuser),
+            'can_edit_personal': can_edit_personal,
+            'gender_choices': UserProfile.GENDER_CHOICES,
             'article_stats': article_stats,
             'recent_authored_articles': authored_articles_qs[:5],
             'assignment_stats': assignment_stats,
@@ -1109,6 +1173,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         'phone',
         'gender',
         'bio',
+        'profile_image',
         'kra',
         'roles',
         'assigned_categories',

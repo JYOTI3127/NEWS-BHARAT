@@ -6,6 +6,34 @@
 {% block extrahead %}
 <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
 <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+<style>
+  .up-input{
+    width:100%;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    font:inherit;
+    font-size:13px;
+    color:var(--text-dark);
+    background:#fff;
+    outline:none;
+    transition:border-color .2s ease, box-shadow .2s ease;
+    box-sizing:border-box;
+  }
+  .up-input:focus{
+    border-color:#1d4ed8;
+    box-shadow:0 0 0 3px rgba(29,78,216,0.12);
+  }
+  .up-input[type="file"]{
+    padding:9px 12px;
+    background:#f8fafc;
+  }
+  textarea.up-input{
+    min-height:112px;
+    resize:vertical;
+    line-height:1.6;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -27,9 +55,15 @@
         <div class="up-avatar-header"></div>
 
         <div class="up-avatar-wrap">
+          {% if profile.profile_photo_url %}
+          <div class="up-avatar" style="padding:0;overflow:hidden;background:#e5e7eb">
+            <img src="{{ profile.profile_photo_url }}" alt="{{ profile.user.get_full_name|default:profile.user.username }}" style="width:100%;height:100%;object-fit:cover;display:block">
+          </div>
+          {% else %}
           <div class="up-avatar" style="background: {% cycle '#D80100' '#1d4ed8' '#16a34a' '#d97706' '#7c3aed' %}">
             {{ profile.user.first_name|first|upper|default:profile.user.username|first|upper }}
           </div>
+          {% endif %}
           <div class="up-avatar-name">
             {{ profile.user.get_full_name|default:profile.user.username }}
           </div>
@@ -129,7 +163,7 @@
 
     <div class="up-right">
 
-      {% if not request.user.is_superuser %}
+      {% if not can_edit_personal %}
       <div class="readonly-notice">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         This profile is in <strong>&nbsp;read-only&nbsp;</strong> mode. Contact your super admin to request changes.
@@ -174,18 +208,102 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
               Basic Information
             </div>
-            {% if request.user.is_superuser %}
-            <a href="{% url 'newsadmin:auth_user_change' profile.user.pk %}" class="btn-admin-edit">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit Details
-            </a>
+            {% if can_edit_personal %}
+            <span class="status-badge active" style="gap:6px">
+              <span class="dot"></span>You can edit this section
+            </span>
             {% else %}
             <span class="admin-only-badge">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Super admin only editable
+              Profile owner or super admin only
             </span>
             {% endif %}
           </div>
+          {% if can_edit_personal %}
+          <form method="post" enctype="multipart/form-data" class="up-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0">
+            {% csrf_token %}
+            <div class="up-field">
+              <div class="up-field-label">First Name</div>
+              <input type="text" name="first_name" value="{{ profile.user.first_name|default:'' }}" class="up-input">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Last Name</div>
+              <input type="text" name="last_name" value="{{ profile.user.last_name|default:'' }}" class="up-input">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Username</div>
+              <div class="up-field-value mono">{{ profile.user.username }}</div>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Email</div>
+              <input type="email" name="email" value="{{ profile.user.email|default:'' }}" class="up-input">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Phone</div>
+              <input type="text" name="phone" value="{{ profile.phone|default:'' }}" class="up-input" placeholder="Enter phone number">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Gender</div>
+              <select name="gender" class="up-input">
+                <option value="">Select gender</option>
+                {% for value, label in gender_choices %}
+                <option value="{{ value }}" {% if profile.gender == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Author Position</div>
+              <input type="text" name="position" value="{{ profile.position|default:'' }}" class="up-input" placeholder="e.g. Senior Editor">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Profile Photo</div>
+              <input type="file" name="profile_image" accept="image/*" class="up-input">
+              <div style="margin-top:8px;font-size:12px;color:var(--text-light)">
+                {% if profile.profile_photo_url %}
+                Current photo uploaded. Nayi image choose karoge to ye replace ho jayegi.
+                {% else %}
+                JPG, PNG ya WEBP upload kar sakte ho.
+                {% endif %}
+              </div>
+            </div>
+            <div class="up-field" style="grid-column:1 / -1">
+              <div class="up-field-label">Bio</div>
+              <textarea name="bio" class="up-input" rows="4" placeholder="Write a short author bio for article pages">{{ profile.bio|default:'' }}</textarea>
+              <div style="margin-top:8px;font-size:12px;color:var(--text-light)">Ye bio article author details me default ke taur par use hogi.</div>
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">X / Twitter</div>
+              <input type="text" name="twitter" value="{{ profile.twitter|default:'' }}" class="up-input" placeholder="@handle">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">LinkedIn</div>
+              <input type="text" name="linkedin" value="{{ profile.linkedin|default:'' }}" class="up-input" placeholder="linkedin.com/in/...">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Instagram</div>
+              <input type="text" name="instagram" value="{{ profile.instagram|default:'' }}" class="up-input" placeholder="instagram.com/...">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Facebook</div>
+              <input type="text" name="facebook" value="{{ profile.facebook|default:'' }}" class="up-input" placeholder="facebook.com/...">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">YouTube</div>
+              <input type="text" name="youtube" value="{{ profile.youtube|default:'' }}" class="up-input" placeholder="youtube.com/...">
+            </div>
+            <div class="up-field">
+              <div class="up-field-label">Reddit</div>
+              <input type="text" name="reddit" value="{{ profile.reddit|default:'' }}" class="up-input" placeholder="reddit.com/u/...">
+            </div>
+            <div class="up-field" style="grid-column:1 / -1;display:flex;justify-content:flex-end;align-items:center;gap:12px">
+              <div style="font-size:12px;color:var(--text-light)">Name, bio, position aur social links article author card me use honge.</div>
+              <button type="submit" class="btn-admin-edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Personal Info
+              </button>
+            </div>
+          </form>
+          {% else %}
           <div class="up-fields">
             <div class="up-field">
               <div class="up-field-label">First Name</div>
@@ -211,23 +329,26 @@
               <div class="up-field-label">Gender</div>
               <div class="up-field-value {% if not profile.gender %}empty{% endif %}">{{ profile.get_gender_display|default:"Not set" }}</div>
             </div>
-          </div>
-        </div>
-
-        <div class="up-card">
-          <div class="up-card-header">
-            <div class="up-card-title">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
-              Bio
+            <div class="up-field">
+              <div class="up-field-label">Author Position</div>
+              <div class="up-field-value {% if not profile.position %}empty{% endif %}">{{ profile.position|default:"Not set" }}</div>
             </div>
-          </div>
-          <div class="up-fields single">
-            <div class="up-field" style="border-bottom:none">
-              <div class="up-field-value {% if not profile.bio %}empty{% endif %}" style="font-size:13px;line-height:1.6">
-                {{ profile.bio|default:"No bio added yet." }}
+            <div class="up-field">
+              <div class="up-field-label">Profile Photo</div>
+              <div class="up-field-value {% if not profile.profile_photo_url %}empty{% endif %}">
+                {% if profile.profile_photo_url %}
+                <a href="{{ profile.profile_photo_url }}" target="_blank" rel="noopener">View uploaded photo</a>
+                {% else %}
+                Not uploaded
+                {% endif %}
               </div>
             </div>
+            <div class="up-field" style="grid-column:1 / -1">
+              <div class="up-field-label">Bio</div>
+              <div class="up-field-value {% if not profile.bio %}empty{% endif %}" style="font-size:13px;line-height:1.6">{{ profile.bio|default:"No bio added yet." }}</div>
+            </div>
           </div>
+          {% endif %}
         </div>
 
         <div class="up-card">

@@ -88,7 +88,7 @@ ul { list-style: none; }
   display: flex;
   flex-direction: column;
   z-index: 200;
-  overflow: visible;
+  overflow: hidden;
   flex-shrink: 0;
   transition: width 0.25s ease;
 }
@@ -232,6 +232,19 @@ body.sidebar-collapsed .admin-main {
   flex-shrink: 0;
 }
 
+.sidebar-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 104px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.sidebar-scroll-area::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 999px; }
+.sidebar-scroll-area::-webkit-scrollbar-track { background: transparent; }
+
 .quick-item {
   display: flex;
   align-items: center;
@@ -283,9 +296,9 @@ body.sidebar-collapsed .admin-main {
   gap: 10px;
   background: transparent !important;
   color: #fff !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 8px 14px;
+  padding: 8px 13px;
   border-radius: 7px;
   border: 1px solid rgba(255,255,255,0.2);
   text-decoration: none;
@@ -581,6 +594,108 @@ body.sidebar-collapsed .admin-main {
 }
 .user-name { font-size: 0.8rem; font-weight: 600; color: #ffffff; }
 .user-email { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+
+/* Sidebar layout overrides */
+.sidebar-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.sidebar-scroll-area::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 999px; }
+.sidebar-scroll-area::-webkit-scrollbar-track { background: transparent; }
+
+.sidebar-scroll-area .quick-item {
+  width: calc(100% - 24px);
+  margin: 0 12px 4px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  min-height: 40px;
+}
+
+.sidebar-scroll-area .quick-item-left {
+  font-size: 0.84rem;
+}
+
+.sidebar-scroll-area .quick-item-left svg,
+.sidebar-scroll-area .post-article-btn svg,
+.sidebar-scroll-area .media-post-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-scroll-area .quick-badge {
+  font-size: 0.7rem;
+}
+
+.sidebar-scroll-area .post-article-btn {
+  font-size: 0.84rem;
+  padding: 8px 12px;
+  margin: 0 12px 4px;
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-scroll-area .media-btn-wrap {
+  margin: 0 12px 4px;
+}
+
+.sidebar-scroll-area .media-post-btn {
+  font-size: 0.84rem;
+  padding: 8px 12px;
+  min-height: 40px;
+}
+
+.sidebar-scroll-area .sidebar-nav {
+  padding: 0 12px;
+  margin: 10px 0 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  min-height: auto;
+  height: auto;
+}
+
+.sidebar-scroll-area .nav-link {
+  font-size: 0.8rem;
+}
+
+.sidebar-scroll-area .submenu li a {
+  font-size: 0.76rem;
+}
+
+.sidebar-scroll-area .panel-footer {
+  margin-top: 10px;
+}
+
+.sidebar-scroll-area .panel-footer .media-btn-wrap {
+  width: calc(100% - 24px);
+  margin: 0 12px 4px;
+}
+
+.sidebar-scroll-area .panel-footer .quick-item {
+  width: calc(100% - 24px);
+  margin: 0 12px 4px;
+}
+
+.admin-sidebar > .sidebar-scroll-area + .panel-user,
+.admin-sidebar > .panel-user {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  margin: 0;
+  flex-shrink: 0;
+  z-index: 3;
+  border-radius: 14px;
+  background: #081437;
+  border: 1px solid rgba(255,255,255,0.12);
+}
 
 /* ─────────────────────────────────────────────
    FLASH MESSAGES
@@ -974,6 +1089,7 @@ input:focus, select:focus, textarea:focus { border-color: #B80100 !important; ba
 .admin-sidebar.collapsed .chevron-icon,
 .admin-sidebar.collapsed .panel-footer .quick-item-left span,
 .admin-sidebar.collapsed .panel-quick .quick-item-left span,
+.admin-sidebar.collapsed .sidebar-scroll-area .quick-item-left span,
 .admin-sidebar.collapsed .overview-quick-btn span,
 .admin-sidebar.collapsed .post-article-btn span,
 .admin-sidebar.collapsed .media-post-btn span,

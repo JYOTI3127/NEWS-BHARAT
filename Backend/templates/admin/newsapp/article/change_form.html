@@ -6896,7 +6896,7 @@ const editorData = [
     name: "{{ u.get_full_name|default:u.username|escapejs }}",
     position: "{{ u.profile.roles.all|first|default:u.reporter.designation|default:u.profile.position|default:'Reporter'|escapejs }}",
     bio: "{{ u.profile.bio|default:''|escapejs }}",
-    photo: "{{ u.profile.photo|default:''|escapejs }}",
+    photo: "{% if u.profile.profile_photo_url %}{{ u.profile.profile_photo_url|escapejs }}{% else %}{{ u.profile.photo|default:''|escapejs }}{% endif %}",
     twitter: "{{ u.profile.twitter|default:''|escapejs }}",
     linkedin: "{{ u.profile.linkedin|default:''|escapejs }}",
     instagram: "{{ u.profile.instagram|default:''|escapejs }}",

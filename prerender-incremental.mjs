@@ -188,7 +188,17 @@ const replacePrerenderDataScript = (html, route, article, allArticles, categorie
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 console.log('Fetching article data...')
-const article = await fetchArticleBySlug(ARTICLE_SLUG)
+let article = null
+
+try {
+  article = await fetchArticleBySlug(ARTICLE_SLUG)
+} catch (error) {
+  console.error(`Unable to fetch article "${ARTICLE_SLUG}" from ${API_BASE}.`)
+  console.error(error?.message || error)
+  console.log('Incremental prerender skipped because the API is unreachable from GitHub Actions.')
+  console.log('The next successful full deploy will still rebuild the page.')
+  process.exit(0)
+}
 
 const [recentResult, categoriesResult] = await Promise.allSettled([
   fetchRecentArticles(30),

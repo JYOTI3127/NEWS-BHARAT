@@ -1280,6 +1280,11 @@ class NewsAdminSite(AdminSite):
                 name='my_assignment_update',
             ),
             path(
+                'access-denied/',
+                self.admin_view(self.access_denied_view),
+                name='access_denied',
+            ),
+            path(
                 'contact-queries/',
                 self.admin_view(self.contact_queries_view),
                 name='contact_queries',
@@ -1311,6 +1316,17 @@ class NewsAdminSite(AdminSite):
             ),
         ]
         return custom_urls + urls
+
+    def access_denied_view(self, request):
+        return render(
+            request,
+            'admin/access_denied.html',
+            {
+                'title': 'Access Denied',
+                'requested_path': request.GET.get('next') or request.path,
+            },
+            status=403,
+        )
 
     def attendance_view(self, request):
         if request.method == 'POST':

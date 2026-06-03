@@ -1079,14 +1079,35 @@ const pickArticlePrerenderSeeds = (articles, options) =>
     .map((article) => pickArticlePrerenderSeed(article, options))
     .filter(Boolean)
 
+const pickCategoryPrerenderSeed = (category) => {
+  if (!category || typeof category !== 'object') return null
+
+  return {
+    id: category.id ?? null,
+    name: category.name || '',
+    slug: category.slug || '',
+    description: category.description || '',
+    meta_title: category.meta_title || '',
+    meta_description: category.meta_description || '',
+    status: category.status || '',
+    sub_categories: category.sub_categories || {},
+  }
+}
+
+const pickCategoryPrerenderSeeds = (categories) =>
+  (Array.isArray(categories) ? categories : [])
+    .map(pickCategoryPrerenderSeed)
+    .filter(Boolean)
+
 const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
   const allArticles = Array.isArray(siteData?.articles) ? siteData.articles : []
   const categories = Array.isArray(siteData?.categories) ? siteData.categories : []
+  const categorySeeds = pickCategoryPrerenderSeeds(categories)
 
   if (route === '/') {
     return {
       articles: pickArticlePrerenderSeeds(allArticles.slice(0, 120)),
-      categories,
+      categories: categorySeeds,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
   }
@@ -1096,7 +1117,7 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
     return {
       articles: currentArticle ? [pickArticlePrerenderSeed(currentArticle, { includeBody: true })] : [],
-      categories,
+      categories: categorySeeds,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
   }
@@ -1111,7 +1132,7 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
     return {
       articles: pickArticlePrerenderSeeds(categoryArticles.slice(0, 80)),
-      categories,
+      categories: categorySeeds,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
   }
@@ -1150,14 +1171,14 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
     return {
       articles: pickArticlePrerenderSeeds(taggedArticles.slice(0, 80)),
-      categories,
+      categories: categorySeeds,
       homepageHeroImage: siteData?.homepageHeroImage || '',
     }
   }
 
   return {
     articles: [],
-    categories,
+    categories: categorySeeds,
     homepageHeroImage: siteData?.homepageHeroImage || '',
   }
 }
@@ -1306,6 +1327,10 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       const fallbackArticleHtml = buildArticleFallbackHtml(article, route, meta)
       if (fallbackArticleHtml) {
         cleaned = injectArticleFallbackIntoRoot(cleaned, fallbackArticleHtml)
+        cleaned = cleaned.replace(
+          /<div class=["']min-h-\[1px\]["']>\s*<\/div>/gi,
+          ''
+        )
         console.log(`    Injected crawlable article HTML for ${route}`)
       }
     }

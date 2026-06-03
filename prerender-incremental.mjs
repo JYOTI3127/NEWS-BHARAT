@@ -99,6 +99,25 @@ async function fetchCategories() {
   return Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : []
 }
 
+const pickCategoryPrerenderSeed = (category) => {
+  if (!category || typeof category !== 'object') return null
+  return {
+    id: category.id ?? null,
+    name: category.name || '',
+    slug: category.slug || '',
+    description: category.description || '',
+    meta_title: category.meta_title || '',
+    meta_description: category.meta_description || '',
+    status: category.status || '',
+    sub_categories: category.sub_categories || {},
+  }
+}
+
+const pickCategoryPrerenderSeeds = (categories) =>
+  (Array.isArray(categories) ? categories : [])
+    .map(pickCategoryPrerenderSeed)
+    .filter(Boolean)
+
 // ─── Build route list ────────────────────────────────────────────────────────
 
 function getRoutesForIncremental(article) {
@@ -121,19 +140,13 @@ function getRoutesForIncremental(article) {
 // ─── Prerender data injection ────────────────────────────────────────────────
 
 const buildRoutePrerenderPayload = (route, article, allArticles, categories) => {
+  const categorySeeds = pickCategoryPrerenderSeeds(categories)
+
   if (route === '/') {
-    return { articles: allArticles, categories }
+    return { articles: allArticles, categories: categorySeeds }
   }
   if (isArticlePath(route)) {
-    const seed = article ? [article, ...allArticles.slice(0, 24)] : allArticles.slice(0, 24)
-    const seen = new Set()
-    const unique = seed.filter((a) => {
-      const key = String(a?.id || a?.slug || '').trim()
-      if (!key || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    return { articles: unique, categories }
+    return { articles: article ? [article] : [], categories: categorySeeds }
   }
   if (route.startsWith('/category/')) {
     const slug = route.replace('/category/', '').trim().toLowerCase()
@@ -145,9 +158,9 @@ const buildRoutePrerenderPayload = (route, article, allArticles, categories) => 
       seen.add(key)
       return true
     })
-    return { articles: unique, categories }
+    return { articles: unique, categories: categorySeeds }
   }
-  return { articles: allArticles.slice(0, 18), categories }
+  return { articles: allArticles.slice(0, 18), categories: categorySeeds }
 }
 
 const replacePrerenderDataScript = (html, route, article, allArticles, categories) => {

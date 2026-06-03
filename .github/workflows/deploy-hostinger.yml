@@ -60,6 +60,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          timeout: 180s
           command_timeout: 20m
           script: |
             set -e
@@ -94,6 +95,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          timeout: 180s
           command_timeout: 20m
           script: |
             touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"

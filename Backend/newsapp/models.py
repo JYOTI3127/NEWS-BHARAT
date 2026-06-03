@@ -987,6 +987,7 @@ class UserProfile(models.Model):
     roles = models.ManyToManyField('Role', blank=True)
     phone = models.CharField(max_length=15, blank=True)
     bio = models.TextField(blank=True)
+    kra = models.TextField(blank=True)
 
     # ── Social links for editor profile ──
     position  = models.CharField(max_length=150, blank=True)

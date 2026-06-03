@@ -416,6 +416,18 @@ Disallow: /admin/
 Disallow: /category/news4bharat
 Crawl-delay: 1
 
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin/
+Disallow: /category/news4bharat
+Crawl-delay: 1
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin/
+Disallow: /category/news4bharat
+Crawl-delay: 1
+
 User-agent: SemrushBot
 Disallow: /
 

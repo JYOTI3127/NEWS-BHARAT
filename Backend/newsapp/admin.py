@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Case, When, F
+from django.db.models import Count, Q, Case, When, F, Sum
 from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
@@ -48,7 +48,29 @@ def _format_duration(total_seconds):
     total_seconds = max(int(total_seconds or 0), 0)
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{hours} hr {minutes} min {seconds} sec"
+
+
+def _attendance_record_seconds(record):
+    if not record:
+        return 0
+
+    stored_seconds = max(int(getattr(record, 'total_active_seconds', 0) or 0), 0)
+    if stored_seconds > 0:
+        return stored_seconds
+
+    clock_in_at = getattr(record, 'last_clock_in_at', None)
+    clock_out_at = getattr(record, 'last_clock_out_at', None)
+    last_activity_at = getattr(record, 'last_activity_at', None)
+    current_session_started_at = getattr(record, 'current_session_started_at', None)
+
+    if clock_in_at and clock_out_at and clock_out_at >= clock_in_at:
+        return max(int((clock_out_at - clock_in_at).total_seconds()), 0)
+
+    if current_session_started_at and last_activity_at and last_activity_at >= current_session_started_at:
+        return max(int((last_activity_at - current_session_started_at).total_seconds()), 0)
+
+    return 0
 
 
 try:
@@ -612,6 +634,7 @@ class UserProfileInline(admin.StackedInline):
         'total_failed_ever',
         'lock_status',
         'last_failed_at',
+        'kra',
         'created_at',
     )
 
@@ -625,6 +648,7 @@ class UserProfileInline(admin.StackedInline):
         'total_failed_ever',
         'lock_status',
         'last_failed_at',
+        'kra',
         'session_timeout_min',
         'remember_me',
         'created_at',
@@ -667,7 +691,7 @@ class UserProfileInline(admin.StackedInline):
 
     def get_readonly_fields(self, request, obj=None):
         if request.user.is_superuser:
-            return tuple(f for f in self.readonly_fields if f != 'staff_id')
+            return tuple(f for f in self.readonly_fields if f not in {'staff_id', 'kra'})
         return self.readonly_fields
 
     def masked_password(self, obj):
@@ -783,6 +807,7 @@ class UserAdmin(BaseUserAdmin):
         extra_context.update({
             'users':    page_obj.object_list,
             'page_obj': page_obj,
+            'can_manage_users': bool(request.user.is_superuser),
         })
 
         return TemplateResponse(
@@ -797,22 +822,21 @@ class UserAdmin(BaseUserAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if not request.user.is_superuser:
-            qs = qs.filter(pk=request.user.pk)
         return qs
 
     def has_view_permission(self, request, obj=None):
-        if request.user.is_superuser:
-            return True
-        if obj and obj.pk == request.user.pk:
-            return True
-        return False
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
 
     def has_change_permission(self, request, obj=None):
         return request.user.is_superuser
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+    def get_actions(self, request):
+        if not request.user.is_superuser:
+            return {}
+        return super().get_actions(request)
 
     actions = ['unlock_selected_users', 'reset_failed_attempts']
 
@@ -856,6 +880,7 @@ class UserAdmin(BaseUserAdmin):
     #          hoga, wahi profile mein save hoga, wahi email mein jayega
     # ══════════════════════════════════════════════════════════════
     def custom_add_view(self, request):
+        _ensure_superuser(request)
         if request.method == 'POST':
             form = CustomUserCreationForm(request.POST)
             if form.is_valid():
@@ -993,13 +1018,128 @@ News4Bharat
         return response
 
     def profile_view(self, request, user_id):
+        if not (request.user.is_active and request.user.is_staff):
+            raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
         user    = get_object_or_404(User, pk=user_id)
         profile = get_object_or_404(UserProfile, user=user)
+        now = timezone.now()
+        today = timezone.localdate()
+
+        authored_articles_qs = (
+            Article.objects
+            .filter(author=user)
+            .select_related('primary_category', 'assigned_to')
+            .order_by('-updated_at')
+        )
+        assignments_qs = (
+            ArticleAssignment.objects
+            .filter(user=user)
+            .select_related('article', 'assigned_by')
+            .order_by('-assigned_at')
+        )
+        reports_qs = (
+            Report.objects
+            .filter(user=user)
+            .order_by('-report_date', '-report_time', '-created_at')
+        )
+        attendance_qs = (
+            AttendanceRecord.objects
+            .filter(user=user)
+            .order_by('-date')
+        )
+        monthly_performance = ReporterMonthlyPerformance.objects.filter(
+            reporter=user,
+            month=today.month,
+            year=today.year,
+        ).first()
+
+        article_stats = authored_articles_qs.aggregate(
+            total=Count('id'),
+            draft=Count('id', filter=Q(status='draft')),
+            review=Count('id', filter=Q(status__in=['review', 'fact_check', 'legal'])),
+            approved=Count('id', filter=Q(status__in=['approved', 'scheduled'])),
+            published=Count('id', filter=Q(status='published')),
+            rejected=Count('id', filter=Q(status='rejected')),
+        )
+        assignment_stats = assignments_qs.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(work_status='pending')),
+            completed=Count('id', filter=Q(work_status='completed')),
+            overdue=Count('id', filter=Q(work_status='pending', deadline__lt=now)),
+        )
+        report_stats = reports_qs.aggregate(
+            total=Count('id'),
+            daily=Count('id', filter=Q(period_type='daily')),
+            weekly=Count('id', filter=Q(period_type='weekly')),
+            monthly=Count('id', filter=Q(period_type='monthly')),
+        )
+        attendance_total_seconds = attendance_qs.aggregate(
+            total_seconds=Sum('total_active_seconds')
+        )['total_seconds'] or 0
+        attendance_last_record = attendance_qs.first()
+        attendance_entry_count = attendance_qs.count()
+
         return TemplateResponse(request, 'admin/user_profile.html', {
             **self.admin_site.each_context(request),
             'profile': profile,
             'title':   f'Profile — {user.username}',
+            'can_manage_users': bool(request.user.is_superuser),
+            'article_stats': article_stats,
+            'recent_authored_articles': authored_articles_qs[:5],
+            'assignment_stats': assignment_stats,
+            'recent_assignments': assignments_qs[:5],
+            'report_stats': report_stats,
+            'recent_reports': reports_qs[:5],
+            'attendance_records': attendance_qs[:7],
+            'attendance_entry_count': attendance_entry_count,
+            'attendance_total_duration': _format_duration(attendance_total_seconds),
+            'attendance_last_record': attendance_last_record,
+            'monthly_performance': monthly_performance,
         })
+
+
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'staff_id', 'status', 'digilocker_status', 'updated_kra')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'staff_id', 'kra')
+    list_filter = ('status', 'digilocker_status')
+    readonly_fields = ('created_at',)
+    fields = (
+        'user',
+        'staff_id',
+        'phone',
+        'gender',
+        'bio',
+        'kra',
+        'roles',
+        'assigned_categories',
+        'status',
+        'digilocker_status',
+        'digilocker_reference_id',
+        'digilocker_last_verified_at',
+        'digilocker_last_error',
+        'digilocker_document_types',
+        'digilocker_verified_payload',
+        'created_at',
+    )
+
+    @admin.display(description="KRA")
+    def updated_kra(self, obj):
+        return "Added" if obj.kra else "Not set"
+
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_view_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_add_permission(self, request):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_change_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1268,7 +1408,7 @@ class NewsAdminSite(AdminSite):
             is_active = False
 
             for record in user_records:
-                seconds = record.total_active_seconds
+                seconds = _attendance_record_seconds(record)
                 if record.date == today:
                     snapshot = get_attendance_snapshot(record.user)
                     seconds = snapshot['display_seconds']
@@ -1282,7 +1422,7 @@ class NewsAdminSite(AdminSite):
             if selected_date:
                 duration_seconds = 0
                 if specific_record:
-                    duration_seconds = specific_record.total_active_seconds
+                    duration_seconds = _attendance_record_seconds(specific_record)
                     if selected_date == today:
                         today_snapshot = get_attendance_snapshot(member)
                         duration_seconds = today_snapshot['display_seconds']
@@ -2936,7 +3076,7 @@ admin_site.register(Group)
 admin_site.register(Role,                       RoleAdmin)
 admin_site.register(Permission)
 admin_site.register(Category,                   CategoryAdmin)
-admin_site.register(UserProfile)
+admin_site.register(UserProfile,                UserProfileAdmin)
 admin_site.register(LoginAttemptLog,            LoginAttemptLogAdmin)
 admin_site.register(Article,                    ArticleAdmin)
 admin_site.register(ArticleAssignment,          ArticleAssignmentAdmin)

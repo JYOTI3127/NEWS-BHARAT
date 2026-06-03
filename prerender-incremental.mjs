@@ -10,8 +10,13 @@ import {
 } from './src/lib/articleUrl.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const API_BASE = 'https://news4bharat.cloud/api'
+const API_BASE = String(
+  process.env.VITE_API_TARGET ||
+  process.env.API_BASE ||
+  'https://news4bharat.cloud/api'
+).replace(/\/+$/, '')
 const ARTICLE_SLUG = process.env.ARTICLE_SLUG || ''
+const FETCH_TIMEOUT_MS = Number(process.env.PRERENDER_FETCH_TIMEOUT_MS || 30000)
 const PRERENDER_DATA_SCRIPT_PATTERN =
   /<script>window\.__N4B_PRERENDER_DATA__=[\s\S]*?<\/script>\s*/g
 
@@ -24,16 +29,19 @@ console.log(`Incremental prerender for slug: ${ARTICLE_SLUG}`)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-async function fetchWithRetry(url, retries = 3) {
+async function fetchWithRetry(url, retries = 5) {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(url)
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return await res.json()
     } catch (e) {
       if (i === retries - 1) throw e
-      console.log(`  Retry ${i + 1}/${retries} for ${url}`)
-      await new Promise((r) => setTimeout(r, 2000 * (i + 1)))
+      const delay = Math.min(15000, 2000 * (i + 1))
+      console.log(`  Retry ${i + 1}/${retries} after ${delay}ms for ${url}`)
+      await new Promise((r) => setTimeout(r, delay))
     }
   }
 }
@@ -74,10 +82,12 @@ const normalizeNextApiUrl = (value) => {
 
 async function fetchArticleBySlug(slug) {
   const cacheBust = `_=${Date.now()}`
-  const [detail, seoEndpoint] = await Promise.all([
-    fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(slug)}/?${cacheBust}`),
-    fetchWithRetry(`${API_BASE}/seo/article/${encodeURIComponent(slug)}/?${cacheBust}`).catch(() => null),
-  ])
+  const detail = await fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(slug)}/?${cacheBust}`)
+  const seoEndpoint = await fetchWithRetry(`${API_BASE}/seo/article/${encodeURIComponent(slug)}/?${cacheBust}`)
+    .catch((error) => {
+      console.log(`  SEO endpoint skipped: ${error?.message || error}`)
+      return null
+    })
 
   const article = Array.isArray(detail) ? detail[0] : detail
   if (!article) throw new Error(`Article not found for slug: ${slug}`)
@@ -178,11 +188,28 @@ const replacePrerenderDataScript = (html, route, article, allArticles, categorie
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 console.log('Fetching article data...')
-const [article, allArticles, categories] = await Promise.all([
-  fetchArticleBySlug(ARTICLE_SLUG),
-  fetchRecentArticles(50),
+const article = await fetchArticleBySlug(ARTICLE_SLUG)
+
+const [recentResult, categoriesResult] = await Promise.allSettled([
+  fetchRecentArticles(30),
   fetchCategories(),
 ])
+
+const allArticles =
+  recentResult.status === 'fulfilled' && Array.isArray(recentResult.value)
+    ? recentResult.value
+    : [article]
+const categories =
+  categoriesResult.status === 'fulfilled' && Array.isArray(categoriesResult.value)
+    ? categoriesResult.value
+    : []
+
+if (recentResult.status !== 'fulfilled') {
+  console.log(`Recent articles skipped: ${recentResult.reason?.message || recentResult.reason}`)
+}
+if (categoriesResult.status !== 'fulfilled') {
+  console.log(`Categories skipped: ${categoriesResult.reason?.message || categoriesResult.reason}`)
+}
 
 const routes = getRoutesForIncremental(article)
 console.log(`Routes to prerender: ${routes.join(', ')}`)

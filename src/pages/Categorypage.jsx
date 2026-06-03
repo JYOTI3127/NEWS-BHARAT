@@ -65,7 +65,23 @@ const normalizeCategoryDisplayName = (value, fallback = "") => {
 };
 
 const getSelectedSubcategoryValues = (selectedSubcategories) => {
-  if (!selectedSubcategories || typeof selectedSubcategories !== "object") return [];
+  if (!selectedSubcategories) return [];
+
+  if (typeof selectedSubcategories === "string") {
+    return selectedSubcategories
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
+  if (Array.isArray(selectedSubcategories)) {
+    return selectedSubcategories
+      .flat()
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+  }
+
+  if (typeof selectedSubcategories !== "object") return [];
 
   const subs = selectedSubcategories.subs;
   if (subs && typeof subs === "object") {
@@ -240,8 +256,15 @@ const getPossibleStateValues = (article) => {
     article?.state,
     article?.state_name,
     article?.selected_subcategory,
+    article?.subcategory,
+    article?.sub_category,
+    article?.subcategory_name,
+    article?.sub_category_name,
+    article?.selected_subcategory_name,
     article?.selectedState,
     ...getSelectedSubcategoryValues(article?.selected_subcategories),
+    ...getSelectedSubcategoryValues(article?.subcategories),
+    ...getSelectedSubcategoryValues(article?.sub_categories),
   ];
 
   return values
@@ -407,7 +430,8 @@ export default function CategoryPage() {
   const location = useLocation();
   const viewportWidth = useViewportWidth();
 
-  const rawSubFilter = decodeURIComponent(stateName || "");
+  const querySubcategory = new URLSearchParams(location.search).get("subcategory") || "";
+  const rawSubFilter = decodeURIComponent(stateName || querySubcategory || "");
   const subFilter = isStateCategorySlug(slug) && isStateParentGroupLabel(rawSubFilter)
     ? ""
     : rawSubFilter;
@@ -597,7 +621,9 @@ export default function CategoryPage() {
   const categoryDisplayName = normalizeCategoryDisplayName(category?.name, slug);
   const categorySeoTitle = getCategorySeoTitle(category, categoryDisplayName);
   const categorySeoDescription = getCategorySeoDescription(category, categoryDisplayName);
-  const categoryCanonicalUrl = `${SITE_URL}/category/${slug}`;
+  const categoryCanonicalUrl = subFilter
+    ? `${SITE_URL}/category/${slug}?subcategory=${encodeURIComponent(subFilter)}`
+    : `${SITE_URL}/category/${slug}`;
   const shellStyle = {
     width: "var(--site-content-width)",
     maxWidth: "var(--site-content-width)",

@@ -26,9 +26,9 @@ export default function AuthorPage() {
     queryKey: ["author-articles-source"],
     queryFn: () =>
       fetchPaginatedArticles({
-        limit: 200,
-        maxPages: 10,
-        full: true,
+        limit: 100,
+        maxPages: 5,
+        full: false,
       }),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -67,11 +67,11 @@ export default function AuthorPage() {
     queryFn: async () => {
       const scanPool = allArticles
         .filter((article) => article?.slug)
-        .slice(0, 1200);
+        .slice(0, 160);
 
       const matched = [];
       const seen = new Set();
-      const batchSize = 10;
+      const batchSize = 6;
 
       for (let i = 0; i < scanPool.length; i += batchSize) {
         const batch = scanPool.slice(i, i + batchSize);
@@ -93,6 +93,8 @@ export default function AuthorPage() {
           seen.add(key);
           matched.push({ ...base, ...detail });
         });
+
+        if (matched.length > 0) break;
       }
 
       return matched.sort(
@@ -145,7 +147,7 @@ export default function AuthorPage() {
       resolvedAuthorArticles
         .map((article) => String(article?.slug || "").trim())
         .filter(Boolean)
-        .slice(0, 40),
+        .slice(0, 8),
     [resolvedAuthorArticles]
   );
 
@@ -167,7 +169,7 @@ export default function AuthorPage() {
       };
 
       const collected = [];
-      const batchSize = 8;
+      const batchSize = 4;
 
       for (let i = 0; i < profileSourceSlugs.length; i += batchSize) {
         const batch = profileSourceSlugs.slice(i, i + batchSize);

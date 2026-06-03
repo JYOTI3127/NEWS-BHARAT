@@ -199,6 +199,49 @@ const compareByLabel = (a, b) =>
   String(a?.label || "").localeCompare(String(b?.label || ""), "en", { sensitivity: "base" });
 
 // ── NAV_SECTIONS (fallback) ──
+const MENU_CATEGORY_ORDER = [
+  "breaking-news",
+  "state-of-bharat",
+  "national",
+  "politics",
+  "business",
+  "bfsi",
+  "stock-market",
+  "bharat-explainers",
+  "bharat-opinions",
+  "bharat-in-numbers",
+  "bharat-startups",
+  "technology",
+  "ai",
+  "world-news",
+  "health",
+  "education",
+  "sports",
+  "entertainment",
+  "automobile",
+  "viral-and-fact-check",
+  "60-second-read",
+  "q4-results",
+  "press-release",
+  "trending",
+];
+
+const getMenuOrderIndex = (section) => {
+  const slug = getFinalSlug(section?.slug, section?.label);
+  const normalizedLabel = makeSlug("", section?.label);
+  const slugIndex = MENU_CATEGORY_ORDER.indexOf(slug);
+  if (slugIndex >= 0) return slugIndex;
+  const labelIndex = MENU_CATEGORY_ORDER.indexOf(normalizedLabel);
+  return labelIndex >= 0 ? labelIndex : Number.MAX_SAFE_INTEGER;
+};
+
+const sortByMenuOrder = (sections) =>
+  [...sections].sort((a, b) => {
+    const orderDiff = getMenuOrderIndex(a) - getMenuOrderIndex(b);
+    if (orderDiff !== 0) return orderDiff;
+    return compareByLabel(a, b);
+  });
+
 const NAV_SECTIONS = [
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu, links: ["Artificial Intelligence"] },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame, links: ["Bharat By 2047"] },
@@ -314,7 +357,7 @@ export default function MenuDrawer({ open, onClose }) {
       try {
         const res = await fetch(apiUrl("/categories/"));
         const data = await res.json();
-        const active = Array.isArray(data) ? data.filter((cat) => cat?.status === "active") : [];
+        const active = Array.isArray(data) ? data : [];
 
         const sections = active.map((cat) => {
           const subCategories = cat?.sub_categories || {};
@@ -346,10 +389,10 @@ export default function MenuDrawer({ open, onClose }) {
           };
         });
 
-        setNavSections(sections.length > 0 ? [...sections].sort(compareByLabel) : NAV_SECTIONS);
+        setNavSections(sections.length > 0 ? sortByMenuOrder(sections) : sortByMenuOrder(NAV_SECTIONS));
         setNavSectionsLoaded(true);
       } catch {
-        setNavSections([...NAV_SECTIONS].sort(compareByLabel));
+        setNavSections(sortByMenuOrder(NAV_SECTIONS));
         setNavSectionsLoaded(true);
       }
     };

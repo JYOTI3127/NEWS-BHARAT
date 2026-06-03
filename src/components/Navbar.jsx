@@ -484,6 +484,51 @@ const orderAllowedNavSections = (sections = []) => {
   return NAV_CATEGORY_ORDER.map((item) => sectionMap.get(item.slug)).filter(Boolean);
 };
 
+const DRAWER_CATEGORY_ORDER = [
+  "breaking-news",
+  "state-of-bharat",
+  "national",
+  "politics",
+  "business",
+  "bfsi",
+  "stock-market",
+  "bharat-explainers",
+  "bharat-opinions",
+  "bharat-in-numbers",
+  "bharat-startups",
+  "bharat-2047",
+  "technology",
+  "ai",
+  "world-news",
+  "health",
+  "education",
+  "sports",
+  "entertainment",
+  "automobile",
+  "viral-and-fact-check",
+  "60-second-read",
+  "india",
+  "q4-results",
+  "press-release",
+  "trending",
+];
+
+const getDrawerOrderIndex = (section) => {
+  const slug = normalizeNavCategoryKey(getFinalSlug(section?.slug, section?.label));
+  const label = normalizeNavCategoryKey(section?.label);
+  const slugIndex = DRAWER_CATEGORY_ORDER.indexOf(slug);
+  if (slugIndex >= 0) return slugIndex;
+  const labelIndex = DRAWER_CATEGORY_ORDER.indexOf(label);
+  return labelIndex >= 0 ? labelIndex : Number.MAX_SAFE_INTEGER;
+};
+
+const orderDrawerSections = (sections = []) =>
+  [...sections].sort((a, b) => {
+    const orderDiff = getDrawerOrderIndex(a) - getDrawerOrderIndex(b);
+    if (orderDiff !== 0) return orderDiff;
+    return String(a?.label || "").localeCompare(String(b?.label || ""), "en", { sensitivity: "base" });
+  });
+
 const NAV_SECTIONS = [
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
@@ -945,6 +990,7 @@ const Header = () => {
   const [expandedSection, setExpandedSection] = useState(null);
   const [expandedSubcat, setExpandedSubcat] = useState(null);
   const [navSections, setNavSections] = useState(NAV_SECTIONS);
+  const [drawerSections, setDrawerSections] = useState(NAV_SECTIONS);
   const [navSectionsLoaded, setNavSectionsLoaded] = useState(false);
   const [weather, setWeather] = useState(null);
 
@@ -1197,7 +1243,7 @@ const Header = () => {
           extractStatesFromByStateResponse(byStateData)
         );
 
-        const sections = active.map(cat => {
+        const buildSections = (items = []) => items.map(cat => {
           const normalizedSlug = String(cat?.slug || "").trim().toLowerCase();
 
           let subcategories = null;
@@ -1237,8 +1283,12 @@ const Header = () => {
           };
         });
 
+        const sections = buildSections(active);
+        const allDrawerSections = buildSections(categoryList);
+
         const orderedSections = orderAllowedNavSections(sections);
         setNavSections(orderedSections.length > 0 ? orderedSections : orderAllowedNavSections(NAV_SECTIONS));
+        setDrawerSections(allDrawerSections.length > 0 ? orderDrawerSections(allDrawerSections) : orderDrawerSections(NAV_SECTIONS));
         setNavSectionsLoaded(true);
       } catch (err) {
         console.error("Categories API fail:", err.message);
@@ -1260,6 +1310,7 @@ const Header = () => {
         });
 
         setNavSections(orderAllowedNavSections(fallbackSections));
+        setDrawerSections(orderDrawerSections(fallbackSections));
         setNavSectionsLoaded(true);
       }
     };
@@ -1878,7 +1929,7 @@ const Header = () => {
         </div>
 
         <div className="drawer-scroll">
-          {navSections.map(({ label, slug, Icon, links, subcategories }) => {
+          {drawerSections.map(({ label, slug, Icon, links, subcategories }) => {
             const sectionOpen = expandedSection === label;
             const hasSubcats = subcategories && subcategories.length > 0;
             const hasLinks = links && links.length > 0;

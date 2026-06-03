@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import {
   Clock, User, Facebook, Link2,
-  ChevronRight, Newspaper, Tag, ArrowLeft,
+  ChevronRight, Newspaper, Tag,
   Instagram, Youtube, Linkedin, TrendingUp,
   Bookmark, Minus, Plus, Share2, Type, Volume2,
 } from "lucide-react";
@@ -2314,6 +2314,7 @@ export default function ArticleDetails() {
   const normalizedCategorySlug = isBfsiCategory
     ? ""
     : normalizeSlugValue(primaryCategory?.slug || primaryCategory?.category_slug || categorySlug || "");
+  const breadcrumbCategoryLabel = categoryName || moreInCategoryLabel || normalizedCategorySlug.replace(/-/g, " ");
   const isWorldNewsArticle = ["world-news", "worldnews"].includes(normalizedCategorySlug);
   const routeCanonicalUrl = buildCanonicalFromRoute(normalizedCategorySlug || categorySlug, article?.slug || articleSlug);
   const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
@@ -2328,6 +2329,28 @@ export default function ArticleDetails() {
   const absoluteAuthorUrl = authorDisplayName === SITE_NAME ? SITE_URL : `${SITE_URL}${authorPagePath}`;
   const authorPhotoUrl = toAbsoluteSiteUrl(article.author_display_photo?.trim());
   const authorInitials = authorDisplayName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const authorBio = getPlainText(
+    article.author_display_bio ||
+    article.author_bio ||
+    article.display_author_bio ||
+    article.author?.bio ||
+    article.author?.description ||
+    ""
+  );
+  const authorBioText = authorBio || (
+    authorDisplayName === SITE_NAME
+      ? "News4Bharat editorial team brings you verified updates, explainers, and stories from Bharat and around the world."
+      : `${authorDisplayName} is a contributor at News4Bharat. Read more stories and updates from this author on News4Bharat.`
+  );
+  const authorBioPreview = truncateText(authorBioText, 260);
+  const authorSocialLinks = [
+    { href: article.author_display_linkedin, icon: <Linkedin size={15} />, label: "LinkedIn" },
+    { href: article.author_display_instagram, icon: <Instagram size={15} />, label: "Instagram" },
+    { href: article.author_display_facebook, icon: <Facebook size={15} />, label: "Facebook" },
+    { href: article.author_display_youtube, icon: <Youtube size={15} />, label: "YouTube" },
+  ]
+    .map((item) => ({ ...item, href: String(item.href || "").trim() }))
+    .filter((item) => item.href);
 
   const articleReadTime = getArticleReadTime({
     ...article,
@@ -2514,9 +2537,41 @@ export default function ArticleDetails() {
         {/* ── MAIN ARTICLE ── */}
         <article ref={mainArticleRef} className="min-w-0">
 
-          <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 mb-5 transition-colors">
-            <ArrowLeft size={13} /> Back to Home
-          </Link>
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-5 text-[12px] font-medium text-gray-500"
+            style={{ maxWidth: articleTextMaxWidth }}
+          >
+            <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <li className="inline-flex items-center">
+                <Link to="/" className="no-underline hover:text-red-600 transition-colors" style={{ textDecoration: "none" }}>
+                  Home
+                </Link>
+              </li>
+              {normalizedCategorySlug && (
+                <>
+                  <li className="inline-flex items-center text-gray-300" aria-hidden="true">
+                    <ChevronRight size={13} />
+                  </li>
+                  <li className="inline-flex min-w-0 items-center">
+                    <Link
+                      to={`/category/${normalizedCategorySlug}`}
+                      className="max-w-[180px] truncate capitalize no-underline hover:text-red-600 transition-colors sm:max-w-none"
+                      style={{ textDecoration: "none" }}
+                    >
+                      {breadcrumbCategoryLabel}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li className="inline-flex items-center text-gray-300" aria-hidden="true">
+                <ChevronRight size={13} />
+              </li>
+              <li className="min-w-0 flex-1 text-gray-700" aria-current="page">
+                <span className="block truncate">{article.title}</span>
+              </li>
+            </ol>
+          </nav>
 
           <h1 className="text-[clamp(20px,4vw,36px)] font-extrabold leading-[1.3] text-gray-900 mb-3 tracking-tight" style={{ maxWidth: articleTextMaxWidth }}>
             {article.title}
@@ -2659,6 +2714,75 @@ export default function ArticleDetails() {
           `}</style>
 
           <ArticleFaqAccordion items={visualFaqItems} maxWidth={articleTextMaxWidth} />
+
+          <section className="mt-8 border-t border-gray-200 pt-6" style={{ maxWidth: articleTextMaxWidth }}>
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <Link
+                  to={authorPagePath}
+                  className="mx-auto flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-50 text-red-600 no-underline sm:mx-0"
+                  style={{ textDecoration: "none" }}
+                  aria-label={`View author profile for ${authorDisplayName}`}
+                >
+                  {authorPhotoUrl ? (
+                    <img
+                      src={authorPhotoUrl}
+                      alt={authorDisplayName}
+                      className="h-full w-full object-cover"
+                      width={80}
+                      height={80}
+                      loading="lazy"
+                    />
+                  ) : authorInitials ? (
+                    <span className="text-xl font-extrabold">{authorInitials}</span>
+                  ) : (
+                    <User size={30} />
+                  )}
+                </Link>
+                <div className="min-w-0 flex-1 text-center sm:text-left">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                    About the Author
+                  </p>
+                  <Link
+                    to={authorPagePath}
+                    className="mt-1 inline-block text-xl font-extrabold text-gray-900 no-underline hover:text-red-600 transition-colors"
+                    style={{ textDecoration: "none" }}
+                  >
+                    {authorDisplayName}
+                  </Link>
+                  {authorPosition && (
+                    <p className="mt-0.5 text-sm font-semibold text-red-600">{authorPosition}</p>
+                  )}
+                  <p className="mt-3 text-[14px] leading-[1.75] text-gray-600">
+                    {authorBioPreview}
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    <Link
+                      to={authorPagePath}
+                      className="inline-flex h-9 items-center rounded-full bg-red-600 px-4 text-[12px] font-bold text-white no-underline hover:bg-red-700 transition-colors"
+                      style={{ textDecoration: "none" }}
+                    >
+                      View Profile
+                    </Link>
+                    {authorSocialLinks.map((item) => (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 no-underline hover:bg-red-50 hover:text-red-600 transition-colors"
+                        style={{ textDecoration: "none" }}
+                        aria-label={item.label}
+                        title={item.label}
+                      >
+                        {item.icon}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* ── 7. TAGS — "Related Topics" ── */}
           {tags.length > 0 && (

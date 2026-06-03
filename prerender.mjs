@@ -511,49 +511,53 @@ const buildArticleSchemaJson = (article, route, meta) => {
   const { name: categoryName } = getArticleCategory(article)
   const tags = getArticleTags(article)
 
-  return {
-    '@context': 'https://schema.org',
-    '@type': ['NewsArticle', 'Article'],
-    ...(canonical ? { '@id': `${canonical}#article` } : {}),
-    headline: title,
-    alternativeHeadline: description,
-    description,
-    ...(bodyText ? { articleBody: bodyText } : {}),
-    inLanguage: 'en-IN',
-    ...(datePublished ? { datePublished } : {}),
-    ...(dateModified ? { dateModified } : {}),
-    ...(canonical ? { url: canonical } : {}),
-    ...(canonical ? { mainEntityOfPage: { '@type': 'WebPage', '@id': canonical } } : {}),
-    author: {
-      '@type': authorName === SITE_NAME ? 'Organization' : 'Person',
-      name: authorName,
-      url: authorName === SITE_NAME ? BASE_URL : `${BASE_URL}/author/${encodeURIComponent(authorName.toLowerCase().replace(/\s+/g, '-'))}`,
+return {
+  '@context': 'https://schema.org',
+  '@type': ['NewsArticle', 'Article'],
+  ...(canonical ? { '@id': `${canonical}#article` } : {}),
+  headline: title,
+  alternativeHeadline: description,
+  description,
+  ...(bodyText ? { articleBody: bodyText } : {}),
+  inLanguage: 'en-IN',
+  ...(datePublished ? { datePublished } : {}),
+  ...(dateModified ? { dateModified } : {}),
+  ...(canonical ? { url: canonical } : {}),
+  ...(canonical ? { mainEntityOfPage: { '@type': 'WebPage', '@id': canonical } } : {}),
+  author: {
+    '@type': authorName === SITE_NAME ? 'Organization' : 'Person',
+    name: authorName,
+    url: authorName === SITE_NAME ? BASE_URL : `${BASE_URL}/author/${encodeURIComponent(authorName.toLowerCase().replace(/\s+/g, '-'))}`,
+  },
+  publisher: {
+    '@type': 'Organization',
+    '@id': `${BASE_URL}/#organization`,
+    name: SITE_NAME,
+    url: BASE_URL,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${BASE_URL}/logo.png`,
     },
-    publisher: {
-      '@type': 'Organization',
-      '@id': `${BASE_URL}/#organization`,
-      name: SITE_NAME,
-      url: BASE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${BASE_URL}/logo.png`,
-      },
-    },
-    ...(imageUrl
-      ? {
-          image: {
-            '@type': 'ImageObject',
-            url: imageUrl,
-            ...(imageAlt ? { caption: imageAlt } : {}),
-          },
-          thumbnailUrl: imageUrl,
-        }
-      : {}),
-    ...(categoryName ? { articleSection: categoryName } : {}),
-    ...(tags.length > 0 ? { keywords: tags.join(', ') } : {}),
-  }
+  },
+  ...(imageUrl
+    ? {
+        image: {
+          '@type': 'ImageObject',
+          url: imageUrl,
+          ...(imageAlt ? { caption: imageAlt } : {}),
+        },
+        thumbnailUrl: imageUrl,
+      }
+    : {}),
+  ...(categoryName ? { articleSection: categoryName } : {}),
+  ...(tags.length > 0 ? { keywords: tags.join(', ') } : {}),
+  isAccessibleForFree: true,
+  isPartOf: {
+    '@type': 'Product',
+    productID: 'CAow6K_GDA:openaccess',
+  },
 }
-
+}
 const buildBreadcrumbSchemaJson = (article, route, meta) => {
   if (!article) return null
 

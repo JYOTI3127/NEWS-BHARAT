@@ -930,7 +930,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
 
   // Category page
   if (route.startsWith('/category/')) {
-    const slug = route.replace('/category/', '').trim().toLowerCase()
+    const slug = route.replace('/category/', '').replace(/\/+$/, '').trim().toLowerCase()
     const category = categoryMap.get(slug)
     const catName = category?.name || toTitleCase(slug.replace(/-/g, ' '))
 
@@ -939,7 +939,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       description:
         getCategorySeoDescription(category, catName) ||
         `Read the latest ${catName} news, updates, analysis and explainers on ${SITE_NAME}.`,
-      canonical: `${BASE_URL}/category/${slug}`,
+      canonical: `${BASE_URL}/category/${slug}/`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
       robots: 'index,follow,max-image-preview:large',

@@ -3,6 +3,14 @@ import { Helmet } from "react-helmet-async";
 
 const SITE_URL = "https://news4bharat.com";
 
+const getCanonicalPath = (path = "/") => {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized === "/") return "/";
+  const [pathname, query = ""] = normalized.split("?");
+  const cleanPathname = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  return query ? `${cleanPathname}?${query}` : cleanPathname;
+};
+
 const isPrerenderRequest = () => {
   if (typeof window === "undefined") return false;
   return /HeadlessChrome|prerender/i.test(window.navigator?.userAgent || "");
@@ -26,7 +34,7 @@ const dispatchPrerenderReady = () => {
 };
 
 export default function PageSeo({ title, description, keywords = "", path = "/" }) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const normalizedPath = getCanonicalPath(path);
   const canonicalUrl = `${SITE_URL}${normalizedPath}`;
   const keywordContent = Array.isArray(keywords) ? keywords.join(", ") : keywords;
 

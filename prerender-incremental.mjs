@@ -159,7 +159,7 @@ const buildRoutePrerenderPayload = (route, article, allArticles, categories) => 
     return { articles: article ? [article] : [], categories: categorySeeds }
   }
   if (route.startsWith('/category/')) {
-    const slug = route.replace('/category/', '').trim().toLowerCase()
+    const slug = route.replace('/category/', '').replace(/\/+$/, '').trim().toLowerCase()
     const catArticles = allArticles.filter((a) => getArticleCategorySlug(a) === slug)
     const seen = new Set()
     const unique = [...catArticles, ...allArticles.slice(0, 18)].filter((a) => {

@@ -4,18 +4,6 @@ import App from './App.jsx'
 import { HelmetProvider } from "react-helmet-async";
 import { fetchArticles, fetchCategories } from './lib/api.js';
 
-// ✅ FIXED: Prerender detection
-const isPrerenderContext = () => {
-  if (typeof window === "undefined") return false;
-  const userAgent = window.navigator?.userAgent || "";
-  return /HeadlessChrome|prerender/i.test(userAgent);
-};
-
-// ✅ FIXED: Immediately set false, will be set true when ready
-if (typeof window !== "undefined" && isPrerenderContext()) {
-  window.prerenderReady = false;
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

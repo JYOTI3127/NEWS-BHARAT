@@ -221,6 +221,14 @@
       accent-color: #1d4ed8;
     }
 
+    .live-admin-toggle--panel {
+      min-height: 52px;
+      padding: 0 14px;
+      border-radius: 16px;
+      border: 1px solid #dbe3ef;
+      background: #f8fafc;
+    }
+
     .live-admin-side {
       display: flex;
       flex-direction: column;
@@ -402,6 +410,11 @@
       color: #15803d;
     }
 
+    .live-admin-status.is-scheduled {
+      background: rgba(245, 158, 11, 0.16);
+      color: #b45309;
+    }
+
     .live-admin-status.is-inactive {
       background: rgba(148, 163, 184, 0.16);
       color: #475569;
@@ -520,7 +533,7 @@
       <div class="live-admin-hero__eyebrow">Live Desk</div>
       <h1>Live Updates Management</h1>
       <p>
-        Create, edit, and manage short live updates with a timestamp, headline, and summary. Use the table below to keep the feed accurate and current.
+        Create, edit, and manage short live updates with instant publishing or scheduled go-live times. Use the table below to keep the feed accurate and current.
       </p>
     </div>
 
@@ -533,12 +546,17 @@
       <div class="live-admin-stat">
         <span>Active Updates</span>
         <strong>{{ live_updates_active_total }}</strong>
-        <small>These entries remain available for the public API.</small>
+        <small>These entries are already live on the public feed.</small>
       </div>
       <div class="live-admin-stat">
-        <span>Latest Update</span>
+        <span>Scheduled</span>
+        <strong>{{ live_updates_scheduled_total }}</strong>
+        <small>These entries will go live automatically at their publish time.</small>
+      </div>
+      <div class="live-admin-stat">
+        <span>Latest Live</span>
         <strong>{% if latest_live_update_at %}{{ latest_live_update_at|date:"d M Y" }}{% else %}No updates{% endif %}</strong>
-        <small>{% if latest_live_update_at %}{{ latest_live_update_at|date:"h:i A" }}{% else %}Create the first live update to begin{% endif %}</small>
+        <small>{% if latest_live_update_at %}{{ latest_live_update_at|date:"h:i A" }}{% else %}Publish the first live update to begin{% endif %}</small>
       </div>
     </div>
   </section>
@@ -551,7 +569,7 @@
     <div>
       <div class="live-admin-compose__head">
         <h2 id="liveUpdateFormTitle">Create Live Update</h2>
-        <p id="liveUpdateFormCopy">Set the time, enter the headline, and add a short summary.</p>
+        <p id="liveUpdateFormCopy">Choose whether to publish now or schedule, then add the headline and summary.</p>
       </div>
 
       {% if live_update_form.non_field_errors %}
@@ -562,8 +580,18 @@
 
       <div class="live-admin-grid">
         <div class="live-admin-field">
-          <label for="{{ live_update_form.published_at.id_for_label }}">Time</label>
+          <label for="id_schedule_for_later">Publishing Mode</label>
+          <label class="live-admin-toggle live-admin-toggle--panel">
+            {{ live_update_form.schedule_for_later }}
+            <span>Schedule this update for later</span>
+          </label>
+          {{ live_update_form.schedule_for_later.errors }}
+        </div>
+
+        <div class="live-admin-field">
+          <label for="{{ live_update_form.published_at.id_for_label }}">Publish At</label>
           {{ live_update_form.published_at }}
+          <small class="helptext" id="liveUpdateTimeHelp">Leave scheduling off to publish immediately when you save.</small>
           {{ live_update_form.published_at.errors }}
         </div>
 
@@ -595,7 +623,7 @@
         <span class="live-admin-side__label">Publishing Panel</span>
         <div class="live-admin-side__value" id="liveUpdateSideTitle">Add a New Update</div>
         <p class="live-admin-side__copy" id="liveUpdateSideCopy">
-          Save a new update here, or choose Edit from the table to load an existing item into this form.
+          Save a new update here, publish it instantly, or choose Edit from the table to schedule an existing item.
         </p>
       </div>
 
@@ -617,7 +645,7 @@
     <div class="live-admin-table-head">
       <div>
         <h3>Saved Live Updates</h3>
-        <p>Use the action buttons to edit or delete any existing update.</p>
+        <p>Use the action buttons to edit, reschedule, or delete any existing update.</p>
       </div>
       <span class="live-admin-chip">{{ live_updates_total }} saved updates</span>
     </div>
@@ -627,7 +655,7 @@
         <table class="live-admin-table">
           <thead>
             <tr>
-              <th style="width: 16%;">Published</th>
+              <th style="width: 16%;">Publish Time</th>
               <th style="width: 22%;">Headline</th>
               <th>Summary</th>
               <th style="width: 12%;">Status</th>
@@ -648,8 +676,8 @@
                   <p class="live-admin-summary">{{ item.summary|truncatechars:220 }}</p>
                 </td>
                 <td>
-                  <span class="live-admin-status {% if item.is_active %}is-active{% else %}is-inactive{% endif %}">
-                    {% if item.is_active %}Active{% else %}Inactive{% endif %}
+                  <span class="live-admin-status {{ item.admin_status_class }}">
+                    {{ item.admin_status_label }}
                   </span>
                 </td>
                 <td>
@@ -662,6 +690,7 @@
                       data-edit-title="{{ item.title|escapejs }}"
                       data-edit-summary="{{ item.summary|escapejs }}"
                       data-edit-active="{% if item.is_active %}1{% else %}0{% endif %}"
+                      data-edit-scheduled="{% if item.is_scheduled %}1{% else %}0{% endif %}"
                     >
                       Edit
                     </button>
@@ -712,6 +741,7 @@
 
     var idField = document.getElementById('liveUpdateId');
     var timeField = document.getElementById('id_published_at');
+    var scheduleField = document.getElementById('id_schedule_for_later');
     var titleField = document.getElementById('id_title');
     var summaryField = document.getElementById('id_summary');
     var activeField = document.getElementById('id_is_active');
@@ -719,37 +749,49 @@
     var formCopy = document.getElementById('liveUpdateFormCopy');
     var sideTitle = document.getElementById('liveUpdateSideTitle');
     var sideCopy = document.getElementById('liveUpdateSideCopy');
+    var timeHelp = document.getElementById('liveUpdateTimeHelp');
     var submitBtn = document.getElementById('liveUpdateSubmitBtn');
     var cancelBtn = document.getElementById('liveUpdateCancelBtn');
 
     var defaultTime = timeField ? timeField.value : '';
 
+    function syncScheduleHelp() {
+      if (!timeHelp || !scheduleField) return;
+      timeHelp.textContent = scheduleField.checked
+        ? 'Choose a future date and time. This update will stay hidden until that moment.'
+        : 'Leave scheduling off to publish immediately when you save.';
+    }
+
     function setCreateMode() {
       idField.value = '';
       if (timeField) timeField.value = defaultTime;
+      if (scheduleField) scheduleField.checked = false;
       if (titleField) titleField.value = '';
       if (summaryField) summaryField.value = '';
       if (activeField) activeField.checked = true;
       if (formTitle) formTitle.textContent = 'Create Live Update';
-      if (formCopy) formCopy.textContent = 'Set the time, enter the headline, and add a short summary.';
+      if (formCopy) formCopy.textContent = 'Choose whether to publish now or schedule, then add the headline and summary.';
       if (sideTitle) sideTitle.textContent = 'Add a New Update';
-      if (sideCopy) sideCopy.textContent = 'Save a new update here, or choose Edit from the table to load an existing item into this form.';
+      if (sideCopy) sideCopy.textContent = 'Save a new update here, publish it instantly, or choose Edit from the table to schedule an existing item.';
       if (submitBtn) submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Update';
       if (cancelBtn) cancelBtn.style.display = 'none';
+      syncScheduleHelp();
     }
 
     function setEditMode(button) {
       idField.value = button.getAttribute('data-edit-id') || '';
       if (timeField) timeField.value = button.getAttribute('data-edit-time') || '';
+      if (scheduleField) scheduleField.checked = button.getAttribute('data-edit-scheduled') === '1';
       if (titleField) titleField.value = button.getAttribute('data-edit-title') || '';
       if (summaryField) summaryField.value = button.getAttribute('data-edit-summary') || '';
       if (activeField) activeField.checked = button.getAttribute('data-edit-active') === '1';
       if (formTitle) formTitle.textContent = 'Edit Live Update';
-      if (formCopy) formCopy.textContent = 'Review the selected update, make changes, and save the latest version.';
+      if (formCopy) formCopy.textContent = 'Review the selected update, publish it now, or adjust its schedule.';
       if (sideTitle) sideTitle.textContent = 'Editing Existing Update';
-      if (sideCopy) sideCopy.textContent = 'The selected row has been loaded into the form. Save your changes to update the record.';
+      if (sideCopy) sideCopy.textContent = 'The selected row has been loaded into the form. Save your changes to update or reschedule the record.';
       if (submitBtn) submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Update Live Update';
       if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+      syncScheduleHelp();
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -759,11 +801,17 @@
       });
     });
 
+    if (scheduleField) {
+      scheduleField.addEventListener('change', syncScheduleHelp);
+    }
+
     if (cancelBtn) {
       cancelBtn.addEventListener('click', function () {
         setCreateMode();
       });
     }
+
+    syncScheduleHelp();
   })();
 </script>
 {% endblock %}

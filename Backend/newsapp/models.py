@@ -1355,6 +1355,30 @@ class LiveUpdate(models.Model):
     def __str__(self):
         return f"{self.title} ({self.published_at:%d %b %Y %I:%M %p})"
 
+    @property
+    def is_scheduled(self):
+        return bool(self.is_active and self.published_at and self.published_at > timezone.now())
+
+    @property
+    def is_live(self):
+        return bool(self.is_active and self.published_at and self.published_at <= timezone.now())
+
+    @property
+    def admin_status_label(self):
+        if self.is_scheduled:
+            return "Scheduled"
+        if self.is_live:
+            return "Active"
+        return "Inactive"
+
+    @property
+    def admin_status_class(self):
+        if self.is_scheduled:
+            return "is-scheduled"
+        if self.is_live:
+            return "is-active"
+        return "is-inactive"
+
 
 class JobOpening(models.Model):
     EMPLOYMENT_TYPE_CHOICES = [

@@ -5856,7 +5856,11 @@ def live_updates_api(request):
     except (TypeError, ValueError):
         limit = 50
 
-    queryset = LiveUpdate.objects.filter(is_active=True).order_by('-published_at', '-created_at')[:limit]
+    queryset = (
+        LiveUpdate.objects
+        .filter(is_active=True, published_at__lte=timezone.now())
+        .order_by('-published_at', '-created_at')[:limit]
+    )
     serializer = LiveUpdateSerializer(queryset, many=True)
     return Response({
         'count': len(serializer.data),

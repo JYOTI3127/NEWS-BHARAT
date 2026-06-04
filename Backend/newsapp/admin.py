@@ -279,6 +279,8 @@ class LiveUpdateAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
 
     class LiveUpdateQuickForm(forms.ModelForm):
+        schedule_for_later = forms.BooleanField(required=False)
+
         class Meta:
             model = LiveUpdate
             fields = ['published_at', 'title', 'summary', 'is_active']
@@ -290,8 +292,34 @@ class LiveUpdateAdmin(admin.ModelAdmin):
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            if not self.initial.get('published_at'):
-                self.initial['published_at'] = timezone.localtime(timezone.now()).strftime('%Y-%m-%dT%H:%M')
+            instance = getattr(self, 'instance', None)
+            current_time = timezone.localtime(timezone.now()).replace(second=0, microsecond=0)
+            publish_time = None
+            if instance and instance.pk and instance.published_at:
+                publish_time = timezone.localtime(instance.published_at).replace(second=0, microsecond=0)
+                self.initial['schedule_for_later'] = publish_time > current_time
+            elif self.initial.get('published_at'):
+                publish_time = self.initial['published_at']
+            else:
+                publish_time = current_time
+            self.initial['published_at'] = publish_time.strftime('%Y-%m-%dT%H:%M')
+
+        def clean(self):
+            cleaned_data = super().clean()
+            publish_time = cleaned_data.get('published_at')
+            schedule_for_later = cleaned_data.get('schedule_for_later')
+            if schedule_for_later and publish_time and publish_time <= timezone.now():
+                self.add_error('published_at', "Choose a future date and time to schedule this live update.")
+            return cleaned_data
+
+        def save(self, commit=True):
+            instance = super().save(commit=False)
+            if not self.cleaned_data.get('schedule_for_later'):
+                now = timezone.now().replace(second=0, microsecond=0)
+                instance.published_at = now
+            if commit:
+                instance.save()
+            return instance
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
@@ -322,16 +350,21 @@ class LiveUpdateAdmin(admin.ModelAdmin):
                     self.message_user(request, success_message, level=messages.SUCCESS)
                     return redirect('/admin/newsapp/liveupdate/')
 
+        now = timezone.now()
         updates_qs = LiveUpdate.objects.all().order_by('-published_at', '-created_at')
         paginator = Paginator(updates_qs, 20)
         page_obj = paginator.get_page(request.GET.get('page', 1))
+        visible_updates_qs = updates_qs.filter(is_active=True, published_at__lte=now)
+        scheduled_updates_qs = updates_qs.filter(is_active=True, published_at__gt=now)
 
         extra_context.update({
             'live_update_form': form,
             'live_updates_page_obj': page_obj,
+            'live_updates_now': now,
             'live_updates_total': updates_qs.count(),
-            'live_updates_active_total': updates_qs.filter(is_active=True).count(),
-            'latest_live_update_at': updates_qs.first().published_at if updates_qs.exists() else None,
+            'live_updates_active_total': visible_updates_qs.count(),
+            'live_updates_scheduled_total': scheduled_updates_qs.count(),
+            'latest_live_update_at': visible_updates_qs.first().published_at if visible_updates_qs.exists() else None,
         })
         return super().changelist_view(request, extra_context=extra_context)
 
@@ -2071,7 +2104,12 @@ class NewsAdminSite(AdminSite):
             top_reporters   = ReporterMonthlyPerformance.objects.filter(
                 month=now.month, year=now.year
             ).select_related('reporter').order_by('-articles_published')[:5]
-            latest_live_update = LiveUpdate.objects.order_by('-published_at', '-created_at').first()
+            latest_live_update = (
+                LiveUpdate.objects
+                .filter(is_active=True, published_at__lte=now)
+                .order_by('-published_at', '-created_at')
+                .first()
+            )
             live_updates_total = LiveUpdate.objects.count()
             attendance_today = timezone.localdate(now)
             attendance_records_today = list(

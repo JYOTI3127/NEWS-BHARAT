@@ -1970,6 +1970,7 @@ const Header = () => {
                       const subcategoryPath = getSubcategoryPath(categoryPath, sub.label);
                       const hasTopics = Array.isArray(sub.topics) && sub.topics.length > 0;
                       const isParentOnlyGroup = isStateParentGroupLabel(finalSlug, sub.label);
+                      const isNonNavigableGroup = hasTopics || isParentOnlyGroup;
                       return (
                         <div key={sub.label} className="drawer-subcat-group">
                           <div
@@ -1977,15 +1978,15 @@ const Header = () => {
                             onClick={(e) => {
                               if (hasTopics) {
                                 toggleSubcat(e, subcatKey);
-                              } else if (!isParentOnlyGroup) {
+                              } else if (!isNonNavigableGroup) {
                                 goTo(subcategoryPath);
                               }
                             }}
                           >
                             <span
-                              className={isParentOnlyGroup ? "" : "cursor-pointer hover:text-red-600"}
+                              className={isNonNavigableGroup ? "" : "cursor-pointer hover:text-red-600"}
                               onClick={(e) => {
-                                if (isParentOnlyGroup) return;
+                                if (isNonNavigableGroup) return;
                                 e.stopPropagation();
                                 goTo(subcategoryPath);
                               }}
@@ -2301,19 +2302,53 @@ const Header = () => {
               >
                 <div className="nav-dropdown-content">
                   {Array.isArray(desktopDropdown.subcategories) &&
-                    desktopDropdown.subcategories.flatMap((sub) => {
+                    desktopDropdown.subcategories.map((sub) => {
                       const topics = Array.isArray(sub.topics) ? sub.topics : [];
-                      return topics.length > 0 ? topics : [sub.label];
-                    }).map((subcategoryLabel) => (
-                      <Link
-                        key={subcategoryLabel}
-                        to={getSubcategoryPath(desktopDropdown.path, subcategoryLabel)}
-                        className="nav-dropdown-link"
-                        onClick={() => setDesktopDropdown(null)}
-                      >
-                        {subcategoryLabel}
-                      </Link>
-                    ))}
+                      const hasTopics = topics.length > 0;
+                      const desktopSlug = String(desktopDropdown.path || "").replace(/^\/category\//, "");
+                      const isParentOnlyGroup = isStateParentGroupLabel(desktopSlug, sub.label);
+
+                      if (!hasTopics) {
+                        return (
+                          <Link
+                            key={sub.label}
+                            to={getSubcategoryPath(desktopDropdown.path, sub.label)}
+                            className="nav-dropdown-link"
+                            onClick={() => setDesktopDropdown(null)}
+                          >
+                            {sub.label}
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <div key={sub.label} className="nav-dropdown-group">
+                          {hasTopics || isParentOnlyGroup ? (
+                            <div className="nav-dropdown-group-label">{sub.label}</div>
+                          ) : (
+                            <Link
+                              to={getSubcategoryPath(desktopDropdown.path, sub.label)}
+                              className="nav-dropdown-link nav-dropdown-group-link"
+                              onClick={() => setDesktopDropdown(null)}
+                            >
+                              {sub.label}
+                            </Link>
+                          )}
+                          <div className="nav-dropdown-topics">
+                            {topics.map((topic) => (
+                              <Link
+                                key={topic}
+                                to={getSubcategoryPath(desktopDropdown.path, topic)}
+                                className="nav-dropdown-link nav-dropdown-topic-link"
+                                onClick={() => setDesktopDropdown(null)}
+                              >
+                                {topic}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   {Array.isArray(desktopDropdown.links) &&
                     desktopDropdown.links.map((linkLabel) => (
                       <Link

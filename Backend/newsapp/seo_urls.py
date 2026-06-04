@@ -38,6 +38,6 @@ urlpatterns = [
     path("api/seo/article/<slug:slug>/", seo_views.api_seo_article, name="api_seo_article"),
     path("api/seo/submit/",              seo_views.api_seo_submit,   name="api_seo_submit"),
 
-    path("category/<slug:slug>/", seo_views.view_category_detail, name="category_detail_page"),
-    path("<slug:category_slug>/<slug:slug>/", seo_views.view_article_detail, name="article_detail_page"),
+    re_path(r"^category/(?P<slug>[-\w]+)/?$", seo_views.view_category_detail, name="category_detail_page"),
+    re_path(r"^(?P<category_slug>[-\w]+)/(?P<slug>[-\w]+)/?$", seo_views.view_article_detail, name="article_detail_page"),
 ]

@@ -241,6 +241,9 @@
 <input type="file" id="fileInput" onchange="hfile(event)" style="display:none">
 <input type="file" id="imgInput" accept="image/*" onchange="himg(event)" style="display:none">
 
+{{ staff_users_json|json_script:"inbox-users-data" }}
+{{ conversations_json|json_script:"inbox-conversations-data" }}
+
 <script>
 // ── Django Data ───────────────────────────────────────
 var CU = {
@@ -251,9 +254,9 @@ var CU = {
   role:   "{% if request.user.is_superuser %}Superuser{% else %}Staff{% endif %}"
 };
 
-var USERS = {{ staff_users_json|safe }};
+var USERS = JSON.parse(document.getElementById('inbox-users-data').textContent);
 
-var CONVS = {{ conversations_json|safe }};
+var CONVS = JSON.parse(document.getElementById('inbox-conversations-data').textContent);
 var ACTIVE_CONV_ID = {{ active_conversation_id|default:"null" }};
 
 // ── State ─────────────────────────────────────────────

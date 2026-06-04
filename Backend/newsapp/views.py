@@ -832,7 +832,7 @@ def _flatten_category_search_results(category, value, query, parent_path=''):
     results = []
     query = str(query or '').strip().lower()
     category_slug = clean_url_segment(category.slug)
-    base_url = f"/category/{category_slug}/"
+    base_url = f"/category/{category_slug}"
 
     def normalize_path(path):
         parts = [part.strip() for part in str(path or '').split('>') if part.strip()]
@@ -1947,7 +1947,7 @@ def normalize_article_canonical(raw_value, slug):
 def _build_category_seo_head(category):
     base_url = str(getattr(settings, 'SEO_SITE_URL', 'https://news4bharat.com') or 'https://news4bharat.com').rstrip('/')
     category_slug = clean_url_segment(getattr(category, 'slug', ''))
-    canonical_url = f"{base_url}/category/{category_slug}/" if category_slug else f"{base_url}/category/"
+    canonical_url = f"{base_url}/category/{category_slug}" if category_slug else f"{base_url}/category"
     title = (getattr(category, 'meta_title', '') or getattr(category, 'name', '')).strip()
     description = (getattr(category, 'meta_description', '') or getattr(category, 'description', '') or '').strip()
 
@@ -3498,7 +3498,7 @@ def live_category_search_api(request):
                     "parent_category": None,
                     "parent_slug": None,
                     "path": cat.name,
-                    "url": f"/category/{clean_url_segment(cat.slug)}/",
+                    "url": f"/category/{clean_url_segment(cat.slug)}",
                     "article_count": cat.article_count,
                     "description": cat.description or "",
                 }
@@ -3526,7 +3526,7 @@ def live_category_search_api(request):
             "slug": cat.slug,
             "description": cat.description or "",
             "article_count": cat.article_count,
-            "url": f"/category/{clean_url_segment(cat.slug)}/",
+            "url": f"/category/{clean_url_segment(cat.slug)}",
             "sub_categories": sub_tree if isinstance(sub_tree, (dict, list)) else {},
             "matched_sub_categories": _category_tree_match_paths(sub_tree, query),
         }
@@ -4445,8 +4445,8 @@ def inbox_view(request):
         'active_conversation': active_conversation,
         'active_conversation_id': active_conversation.id if active_conversation else None,
         'messages':            conv_messages,
-        'staff_users_json':    json.dumps(staff_users_data),
-        'conversations_json':  json.dumps(conversations_data),
+        'staff_users_json':    staff_users_data,
+        'conversations_json':  conversations_data,
     })
 
 

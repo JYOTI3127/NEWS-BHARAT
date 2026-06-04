@@ -63,7 +63,7 @@ class CategorySitemap(Sitemap):
         return Category.objects.filter(status='active')
 
     def location(self, obj):
-        return f"/category/{clean_url_segment(obj.slug)}/"
+        return f"/category/{clean_url_segment(obj.slug)}"
 
 
 class StaticSitemap(Sitemap):
@@ -73,14 +73,14 @@ class StaticSitemap(Sitemap):
     def items(self):
         return [
             '/',
-            '/about-us/',
-            '/contact-us/',
-            '/privacy-policy/',
-            '/terms-and-conditions/',
-            '/disclaimer/',
-            '/editorial-policy/',
-            '/founders-note/',
-            '/careers/',
+            '/about-us',
+            '/contact-us',
+            '/privacy-policy',
+            '/terms-and-conditions',
+            '/disclaimer',
+            '/editorial-policy',
+            '/founders-note',
+            '/careers',
         ]
 
     def location(self, item):

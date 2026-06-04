@@ -347,8 +347,8 @@ def article_path(article_or_slug, category_slug: str = None) -> str:
         slug = clean_url_segment(article_or_slug)
     category_slug = clean_url_segment(category_slug)
     if category_slug:
-        return f"/{category_slug}/{slug}/"
-    return f"/article/{slug}/"
+        return f"/{category_slug}/{slug}"
+    return f"/article/{slug}"
 
 
 def article_url(article_or_slug, base: str = None, category_slug: str = None) -> str:
@@ -678,7 +678,7 @@ class SitemapEngine:
             if not category_slug:
                 continue
             url = ET.SubElement(root, "url")
-            ET.SubElement(url, "loc").text        = f"{base}/category/{category_slug}/"
+            ET.SubElement(url, "loc").text        = f"{base}/category/{category_slug}"
             ET.SubElement(url, "changefreq").text = "hourly"
             ET.SubElement(url, "priority").text   = "0.8"
 
@@ -691,14 +691,14 @@ class SitemapEngine:
         today = datetime.utcnow().date().isoformat()
         pages = [
             ("/",               "1.0", "always"),
-            ("/about-us/",             "1.0", "daily"),
-            ("/contact-us/",           "1.0", "daily"),
-            ("/privacy-policy/",       "1.0", "daily"),
-            ("/terms-and-conditions/", "1.0", "daily"),
-            ("/disclaimer/",           "1.0", "daily"),
-            ("/editorial-policy/",     "1.0", "daily"),
-            ("/founders-note/",        "1.0", "daily"),
-            ("/careers/",              "1.0", "daily"),
+            ("/about-us",             "1.0", "daily"),
+            ("/contact-us",           "1.0", "daily"),
+            ("/privacy-policy",       "1.0", "daily"),
+            ("/terms-and-conditions", "1.0", "daily"),
+            ("/disclaimer",           "1.0", "daily"),
+            ("/editorial-policy",     "1.0", "daily"),
+            ("/founders-note",        "1.0", "daily"),
+            ("/careers",              "1.0", "daily"),
         ]
         root = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
         for path, priority, freq in pages:
@@ -927,7 +927,7 @@ class SchemaEngine:
         items    = [{"id": 1, "name": "Home", "url": base}]
         if first_cat:
             items.append({"id": 2, "name": str(first_cat),
-                          "url": f"{base}/category/{clean_url_segment(first_cat.slug)}/"})
+                          "url": f"{base}/category/{clean_url_segment(first_cat.slug)}"})
         items.append({"id": len(items) + 1, "name": article.title,
                       "url": article_url(article, base)})
         return {

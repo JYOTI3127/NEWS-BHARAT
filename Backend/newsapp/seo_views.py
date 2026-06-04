@@ -161,12 +161,24 @@ def view_rss_category(request, category_slug):
 
 @require_GET
 def view_article_detail(request, category_slug, slug):
+    normalized_path = request.path.rstrip('/')
+    if normalized_path != request.path:
+        query_string = request.META.get('QUERY_STRING', '').strip()
+        if query_string:
+            normalized_path = f"{normalized_path}?{query_string}"
+        return redirect(normalized_path, permanent=True)
     from newsapp.views import article_detail_page
     return article_detail_page(request, slug, category_slug=category_slug)
 
 
 @require_GET
 def view_category_detail(request, slug):
+    normalized_path = request.path.rstrip('/')
+    if normalized_path != request.path:
+        query_string = request.META.get('QUERY_STRING', '').strip()
+        if query_string:
+            normalized_path = f"{normalized_path}?{query_string}"
+        return redirect(normalized_path, permanent=True)
     from newsapp.views import category_detail_page
     return category_detail_page(request, slug)
 

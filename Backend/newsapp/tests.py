@@ -1341,17 +1341,17 @@ class SeoPageRenderTests(TestCase):
         self.article.categories.add(self.category)
 
     def test_article_page_renders_canonical_tag(self):
-        response = self.client.get('/politics/cabinet-meeting-updates/')
+        response = self.client.get('/politics/cabinet-meeting-updates')
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            '<link rel="canonical" href="https://news4bharat.com/politics/cabinet-meeting-updates/">',
+            '<link rel="canonical" href="https://news4bharat.com/politics/cabinet-meeting-updates">',
             html=False,
         )
 
     def test_category_page_renders_saved_meta_and_canonical(self):
-        response = self.client.get('/category/politics/')
+        response = self.client.get('/category/politics')
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '<title>Politics News Today</title>', html=False)
@@ -1362,7 +1362,7 @@ class SeoPageRenderTests(TestCase):
         )
         self.assertContains(
             response,
-            '<link rel="canonical" href="https://news4bharat.com/category/politics/">',
+            '<link rel="canonical" href="https://news4bharat.com/category/politics">',
             html=False,
         )
 
@@ -1372,12 +1372,12 @@ class StaticSitemapTests(TestCase):
     def test_static_sitemap_uses_trailing_slash_urls(self):
         sitemap_xml = SitemapEngine.static_pages()
 
-        self.assertIn('https://news4bharat.com/contact-us/', sitemap_xml)
-        self.assertIn('https://news4bharat.com/terms-and-conditions/', sitemap_xml)
-        self.assertIn('https://news4bharat.com/disclaimer/', sitemap_xml)
-        self.assertIn('https://news4bharat.com/editorial-policy/', sitemap_xml)
-        self.assertIn('https://news4bharat.com/founders-note/', sitemap_xml)
-        self.assertIn('https://news4bharat.com/careers/', sitemap_xml)
+        self.assertIn('https://news4bharat.com/contact-us', sitemap_xml)
+        self.assertIn('https://news4bharat.com/terms-and-conditions', sitemap_xml)
+        self.assertIn('https://news4bharat.com/disclaimer', sitemap_xml)
+        self.assertIn('https://news4bharat.com/editorial-policy', sitemap_xml)
+        self.assertIn('https://news4bharat.com/founders-note', sitemap_xml)
+        self.assertIn('https://news4bharat.com/careers', sitemap_xml)
         self.assertNotIn('https://news4bharat.com/contact-us</loc>', sitemap_xml)
         self.assertNotIn('https://news4bharat.com/terms-and-conditions</loc>', sitemap_xml)
 

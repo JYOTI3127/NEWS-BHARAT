@@ -8,6 +8,50 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 
 
+def _build_article_dispatch_payload(article):
+    if article is None:
+        return None
+
+    from .serializers import ArticleSerializer
+
+    serialized = ArticleSerializer(article).data
+    primary_category = serialized.get("primary_category_details") or serialized.get("primary_category") or {}
+    tags = serialized.get("tags_list")
+    if not isinstance(tags, list):
+        raw_tags = serialized.get("tags") or ""
+        tags = [tag.strip() for tag in str(raw_tags).split(",") if tag.strip()]
+
+    author_name = (
+        serialized.get("display_author_name")
+        or serialized.get("author_display_name")
+        or getattr(getattr(article, "author", None), "get_full_name", lambda: "")()
+        or getattr(getattr(article, "author", None), "username", "")
+    )
+
+    return {
+        "id": serialized.get("id"),
+        "title": serialized.get("title") or "",
+        "slug": serialized.get("slug") or "",
+        "subtitle": serialized.get("subtitle") or "",
+        "content_html": serialized.get("content_html") or "",
+        "image_url": serialized.get("image_url") or "",
+        "image_alt": serialized.get("image_alt") or "",
+        "primary_category": {
+            "id": primary_category.get("id"),
+            "name": primary_category.get("name") or "",
+            "slug": primary_category.get("slug") or "",
+        } if primary_category else None,
+        "tags": tags,
+        "author_name": author_name or "",
+        "author_display_name": serialized.get("author_display_name") or author_name or "",
+        "published_at": serialized.get("published_at"),
+        "updated_at": serialized.get("updated_at"),
+        "canonical_url": serialized.get("canonical_url") or "",
+        "meta_title": serialized.get("meta_title") or "",
+        "meta_description": serialized.get("meta_description") or "",
+    }
+
+
 def _is_github_dispatch_url(url):
     return "api.github.com/repos/" in url and url.rstrip("/").endswith("/dispatches")
 
@@ -67,6 +111,7 @@ def trigger_frontend_build(*, reason="article_updated", article=None, force=Fals
         "build_mode": "immediate",
         "article_id": getattr(article, "id", None),
         "slug": getattr(article, "slug", ""),
+        "article": _build_article_dispatch_payload(article),
         "previous_status": getattr(article, "_build_previous_status", None),
         "status": getattr(article, "status", ""),
     }

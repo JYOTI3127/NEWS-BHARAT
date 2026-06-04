@@ -7,7 +7,7 @@ const getCanonicalPath = (path = "/") => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   if (normalized === "/") return "/";
   const [pathname, query = ""] = normalized.split("?");
-  const cleanPathname = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  const cleanPathname = pathname.replace(/\/+$/, "");
   return query ? `${cleanPathname}?${query}` : cleanPathname;
 };
 

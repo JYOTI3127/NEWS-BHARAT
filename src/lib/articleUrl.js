@@ -80,13 +80,13 @@ export const isArticlePath = (value) => {
 export const getArticlePath = (article) => {
   const publicUrl = getValidSiteUrl(article?.public_url);
   if (publicUrl) {
-    const cleanPath = `/${getCleanSegments(publicUrl.pathname).join("/")}/`;
+    const cleanPath = `/${getCleanSegments(publicUrl.pathname).join("/")}`;
     if (isArticlePath(cleanPath)) return cleanPath;
   }
 
   const canonicalUrl = getValidSiteUrl(article?.canonical_url);
   if (canonicalUrl) {
-    const cleanPath = `/${getCleanSegments(canonicalUrl.pathname).join("/")}/`;
+    const cleanPath = `/${getCleanSegments(canonicalUrl.pathname).join("/")}`;
     if (isArticlePath(cleanPath)) return cleanPath;
   }
 
@@ -94,7 +94,7 @@ export const getArticlePath = (article) => {
     .trim()
     .replace(/^\/+|\/+$/g, "");
   const categorySlug = getArticleCategorySlug(article);
-  const derivedPath = categorySlug && slug ? `/${categorySlug}/${slug}/` : "";
+  const derivedPath = categorySlug && slug ? `/${categorySlug}/${slug}` : "";
 
   return isArticlePath(derivedPath) ? derivedPath : "";
 };
@@ -107,7 +107,7 @@ export const getAbsoluteArticleUrl = (article) => {
 export const getCanonicalArticleUrl = (article) => {
   const canonical = getValidSiteUrl(article?.canonical_url);
   if (canonical) {
-    const cleanPath = `/${getCleanSegments(canonical.pathname).join("/")}/`;
+    const cleanPath = `/${getCleanSegments(canonical.pathname).join("/")}`;
     if (isArticlePath(cleanPath)) {
       return `${canonical.origin}${cleanPath}`;
     }

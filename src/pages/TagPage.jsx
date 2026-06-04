@@ -82,10 +82,10 @@ const getArticleRouteFromUrlLikeValue = (value) => {
 
   try {
     const parsed = new URL(raw, "https://news4bharat.com");
-    const cleanPath = `/${getCleanSegments(parsed.pathname).join("/")}/`;
+    const cleanPath = `/${getCleanSegments(parsed.pathname).join("/")}`;
     return isArticlePath(cleanPath) ? cleanPath : "";
   } catch {
-    const cleanPath = `/${getCleanSegments(raw).join("/")}/`;
+    const cleanPath = `/${getCleanSegments(raw).join("/")}`;
     return isArticlePath(cleanPath) ? cleanPath : "";
   }
 };
@@ -110,7 +110,7 @@ const getArticleHref = (article) => {
   ).trim();
 
   if (slug && categorySlug) {
-    const derivedPath = `/${categorySlug}/${slug}/`;
+    const derivedPath = `/${categorySlug}/${slug}`;
     if (isArticlePath(derivedPath)) return derivedPath;
   }
 

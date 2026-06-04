@@ -622,8 +622,8 @@ export default function CategoryPage() {
   const categorySeoTitle = getCategorySeoTitle(category, categoryDisplayName);
   const categorySeoDescription = getCategorySeoDescription(category, categoryDisplayName);
   const categoryCanonicalUrl = subFilter
-    ? `${SITE_URL}/category/${slug}/?subcategory=${encodeURIComponent(subFilter)}`
-    : `${SITE_URL}/category/${slug}/`;
+    ? `${SITE_URL}/category/${slug}?subcategory=${encodeURIComponent(subFilter)}`
+    : `${SITE_URL}/category/${slug}`;
   const shellStyle = {
     width: "var(--site-content-width)",
     maxWidth: "var(--site-content-width)",

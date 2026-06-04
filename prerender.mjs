@@ -108,16 +108,22 @@ const getTagRoute = (tag) => {
   return normalized ? `/tag/${encodeURIComponent(normalized)}` : ''
 }
 
+const getPrerenderOutputPath = (baseDir, route) => {
+  const cleanSegments = getCleanPathSegments(route)
+  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')
+  return path.join(baseDir, '__prerender', `${cleanSegments.join('/')}.html`)
+}
+
 const toArticleRouteFromUrl = (value) => {
   const normalized = String(value || '').trim()
   if (!normalized) return ''
 
   try {
     const parsed = new URL(normalized, 'https://news4bharat.com')
-    const cleanPath = `/${getCleanPathSegments(parsed.pathname).join('/')}/`
+    const cleanPath = `/${getCleanPathSegments(parsed.pathname).join('/')}`
     return isArticlePath(cleanPath) ? cleanPath : ''
   } catch {
-    const cleanPath = `/${getCleanPathSegments(normalized).join('/')}/`
+    const cleanPath = `/${getCleanPathSegments(normalized).join('/')}`
     return isArticlePath(cleanPath) ? cleanPath : ''
   }
 }
@@ -194,7 +200,7 @@ const getArticleRoutes = (article) => {
   const slug = normalizeSlugToken(article?.slug || article?.article_slug || article?.articleSlug)
   const categorySlug = getArticleCategorySlug(article)
   if (slug && categorySlug) {
-    const derivedPath = `/${categorySlug}/${slug}/`
+    const derivedPath = `/${categorySlug}/${slug}`
     if (isArticlePath(derivedPath)) {
       routes.add(derivedPath)
     }
@@ -375,6 +381,19 @@ const toAbsoluteUrl = (value) => {
     return new URL(normalized, BASE_URL).toString()
   } catch {
     return ''
+  }
+}
+
+const toCanonicalSiteUrl = (value) => {
+  const absolute = toAbsoluteUrl(value)
+  if (!absolute) return ''
+  try {
+    const parsed = new URL(absolute)
+    if (parsed.origin !== BASE_URL) return absolute
+    parsed.pathname = `/${getCleanPathSegments(parsed.pathname).join('/')}`
+    return parsed.toString().replace(/\/$/, '')
+  } catch {
+    return absolute
   }
 }
 
@@ -850,7 +869,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       )
 
       const image = toAbsoluteUrl(endpointOg.image || endpointTwitter.image || article.image_url || article.image) || DEFAULT_IMAGE
-      const canonical = toAbsoluteUrl(endpointMeta.canonical) || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
+      const canonical = toCanonicalSiteUrl(endpointMeta.canonical) || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
         ? article.secondary_keywords_list.map((item) => normalizeKeywordPhrase(item))
         : String(article.secondary_keywords || '')
@@ -939,7 +958,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       description:
         getCategorySeoDescription(category, catName) ||
         `Read the latest ${catName} news, updates, analysis and explainers on ${SITE_NAME}.`,
-      canonical: `${BASE_URL}/category/${slug}/`,
+      canonical: `${BASE_URL}/category/${slug}`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
       robots: 'index,follow,max-image-preview:large',
@@ -1590,9 +1609,9 @@ async function renderInBatches(prerenderer, routes, articleMap, categoryMap, sit
           rendered.forEach(({ route: r, html }) => {
             const cleanHtml = cleanupPrerenderedHtml(html, r, articleMap, categoryMap, siteData)
 
-            const outputDir = path.join(__dirname, 'build', r)
-            fs.mkdirSync(outputDir, { recursive: true })
-            fs.writeFileSync(path.join(outputDir, 'index.html'), cleanHtml, 'utf8')
+            const outputPath = getPrerenderOutputPath(path.join(__dirname, 'build'), r)
+            fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+            fs.writeFileSync(outputPath, cleanHtml, 'utf8')
 
             console.log(`  OK ${r}`)
             success++
@@ -1624,8 +1643,7 @@ function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
   const shellHtml = fs.readFileSync(shellPath, 'utf8')
 
   Object.keys(STATIC_PAGE_META).forEach((route) => {
-    const outputDir = path.join(__dirname, 'build', route)
-    const outputPath = path.join(outputDir, 'index.html')
+    const outputPath = getPrerenderOutputPath(path.join(__dirname, 'build'), route)
 
     if (fs.existsSync(outputPath)) {
       console.log(`  STATIC SEO skipped existing ${route}`)
@@ -1640,7 +1658,7 @@ function ensureStaticPageHtml(articleMap, categoryMap, siteData) {
       siteData
     )
 
-    fs.mkdirSync(outputDir, { recursive: true })
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true })
     fs.writeFileSync(outputPath, staticHtml, 'utf8')
     console.log(`  STATIC SEO ${route}`)
   })

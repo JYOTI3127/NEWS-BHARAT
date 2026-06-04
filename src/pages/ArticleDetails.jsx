@@ -366,11 +366,24 @@ const toAbsoluteSiteUrl = (value) => {
   try { return new URL(normalized, SITE_URL).toString(); } catch { return null; }
 };
 
+const toCanonicalSiteUrl = (value) => {
+  const absolute = toAbsoluteSiteUrl(value);
+  if (!absolute) return null;
+  try {
+    const parsed = new URL(absolute);
+    if (parsed.origin !== SITE_URL) return absolute;
+    parsed.pathname = `/${getCleanSegments(parsed.pathname).join("/")}`;
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return absolute;
+  }
+};
+
 const buildCanonicalFromRoute = (categorySlug, articleSlug) => {
   const category = normalizeSlugValue(categorySlug);
   const slug = normalizeSlugValue(articleSlug);
   if (!category || !slug) return "";
-  return `${SITE_URL}/${category}/${slug}/`;
+  return `${SITE_URL}/${category}/${slug}`;
 };
 
 const getSeoEndpointMeta = (payload) =>
@@ -2320,7 +2333,7 @@ export default function ArticleDetails() {
   const breadcrumbCategoryLabel = categoryName || moreInCategoryLabel || normalizedCategorySlug.replace(/-/g, " ");
   const isWorldNewsArticle = ["world-news", "worldnews"].includes(normalizedCategorySlug);
   const routeCanonicalUrl = buildCanonicalFromRoute(normalizedCategorySlug || categorySlug, article?.slug || articleSlug);
-  const canonicalUrl = toAbsoluteSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
+  const canonicalUrl = toCanonicalSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
   const articlePath = getArticlePath(article) || (routeCanonicalUrl ? new URL(routeCanonicalUrl).pathname : "");
   const articleUrlForSchema = canonicalUrl || (articlePath ? `${SITE_URL}${articlePath}` : "");
   const displayMoreArticles = categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;

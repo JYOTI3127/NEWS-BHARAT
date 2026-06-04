@@ -1660,7 +1660,7 @@ const prerenderer = new Prerenderer({
   },
   renderer: new PuppeteerRenderer({
     renderAfterDocumentEvent: 'prerender-ready',
-  timeout: 15000, 
+    timeout: 15000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -1670,10 +1670,6 @@ const prerenderer = new Prerenderer({
     consoleHandler: () => {},
   }),
 })
-const { success, failed, failedRoutes } = await renderInBatches(
-  prerenderer, routes, articleMap, categoryMap, siteData, 2  // 3 से 2
-)
-
 await prerenderer.initialize()
 console.log('Prerenderer initialized\n')
 

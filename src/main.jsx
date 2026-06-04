@@ -4,30 +4,30 @@ import App from './App.jsx'
 import { HelmetProvider } from "react-helmet-async";
 import { fetchArticles, fetchCategories } from './lib/api.js';
 
+// ✅ FIXED: Prerender detection
 const isPrerenderContext = () => {
   if (typeof window === "undefined") return false;
   const userAgent = window.navigator?.userAgent || "";
   return /HeadlessChrome|prerender/i.test(userAgent);
 };
 
+// ✅ FIXED: Immediately set false, will be set true when ready
 if (typeof window !== "undefined" && isPrerenderContext()) {
   window.prerenderReady = false;
-  document.addEventListener("prerender-ready", () => {
-    window.prerenderReady = true;
-  });
 }
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0,
-      gcTime: 0,
-      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: false,  // prerender में false रखें
       refetchOnMount: true,
     }
   }
 })
 
+// Prefetch करें
 void queryClient.prefetchQuery({
   queryKey: ['articles'],
   queryFn: fetchArticles,

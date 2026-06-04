@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { signalPrerenderReady } from '../lib/prerender';
 import {
   Clock, User, Facebook, Link2,
   ChevronRight, Newspaper, Tag,
@@ -1965,7 +1966,9 @@ export default function ArticleDetails() {
       } catch (error) {
         if (error.name === "AbortError") return;
         setLoadError(true);
-      }
+      } finally {
+      signalPrerenderReady(); // ✅ yeh add karo
+    }
     };
     loadArticle();
     return () => controller.abort();

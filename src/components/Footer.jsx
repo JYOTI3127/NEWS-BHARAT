@@ -163,10 +163,7 @@ export default function Footer() {
           </Link>
 
           <p className="ft-desc">
-            In An Era Where Information Moves Faster Than Verification,
-            And Opinions Often Overshadow Facts, News4bharat Was Founded
-            With A Clear Purpose: To Restore Clarity, Credibility, And
-            Responsibility In News Reporting.
+            News4Bharat is a leading digital news platform delivering credible, timely, and insightful coverage of India’s most important developments. From politics, policy, business, startups, economy, technology, education, and governance to social impact stories, we bring accurate reporting and in-depth analysis that matters. Our mission is to keep readers informed with trustworthy journalism, fact-based news, and meaningful stories shaping the future of Bharat.
           </p>
 
           <div className="ft-follow-label">FOLLOW US</div>
@@ -231,76 +228,76 @@ export default function Footer() {
             {Object.entries(footerLinks)
               .filter(([heading]) => heading !== "MORE")
               .map(([heading, links]) => (
-              <div className="ft-col" key={heading}>
-                <div className="ft-col-head">
-                  {heading === "State_of_Bharat" ? (
-                    <Link
-                      to="/category/state-of-bharat"
-                      className="ft-col-title ft-col-title-tight ft-col-title-link"
-                    >
-                      States of Bharat
-                    </Link>
-                  ) : heading === "Bharat_Opinion" ? (
-                    <Link
-                      to="/category/bharat-opinions"
-                      className="ft-col-title ft-col-title-tight ft-col-title-link"
-                    >
-                      Bharats Opinions
-                    </Link>
-                  ) : (
-                    <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>
-                      {heading.replaceAll("_", " ")}
-                    </span>
-                  )}
-                  <div className="ft-col-underline">
-                    <span className="u-r" />
-                    <span className="u-b" />
-                    <span className="u-y" />
-                  </div>
-                </div>
-                <ul className="ft-col-list">
-                  {links.map((item, index) => {
-                    return (
-                      <li key={index}>
-                        <Link
-                          to={
-                            item.subcategory
-                              ? `/category/${item.slug}?subcategory=${item.subcategory}`
-                              : `/category/${item.slug}`
-                          }
-                          className="ft-col-link"
-                        >
-                          {item.name}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {heading === "State_of_Bharat" && Array.isArray(footerLinks.MORE) && (
-                  <div className="ft-sub-col">
-                    <div className="ft-col-head">
-                      <span className="ft-col-title">MORE</span>
-                      <div className="ft-col-underline">
-                        <span className="u-r" />
-                        <span className="u-b" />
-                        <span className="u-y" />
-                      </div>
+                <div className="ft-col" key={heading}>
+                  <div className="ft-col-head">
+                    {heading === "State_of_Bharat" ? (
+                      <Link
+                        to="/category/state-of-bharat"
+                        className="ft-col-title ft-col-title-tight ft-col-title-link"
+                      >
+                        States of Bharat
+                      </Link>
+                    ) : heading === "Bharat_Opinion" ? (
+                      <Link
+                        to="/category/bharat-opinions"
+                        className="ft-col-title ft-col-title-tight ft-col-title-link"
+                      >
+                        Bharats Opinions
+                      </Link>
+                    ) : (
+                      <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>
+                        {heading.replaceAll("_", " ")}
+                      </span>
+                    )}
+                    <div className="ft-col-underline">
+                      <span className="u-r" />
+                      <span className="u-b" />
+                      <span className="u-y" />
                     </div>
-                    <ul className="ft-col-list">
-                      {footerLinks.MORE.map((item, index) => (
-                        <li key={`more-${index}`}>
-                          <Link to={`/category/${item.slug}`} className="ft-col-link">
+                  </div>
+                  <ul className="ft-col-list">
+                    {links.map((item, index) => {
+                      return (
+                        <li key={index}>
+                          <Link
+                            to={
+                              item.subcategory
+                                ? `/category/${item.slug}?subcategory=${item.subcategory}`
+                                : `/category/${item.slug}`
+                            }
+                            className="ft-col-link"
+                          >
                             {item.name}
                           </Link>
                         </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                      );
+                    })}
+                  </ul>
 
-              </div>
-            ))}
+                  {heading === "State_of_Bharat" && Array.isArray(footerLinks.MORE) && (
+                    <div className="ft-sub-col">
+                      <div className="ft-col-head">
+                        <span className="ft-col-title">MORE</span>
+                        <div className="ft-col-underline">
+                          <span className="u-r" />
+                          <span className="u-b" />
+                          <span className="u-y" />
+                        </div>
+                      </div>
+                      <ul className="ft-col-list">
+                        {footerLinks.MORE.map((item, index) => (
+                          <li key={`more-${index}`}>
+                            <Link to={`/category/${item.slug}`} className="ft-col-link">
+                              {item.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                </div>
+              ))}
           </div>
 
           {/* Horizontal line above policy pills */}

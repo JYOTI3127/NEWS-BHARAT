@@ -19,7 +19,7 @@ concurrency:
 jobs:
   incremental-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -84,16 +84,29 @@ jobs:
           ARTICLE_SLUG: ${{ steps.resolve_slug.outputs.slug }}
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Deploy only changed pages over FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Deploy only changed pages
+        uses: appleboy/scp-action@master
         with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: ${{ secrets.HOSTINGER_FTP_PORT }}
-          protocol: ${{ secrets.HOSTINGER_FTP_PROTOCOL }}
-          local-dir: build-incremental/
-          server-dir: ${{ secrets.HOSTINGER_SERVER_DIR }}
-          exclude: |
-            **/.htaccess
-            **/robots.txt
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          source: "build-incremental/*"
+          target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
+          strip_components: 1
+          overwrite: true
+          tar_dereference: true
+          timeout: 60s
+          command_timeout: 10m
+
+      - name: Bust cache
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          timeout: 180s
+          command_timeout: 10m
+          script: |
+            touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"

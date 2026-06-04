@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, Profiler } from 'react';
 import { Link } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
+import { signalPrerenderReady } from '../lib/prerender';
 import {
   fetchPaginatedArticles,
   fetchCategories,

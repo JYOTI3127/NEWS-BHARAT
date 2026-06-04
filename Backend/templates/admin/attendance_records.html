@@ -10,7 +10,7 @@
     <div>
       <div class="perm-breadcrumb">Dashboard / Team / Attendance / <span>Records</span></div>
       <div class="perm-title">Attendance Records</div>
-      <div class="perm-subtitle">Review monthly attendance summary, working days, offs and active time for every staff member.</div>
+      <div class="perm-subtitle">Review a simple attendance summary for each staff member.</div>
     </div>
     <a href="/admin/attendance/" class="btn-perm-add">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15">
@@ -23,7 +23,7 @@
   <div class="perm-table-card">
     <div class="perm-table-toolbar attendance-toolbar-stack">
       <div class="perm-toolbar-title">
-        Monthly Attendance Summary
+        Attendance Overview
         <span>({{ total_records }} entries)</span>
       </div>
 
@@ -50,21 +50,18 @@
       <table class="perm-table attendance-table">
         <thead>
           <tr>
-            <th>Month</th>
             <th>User</th>
-            <th>Days Present</th>
-            <th>Days Absent</th>
-            <th>Monthly Offs</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Off Days</th>
             <th>Working Days</th>
             <th>{{ active_time_label }}</th>
-            <th>Attendance %</th>
             <th>Live Status</th>
           </tr>
         </thead>
         <tbody>
           {% for row in records %}
           <tr>
-            <td><strong>{{ month_label }}</strong></td>
             <td>
               <div class="attendance-user-cell">
                 <div class="attendance-user-avatar">{{ row.user.get_full_name|default:row.user.username|slice:":1"|upper }}</div>
@@ -77,18 +74,17 @@
             <td>{{ row.present_days }}</td>
             <td>{{ row.absent_days }}</td>
             <td>{{ row.monthly_offs }}</td>
-            <td>{{ row.working_days }}</td>
+            <td><span class="attendance-table-chip attendance-table-chip--days">{{ row.working_days_display }}</span></td>
             <td>{{ row.duration }}</td>
-            <td>{{ row.attendance_rate }}%</td>
             <td>
-              <span class="attendance-status-pill {% if row.is_active %}is-online{% else %}is-offline{% endif %}">
+              <span class="attendance-status-pill attendance-table-chip {% if row.is_active %}is-online{% else %}is-offline{% endif %}">
                 {% if row.is_active %}Online{% else %}Closed{% endif %}
               </span>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="attendance-empty">No attendance records match the current filters.</td>
+            <td colspan="7" class="attendance-empty">No attendance records match the current filters.</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -57,7 +57,7 @@ from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
 from django.utils.text import slugify
-from .attendance import get_attendance_snapshot, pause_attendance, touch_attendance
+from .attendance import clock_in_attendance, get_attendance_snapshot, pause_attendance, touch_attendance
 from django.core import signing
 
 User = get_user_model()
@@ -4899,6 +4899,23 @@ def attendance_status_api(request):
         "is_active": snapshot["is_active"],
         "display_seconds": snapshot["display_seconds"],
         "started_at": snapshot["started_at"].isoformat() if snapshot["started_at"] else None,
+        "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
+        "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
+        "last_activity_at": snapshot["last_activity_at"].isoformat() if snapshot["last_activity_at"] else None,
+    })
+
+
+@staff_member_required
+def attendance_clock_in_api(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    clock_in_attendance(request.user)
+    snapshot = get_attendance_snapshot(request.user)
+    return JsonResponse({
+        "status": "clocked_in",
+        "is_active": snapshot["is_active"],
+        "display_seconds": snapshot["display_seconds"],
         "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
         "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
         "last_activity_at": snapshot["last_activity_at"].isoformat() if snapshot["last_activity_at"] else None,

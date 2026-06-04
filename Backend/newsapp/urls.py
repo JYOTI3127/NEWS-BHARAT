@@ -51,6 +51,7 @@ urlpatterns = [
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='api_notification_mark_all_read'),
     path('notifications/status/', views.notification_status_api, name='api_notification_status'),
     path('attendance/status/', views.attendance_status_api, name='attendance_status'),
+    path('attendance/clock-in/', views.attendance_clock_in_api, name='attendance_clock_in'),
     path('attendance/heartbeat/', views.attendance_heartbeat_api, name='attendance_heartbeat'),
     path('attendance/disconnect/', views.attendance_disconnect_api, name='attendance_disconnect'),
     path('admin/online-status/', online_status_view, name='online_status'),

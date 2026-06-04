@@ -237,6 +237,153 @@
      ROW 2 — RECENT ARTICLES + BAR CHART
      (Homepage Control se UPAR)
 ══════════════════════════════════════════ -->
+<div class="team-dashboard-section">
+  <div class="dash-card team-dashboard-card">
+    <div class="dash-card-header">
+      <div>
+        <h3 class="dash-card-title">Our Team</h3>
+        <p class="attendance-dashboard-subtitle">
+          {% if user.is_superuser %}
+            Open any card to view that team member's profile.
+          {% else %}
+            Team cards are visible in read-only mode for your role.
+          {% endif %}
+        </p>
+      </div>
+      <a href="/admin/auth/user/" class="dash-card-link">Open team &#x203A;</a>
+    </div>
+
+    <div class="team-member-grid">
+      {% for member in team_cards %}
+        {% if user.is_superuser %}
+          <a href="{% url 'newsadmin:user_profile' member.user.pk %}" class="team-member-card team-member-card--link">
+        {% else %}
+          <div class="team-member-card team-member-card--readonly">
+        {% endif %}
+            <div class="team-member-card__head">
+              <div class="team-member-card__identity">
+                <div class="team-member-card__avatar">
+                  {% if member.photo_url %}
+                    <img src="{{ member.photo_url }}" alt="{{ member.user.get_full_name|default:member.user.username }}">
+                  {% else %}
+                    {{ member.user.get_full_name|default:member.user.username|slice:":1"|upper }}
+                  {% endif %}
+                </div>
+                <div class="team-member-card__title">
+                  <div class="team-member-card__name">{{ member.user.get_full_name|default:member.user.username }}</div>
+                  <div class="team-member-card__role">{{ member.role_name }}</div>
+                </div>
+              </div>
+              <span class="team-member-card__badge {% if member.is_online %}is-online{% else %}is-offline{% endif %}">
+                {% if member.is_online %}Working{% else %}Offline{% endif %}
+              </span>
+            </div>
+
+            <div class="team-member-card__meta">
+              <span>{{ member.user.email|default:member.user.username }}</span>
+              {% if member.staff_id %}<span>{{ member.staff_id }}</span>{% endif %}
+            </div>
+            <div class="team-member-card__footer">
+              {% if user.is_superuser %}View profile{% else %}Read only{% endif %}
+            </div>
+        {% if user.is_superuser %}
+          </a>
+        {% else %}
+          </div>
+        {% endif %}
+      {% empty %}
+        <div class="attendance-dashboard-empty">No team members are available right now.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="attendance-dashboard-row">
+  <div class="dash-card attendance-dashboard-card">
+    <div class="dash-card-header">
+      <div>
+        <h3 class="dash-card-title">Attendance</h3>
+        <p class="attendance-dashboard-subtitle">See who has clocked in and how long they have been active today.</p>
+      </div>
+      <a href="/admin/attendance/" class="dash-card-link">Open attendance &#x203A;</a>
+    </div>
+
+    <div class="attendance-dashboard-stats">
+      <div class="attendance-dashboard-stat">
+        <span class="attendance-dashboard-stat__label">Active Right Now</span>
+        <strong class="attendance-dashboard-stat__value">{{ attendance_active_count }}</strong>
+      </div>
+      <div class="attendance-dashboard-stat">
+        <span class="attendance-dashboard-stat__label">Clocked In Today</span>
+        <strong class="attendance-dashboard-stat__value">{{ attendance_clocked_count }}</strong>
+      </div>
+      <div class="attendance-dashboard-stat">
+        <span class="attendance-dashboard-stat__label">Today</span>
+        <strong class="attendance-dashboard-stat__value attendance-dashboard-stat__value--small">{{ attendance_today|date:"d M Y" }}</strong>
+      </div>
+    </div>
+
+    <div class="attendance-dashboard-list">
+      {% if attendance_recent_rows %}
+        {% for row in attendance_recent_rows %}
+        <div class="attendance-dashboard-person">
+          <div class="attendance-dashboard-person__meta">
+            <span class="attendance-dashboard-person__avatar">{{ row.user.get_full_name|default:row.user.username|slice:":1"|upper }}</span>
+            <div>
+              <div class="attendance-dashboard-person__name">{{ row.user.get_full_name|default:row.user.username }}</div>
+              <div class="attendance-dashboard-person__time">{% if row.clock_in_at %}Clocked in {{ row.clock_in_at|date:"h:i A" }}{% else %}No clock-in time{% endif %}</div>
+            </div>
+          </div>
+          <div class="attendance-dashboard-person__side">
+            <span class="attendance-dashboard-person__duration">{{ row.duration }}</span>
+            <span class="attendance-dashboard-person__status {% if row.is_active %}is-online{% else %}is-offline{% endif %}">{% if row.is_active %}Working{% else %}Paused{% endif %}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="attendance-dashboard-empty">No one has clocked in yet today.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="dash-card attendance-dashboard-card attendance-dashboard-card--action">
+    <div class="dash-card-header">
+      <div>
+        <h3 class="dash-card-title">Your Attendance</h3>
+        <p class="attendance-dashboard-subtitle">Start or end your shift directly from the dashboard.</p>
+      </div>
+    </div>
+
+    <div class="attendance-action-panel">
+      <div class="attendance-action-panel__highlights">
+        <div class="attendance-action-panel__highlight">
+          <span class="attendance-action-panel__highlight-label">Status</span>
+          <strong class="attendance-action-panel__highlight-value" id="dashboardAttendanceSummaryStatus">{% if attendance_snapshot.is_active %}Active{% else %}Offline{% endif %}</strong>
+        </div>
+        <div class="attendance-action-panel__highlight">
+          <span class="attendance-action-panel__highlight-label">Today</span>
+          <strong class="attendance-action-panel__highlight-value">{{ attendance_today|date:"d M Y" }}</strong>
+        </div>
+      </div>
+      <div class="attendance-action-panel__status" id="dashboardAttendanceState">{% if attendance_snapshot.is_active %}You are clocked in{% else %}You are clocked out{% endif %}</div>
+      <div class="attendance-action-panel__timer" id="dashboardAttendanceTimer" data-seconds="{{ attendance_snapshot.display_seconds|default:0 }}" data-active="{% if attendance_snapshot.is_active %}1{% else %}0{% endif %}">{{ attendance_snapshot.display_duration|default:"00:00:00" }}</div>
+      <div class="attendance-action-panel__meta" id="dashboardAttendanceMeta">
+        {% if attendance_snapshot.clock_in_at %}
+          Clocked in at {{ attendance_snapshot.clock_in_at|date:"d M Y, h:i A" }}
+        {% elif attendance_snapshot.clock_out_at %}
+          Last clock out at {{ attendance_snapshot.clock_out_at|date:"d M Y, h:i A" }}
+        {% else %}
+          Use the buttons below to start or end your work session.
+        {% endif %}
+      </div>
+      <div class="attendance-action-panel__buttons">
+        <button type="button" class="attendance-soft-btn attendance-soft-btn--start" id="dashboardClockInBtn">Clock In</button>
+        <button type="button" class="attendance-soft-btn attendance-soft-btn--stop" id="dashboardClockOutBtn">Clock Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="dash-mid-row">
   <div class="dash-card dash-card--articles">
     <div class="dash-card-header">
@@ -896,6 +1043,105 @@ document.addEventListener('DOMContentLoaded',async function(){
 
   var dc=document.getElementById('donutChart');
   if(dc){new Chart(dc.getContext('2d'),{type:'doughnut',data:{labels:['Published','Draft','Review','Archived','Rejected','Other'],datasets:[{data:dd,backgroundColor:['#1a4731','#4caf7d','#f0a500','#8fa899','#e05252','#a8d5b5'],borderWidth:0,hoverOffset:6}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.label+': '+ctx.raw;}}}},animation:{animateRotate:true,duration:1000}}});}
+
+  var dashboardAttendanceTimer=document.getElementById('dashboardAttendanceTimer');
+  var dashboardAttendanceState=document.getElementById('dashboardAttendanceState');
+  var dashboardAttendanceMeta=document.getElementById('dashboardAttendanceMeta');
+  var dashboardAttendanceSummaryStatus=document.getElementById('dashboardAttendanceSummaryStatus');
+  var dashboardClockInBtn=document.getElementById('dashboardClockInBtn');
+  var dashboardClockOutBtn=document.getElementById('dashboardClockOutBtn');
+  var dashboardAttendanceSeconds=parseInt((dashboardAttendanceTimer&&dashboardAttendanceTimer.getAttribute('data-seconds'))||'0',10)||0;
+  var dashboardAttendanceActive=!!(dashboardAttendanceTimer&&dashboardAttendanceTimer.getAttribute('data-active')==='1');
+
+  function formatAttendanceDuration(totalSeconds){
+    totalSeconds=Math.max(parseInt(totalSeconds||0,10)||0,0);
+    var hours=Math.floor(totalSeconds/3600);
+    var minutes=Math.floor((totalSeconds%3600)/60);
+    var seconds=totalSeconds%60;
+    return [hours,minutes,seconds].map(function(part){return String(part).padStart(2,'0');}).join(':');
+  }
+
+  function getDashboardCsrf(){
+    var input=document.querySelector('[name=csrfmiddlewaretoken]');
+    if(input&&input.value){return input.value;}
+    var match=document.cookie.match(/csrftoken=([^;]+)/);
+    return match?match[1]:'';
+  }
+
+  function updateDashboardAttendanceCard(snapshot){
+    if(!dashboardAttendanceTimer||!dashboardAttendanceState||!dashboardAttendanceMeta){return;}
+    dashboardAttendanceActive=!!snapshot.is_active;
+    dashboardAttendanceSeconds=parseInt(snapshot.display_seconds||0,10)||0;
+    dashboardAttendanceTimer.textContent=formatAttendanceDuration(dashboardAttendanceSeconds);
+    dashboardAttendanceTimer.setAttribute('data-seconds',String(dashboardAttendanceSeconds));
+    dashboardAttendanceTimer.setAttribute('data-active',dashboardAttendanceActive?'1':'0');
+    dashboardAttendanceTimer.classList.toggle('is-active',dashboardAttendanceActive);
+    dashboardAttendanceState.textContent=dashboardAttendanceActive?'You are clocked in':'You are clocked out';
+    if(dashboardAttendanceSummaryStatus){dashboardAttendanceSummaryStatus.textContent=dashboardAttendanceActive?'Active':'Offline';}
+
+    if(snapshot.clock_in_at&&dashboardAttendanceActive){
+      dashboardAttendanceMeta.textContent='Clocked in at '+new Date(snapshot.clock_in_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    }else if(snapshot.clock_out_at){
+      dashboardAttendanceMeta.textContent='Last clock out at '+new Date(snapshot.clock_out_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    }else{
+      dashboardAttendanceMeta.textContent='Use the buttons below to start or end your work session.';
+    }
+
+    if(dashboardClockInBtn){dashboardClockInBtn.disabled=dashboardAttendanceActive;}
+    if(dashboardClockOutBtn){dashboardClockOutBtn.disabled=!dashboardAttendanceActive;}
+  }
+
+  function callAttendanceAction(url,button){
+    if(button){button.disabled=true;}
+    return fetch(url,{
+      method:'POST',
+      credentials:'same-origin',
+      headers:{
+        'X-CSRFToken':getDashboardCsrf(),
+        'Content-Type':'application/json'
+      }
+    })
+    .then(function(response){
+      if(!response.ok){throw new Error('Attendance update failed');}
+      return response.json();
+    })
+    .then(function(data){
+      updateDashboardAttendanceCard(data);
+    })
+    .catch(function(){
+      if(dashboardAttendanceMeta){
+        dashboardAttendanceMeta.textContent='Attendance update failed. Please try again.';
+      }
+      if(dashboardClockInBtn){dashboardClockInBtn.disabled=dashboardAttendanceActive;}
+      if(dashboardClockOutBtn){dashboardClockOutBtn.disabled=!dashboardAttendanceActive;}
+    });
+  }
+
+  if(dashboardClockInBtn){
+    dashboardClockInBtn.addEventListener('click',function(){
+      callAttendanceAction('/api/attendance/clock-in/',dashboardClockInBtn);
+    });
+  }
+
+  if(dashboardClockOutBtn){
+    dashboardClockOutBtn.addEventListener('click',function(){
+      callAttendanceAction('/api/attendance/disconnect/',dashboardClockOutBtn);
+    });
+  }
+
+  updateDashboardAttendanceCard({
+    is_active: dashboardAttendanceActive,
+    display_seconds: dashboardAttendanceSeconds,
+    clock_in_at: '{{ attendance_snapshot.clock_in_at|date:"c"|default:"" }}',
+    clock_out_at: '{{ attendance_snapshot.clock_out_at|date:"c"|default:"" }}'
+  });
+
+  window.setInterval(function(){
+    if(dashboardAttendanceActive&&dashboardAttendanceTimer){
+      dashboardAttendanceSeconds+=1;
+      dashboardAttendanceTimer.textContent=formatAttendanceDuration(dashboardAttendanceSeconds);
+    }
+  },1000);
 });
 </script>
 {% endblock %}

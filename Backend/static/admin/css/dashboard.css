@@ -371,6 +371,392 @@ html {
 }
 
 /* ─────────────────────────────────────────────
+   TEAM SECTION
+───────────────────────────────────────────── */
+.team-dashboard-section {
+  margin-bottom: 20px;
+}
+
+.team-member-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.team-member-card {
+  display: block;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e5edf5;
+  background:
+    radial-gradient(circle at top right, rgba(219, 234, 254, 0.75), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.team-member-card--link:hover {
+  transform: translateY(-2px);
+  border-color: #bfd6f6;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.team-member-card--readonly {
+  cursor: default;
+}
+
+.team-member-card__head,
+.team-member-card__identity {
+  display: flex;
+  align-items: center;
+}
+
+.team-member-card__head {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.team-member-card__identity {
+  gap: 12px;
+  min-width: 0;
+}
+
+.team-member-card__avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.team-member-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.team-member-card__title {
+  min-width: 0;
+}
+
+.team-member-card__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.team-member-card__role {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.team-member-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.team-member-card__badge.is-online {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.team-member-card__badge.is-offline {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.team-member-card__meta {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: #475569;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.team-member-card__footer {
+  margin-top: 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+/* ─────────────────────────────────────────────
+   ROW 2 — ATTENDANCE
+───────────────────────────────────────────── */
+.attendance-dashboard-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.attendance-dashboard-card {
+  min-width: 0;
+  padding: 18px 20px;
+}
+
+.attendance-dashboard-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--clr-text-300);
+}
+
+.attendance-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.attendance-dashboard-stat {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fcfdfd 0%, #f5faf7 100%);
+  border: 1px solid #dbe9df;
+}
+
+.attendance-dashboard-stat__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.attendance-dashboard-stat__value {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.attendance-dashboard-stat__value--small {
+  font-size: 1.05rem;
+}
+
+.attendance-dashboard-list {
+  display: grid;
+  gap: 8px;
+}
+
+.attendance-dashboard-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #e5edf5;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.attendance-dashboard-person__meta,
+.attendance-dashboard-person__side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attendance-dashboard-person__side {
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.attendance-dashboard-person__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0ecff;
+  color: #1d4ed8;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.attendance-dashboard-person__name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.attendance-dashboard-person__time {
+  margin-top: 1px;
+  font-size: 0.73rem;
+  color: #6b7280;
+}
+
+.attendance-dashboard-person__duration {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #14532d;
+  background: #e8f7ec;
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+
+.attendance-dashboard-person__status {
+  font-size: 0.69rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+
+.attendance-dashboard-person__status.is-online {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.attendance-dashboard-person__status.is-offline {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.attendance-dashboard-empty {
+  padding: 18px 14px;
+  text-align: center;
+  border: 1px dashed #d6e2ee;
+  border-radius: 14px;
+  color: #64748b;
+  background: #fbfdff;
+}
+
+.attendance-dashboard-card--action {
+  background: linear-gradient(180deg, #fffefe 0%, #fff8f4 100%);
+}
+
+.attendance-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.attendance-action-panel__highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.attendance-action-panel__highlight {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #eadfd8;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.attendance-action-panel__highlight-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7c6f67;
+}
+
+.attendance-action-panel__highlight-value {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.attendance-action-panel__status {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.attendance-action-panel__timer {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+}
+
+.attendance-action-panel__timer.is-active {
+  color: #1d4ed8;
+}
+
+.attendance-action-panel__meta {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.attendance-action-panel__buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.attendance-soft-btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.attendance-soft-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.attendance-soft-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.attendance-soft-btn--start {
+  background: #dff5e8;
+  color: #166534;
+  border-color: #b7e4c7;
+}
+
+.attendance-soft-btn--stop {
+  background: #fde7df;
+  color: #9a3412;
+  border-color: #fbc4b4;
+}
+
+/* ─────────────────────────────────────────────
    ROW 2 — TABLE + BAR CHART
 ───────────────────────────────────────────── */
 .dash-mid-row {
@@ -617,6 +1003,14 @@ html {
     grid-template-columns: 1fr !important;
   }
 
+  .team-member-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attendance-dashboard-row {
+    grid-template-columns: 1fr !important;
+  }
+
   .dash-card--articles,
   .dash-mid-row > .dash-card:last-child {
     width: 100%;
@@ -658,6 +1052,47 @@ html {
 
   .dash-mid-row {
     grid-template-columns: 1fr !important;
+  }
+
+  .team-member-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attendance-dashboard-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .team-member-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-dashboard-person {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attendance-dashboard-person__meta,
+  .attendance-dashboard-person__side,
+  .attendance-action-panel__buttons {
+    width: 100%;
+  }
+
+  .attendance-action-panel__highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-dashboard-person__side {
+    justify-content: flex-start;
+  }
+
+  .attendance-soft-btn {
+    flex: 1 1 100%;
   }
 }
 
@@ -7262,6 +7697,18 @@ table.um-table {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar--photo {
+  background: #e2e8f0 !important;
+}
+
+.avatar--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .user-name {

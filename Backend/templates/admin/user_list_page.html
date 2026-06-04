@@ -186,7 +186,7 @@
               <th>Status</th>
               <th class="sortable" onclick="sortTable(5)">Failed ↕</th>
               <th>Staff</th>
-              <th>DigiLocker</th>
+              {% comment %}<th>DigiLocker</th>{% endcomment %}
               <th>Profile</th>
               <th>Actions</th>
             </tr>
@@ -202,8 +202,12 @@
               </td>
               <td>
                 <div class="user-cell">
-                  <div class="avatar" style="background: {{ profile.avatar_color|default:'#D80100' }}">
-                    {{ user.first_name|first|upper|default:user.username|first|upper }}
+                  <div class="avatar{% if profile.profile_photo_url %} avatar--photo{% endif %}" style="background: {{ profile.avatar_color|default:'#D80100' }}">
+                    {% if profile.profile_photo_url %}
+                      <img src="{{ profile.profile_photo_url }}" alt="{{ user.get_full_name|default:user.username }}">
+                    {% else %}
+                      {{ user.first_name|first|upper|default:user.username|first|upper }}
+                    {% endif %}
                   </div>
                   <div>
                     <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
@@ -255,7 +259,7 @@
                   <span style="color:#ccc;font-size:13px">— No</span>
                 {% endif %}
               </td>
-              <td>
+              {% comment %}<td>
                 {% if profile.digilocker_status == 'verified' %}
                   <span class="status-chip active"><span class="status-dot"></span>Verified</span>
                   {% if profile.digilocker_document_types %}
@@ -293,7 +297,7 @@
                     {{ profile.digilocker_last_verified_at|date:"d M Y h:i A" }}
                   </div>
                 {% endif %}
-              </td>
+              </td>{% endcomment %}
               <td>
                 <a href="{% url 'newsadmin:user_profile' user.pk %}" class="btn-profile">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -318,7 +322,7 @@
             {% endwith %}
             {% empty %}
             <tr>
-              <td colspan="10">
+              <td colspan="9">
                 <div class="empty-state">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   <p>No users found</p>

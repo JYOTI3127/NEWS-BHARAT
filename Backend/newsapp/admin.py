@@ -1475,11 +1475,12 @@ class NewsAdminSite(AdminSite):
         for record in specific_date_records:
             specific_records_by_user[record.user_id] = record
 
-        active_time_label = (
-            f"Active Time on {selected_date.strftime('%d %b %Y')}"
-            if selected_date
-            else "Total Active Time"
-        )
+        if selected_date == today:
+            active_time_label = "Today's Hours"
+        elif selected_date:
+            active_time_label = f"Hours on {selected_date.strftime('%d %b %Y')}"
+        else:
+            active_time_label = "Hours Logged"
 
         summary_rows = []
         for member in users:
@@ -1514,15 +1515,13 @@ class NewsAdminSite(AdminSite):
             monthly_offs = len(elapsed_off_dates)
             working_days = max(elapsed_days - monthly_offs, 0)
             absent_days = max(working_days - present_days, 0)
-            attendance_rate = round((present_days / working_days) * 100, 1) if working_days else 0
-
             summary_rows.append({
                 'user': member,
                 'present_days': present_days,
                 'absent_days': absent_days,
                 'monthly_offs': monthly_offs,
                 'working_days': working_days,
-                'attendance_rate': attendance_rate,
+                'working_days_display': f"{working_days}/{total_days_in_month}",
                 'duration': _format_duration(duration_seconds),
                 'is_active': is_active,
             })
@@ -1540,12 +1539,11 @@ class NewsAdminSite(AdminSite):
                 'Month',
                 'User',
                 'Email',
-                'Days Present',
-                'Days Absent',
-                'Monthly Offs',
+                'Present Days',
+                'Absent Days',
+                'Off Days',
                 'Working Days',
                 active_time_label,
-                'Attendance Percentage',
                 'Live Status',
             ])
             for row in summary_rows:
@@ -1556,9 +1554,8 @@ class NewsAdminSite(AdminSite):
                     row['present_days'],
                     row['absent_days'],
                     row['monthly_offs'],
-                    row['working_days'],
+                    row['working_days_display'],
                     row['duration'],
-                    f"{row['attendance_rate']}%",
                     'Online' if row['is_active'] else 'Closed',
                 ])
             return response
@@ -2076,6 +2073,49 @@ class NewsAdminSite(AdminSite):
             ).select_related('reporter').order_by('-articles_published')[:5]
             latest_live_update = LiveUpdate.objects.order_by('-published_at', '-created_at').first()
             live_updates_total = LiveUpdate.objects.count()
+            attendance_today = timezone.localdate(now)
+            attendance_records_today = list(
+                AttendanceRecord.objects
+                .filter(date=attendance_today, user__is_staff=True)
+                .select_related('user')
+                .order_by('-current_session_started_at', '-last_activity_at', 'user__first_name', 'user__username')
+            )
+            attendance_rows = []
+            for record in attendance_records_today:
+                snapshot = get_attendance_snapshot(record.user, now)
+                attendance_rows.append({
+                    'user': record.user,
+                    'is_active': snapshot['is_active'],
+                    'duration': snapshot['display_duration'],
+                    'clock_in_at': snapshot['clock_in_at'],
+                })
+
+            active_attendance_rows = [row for row in attendance_rows if row['is_active']]
+            recent_attendance_rows = active_attendance_rows[:4] or attendance_rows[:4]
+            active_attendance_user_ids = {row['user'].id for row in active_attendance_rows}
+
+            team_members = (
+                User.objects
+                .filter(is_staff=True)
+                .select_related('profile')
+                .prefetch_related('profile__roles')
+                .order_by('first_name', 'username')[:8]
+            )
+            team_cards = []
+            for member in team_members:
+                profile = getattr(member, 'profile', None)
+                role_name = ''
+                if profile:
+                    first_role = profile.roles.first()
+                    role_name = (profile.position or (first_role.name if first_role else '')).strip()
+                team_cards.append({
+                    'user': member,
+                    'profile': profile,
+                    'photo_url': profile.profile_photo_url if profile else '',
+                    'role_name': role_name or 'Team Member',
+                    'staff_id': getattr(profile, 'staff_id', '') if profile else '',
+                    'is_online': member.id in active_attendance_user_ids,
+                })
 
             monthly_data_qs = (
                 Article.objects
@@ -2120,6 +2160,11 @@ class NewsAdminSite(AdminSite):
                 'top_reporters':         top_reporters,
                 'live_updates_total':    live_updates_total,
                 'latest_live_update':    latest_live_update,
+                'attendance_today':      attendance_today,
+                'attendance_active_count': len(active_attendance_rows),
+                'attendance_clocked_count': len(attendance_rows),
+                'attendance_recent_rows': recent_attendance_rows,
+                'team_cards':            team_cards,
                 'monthly_labels':        monthly_labels,
                 'monthly_pub':           monthly_pub,
                 'monthly_draft':         monthly_draft,

@@ -4680,6 +4680,11 @@ def notification_status_api(request):
     ).exclude(sender=request.user).filter(is_read=False)
 
     latest_unread = unread_notifications_qs.order_by('-created_at', '-id').first()
+    unread_preview = list(
+        unread_notifications_qs
+        .order_by('created_at', 'id')[:5]
+        .values('id', 'title', 'message', 'icon', 'action_url')
+    )
 
     return JsonResponse({
         "unread_notifications": unread_notifications_qs.count(),
@@ -4692,6 +4697,7 @@ def notification_status_api(request):
             "icon": latest_unread.icon,
             "action_url": latest_unread.action_url,
         } if latest_unread else None,
+        "unread_notification_preview": unread_preview,
         "attendance": {
             "is_active": attendance_snapshot["is_active"],
             "display_seconds": attendance_snapshot["display_seconds"],

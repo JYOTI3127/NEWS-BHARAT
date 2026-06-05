@@ -404,12 +404,21 @@ function buildSubsHtml(cat) {
         const rows = items.map(function(item) {
             const itemName = escapeHtml(item.name || '');
             const articleCount = Number(item.article_count || 0);
+            const itemStatus = item.status === 'archived' ? 'archived' : 'active';
+            const itemStatusLabel = itemStatus === 'archived' ? 'Hidden' : 'Visible';
+            const itemAction = CAN_MANAGE_CATEGORIES
+                ? (itemStatus === 'archived'
+                    ? `<button class="cm-btn cm-btn--restore" style="padding:6px 10px;font-size:11px" onclick='doRestoreSubcategory(${cat.id}, ${JSON.stringify(section.section || 'default')}, ${JSON.stringify(item.name || "")})'>Restore</button>`
+                    : `<button class="cm-btn cm-btn--archive" style="padding:6px 10px;font-size:11px" onclick='doArchiveSubcategory(${cat.id}, ${JSON.stringify(section.section || 'default')}, ${JSON.stringify(item.name || "")})'>Hide</button>`)
+                : '';
             return `
-                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 126px;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16)">
-                    <div style="font-size:13px;font-weight:600;color:#e5eefc;line-height:1.45">${itemName}</div>
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 90px 188px;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16)">
+                    <div style="font-size:13px;font-weight:600;color:${itemStatus === 'archived' ? 'rgba(226,232,240,.58)' : '#e5eefc'};line-height:1.45">${itemName}</div>
                     <div style="font-size:12px;color:#f8fbff;text-align:center;font-weight:600">${articleCount} article${articleCount === 1 ? '' : 's'}</div>
+                    <div style="font-size:11px;color:${itemStatus === 'archived' ? '#fbbf24' : '#86efac'};text-align:center;font-weight:700;letter-spacing:.04em;text-transform:uppercase">${itemStatusLabel}</div>
                     <div style="display:flex;justify-content:flex-end">
                         <button class="cm-btn cm-btn--view" style="padding:6px 10px;font-size:11px" onclick='openPanel(${cat.id}, ${JSON.stringify(item.name || "")})'>View Articles</button>
+                        ${itemAction}
                     </div>
                 </div>`;
         }).join('');
@@ -619,11 +628,11 @@ async function saveSubCategories() {
 
     if (Object.keys(subs).length === 0 || subs.default !== undefined) {
         // Flat / empty → add to default bucket
-        subs.default = [...(subs.default || []), ...addSubTags];
+        subs.default = [...(subs.default || []), ...addSubTags.map(tag => ({ name: tag, status: 'active' }))];
     } else {
         // Sectioned → append to first section
         const firstKey = Object.keys(subs)[0];
-        subs[firstKey] = [...subs[firstKey], ...addSubTags];
+        subs[firstKey] = [...subs[firstKey], ...addSubTags.map(tag => ({ name: tag, status: 'active' }))];
     }
 
     const updated = await apiFetch(`/api/categories/${addSubTarget}/update/`, 'PUT', {
@@ -663,7 +672,11 @@ function openEditModal(catId) {
     editSections = {};
     const subs = cat.subs && typeof cat.subs === 'object' && !Array.isArray(cat.subs) ? cat.subs : {};
     Object.entries(subs).forEach(([sec, items]) => {
-        editSections[sec] = Array.isArray(items) ? [...items] : [];
+        editSections[sec] = Array.isArray(items) ? items.map(item => (
+            item && typeof item === 'object'
+                ? { name: String(item.name || '').trim(), status: item.status === 'archived' ? 'archived' : 'active' }
+                : { name: String(item || '').trim(), status: 'active' }
+        )).filter(item => item.name) : [];
     });
     if (!Object.keys(editSections).length) editSections['default'] = [];
 
@@ -699,7 +712,7 @@ function renderEditSections() {
 
         const pillsHtml = tags.map((t, ti) => `
             <span class="cm-tag-pill">
-                ${t}
+                ${escapeHtml(t.name || '')}${t.status === 'archived' ? ' (hidden)' : ''}
                 <button class="cm-tag-pill__del" onclick="editRemoveTag(${secIdx},${ti})">×</button>
             </span>`).join('');
 
@@ -726,7 +739,7 @@ function editTagKeydown(e, secIdx, inputId) {
         e.preventDefault();
         if (val) {
             const secName = Object.keys(editSections)[secIdx];
-            editSections[secName].push(val);
+            editSections[secName].push({ name: val, status: 'active' });
             input.value = '';
             renderEditSections();
             setTimeout(() => { const el = document.getElementById(`editSecInp_${secIdx}`); if (el) el.focus(); }, 0);
@@ -838,6 +851,32 @@ async function doRestore(catId) {
     cat.status = 'active';
     render();
     showToast(`"${cat.name}" restored & visible on frontend`, 'ok');
+}
+
+async function doArchiveSubcategory(catId, sectionName, subcategoryName) {
+    if (!CAN_MANAGE_CATEGORIES) return;
+    const res = await apiFetch(`/api/categories/${catId}/subcategories/archive/`, 'POST', {
+        section: sectionName,
+        name: subcategoryName,
+    });
+    if (res.error) { showToast(res.error, 'warn'); return; }
+    await loadCategories();
+    expanded[catId] = true;
+    render();
+    showToast(`"${subcategoryName}" hidden from frontend`, 'warn');
+}
+
+async function doRestoreSubcategory(catId, sectionName, subcategoryName) {
+    if (!CAN_MANAGE_CATEGORIES) return;
+    const res = await apiFetch(`/api/categories/${catId}/subcategories/restore/`, 'POST', {
+        section: sectionName,
+        name: subcategoryName,
+    });
+    if (res.error) { showToast(res.error, 'warn'); return; }
+    await loadCategories();
+    expanded[catId] = true;
+    render();
+    showToast(`"${subcategoryName}" visible on frontend again`, 'ok');
 }
 
 /* ================================================================

@@ -600,6 +600,13 @@ def _normalize_category_tree(value):
     if value in (None, ''):
         return {}
 
+    if isinstance(value, dict) and 'name' in value:
+        name = str(value.get('name') or '').strip()
+        status = str(value.get('status') or 'active').strip().lower() or 'active'
+        if not name or status == 'archived':
+            return ''
+        return name
+
     if isinstance(value, str):
         text = value.strip()
         return text if text else ''
@@ -629,12 +636,36 @@ def _normalize_category_tree(value):
     return text if text else ''
 
 
-def _normalize_subcategory_sections(value):
+def _normalize_subcategory_item(value):
+    if isinstance(value, dict):
+        name = str(value.get('name') or '').strip()
+        status = str(value.get('status') or 'active').strip().lower() or 'active'
+    else:
+        name = str(value or '').strip()
+        status = 'active'
+
+    if not name:
+        return None
+
+    return {
+        'name': name,
+        'status': 'archived' if status == 'archived' else 'active',
+    }
+
+
+def _normalize_subcategory_sections(value, *, include_archived=True):
     if value in (None, ''):
         return {}
 
     if isinstance(value, list):
-        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        cleaned = []
+        for item in value:
+            normalized_item = _normalize_subcategory_item(item)
+            if not normalized_item:
+                continue
+            if not include_archived and normalized_item['status'] == 'archived':
+                continue
+            cleaned.append(normalized_item)
         return {'default': cleaned} if cleaned else {}
 
     if not isinstance(value, dict):
@@ -644,12 +675,22 @@ def _normalize_subcategory_sections(value):
     for key, items in value.items():
         section_key = str(key).strip() or 'default'
         if isinstance(items, list):
-            cleaned = [str(item).strip() for item in items if str(item).strip()]
+            cleaned = []
+            for item in items:
+                normalized_item = _normalize_subcategory_item(item)
+                if not normalized_item:
+                    continue
+                if not include_archived and normalized_item['status'] == 'archived':
+                    continue
+                cleaned.append(normalized_item)
         elif items in (None, ''):
             cleaned = []
         else:
-            item = str(items).strip()
-            cleaned = [item] if item else []
+            normalized_item = _normalize_subcategory_item(items)
+            if normalized_item and (include_archived or normalized_item['status'] != 'archived'):
+                cleaned = [normalized_item]
+            else:
+                cleaned = []
         if cleaned:
             normalized[section_key] = cleaned
     return normalized
@@ -690,7 +731,7 @@ def _build_category_subcategory_stats(categories):
 
     counts = {
         category_id: {
-            section: {item: 0 for item in items}
+            section: {item['name']: 0 for item in items}
             for section, items in sections.items()
         }
         for category_id, sections in sections_by_category.items()
@@ -720,19 +761,20 @@ def _build_category_subcategory_stats(categories):
                     continue
                 for section, items in sections_by_category.get(category_id, {}).items():
                     for item in items:
-                        if item in selected_items:
-                            counts[category_id][section][item] += 1
+                        if item['name'] in selected_items:
+                            counts[category_id][section][item['name']] += 1
 
     return {
         category.id: [
             {
                 'section': section,
                 'label': '' if section == 'default' else section,
-                'article_count': sum(section_counts.get(item, 0) for item in items),
+                'article_count': sum(section_counts.get(item['name'], 0) for item in items),
                 'items': [
                     {
-                        'name': item,
-                        'article_count': section_counts.get(item, 0),
+                        'name': item['name'],
+                        'status': item.get('status', 'active'),
+                        'article_count': section_counts.get(item['name'], 0),
                     }
                     for item in items
                 ],
@@ -929,7 +971,7 @@ def _is_current_article_image_url(article, url_value, request=None):
 
 @api_view(['GET'])
 def category_list(request):
-    cache_key = 'categories:all:v5'
+    cache_key = 'categories:all:v6'
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
@@ -1094,6 +1136,66 @@ def category_restore(request, cat_id):
     cat = get_object_or_404(Category, id=cat_id)
     cat.status = 'active'
     cat.save(update_fields=['status'])
+    _invalidate_category_cache()
+    return Response({'status': 'active'})
+
+
+@api_view(['POST'])
+def category_subcategory_archive(request, cat_id):
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
+
+    cat = get_object_or_404(Category, id=cat_id)
+    section = str(request.data.get('section') or 'default').strip() or 'default'
+    subcategory_name = str(request.data.get('name') or '').strip()
+    if not subcategory_name:
+        return Response({'error': 'Sub-category name is required.'}, status=400)
+
+    sections = _normalize_subcategory_sections(cat.sub_categories)
+    items = sections.get(section, [])
+    updated = False
+    for item in items:
+        if item['name'] == subcategory_name:
+            item['status'] = 'archived'
+            updated = True
+            break
+
+    if not updated:
+        return Response({'error': 'Sub-category not found.'}, status=404)
+
+    cat.sub_categories = sections
+    cat.save(update_fields=['sub_categories'])
+    _invalidate_category_cache()
+    return Response({'status': 'archived'})
+
+
+@api_view(['POST'])
+def category_subcategory_restore(request, cat_id):
+    permission_error = _ensure_category_manager(request)
+    if permission_error:
+        return permission_error
+
+    cat = get_object_or_404(Category, id=cat_id)
+    section = str(request.data.get('section') or 'default').strip() or 'default'
+    subcategory_name = str(request.data.get('name') or '').strip()
+    if not subcategory_name:
+        return Response({'error': 'Sub-category name is required.'}, status=400)
+
+    sections = _normalize_subcategory_sections(cat.sub_categories)
+    items = sections.get(section, [])
+    updated = False
+    for item in items:
+        if item['name'] == subcategory_name:
+            item['status'] = 'active'
+            updated = True
+            break
+
+    if not updated:
+        return Response({'error': 'Sub-category not found.'}, status=404)
+
+    cat.sub_categories = sections
+    cat.save(update_fields=['sub_categories'])
     _invalidate_category_cache()
     return Response({'status': 'active'})
 
@@ -1538,7 +1640,7 @@ def article_list(request):
             page = 1
         use_full_payload = str(request.GET.get('full', '')).lower() in {'1', 'true', 'yes'}
 
-        cache_key = f"articles:list:v6:{category or 'all'}:{subcategory or 'all-subcategories'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
+        cache_key = f"articles:list:v7:{category or 'all'}:{subcategory or 'all-subcategories'}:{page}:{limit}:{'full' if use_full_payload else 'slim'}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -1575,9 +1677,28 @@ def article_list(request):
         category_obj = None
         if category:
             articles = articles.filter(categories__slug=category).distinct()
-            category_obj = Category.objects.filter(slug=category).only('id', 'name', 'slug').first()
+            category_obj = Category.objects.filter(slug=category).only('id', 'name', 'slug', 'sub_categories').first()
 
         if subcategory:
+            if category_obj:
+                visible_sections = _normalize_subcategory_sections(category_obj.sub_categories, include_archived=False)
+                visible_subcategories = {
+                    item['name']
+                    for items in visible_sections.values()
+                    for item in items
+                }
+                if subcategory not in visible_subcategories:
+                    payload = {
+                        'count': 0,
+                        'page': page,
+                        'limit': limit,
+                        'total_pages': 0,
+                        'has_next': False,
+                        'has_previous': False,
+                        'results': [],
+                    }
+                    cache.set(cache_key, payload, 300)
+                    return Response(payload)
             filtered_articles = []
             category_key = str(category_obj.id) if category_obj else ''
             for article in articles:
@@ -1631,7 +1752,11 @@ def articles_by_state(request):
     if not state:
         try:
             category = Category.objects.get(slug='state-of-bharat')
-            return Response(category.sub_categories)
+            visible_sections = _normalize_subcategory_sections(category.sub_categories, include_archived=False)
+            return Response({
+                key: [item['name'] for item in items]
+                for key, items in visible_sections.items()
+            })
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=404)
  
@@ -1718,10 +1843,8 @@ def articles_by_state(request):
         if cached is not None:
             return Response(cached)
 
-        sub_categories = category.sub_categories if isinstance(category.sub_categories, dict) else {}
-        configured_states = sub_categories.get('3', [])
-        if not isinstance(configured_states, list):
-            configured_states = []
+        sub_categories = _normalize_subcategory_sections(category.sub_categories, include_archived=False)
+        configured_states = [item['name'] for item in sub_categories.get('3', [])]
         all_states = list(dict.fromkeys([
             *[str(item).strip() for item in configured_states if str(item).strip()],
             *[

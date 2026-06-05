@@ -98,7 +98,20 @@ class CategorySerializer(serializers.ModelSerializer):
             return {}
 
         if isinstance(value, list):
-            cleaned = [str(item).strip() for item in value if str(item).strip()]
+            cleaned = []
+            for item in value:
+                if isinstance(item, dict):
+                    name = str(item.get('name') or '').strip()
+                    status = str(item.get('status') or 'active').strip().lower() or 'active'
+                else:
+                    name = str(item).strip()
+                    status = 'active'
+                if not name:
+                    continue
+                cleaned.append({
+                    'name': name,
+                    'status': 'archived' if status == 'archived' else 'active',
+                })
             return {'default': cleaned} if cleaned else {}
 
         if isinstance(value, dict):
@@ -106,12 +119,34 @@ class CategorySerializer(serializers.ModelSerializer):
             for key, items in value.items():
                 section_key = str(key).strip() or 'default'
                 if isinstance(items, list):
-                    normalized[section_key] = [str(item).strip() for item in items if str(item).strip()]
+                    normalized_items = []
+                    for item in items:
+                        if isinstance(item, dict):
+                            name = str(item.get('name') or '').strip()
+                            status = str(item.get('status') or 'active').strip().lower() or 'active'
+                        else:
+                            name = str(item).strip()
+                            status = 'active'
+                        if not name:
+                            continue
+                        normalized_items.append({
+                            'name': name,
+                            'status': 'archived' if status == 'archived' else 'active',
+                        })
+                    normalized[section_key] = normalized_items
                 elif items in (None, ''):
                     normalized[section_key] = []
                 else:
-                    item = str(items).strip()
-                    normalized[section_key] = [item] if item else []
+                    if isinstance(items, dict):
+                        name = str(items.get('name') or '').strip()
+                        status = str(items.get('status') or 'active').strip().lower() or 'active'
+                    else:
+                        name = str(items).strip()
+                        status = 'active'
+                    normalized[section_key] = [{
+                        'name': name,
+                        'status': 'archived' if status == 'archived' else 'active',
+                    }] if name else []
             return normalized
 
         return {}
@@ -120,7 +155,13 @@ class CategorySerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         subs = instance.sub_categories
         if isinstance(subs, list):
-            data['sub_categories'] = {'default': subs} if subs else {}
+            data['sub_categories'] = {
+                'default': [
+                    {'name': str(item).strip(), 'status': 'active'}
+                    for item in subs
+                    if str(item).strip()
+                ]
+            } if subs else {}
         elif isinstance(subs, dict):
             data['sub_categories'] = subs
         else:

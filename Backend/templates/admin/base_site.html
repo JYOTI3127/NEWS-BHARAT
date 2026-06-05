@@ -611,6 +611,7 @@ document.addEventListener('click', function(e){
   var toastDurationMs = 8000;
   var audioContext = null;
   var audioUnlocked = false;
+  var pendingToastSoundCount = 0;
   var notificationToastCacheKey = 'adminToastSeen:' + currentUserId;
 
   function normalizeToastType(tags){
@@ -701,7 +702,11 @@ document.addEventListener('click', function(e){
     }
 
     if(!options.silent){
-      playToastSound();
+      if(audioUnlocked){
+        playToastSound();
+      }else{
+        pendingToastSoundCount += 1;
+      }
     }
 
     window.setTimeout(removeToast, toastDurationMs);
@@ -721,10 +726,18 @@ document.addEventListener('click', function(e){
     if(ctx.state === 'suspended'){
       ctx.resume().then(function(){
         audioUnlocked = true;
+        flushPendingToastSound();
       }).catch(function(){});
       return;
     }
     audioUnlocked = true;
+    flushPendingToastSound();
+  }
+
+  function flushPendingToastSound(){
+    if(!audioUnlocked || pendingToastSoundCount <= 0){ return; }
+    pendingToastSoundCount = 0;
+    playToastSound();
   }
 
   function scheduleTone(ctx, startAt, frequency, duration, volume){
@@ -1024,8 +1037,14 @@ document.addEventListener('click', function(e){
   }
 
   document.addEventListener('DOMContentLoaded', function(){
-    ['click', 'keydown', 'touchstart'].forEach(function(evt){
+    ['click', 'keydown', 'touchstart', 'mousedown'].forEach(function(evt){
       window.addEventListener(evt, unlockAudio, {passive:true});
+    });
+    window.addEventListener('focus', unlockAudio);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible'){
+        unlockAudio();
+      }
     });
     flushDjangoMessages();
     syncTitle(lastUnreadNotifications);

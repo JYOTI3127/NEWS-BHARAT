@@ -971,7 +971,11 @@ def _is_current_article_image_url(article, url_value, request=None):
 
 @api_view(['GET'])
 def category_list(request):
-    cache_key = 'categories:all:v6'
+    is_admin_request = bool(
+        getattr(request.user, 'is_authenticated', False)
+        and getattr(request.user, 'is_staff', False)
+    )
+    cache_key = f"categories:all:v7:{'admin' if is_admin_request else 'public'}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
@@ -1001,7 +1005,27 @@ def category_list(request):
     subcategory_stats = _build_category_subcategory_stats(categories)
 
     for item in serialized_categories:
-        item['subcategory_stats'] = subcategory_stats.get(item['id'], [])
+        stats = subcategory_stats.get(item['id'], [])
+        if is_admin_request:
+            item['subcategory_stats'] = stats
+            continue
+
+        visible_sections = _normalize_subcategory_sections(item.get('sub_categories'), include_archived=False)
+        item['sub_categories'] = {
+            section: [sub_item['name'] for sub_item in items]
+            for section, items in visible_sections.items()
+        }
+        item['subcategory_stats'] = [
+            {
+                **section,
+                'items': [
+                    sub_item for sub_item in section.get('items', [])
+                    if sub_item.get('status') != 'archived'
+                ],
+            }
+            for section in stats
+            if any(sub_item.get('status') != 'archived' for sub_item in section.get('items', []))
+        ]
 
     cache.set(cache_key, serialized_categories, 3600)  # 1 hour
     return Response(serialized_categories)

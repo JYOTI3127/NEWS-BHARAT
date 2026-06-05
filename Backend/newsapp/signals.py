@@ -139,6 +139,45 @@ def _create_or_refresh_notification(*, user, notif_type, title, message, action_
         action_url=action_url,
     )
 
+
+def _superadmin_notification_recipients(*, exclude_user=None):
+    recipients = User.objects.filter(is_active=True, is_superuser=True)
+    exclude_user_id = getattr(exclude_user, "pk", exclude_user)
+    if exclude_user_id:
+        recipients = recipients.exclude(pk=exclude_user_id)
+    return recipients
+
+
+def notify_superadmins(*, title, message, action_url="", icon="", notif_type="message", exclude_user=None):
+    for admin_user in _superadmin_notification_recipients(exclude_user=exclude_user):
+        _create_or_refresh_notification(
+            user=admin_user,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+            action_url=action_url,
+            icon=icon,
+        )
+
+
+def notify_attendance_event(actor, event_key):
+    actor_name = actor.get_full_name() or actor.username
+    if event_key == "clock_in":
+        title = "Attendance Clock In"
+        message = f"{actor_name} clocked in."
+    else:
+        title = "Attendance Clock Out"
+        message = f"{actor_name} clocked out."
+
+    notify_superadmins(
+        title=title,
+        message=message,
+        action_url=f"/admin/attendance/?member={actor.pk}&event={event_key}",
+        icon="AT",
+        notif_type="message",
+        exclude_user=actor,
+    )
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and not getattr(instance, '_disable_signals', False):
@@ -428,6 +467,50 @@ def new_user_notification(sender, instance, created, **kwargs):
             )
         except Exception:
             pass
+
+
+@receiver(post_save, sender=ContactQuery)
+def contact_query_notification(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    notify_superadmins(
+        title="New Contact Query",
+        message=f'{instance.full_name} sent a contact query about "{instance.subject}".',
+        action_url=f"/admin/contact-queries/{instance.pk}/",
+        icon="CQ",
+        notif_type="message",
+    )
+
+
+@receiver(post_save, sender=CareerApplication)
+def career_application_notification(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    notify_superadmins(
+        title="New Career Application",
+        message=f'{instance.full_name} applied for "{instance.job_title}".',
+        action_url=f"/admin/career-applications/{instance.pk}/",
+        icon="CV",
+        notif_type="message",
+    )
+
+
+@receiver(post_save, sender=Report)
+def report_activity_notification(sender, instance, created, **kwargs):
+    actor_name = instance.user.get_full_name() or instance.user.username
+    title = "New Report Submitted" if created else "Report Updated"
+    verb = "submitted" if created else "updated"
+
+    notify_superadmins(
+        title=title,
+        message=f'{actor_name} {verb} a {instance.get_period_type_display().lower()} report for {instance.period_label}.',
+        action_url=f"/admin/newsapp/report/?edit={instance.pk}",
+        icon="RP",
+        notif_type="message",
+        exclude_user=instance.user,
+    )
 
 import requests
 

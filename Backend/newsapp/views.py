@@ -4685,6 +4685,13 @@ def notification_status_api(request):
         "unread_notifications": unread_notifications_qs.count(),
         "unread_messages": unread_messages_qs.count(),
         "latest_unread_notification_id": latest_unread.id if latest_unread else None,
+        "latest_unread_notification": {
+            "id": latest_unread.id,
+            "title": latest_unread.title,
+            "message": latest_unread.message,
+            "icon": latest_unread.icon,
+            "action_url": latest_unread.action_url,
+        } if latest_unread else None,
         "attendance": {
             "is_active": attendance_snapshot["is_active"],
             "display_seconds": attendance_snapshot["display_seconds"],
@@ -4910,7 +4917,9 @@ def attendance_clock_in_api(request):
     if request.method != "POST":
         return JsonResponse({"error": "method not allowed"}, status=405)
 
+    from .signals import notify_attendance_event
     clock_in_attendance(request.user)
+    notify_attendance_event(request.user, "clock_in")
     snapshot = get_attendance_snapshot(request.user)
     return JsonResponse({
         "status": "clocked_in",
@@ -4943,7 +4952,9 @@ def attendance_disconnect_api(request):
     if request.method != "POST":
         return JsonResponse({"error": "method not allowed"}, status=405)
 
+    from .signals import notify_attendance_event
     pause_attendance(request.user)
+    notify_attendance_event(request.user, "clock_out")
     snapshot = get_attendance_snapshot(request.user)
     return JsonResponse({
         "status": "paused",

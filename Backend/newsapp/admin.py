@@ -1364,11 +1364,14 @@ class NewsAdminSite(AdminSite):
     def attendance_view(self, request):
         if request.method == 'POST':
             action = (request.POST.get('attendance_action') or '').strip()
+            from .signals import notify_attendance_event
             if action == 'clock_in':
                 clock_in_attendance(request.user)
+                notify_attendance_event(request.user, 'clock_in')
                 messages.success(request, 'Attendance clock-in recorded successfully.')
             elif action == 'clock_out':
                 pause_attendance(request.user)
+                notify_attendance_event(request.user, 'clock_out')
                 messages.success(request, 'Attendance clock-out recorded successfully.')
             return redirect(request.get_full_path())
 
@@ -1985,7 +1988,9 @@ class NewsAdminSite(AdminSite):
     def logout(self, request, extra_context=None):
         from django.contrib.auth import logout as auth_logout
         from django.shortcuts import redirect
+        from .signals import notify_attendance_event
         pause_attendance(request.user)
+        notify_attendance_event(request.user, 'clock_out')
         auth_logout(request)
         return redirect('/admin/login/')
 

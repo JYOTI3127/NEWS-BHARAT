@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}?v=20260514a">
-<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}?v=20260514a">
+<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}?v=20260605a">
+<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}?v=20260605a">
 {% block extrastyle %}{% endblock %}
 {% block extrahead %}{% endblock %}
 </head>
@@ -250,14 +250,11 @@
         </div>
       </div>
     </header>
+    <div class="admin-toast-stack" id="adminToastStack" aria-live="polite" aria-atomic="true"></div>
     {% if messages %}
-      <div class="admin-messages">
+      <div id="djangoMessageStore" hidden>
         {% for message in messages %}{% if message.message %}
-          <div class="admin-message admin-message--{{ message.tags }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2"/></svg>
-            <span>{{ message.message }}</span>
-            <button class="msg-close" onclick="this.parentElement.remove()">&#x00D7;</button>
-          </div>
+          <div data-message="{{ message.message|escape }}" data-tags="{{ message.tags|default:'info'|escape }}"></div>
         {% endif %}{% endfor %}
       </div>
     {% endif %}
@@ -609,6 +606,165 @@ document.addEventListener('click', function(e){
   var attendanceIsActive = !!(attendanceTimer && attendanceTimer.getAttribute('data-active') === '1');
   var lastActivityMs = attendanceTimer && attendanceTimer.getAttribute('data-last-activity') ? Date.parse(attendanceTimer.getAttribute('data-last-activity')) : Date.now();
   var lastHeartbeatAt = 0;
+  var toastStack = document.getElementById('adminToastStack');
+  var djangoMessageStore = document.getElementById('djangoMessageStore');
+  var toastDurationMs = 8000;
+  var audioContext = null;
+  var audioUnlocked = false;
+
+  function normalizeToastType(tags){
+    var tagText = String(tags || '').toLowerCase();
+    if(tagText.indexOf('error') !== -1){ return 'error'; }
+    if(tagText.indexOf('warning') !== -1){ return 'warning'; }
+    if(tagText.indexOf('success') !== -1){ return 'success'; }
+    return 'info';
+  }
+
+  function createToastIcon(type, iconText){
+    if(iconText){ return iconText; }
+    if(type === 'success'){ return 'OK'; }
+    if(type === 'warning'){ return '!'; }
+    if(type === 'error'){ return '!'; }
+    return 'i';
+  }
+
+  function showAdminToast(options){
+    if(!toastStack || !options || !options.message){ return; }
+
+    var type = normalizeToastType(options.type || options.tags);
+    var toast = document.createElement('div');
+    toast.className = 'admin-toast admin-toast--' + type;
+
+    var icon = document.createElement('div');
+    icon.className = 'admin-toast__icon';
+    icon.textContent = createToastIcon(type, options.icon);
+    toast.appendChild(icon);
+
+    var body = document.createElement('div');
+    body.className = 'admin-toast__body';
+
+    if(options.title){
+      var title = document.createElement('div');
+      title.className = 'admin-toast__title';
+      title.textContent = options.title;
+      body.appendChild(title);
+    }
+
+    var message = document.createElement('div');
+    message.className = 'admin-toast__message';
+    message.textContent = options.message;
+    body.appendChild(message);
+    toast.appendChild(body);
+
+    if(options.actionUrl){
+      var action = document.createElement('a');
+      action.className = 'admin-toast-action';
+      action.href = options.actionUrl;
+      action.textContent = 'View';
+      toast.appendChild(action);
+    }
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'admin-toast__close';
+    closeBtn.setAttribute('aria-label', 'Close notification');
+    closeBtn.innerHTML = '&times;';
+    toast.appendChild(closeBtn);
+
+    var progressBar = document.createElement('div');
+    progressBar.className = 'admin-toast__progress';
+    toast.appendChild(progressBar);
+
+    toastStack.appendChild(toast);
+    requestAnimationFrame(function(){
+      toast.classList.add('is-visible');
+    });
+
+    var progress = toast.querySelector('.admin-toast__progress');
+    if(progress){
+      progress.style.animationDuration = toastDurationMs + 'ms';
+    }
+
+    var removed = false;
+    function removeToast(){
+      if(removed){ return; }
+      removed = true;
+      toast.classList.add('is-removing');
+      window.setTimeout(function(){
+        if(toast.parentNode){ toast.parentNode.removeChild(toast); }
+      }, 260);
+    }
+
+    if(closeBtn){
+      closeBtn.addEventListener('click', removeToast);
+    }
+
+    if(!options.silent){
+      playToastSound();
+    }
+
+    window.setTimeout(removeToast, toastDurationMs);
+  }
+
+  function ensureAudioContext(){
+    if(audioContext){ return audioContext; }
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx){ return null; }
+    audioContext = new Ctx();
+    return audioContext;
+  }
+
+  function unlockAudio(){
+    var ctx = ensureAudioContext();
+    if(!ctx){ return; }
+    if(ctx.state === 'suspended'){
+      ctx.resume().then(function(){
+        audioUnlocked = true;
+      }).catch(function(){});
+      return;
+    }
+    audioUnlocked = true;
+  }
+
+  function scheduleTone(ctx, startAt, frequency, duration, volume){
+    var oscillator = ctx.createOscillator();
+    var gainNode = ctx.createGain();
+    var filterNode = ctx.createBiquadFilter();
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    filterNode.type = 'lowpass';
+    filterNode.frequency.setValueAtTime(3200, startAt);
+    filterNode.Q.setValueAtTime(0.8, startAt);
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(volume, startAt + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+    oscillator.connect(filterNode);
+    filterNode.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+  }
+
+  function playToastSound(){
+    var ctx = ensureAudioContext();
+    if(!ctx || !audioUnlocked){ return; }
+    var startAt = ctx.currentTime + 0.01;
+    scheduleTone(ctx, startAt, 1174.66, 0.18, 0.16);
+    scheduleTone(ctx, startAt + 0.12, 1567.98, 0.24, 0.13);
+    scheduleTone(ctx, startAt + 0.26, 2093.00, 0.3, 0.1);
+  }
+
+  function flushDjangoMessages(){
+    if(!djangoMessageStore){ return; }
+    djangoMessageStore.querySelectorAll('[data-message]').forEach(function(node){
+      showAdminToast({
+        message: node.getAttribute('data-message'),
+        tags: node.getAttribute('data-tags')
+      });
+    });
+  }
 
   function formatDuration(totalSeconds){
     totalSeconds = Math.max(parseInt(totalSeconds || 0, 10) || 0, 0);
@@ -802,6 +958,13 @@ document.addEventListener('click', function(e){
           pulse(notifBadge);
           pulse(notifQuickItem);
           pulse(topbarBellBtn);
+          showAdminToast({
+            type: 'success',
+            title: data.latest_unread_notification && data.latest_unread_notification.title ? data.latest_unread_notification.title : 'New notification',
+            message: data.latest_unread_notification && data.latest_unread_notification.message ? data.latest_unread_notification.message : 'A new notification has arrived.',
+            icon: data.latest_unread_notification && data.latest_unread_notification.icon ? data.latest_unread_notification.icon : '',
+            actionUrl: data.latest_unread_notification && data.latest_unread_notification.action_url ? data.latest_unread_notification.action_url : ''
+          });
         }
 
         lastUnreadNotifications = unreadNotifications;
@@ -811,6 +974,10 @@ document.addEventListener('click', function(e){
   }
 
   document.addEventListener('DOMContentLoaded', function(){
+    ['click', 'keydown', 'touchstart'].forEach(function(evt){
+      window.addEventListener(evt, unlockAudio, {passive:true});
+    });
+    flushDjangoMessages();
     syncTitle(lastUnreadNotifications);
     setTopbarBellBadge(lastUnreadNotifications);
     setBellRinging(lastUnreadNotifications > 0 && !isNotificationsPage);

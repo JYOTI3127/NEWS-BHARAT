@@ -124,3 +124,11 @@ jobs:
           command_timeout: 10m
           script: |
             touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"
+
+      - name: Ping Google to reindex sitemap
+        if: steps.incremental_output.outputs.deploy_needed == 'true'
+        run: |
+          ARTICLE_SLUG="${{ steps.resolve_slug.outputs.slug }}"
+          echo "Pinging Google sitemap for new article: $ARTICLE_SLUG"
+          curl -sf "https://www.google.com/ping?sitemap=https://news4bharat.com/sitemap.xml" || true
+          echo "Sitemap ping done."

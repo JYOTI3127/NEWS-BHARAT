@@ -366,6 +366,13 @@ const toAbsoluteSiteUrl = (value) => {
   try { return new URL(normalized, SITE_URL).toString(); } catch { return null; }
 };
 
+const getCleanSegments = (pathname) =>
+  String(pathname || "")
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
 const toCanonicalSiteUrl = (value) => {
   const absolute = toAbsoluteSiteUrl(value);
   if (!absolute) return null;
@@ -539,7 +546,7 @@ const sharesCategoryWithArticle = (candidate, currentArticle) => {
 
 const getRobotsContent = (article) => {
   const parts = [article?.noindex ? "noindex" : "index", article?.nofollow ? "nofollow" : "follow"];
-  if (!article?.noindex) parts.push("max-snippet:-1", "max-image-preview:large");
+  if (!article?.noindex) parts.push("max-snippet:-1", "max-image-preview:large", "max-video-preview:-1");
   return parts.join(",");
 };
 
@@ -1996,9 +2003,8 @@ export default function ArticleDetails() {
       } catch (error) {
         if (error.name === "AbortError") return;
         setLoadError(true);
-      } finally {
-      signalPrerenderReady(); // ✅ yeh add karo
-    }
+      }
+      // prerender signal handled exclusively by polling useEffect
     };
     loadArticle();
     return () => controller.abort();
@@ -2419,8 +2425,8 @@ export default function ArticleDetails() {
     getPlainText(seoEndpointTwitter.description) ||
     getPlainText(article.meta_description) ||
     articleSummaryText ||
-    getPlainText(plainArticleContent) ||
-    article.title;
+    truncateText(plainArticleContent, 160) ||
+    truncateText(article.title, 160);
   const secondaryKeywords = Array.isArray(article.secondary_keywords_list) ? article.secondary_keywords_list.map(normalizeKeywordPhrase).filter(Boolean) : String(article.secondary_keywords || "").split(",").map((item) => normalizeKeywordPhrase(item)).filter(Boolean);
   const focusKeyword = normalizeKeywordPhrase(article.focus_keyword);
   const seoKeywords = splitSeoKeywordText(seoEndpointMeta.keywords);
@@ -2745,9 +2751,7 @@ export default function ArticleDetails() {
 }
 .article-content img {
   display: block;
-  width: auto;
-  max-width: min(100%, 520px);
-  height: auto;
+  max-width: 100%;
   margin: 16px 0;
   border-radius: 8px;
 }

@@ -10,7 +10,7 @@ export const signalPrerenderReady = () => {
   } catch (e) {}
 };
 
-// Safety net: 8 seconds baad automatically fire karo
+// Safety net: allow slow article and SEO fetches to complete before falling back.
 if (typeof window !== "undefined") {
   const ua = window.navigator?.userAgent || "";
   if (/HeadlessChrome|prerender/i.test(ua)) {
@@ -18,6 +18,6 @@ if (typeof window !== "undefined") {
       if (!window.prerenderReady) {
         signalPrerenderReady();
       }
-    }, 8000);
+    }, 20000);
   }
 }

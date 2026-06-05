@@ -10,6 +10,7 @@ apps.py mein sirf yeh add karo:
 """
 
 import logging
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.db.models.signals import pre_save
 from django.db.models.signals import m2m_changed
@@ -52,15 +53,17 @@ def register():
         if update_fields and set(update_fields) == {"view_count"}:
             return
 
-        try:
-            result = submit_article_everywhere(instance)
-            logger.warning(
-                f"[SEO Signal] '{instance.slug}' submitted | "
-                f"google={result.get('google')} | indexnow={result.get('indexnow')}"
-            )
-        except Exception as e:
-            # NEVER crash the save — just log
-            logger.error(f"[SEO Signal] Failed for '{instance.slug}': {e}")
+        def _submit_after_commit(article=instance):
+            try:
+                result = submit_article_everywhere(article)
+                logger.warning(
+                    f"[SEO Signal] '{article.slug}' submitted | "
+                    f"google={result.get('google')} | indexnow={result.get('indexnow')}"
+                )
+            except Exception as e:
+                logger.error(f"[SEO Signal] Failed for '{article.slug}': {e}")
+
+        transaction.on_commit(_submit_after_commit)
 
         previous_status = getattr(instance, "_previous_status", None)
         if instance.status == "published" and previous_status != "published":

@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from .admin import ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
-from .seo_direct import SitemapEngine, _iso
+from .seo_direct import SitemapEngine, _iso, article_related_urls, submit_article_everywhere
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
@@ -644,6 +644,50 @@ class ArticleReviewEmailActionTests(TestCase):
         self.assertEqual(response['Location'], f'/admin/newsapp/article/{self.article.pk}/change/')
         self.article.refresh_from_db()
         self.assertEqual(self.article.status, 'approved')
+
+
+class SeoIndexingSubmissionTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(
+            username='seoauthor',
+            password='testpass123',
+        )
+        self.category = Category.objects.create(name='Business', slug='business', status='active')
+        self.article = Article.objects.create(
+            author=self.author,
+            title='SEO Publish Story',
+            content='Body',
+            status='published',
+        )
+        self.article.categories.add(self.category)
+
+    def test_article_related_urls_include_article_homepage_and_categories(self):
+        urls = article_related_urls(self.article, base='https://news4bharat.com')
+        self.assertIn('https://news4bharat.com/', urls)
+        self.assertIn('https://news4bharat.com/category/business', urls)
+        self.assertTrue(any('/business/' in url for url in urls))
+
+    @patch('newsapp.seo_direct.ping_search_engines')
+    @patch('newsapp.seo_direct.IndexNow.submit')
+    @patch('newsapp.seo_direct.GoogleIndexingAPI.submit_many')
+    def test_submit_article_everywhere_submits_article_and_category_urls(
+        self,
+        mock_google_submit_many,
+        mock_indexnow_submit,
+        mock_ping_search_engines,
+    ):
+        mock_google_submit_many.return_value = [{'success': True}]
+        mock_indexnow_submit.return_value = {'success': True}
+        mock_ping_search_engines.return_value = {'google': {'success': True}}
+
+        result = submit_article_everywhere(self.article)
+
+        submitted_urls = mock_google_submit_many.call_args.args[0]
+        self.assertIn('https://news4bharat.com/', submitted_urls)
+        self.assertIn('https://news4bharat.com/category/business', submitted_urls)
+        self.assertTrue(any('/business/' in url for url in submitted_urls))
+        self.assertEqual(mock_indexnow_submit.call_args.args[0], submitted_urls)
+        self.assertIn('google', result)
 
 
 class ArticleVersioningTests(TestCase):

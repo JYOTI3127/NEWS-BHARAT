@@ -414,6 +414,7 @@ else:
 
 SEO_SITE_URL = os.environ.get("SEO_SITE_URL", "https://news4bharat.com").rstrip("/")
 SEO_SITE_NAME = os.environ.get("SEO_SITE_NAME", "news4bharat")
+SEO_GOOGLE_SA_JSON = os.environ.get("SEO_GOOGLE_SA_JSON", "").strip()
 
 SEO_INDEXNOW_KEY = os.environ.get(
     "SEO_INDEXNOW_KEY",

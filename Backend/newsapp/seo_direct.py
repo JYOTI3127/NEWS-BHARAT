@@ -49,10 +49,10 @@ SEO = {
     "GOOGLE_VERIFY":  getattr(settings, "SEO_GOOGLE_VERIFY",    ""),
     "BING_VERIFY":    getattr(settings, "SEO_BING_VERIFY",      ""),
 
-    # Tera service account JSON (root mein rakha hai)
-    "GOOGLE_SA_JSON": getattr(settings, "SEO_GOOGLE_SA_JSON",
-                              os.path.join(getattr(settings, "BASE_DIR", ""),
-                                           "news4bharat-indexing-f0568ad9e074.json")),
+    "GOOGLE_SA_JSON": (
+        getattr(settings, "SEO_GOOGLE_SA_JSON", "") or
+        os.path.join(getattr(settings, "BASE_DIR", ""), "news4bharat-indexing-f0568ad9e074.json")
+    ),
 }
 
 CACHE_SITEMAP = 1800   # 30 min
@@ -354,6 +354,50 @@ def article_path(article_or_slug, category_slug: str = None) -> str:
 def article_url(article_or_slug, base: str = None, category_slug: str = None) -> str:
     base = (base or SEO["SITE_URL"]).rstrip("/")
     return f"{base}{article_path(article_or_slug, category_slug)}"
+
+
+def category_url(category_or_slug, base: str = None) -> str:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    slug = clean_url_segment(
+        getattr(category_or_slug, "slug", category_or_slug)
+    )
+    return f"{base}/category/{slug}"
+
+
+def static_page_urls(base: str = None) -> list[str]:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    pages = [
+        "/",
+        "/about-us",
+        "/contact-us",
+        "/privacy-policy",
+        "/terms-and-conditions",
+        "/disclaimer",
+        "/editorial-policy",
+        "/founders-note",
+        "/careers",
+    ]
+    return [f"{base}{path}" for path in pages]
+
+
+def article_related_urls(article, base: str = None, include_homepage: bool = True) -> list[str]:
+    base = (base or SEO["SITE_URL"]).rstrip("/")
+    urls = [article_url(article, base)]
+
+    if include_homepage:
+        urls.append(f"{base}/")
+
+    try:
+        category_slugs = [
+            clean_url_segment(category.slug)
+            for category in article.categories.all()
+            if getattr(category, "status", "active") == "active" and getattr(category, "slug", "")
+        ]
+    except Exception:
+        category_slugs = []
+
+    urls.extend(category_url(slug, base) for slug in category_slugs if slug)
+    return list(dict.fromkeys(urls))
 
 
 def normalized_canonical(article, default_url: str) -> str:
@@ -1211,10 +1255,16 @@ class GoogleIndexingAPI:
             return {"success": False, "url": url, "error": str(e)}
 
     @classmethod
+    def submit_many(cls, urls, url_type: str = "URL_UPDATED") -> list[dict]:
+        if isinstance(urls, str):
+            urls = [urls]
+        unique_urls = [url for url in dict.fromkeys(urls) if url]
+        return [cls.submit(url, url_type=url_type) for url in unique_urls]
+
+    @classmethod
     def submit_article(cls, article) -> dict:
-        base = SEO["SITE_URL"]
         return {
-            "article": cls.submit(article_url(article, base)),
+            "urls": cls.submit_many(article_related_urls(article)),
         }
 
 
@@ -1291,11 +1341,12 @@ def submit_article_everywhere(article) -> dict:
     base = SEO["SITE_URL"]
     slug = article.slug
 
-    google   = GoogleIndexingAPI.submit_article(article)
-    indexnow = IndexNow.submit([article_url(article, base)])
+    urls = article_related_urls(article, base)
+    google   = GoogleIndexingAPI.submit_many(urls)
+    indexnow = IndexNow.submit(urls)
     pings    = ping_search_engines()
 
     invalidate_seo_caches()
 
-    logger.info(f"[SEO] Submitted '{slug}' | google={google} | indexnow={indexnow}")
+    logger.info(f"[SEO] Submitted '{slug}' | urls={urls} | google={google} | indexnow={indexnow}")
     return {"google": google, "indexnow": indexnow, "pings": pings}

@@ -409,6 +409,34 @@ const getListFromSearchResponse = (data) => {
 const getCategorySearchTitle = (item) =>
   item?.name || item?.title || item?.label || item?.category_name || "Untitled Category";
 
+const getRenderableText = (value, fallback = "") => {
+  if (value == null) return fallback;
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim() || fallback;
+  }
+  if (typeof value === "object") {
+    return String(
+      value.name ||
+        value.title ||
+        value.label ||
+        value.slug ||
+        value.category_slug ||
+        value.type ||
+        fallback
+    ).trim();
+  }
+  return fallback;
+};
+
+const getTopicLabel = (value, fallback = "") => getRenderableText(value, fallback);
+
+const getTopicPathValue = (value, fallback = "") => {
+  if (value && typeof value === "object") {
+    return String(value.path || value.url || value.slug || value.name || value.label || fallback).trim();
+  }
+  return getRenderableText(value, fallback);
+};
+
 const getCategorySearchDescription = (item) => {
   const cleaned = stripHtml(item?.description || item?.summary || item?.excerpt || "");
   if (!cleaned) return "";
@@ -2003,11 +2031,11 @@ const Header = () => {
                           </div>
                           {subcatOpen && hasTopics && (
                             <div className="drawer-topics-list">
-                              {(sub.topics || []).map((topic) => (
+                              {(sub.topics || []).map((topic) => getTopicLabel(topic, "Topic")).map((topic, topicIndex) => (
                                 <span
-                                  key={topic}
+                                  key={`${getTopicLabel(topic, "Topic")}-${topicIndex}`}
                                   className="drawer-topic-link block px-4 py-1.5 pl-11 text-[12.5px] text-slate-600 no-underline border-b border-slate-100 transition-colors duration-150 font-sans hover:text-red-600 hover:bg-red-50 cursor-pointer"
-                                  onClick={() => goTo(getSubcategoryPath(categoryPath, topic))}
+                                  onClick={() => goTo(getSubcategoryPath(categoryPath, getTopicPathValue(topic, getTopicLabel(topic, "Topic"))))}
                                 >
                                   › {topic}
                                 </span>
@@ -2018,7 +2046,7 @@ const Header = () => {
                       );
                     })
                   ) : hasLinks ? (
-                    links.map((link) => (
+                    links.map((link) => getTopicLabel(link, "Link")).map((link) => (
                       <span
                         key={link}
                         className="drawer-sub-link cursor-pointer"
@@ -2199,12 +2227,12 @@ const Header = () => {
                               className={`flex flex-col p-2.5 border-b ${idx < searchResults.length - 1 ? "border-slate-100" : "border-transparent"} text-slate-900 no-underline transition-colors duration-150 hover:bg-red-50`}
                               onClick={(event) => handleSearchResultClick(event, item)}
                             >
-                              {(item.category || item.tag || item.type) && (
+                              {getRenderableText(item.category || item.tag || item.type) && (
                                 <span className="text-[10px] font-bold text-red-600 uppercase tracking-[0.5px] mb-1">
-                                  {item.category || item.tag || item.type}
+                                  {getRenderableText(item.category || item.tag || item.type)}
                                 </span>
                               )}
-                              <span className="text-[13px] font-semibold leading-[1.4]">{item.title || item.headline || item.name || "Untitled"}</span>
+                              <span className="text-[13px] font-semibold leading-[1.4]">{getRenderableText(item.title || item.headline || item.name, "Untitled")}</span>
                               {getSearchPreview(item) && (
                                 <span className="text-[11px] text-slate-600 mt-1 leading-[1.4]">{getSearchPreview(item)}</span>
                               )}
@@ -2335,7 +2363,7 @@ const Header = () => {
                             </Link>
                           )}
                           <div className="nav-dropdown-topics">
-                            {topics.map((topic) => (
+                            {topics.map((topic) => getTopicLabel(topic, "Topic")).map((topic) => (
                               <Link
                                 key={topic}
                                 to={getSubcategoryPath(desktopDropdown.path, topic)}
@@ -2350,7 +2378,7 @@ const Header = () => {
                       );
                     })}
                   {Array.isArray(desktopDropdown.links) &&
-                    desktopDropdown.links.map((linkLabel) => (
+                    desktopDropdown.links.map((linkLabel) => getTopicLabel(linkLabel, "Link")).map((linkLabel) => (
                       <Link
                         key={linkLabel}
                         to={getSubcategoryPath(desktopDropdown.path, linkLabel)}

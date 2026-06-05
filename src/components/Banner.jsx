@@ -7,6 +7,16 @@ const getCategoryLabel = (article) => {
   if (article?.primary_category?.name) return article.primary_category.name;
   const details = Array.isArray(article?.category_details) ? article.category_details : [];
   if (details[0]?.name) return details[0].name;
+  if (article?.category && typeof article.category === "object") {
+    return String(
+      article.category.name ||
+        article.category.title ||
+        article.category.label ||
+        article.category.slug ||
+        "News"
+    ).trim();
+  }
+  if (typeof article?.category === "string") return article.category;
   return "News";
 };
 

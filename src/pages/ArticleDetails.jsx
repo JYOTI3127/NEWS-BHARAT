@@ -648,6 +648,8 @@ const FAQ_CONTENT_KEYS = [
   "faqs",
   "faq_items",
   "faqItems",
+  "faq_schema_items",
+  "faqSchemaItems",
   "faq_schema",
   "faq_schemas",
   "faqpage",
@@ -743,14 +745,14 @@ const dedupeFaqItems = (items) => {
   return unique;
 };
 
-const ArticleFaqAccordion = ({ items = [], maxWidth }) => {
+const ArticleFaqAccordion = ({ items = [], maxWidth, title = "Frequently Asked Questions" }) => {
   const [openIndex, setOpenIndex] = useState(0);
   if (!items.length) return null;
 
   return (
-    <section className="article-faq" style={{ maxWidth }} aria-labelledby="article-faq-heading">
+    <section className="article-faq" style={{ width: "100%", maxWidth, marginLeft: 0, marginRight: 0 }} aria-labelledby="article-faq-heading">
       <div className="article-faq__header">
-        <h2 id="article-faq-heading">Frequently Asked Questions</h2>
+        <h2 id="article-faq-heading">{title}</h2>
       </div>
       <div className="article-faq__list">
         {items.map((item, index) => {
@@ -1028,7 +1030,15 @@ const normalizeHeadingStructure = (doc) => {
       });
     }
 
-    if (getPlainText(heading.textContent || "").length === 0) heading.remove();
+    if (getPlainText(heading.textContent || "").length === 0) {
+      if (heading.querySelector("img, iframe, video")) {
+        const figure = doc.createElement("figure");
+        while (heading.firstChild) figure.appendChild(heading.firstChild);
+        heading.replaceWith(figure);
+        return;
+      }
+      heading.remove();
+    }
   });
 };
 
@@ -1090,7 +1100,14 @@ const normalizeArticleContent = (html) => {
     });
   });
   Array.from(doc.body.querySelectorAll("h1, h2, h3, h4, h5, h6")).forEach((heading) => {
-    if (getPlainText(heading.textContent || "").length === 0) heading.remove();
+    if (getPlainText(heading.textContent || "").length > 0) return;
+    if (heading.querySelector("img, iframe, video")) {
+      const figure = doc.createElement("figure");
+      while (heading.firstChild) figure.appendChild(heading.firstChild);
+      heading.replaceWith(figure);
+      return;
+    }
+    heading.remove();
   });
   Array.from(doc.body.querySelectorAll("p, div, span")).forEach((node) => {
     const childElements = Array.from(node.children);
@@ -2481,16 +2498,24 @@ export default function ArticleDetails() {
 
     return dedupeStructuredSchemas(merged);
   })();
-  // Frontend FAQ accordion should show only article-authored FAQ content.
-  // JSON-LD schemas are still emitted separately for crawlers below.
+  // Frontend FAQ accordion shows article-authored FAQ content, including backend FAQ schema fields.
   const visualFaqItems = dedupeFaqItems(
     extractFaqItems({
       faq: article?.faq,
       faqs: article?.faqs,
       faq_items: article?.faq_items,
       faqItems: article?.faqItems,
+      faq_schema_items: article?.faq_schema_items,
+      faqSchemaItems: article?.faqSchemaItems,
+      faq_schema: article?.faq_schema,
+      faq_schemas: article?.faq_schemas,
+      faqpage: article?.faqpage,
+      faq_page: article?.faq_page,
     })
   );
+  const visualFaqTitle =
+    getPlainText(article?.faq_schema_title || article?.faqSchemaTitle) ||
+    "Frequently Asked Questions";
 
   return (
     <div className="min-h-screen bg-white pt-[62px] font-[Poppins,_sans-serif]">
@@ -2718,6 +2743,14 @@ export default function ArticleDetails() {
   font-size: 16px;
   line-height: 1.7;
 }
+.article-content img {
+  display: block;
+  width: auto;
+  max-width: min(100%, 520px);
+  height: auto;
+  margin: 16px 0;
+  border-radius: 8px;
+}
             .article-content .article-dropcap-first::first-letter {
               float: left;
               font-size: 4.4rem;
@@ -2729,7 +2762,7 @@ export default function ArticleDetails() {
             }
           `}</style>
 
-          <ArticleFaqAccordion items={visualFaqItems} maxWidth={articleTextMaxWidth} />
+          <ArticleFaqAccordion items={visualFaqItems} maxWidth={articleTextMaxWidth} title={visualFaqTitle} />
 
           <section className="mt-8 border-t border-gray-200 pt-6" style={{ maxWidth: articleTextMaxWidth }}>
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">

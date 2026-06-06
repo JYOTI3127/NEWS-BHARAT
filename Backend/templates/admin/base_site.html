@@ -613,6 +613,9 @@ document.addEventListener('click', function(e){
   var audioUnlocked = false;
   var pendingToastSoundCount = 0;
   var notificationToastCacheKey = 'adminToastSeen:' + currentUserId;
+  var notificationTitleFlashTimer = null;
+  var notificationTitleFlashCount = 0;
+  var notificationFlashTitle = 'News4Bharat Alert';
 
   function normalizeToastType(tags){
     var tagText = String(tags || '').toLowerCase();
@@ -703,7 +706,7 @@ document.addEventListener('click', function(e){
 
     if(!options.silent){
       if(audioUnlocked){
-        playToastSound();
+        triggerNotificationCue();
       }else{
         pendingToastSoundCount += 1;
       }
@@ -737,7 +740,7 @@ document.addEventListener('click', function(e){
   function flushPendingToastSound(){
     if(!audioUnlocked || pendingToastSoundCount <= 0){ return; }
     pendingToastSoundCount = 0;
-    playToastSound();
+    triggerNotificationCue();
   }
 
   function scheduleTone(ctx, startAt, frequency, duration, volume){
@@ -761,13 +764,67 @@ document.addEventListener('click', function(e){
     oscillator.stop(startAt + duration + 0.02);
   }
 
+  function scheduleSweep(ctx, startAt, fromFrequency, toFrequency, duration, volume){
+    var oscillator = ctx.createOscillator();
+    var gainNode = ctx.createGain();
+    var filterNode = ctx.createBiquadFilter();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(fromFrequency, startAt);
+    oscillator.frequency.exponentialRampToValueAtTime(toFrequency, startAt + duration);
+    filterNode.type = 'bandpass';
+    filterNode.frequency.setValueAtTime(1800, startAt);
+    filterNode.Q.setValueAtTime(1.2, startAt);
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(volume, startAt + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+    oscillator.connect(filterNode);
+    filterNode.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+  }
+
+  function stopNotificationTitleFlash(){
+    if(notificationTitleFlashTimer){
+      window.clearInterval(notificationTitleFlashTimer);
+      notificationTitleFlashTimer = null;
+    }
+    notificationTitleFlashCount = 0;
+    syncTitle(lastUnreadNotifications);
+  }
+
+  function startNotificationTitleFlash(){
+    if(document.visibilityState === 'visible'){ return; }
+    stopNotificationTitleFlash();
+    var baseTitle = document.title.replace(/^\(\d+\)\s*/, '');
+    notificationTitleFlashCount = 0;
+    notificationTitleFlashTimer = window.setInterval(function(){
+      notificationTitleFlashCount += 1;
+      document.title = notificationTitleFlashCount % 2 === 1
+        ? notificationFlashTitle + ' • ' + baseTitle
+        : '(' + (lastUnreadNotifications || 1) + ') ' + baseTitle;
+      if(notificationTitleFlashCount >= 10){
+        stopNotificationTitleFlash();
+      }
+    }, 900);
+  }
+
   function playToastSound(){
     var ctx = ensureAudioContext();
     if(!ctx || !audioUnlocked){ return; }
     var startAt = ctx.currentTime + 0.01;
-    scheduleTone(ctx, startAt, 1174.66, 0.18, 0.16);
-    scheduleTone(ctx, startAt + 0.12, 1567.98, 0.24, 0.13);
-    scheduleTone(ctx, startAt + 0.26, 2093.00, 0.3, 0.1);
+    scheduleSweep(ctx, startAt, 740, 980, 0.12, 0.12);
+    scheduleTone(ctx, startAt + 0.11, 1318.51, 0.16, 0.13);
+    scheduleTone(ctx, startAt + 0.24, 1760.00, 0.18, 0.12);
+    scheduleTone(ctx, startAt + 0.42, 1318.51, 0.14, 0.1);
+    scheduleTone(ctx, startAt + 0.53, 1760.00, 0.22, 0.11);
+  }
+
+  function triggerNotificationCue(){
+    playToastSound();
+    startNotificationTitleFlash();
   }
 
   function flushDjangoMessages(){
@@ -1044,6 +1101,7 @@ document.addEventListener('click', function(e){
     document.addEventListener('visibilitychange', function(){
       if(document.visibilityState === 'visible'){
         unlockAudio();
+        stopNotificationTitleFlash();
       }
     });
     flushDjangoMessages();
@@ -1060,6 +1118,9 @@ document.addEventListener('click', function(e){
     document.addEventListener('visibilitychange', function(){
       if(document.visibilityState === 'visible' && attendanceIsActive){
         registerActivity();
+      }
+      if(document.visibilityState === 'visible'){
+        stopNotificationTitleFlash();
       }
     });
     window.setInterval(function(){

@@ -277,6 +277,8 @@ class ArticleSerializer(serializers.ModelSerializer):
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
+    category_slug = serializers.SerializerMethodField()
+    primary_category_slug = serializers.SerializerMethodField()
     reporter_assignments = serializers.SerializerMethodField()
 
     # Audit trail - read only
@@ -327,6 +329,32 @@ class ArticleSerializer(serializers.ModelSerializer):
             'is_updated', 'updated_display',
         ]
 
+    def get_field_names(self, declared_fields, info):
+        field_names = list(super().get_field_names(declared_fields, info))
+        for extra_name in (
+            'primary_category_details',
+            'category_details',
+            'canonical_url',
+            'public_url',
+            'content_html',
+            'structured_data',
+            'updated_at',
+            'is_updated',
+            'updated_display',
+            'category_slug',
+            'primary_category_slug',
+            'reporter_assignments',
+            'posted_by_username',
+            'posted_by_fullname',
+            'display_author_name',
+            'image_url',
+            'tags_list',
+            'secondary_keywords_list',
+        ):
+            if extra_name not in field_names:
+                field_names.append(extra_name)
+        return field_names
+
     def get_category_details(self, obj):
         return CategorySerializer(obj.categories.all(), many=True).data
 
@@ -340,6 +368,14 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_public_url(self, obj):
         return article_url(obj)
+
+    def get_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
+    def get_primary_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
 
     def get_content_html(self, obj):
         return get_article_render_content(obj)
@@ -365,7 +401,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         if not updated_at:
             return ''
         updated_at = timezone.localtime(updated_at)
-        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
+        return f"Updated on {updated_at.strftime('%B %d, %Y at %I:%M %p')}"
 
     def get_is_updated(self, obj):
         updated_at = self.get_effective_updated_at(obj)
@@ -551,6 +587,14 @@ class ArticleMinSerializer(serializers.ModelSerializer):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
 
+    def get_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
+    def get_primary_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
     def get_canonical_url(self, obj):
         final_url = article_url(obj)
         return normalized_canonical(obj, final_url)
@@ -571,6 +615,8 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
+    category_slug = serializers.SerializerMethodField()
+    primary_category_slug = serializers.SerializerMethodField()
     categories   = ArticleCategorySerializer(many=True, read_only=True)
 
     class Meta:
@@ -581,6 +627,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
             'category', 'primary_category', 'categories',
             'published_at', 'created_at', 'updated_at', 'date',
             'is_updated', 'updated_display',
+            'category_slug', 'primary_category_slug',
             'canonical_url', 'public_url', 'meta_title', 'meta_description', 'focus_keyword',
             'secondary_keywords', 'noindex', 'nofollow', 'in_sitemap',
             'author_name', 'tags', 'is_paid',
@@ -670,6 +717,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
     updated_at = serializers.SerializerMethodField()
     is_updated = serializers.SerializerMethodField()
     updated_display = serializers.SerializerMethodField()
+    category_slug = serializers.SerializerMethodField()
+    primary_category_slug = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     canonical_url = serializers.SerializerMethodField()
     selected_subcategories = serializers.JSONField(read_only=True)
@@ -689,6 +738,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
             'updated_at',
             'is_updated',
             'updated_display',
+            'category_slug',
+            'primary_category_slug',
             'public_url',
             'canonical_url',
             'selected_subcategories',
@@ -707,6 +758,14 @@ class ArticleListSerializer(serializers.ModelSerializer):
     def get_primary_category(self, obj):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
+
+    def get_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
+    def get_primary_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
 
     def get_published_at(self, obj):
         published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)

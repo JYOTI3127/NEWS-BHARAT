@@ -12,8 +12,11 @@ import json
 from datetime import datetime
 from io import StringIO
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 from .admin import ArticleAdmin, ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
+from .attendance import clock_in_attendance
+from .attendance_reminders import process_attendance_reminders
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
 from .seo_direct import SitemapEngine, _iso, article_related_urls, submit_article_everywhere
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
@@ -566,6 +569,144 @@ class UserProfileKraPermissionTests(TestCase):
         self.assertEqual(response.status_code, 302)
         profile.refresh_from_db()
         self.assertEqual(profile.kra, 'Updated by super admin')
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    SEO_SITE_URL='https://news4bharat.com',
+)
+class AttendanceReminderTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.employee = User.objects.create_user(
+            username='attendanceuser',
+            password='testpass123',
+            email='attendance@example.com',
+            is_staff=True,
+        )
+
+    def test_clock_in_reminder_sends_email_with_one_click_link(self):
+        morning_time = timezone.make_aware(datetime(2026, 6, 6, 10, 15))
+        mail.outbox = []
+
+        summary = process_attendance_reminders(now=morning_time)
+
+        self.assertEqual(summary['clock_in_first_sent'], 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Clock In', mail.outbox[0].subject)
+        self.assertIn('/api/attendance/email-action/?token=', mail.outbox[0].body)
+
+    def test_email_clock_in_link_clocks_user_in(self):
+        morning_time = timezone.make_aware(datetime(2026, 6, 6, 10, 15))
+        process_attendance_reminders(now=morning_time)
+        email_body = mail.outbox[0].body
+        action_url = next(
+            line.strip() for line in email_body.splitlines()
+            if '/api/attendance/email-action/?token=' in line
+        )
+        response = self.client.get(urlparse(action_url).path + '?' + urlparse(action_url).query)
+
+        self.assertEqual(response.status_code, 200)
+        snapshot = self.employee.attendance_records.get(date=timezone.localdate(morning_time))
+        self.assertIsNotNone(snapshot.last_clock_in_at)
+        self.assertIsNone(snapshot.last_clock_out_at)
+
+    def test_auto_clock_out_runs_at_8pm(self):
+        clock_in_time = timezone.make_aware(datetime(2026, 6, 6, 9, 30))
+        auto_clock_out_time = timezone.make_aware(datetime(2026, 6, 6, 20, 0))
+        clock_in_attendance(self.employee, now=clock_in_time)
+
+        summary = process_attendance_reminders(now=auto_clock_out_time)
+
+        self.assertEqual(summary['auto_clocked_out'], 1)
+        record = self.employee.attendance_records.get(date=timezone.localdate(clock_in_time))
+        self.assertIsNotNone(record.last_clock_out_at)
+        self.assertIsNotNone(record.auto_clocked_out_at)
+
+
+class ArticleDetailUpdatedFieldsTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.author = User.objects.create_user(
+            username='updatedfields',
+            password='testpass123',
+        )
+
+    def test_article_detail_by_slug_includes_updated_fields(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Updated article',
+            content='Body',
+            status='published',
+        )
+        published_at = timezone.now() - timedelta(minutes=20)
+        updated_at = timezone.now()
+        Article.objects.filter(pk=article.pk).update(
+            published_at=published_at,
+            updated_at=updated_at,
+        )
+
+        response = self.client.get(f'/api/articles/slug/{article.slug}/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn('updated_at', payload)
+        self.assertIn('is_updated', payload)
+        self.assertIn('updated_display', payload)
+        self.assertEqual(payload['updated_at'], updated_at.isoformat())
+        self.assertTrue(payload['is_updated'])
+        self.assertIn('Updated on', payload['updated_display'])
+        self.assertIn('category_slug', payload)
+        self.assertIn('primary_category_slug', payload)
+
+
+class ArticleCategorySlugPayloadTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.author = User.objects.create_user(
+            username='slugpayloads',
+            password='testpass123',
+        )
+        self.category = Category.objects.create(name='Business', slug='business', status='active')
+
+    def test_article_detail_by_slug_exposes_flat_category_slug_fields(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Category slug story',
+            content='Body',
+            status='published',
+            primary_category=self.category,
+        )
+        article.categories.add(self.category)
+
+        response = self.client.get(f'/api/articles/slug/{article.slug}/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload['category_slug'], 'business')
+        self.assertEqual(payload['primary_category_slug'], 'business')
+
+    def test_homepage_latest_news_current_includes_flat_category_slug_fields(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Homepage slug story',
+            content='Body',
+            status='published',
+            primary_category=self.category,
+            published_at=timezone.now(),
+        )
+        article.categories.add(self.category)
+
+        response = self.client.get('/api/homepage/latest_news/current/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn('articles', payload)
+        self.assertTrue(payload['articles'])
+        first_article = payload['articles'][0]
+        self.assertEqual(first_article['slug'], article.slug)
+        self.assertEqual(first_article['category_slug'], 'business')
+        self.assertEqual(first_article['primary_category_slug'], 'business')
 
 
 @override_settings(

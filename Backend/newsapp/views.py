@@ -58,6 +58,10 @@ from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
 from django.utils.text import slugify
 from .attendance import clock_in_attendance, get_attendance_snapshot, pause_attendance, touch_attendance
+from .attendance_reminders import (
+    execute_attendance_email_action,
+    read_attendance_email_action_token,
+)
 from django.core import signing
 
 User = get_user_model()
@@ -5130,6 +5134,50 @@ def attendance_disconnect_api(request):
         "clock_in_at": snapshot["clock_in_at"].isoformat() if snapshot["clock_in_at"] else None,
         "clock_out_at": snapshot["clock_out_at"].isoformat() if snapshot["clock_out_at"] else None,
     })
+
+
+@require_GET
+def attendance_email_action(request):
+    token = str(request.GET.get("token") or "").strip()
+    if not token:
+        return HttpResponse("Missing attendance token.", status=403)
+
+    try:
+        payload = read_attendance_email_action_token(token)
+    except signing.BadSignature:
+        return HttpResponse("This attendance link is invalid or has expired.", status=403)
+
+    action = str(payload.get("action") or "").strip().lower()
+    user_id = payload.get("user_id")
+    target_date = str(payload.get("date") or "").strip()
+    if action not in {"clock_in", "clock_out"} or not user_id:
+        return HttpResponse("This attendance link is invalid.", status=403)
+
+    user = get_object_or_404(User, pk=user_id, is_active=True, is_staff=True)
+    today = str(timezone.localdate())
+    if target_date and target_date != today:
+        return HttpResponse("This attendance link is no longer valid for today.", status=403)
+
+    execute_attendance_email_action(user=user, action=action, now=timezone.now())
+    action_label = "Clock In" if action == "clock_in" else "Clock Out"
+    return HttpResponse(
+        f"""
+        <html>
+          <head><title>{action_label} Completed</title></head>
+          <body style="font-family:Arial,sans-serif;background:#f5f7fb;padding:40px;color:#1f2937">
+            <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:32px;text-align:center">
+              <h1 style="margin:0 0 14px;font-size:28px;color:#10235c">{action_label} Completed</h1>
+              <p style="margin:0 0 10px;font-size:15px;line-height:1.7">
+                Your attendance action has been recorded successfully for today.
+              </p>
+              <p style="margin:0;font-size:13px;color:#6b7280">
+                You may now close this page.
+              </p>
+            </div>
+          </body>
+        </html>
+        """
+    )
 
 
 # ═══════════════════════════════════════════════════════

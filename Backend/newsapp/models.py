@@ -1070,6 +1070,11 @@ class AttendanceRecord(models.Model):
     last_clock_in_at = models.DateTimeField(null=True, blank=True)
     last_clock_out_at = models.DateTimeField(null=True, blank=True)
     last_activity_at = models.DateTimeField(null=True, blank=True)
+    clock_in_first_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    clock_in_second_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    clock_out_first_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    clock_out_second_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    auto_clocked_out_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

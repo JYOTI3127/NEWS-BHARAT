@@ -278,6 +278,21 @@ class LiveUpdateAdmin(admin.ModelAdmin):
     ordering = ('-published_at', '-created_at')
     readonly_fields = ('created_at', 'updated_at')
 
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_view_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_add_permission(self, request):
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
     class LiveUpdateQuickForm(forms.ModelForm):
         schedule_for_later = forms.BooleanField(required=False)
 

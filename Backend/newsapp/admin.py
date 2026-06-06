@@ -1071,8 +1071,23 @@ News4Bharat
         user    = get_object_or_404(User, pk=user_id)
         profile = get_object_or_404(UserProfile, user=user)
         can_edit_personal = bool(request.user.is_superuser or request.user.pk == user.pk)
+        can_add_own_kra = bool(request.user.pk == user.pk and not (profile.kra or '').strip())
+        can_manage_kra = bool(request.user.is_superuser or can_add_own_kra)
 
         if request.method == 'POST':
+            if '_save_kra' in request.POST:
+                if not can_manage_kra:
+                    raise PermissionDenied("You do not have permission to update KRA.")
+
+                kra = str(request.POST.get('kra', '') or '').strip()
+                profile.kra = kra
+                profile.save(update_fields=['kra'])
+                messages.success(
+                    request,
+                    "KRA updated successfully." if request.user.is_superuser else "KRA added successfully.",
+                )
+                return redirect(request.path)
+
             if not can_edit_personal:
                 raise PermissionDenied("You do not have permission to edit this profile.")
 
@@ -1195,6 +1210,8 @@ News4Bharat
             'title':   f'Profile — {user.username}',
             'can_manage_users': bool(request.user.is_superuser),
             'can_edit_personal': can_edit_personal,
+            'can_manage_kra': can_manage_kra,
+            'can_add_own_kra': can_add_own_kra,
             'gender_choices': UserProfile.GENDER_CHOICES,
             'article_stats': article_stats,
             'recent_authored_articles': authored_articles_qs[:5],
@@ -2779,6 +2796,9 @@ class ArticleAdmin(admin.ModelAdmin):
             or has_permission(user, 'edit_own_article')
         )
 
+    def _can_publish_articles(self, user):
+        return bool(user.is_superuser or has_permission(user, 'publish_article'))
+
     def _can_access_object(self, user, obj):
         if user.is_superuser:
             return True
@@ -2845,14 +2865,20 @@ class ArticleAdmin(admin.ModelAdmin):
 
         if change:
             old_status = form.initial.get('status')
+            can_publish_articles = self._can_publish_articles(request.user)
+
+            if old_status == 'published' and not can_publish_articles:
+                if obj.status not in {'draft', 'review'}:
+                    obj.status = 'review'
+                obj.published_at = None
+
             if old_status and obj.status != old_status:
-                if obj.status == 'published' and not (
-                    request.user.is_superuser
-                    or has_permission(request.user, 'publish_article')
-                ):
+                if obj.status == 'published' and not can_publish_articles:
                     raise PermissionDenied("Only admin can publish articles.")
                 if not request.user.is_superuser:
                     allowed = ALLOWED_TRANSITIONS.get(old_status, [])
+                    if old_status == 'published' and not can_publish_articles and obj.status == 'draft':
+                        allowed = [*allowed, 'draft']
                     if obj.status not in allowed:
                         raise ValidationError(
                             f"You can't directly move from {old_status} to {obj.status}"

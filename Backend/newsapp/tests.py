@@ -13,7 +13,7 @@ from datetime import datetime
 from io import StringIO
 from unittest.mock import patch
 
-from .admin import ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
+from .admin import ArticleAdmin, ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
 from .seo_direct import SitemapEngine, _iso, article_related_urls, submit_article_everywhere
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
@@ -458,6 +458,114 @@ class ArticleAdminPermissionTests(TestCase):
             self.article.author_display_bio,
             'Reporter can save their own byline details.',
         )
+
+    def test_author_editing_published_article_via_api_moves_it_to_review(self):
+        self.author.is_staff = True
+        self.author.save(update_fields=['is_staff'])
+        self.author.profile.extra_permissions.add(self.edit_own_article)
+        self.article.status = 'published'
+        self.article.published_at = timezone.now()
+        self.article.save()
+        self.client.force_authenticate(self.author)
+
+        response = self.client.put(
+            f'/api/articles/{self.article.pk}/',
+            {
+                'title': 'Updated published story',
+                'content': self.article.content,
+                'editor_name': 'Reporter Display Name',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.status, 'review')
+        self.assertIsNone(self.article.published_at)
+
+    def test_author_editing_published_article_via_admin_cannot_keep_it_live(self):
+        self.author.is_staff = True
+        self.author.save(update_fields=['is_staff'])
+        self.author.profile.extra_permissions.add(self.edit_own_article)
+        article = Article.objects.create(
+            author=self.author,
+            title='Live story',
+            content='Body copy',
+            status='published',
+            published_at=timezone.now(),
+        )
+        request = RequestFactory().post(f'/admin/newsapp/article/{article.pk}/change/')
+        request.user = self.author
+        model_admin = ArticleAdmin(Article, admin_site)
+        form = type('FormStub', (), {'initial': {'status': 'published'}})()
+
+        article.title = 'Live story updated by reporter'
+        article.status = 'published'
+        model_admin.save_model(request, article, form=form, change=True)
+
+        article.refresh_from_db()
+        self.assertEqual(article.status, 'review')
+        self.assertIsNone(article.published_at)
+
+
+class UserProfileKraPermissionTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.employee = User.objects.create_user(
+            username='employee1',
+            password='testpass123',
+            email='employee1@example.com',
+            is_staff=True,
+        )
+        self.super_admin = User.objects.create_user(
+            username='superkra',
+            password='testpass123',
+            email='superkra@example.com',
+            is_staff=True,
+            is_superuser=True,
+        )
+
+    def test_employee_can_add_own_kra_once(self):
+        self.client.force_login(self.employee)
+
+        response = self.client.post(
+            f'/admin/auth/user/{self.employee.pk}/profile/',
+            {'_save_kra': '1', 'kra': 'Own KRA details'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.employee.profile.refresh_from_db()
+        self.assertEqual(self.employee.profile.kra, 'Own KRA details')
+
+    def test_employee_cannot_update_own_kra_after_it_is_set(self):
+        profile = self.employee.profile
+        profile.kra = 'Initial KRA'
+        profile.save(update_fields=['kra'])
+        self.client.force_login(self.employee)
+
+        response = self.client.post(
+            f'/admin/auth/user/{self.employee.pk}/profile/',
+            {'_save_kra': '1', 'kra': 'Changed KRA'},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        profile.refresh_from_db()
+        self.assertEqual(profile.kra, 'Initial KRA')
+
+    def test_super_admin_can_update_existing_kra(self):
+        profile = self.employee.profile
+        profile.kra = 'Initial KRA'
+        profile.save(update_fields=['kra'])
+        self.client.force_login(self.super_admin)
+
+        response = self.client.post(
+            f'/admin/auth/user/{self.employee.pk}/profile/',
+            {'_save_kra': '1', 'kra': 'Updated by super admin'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.kra, 'Updated by super admin')
 
 
 @override_settings(

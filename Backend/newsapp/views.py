@@ -792,12 +792,15 @@ def _validate_article_status_change(*, user, previous_status, requested_status):
 
     requested_status = (requested_status or '').strip()
     previous_status = (previous_status or '').strip()
+    can_publish_article = has_permission(user, 'publish_article')
 
-    if requested_status == 'published' and not has_permission(user, 'publish_article'):
+    if requested_status == 'published' and not can_publish_article:
         return 'Only admin can publish articles.'
 
     if previous_status and requested_status and previous_status != requested_status:
         allowed = ALLOWED_TRANSITIONS.get(previous_status, [])
+        if previous_status == 'published' and not can_publish_article and requested_status == 'draft':
+            allowed = [*allowed, 'draft']
         if requested_status not in allowed:
             return f"You can't directly move from {previous_status} to {requested_status}."
 
@@ -811,10 +814,17 @@ def _normalize_requested_article_status(*, user, previous_status, requested_stat
     if getattr(user, 'is_superuser', False):
         return requested_status
 
-    if requested_status == 'published' and not has_permission(user, 'publish_article'):
+    can_publish_article = has_permission(user, 'publish_article')
+
+    if requested_status == 'published' and not can_publish_article:
         # Authors/reporters should still be able to save their article and
         # author details. If they try to publish directly, move it into the
         # review queue instead of rejecting the entire save.
+        return 'review'
+
+    if previous_status == 'published' and not can_publish_article:
+        if requested_status in {'draft', 'review'}:
+            return requested_status
         return 'review'
 
     return requested_status
@@ -1419,7 +1429,11 @@ def _save_article_from_request(request, article=None):
         previous_status=previous_status,
         requested_status=requested_status,
     )
-    if previous_status == 'published' and requested_status not in {'archived', 'review'}:
+    can_publish_article = request.user.is_superuser or has_permission(request.user, 'publish_article')
+    if previous_status == 'published' and not can_publish_article:
+        if requested_status not in {'draft', 'review'}:
+            requested_status = 'review'
+    elif previous_status == 'published' and requested_status not in {'archived', 'review'}:
         # Published articles may be sent back to review for editorial changes,
         # but stale editor requests must not silently downgrade them to draft
         # or any unrelated pre-publish state.

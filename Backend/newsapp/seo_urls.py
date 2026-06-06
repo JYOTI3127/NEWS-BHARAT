@@ -40,4 +40,6 @@ urlpatterns = [
 
     re_path(r"^category/(?P<slug>[-\w]+)/?$", seo_views.view_category_detail, name="category_detail_page"),
     re_path(r"^(?P<category_slug>[-\w]+)/(?P<slug>[-\w]+)/?$", seo_views.view_article_detail, name="article_detail_page"),
+
+    path("google266e9c0e77b9663d.html", seo_views.view_google_verify, name="google_verify"),
 ]

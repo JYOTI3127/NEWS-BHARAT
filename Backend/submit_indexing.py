@@ -20,7 +20,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import requests
@@ -245,13 +245,14 @@ def main():
         for item in failed:
             print(f"  {item['url']} -> {item['error']}")
 
+    now_utc = datetime.now(timezone.utc)
     log = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": now_utc.isoformat(),
         "submitted": submitted,
         "failed": [item["url"] for item in failed],
         "errors": failed,
     }
-    log_file = f"indexing-log-day{args.day}-{datetime.utcnow().strftime('%Y%m%d-%H%M')}.json"
+    log_file = f"indexing-log-day{args.day}-{now_utc.strftime('%Y%m%d-%H%M')}.json"
     with open(log_file, "w", encoding="utf-8") as handle:
         json.dump(log, handle, indent=2)
     print(f"\nLog saved to {log_file}")

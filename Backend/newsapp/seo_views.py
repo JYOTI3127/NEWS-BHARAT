@@ -271,3 +271,10 @@ def api_seo_submit(request):
         return JsonResponse({"google": google, "indexnow": indexnow, "pings": pings})
 
     return JsonResponse({"error": "Provide slug or urls"}, status=400)
+
+@require_GET
+def view_google_verify(request):
+    return HttpResponse(
+        "google-site-verification: google266e9c0e77b9663d.html",
+        content_type="text/html"
+    )

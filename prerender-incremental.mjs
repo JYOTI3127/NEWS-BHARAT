@@ -142,6 +142,23 @@ const pickCategoryPrerenderSeeds = (categories) =>
     .map(pickCategoryPrerenderSeed)
     .filter(Boolean)
 
+const dedupeArticles = (articles) => {
+  const seen = new Set()
+  return (Array.isArray(articles) ? articles : []).filter((article, index) => {
+    const key = String(
+      article?.id ||
+        article?.slug ||
+        article?.public_url ||
+        article?.url ||
+        article?.title ||
+        index
+    ).trim().toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 // ─── Build route list ────────────────────────────────────────────────────────
 
 function getRoutesForIncremental(article) {
@@ -219,10 +236,11 @@ const [recentResult, categoriesResult] = await Promise.allSettled([
   fetchCategories(),
 ])
 
-const allArticles =
+const recentArticles =
   recentResult.status === 'fulfilled' && Array.isArray(recentResult.value)
     ? recentResult.value
     : [article]
+const allArticles = dedupeArticles([article, ...recentArticles])
 const categories =
   categoriesResult.status === 'fulfilled' && Array.isArray(categoriesResult.value)
     ? categoriesResult.value

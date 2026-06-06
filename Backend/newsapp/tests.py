@@ -3,7 +3,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.test.utils import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
@@ -1086,6 +1086,74 @@ class PushSubscriptionCleanupTests(TestCase):
         self.assertTrue(PushSubscription.objects.filter(pk=inactive_sub.pk).exists())
         self.assertEqual(PushNotificationLog.objects.filter(subscription=active_ok, status='sent').count(), 1)
         self.assertEqual(PushNotificationLog.objects.filter(subscription=active_expired, status='failed').count(), 1)
+
+
+@override_settings(
+    VAPID_PUBLIC_KEY='test-public',
+    VAPID_PRIVATE_KEY='test-private',
+    VAPID_CLAIMS={'sub': 'mailto:test@example.com'},
+)
+class PushDeliveryStatusApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.staff_user = User.objects.create_user(
+            username='pushadmin',
+            email='pushadmin@example.com',
+            password='testpass123',
+            is_staff=True,
+            is_superuser=True,
+        )
+
+    def test_push_status_api_returns_subscription_and_log_summary(self):
+        active_sub = PushSubscription.objects.create(
+            endpoint='https://example.com/push/active',
+            p256dh='key-active',
+            auth='auth-active',
+            is_active=True,
+            subscriber_name='Active User',
+            subscriber_email='active@example.com',
+        )
+        inactive_sub = PushSubscription.objects.create(
+            endpoint='https://example.com/push/inactive',
+            p256dh='key-inactive',
+            auth='auth-inactive',
+            is_active=False,
+            subscriber_name='Inactive User',
+            subscriber_email='inactive@example.com',
+        )
+        PushNotificationLog.objects.create(
+            subscription=inactive_sub,
+            title='Failed alert',
+            body='Body',
+            target_url='/failed',
+            icon='/logo.png',
+            status=PushNotificationLog.STATUS_FAILED,
+            error_message='410 Gone',
+        )
+        PushNotificationLog.objects.create(
+            subscription=active_sub,
+            title='Sent alert',
+            body='Body',
+            target_url='/sent',
+            icon='/logo.png',
+            status=PushNotificationLog.STATUS_SENT,
+        )
+
+        self.client.force_login(self.staff_user)
+        response = self.client.get('/api/push/status/')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(payload['subscriptions']['active'], 1)
+        self.assertEqual(payload['subscriptions']['inactive'], 1)
+        self.assertEqual(payload['subscriptions']['total'], 2)
+        self.assertEqual(payload['logs']['total'], 2)
+        self.assertEqual(payload['logs']['sent'], 1)
+        self.assertEqual(payload['logs']['failed'], 1)
+        self.assertEqual(payload['logs']['latest']['status'], PushNotificationLog.STATUS_SENT)
+        self.assertEqual(len(payload['logs']['recent_failures']), 1)
+        self.assertEqual(payload['logs']['recent_failures'][0]['error_message'], '410 Gone')
 
 
 class EditorialCalendarSeedTests(TestCase):

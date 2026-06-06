@@ -6376,6 +6376,52 @@ def send_push_to_all(title, body, url, icon="/logo.png", return_report=False):
 
 
 @staff_member_required
+@require_GET
+def push_delivery_status(request):
+    active_subscriptions = PushSubscription.objects.filter(is_active=True)
+    inactive_subscriptions = PushSubscription.objects.filter(is_active=False)
+    logs = PushNotificationLog.objects.select_related("subscription").order_by("-sent_at")
+    latest_log = logs.first()
+
+    recent_failures = [
+        {
+            "log_id": log.id,
+            "subscription_id": log.subscription_id,
+            "subscriber_name": log.subscription.subscriber_name,
+            "subscriber_email": log.subscription.subscriber_email,
+            "sent_at": timezone.localtime(log.sent_at).isoformat(),
+            "title": log.title,
+            "error_message": log.error_message,
+        }
+        for log in logs.filter(status=PushNotificationLog.STATUS_FAILED)[:10]
+    ]
+
+    return JsonResponse({
+        "status": "ok",
+        "subscriptions": {
+            "active": active_subscriptions.count(),
+            "inactive": inactive_subscriptions.count(),
+            "total": active_subscriptions.count() + inactive_subscriptions.count(),
+        },
+        "logs": {
+            "total": logs.count(),
+            "sent": logs.filter(status=PushNotificationLog.STATUS_SENT).count(),
+            "failed": logs.filter(status=PushNotificationLog.STATUS_FAILED).count(),
+            "latest": {
+                "id": latest_log.id,
+                "subscription_id": latest_log.subscription_id,
+                "status": latest_log.status,
+                "title": latest_log.title,
+                "target_url": latest_log.target_url,
+                "sent_at": timezone.localtime(latest_log.sent_at).isoformat(),
+                "error_message": latest_log.error_message,
+            } if latest_log else None,
+            "recent_failures": recent_failures,
+        },
+    })
+
+
+@staff_member_required
 @require_POST
 def send_test_push_notification(request):
     payload = {

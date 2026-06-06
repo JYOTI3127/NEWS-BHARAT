@@ -655,6 +655,14 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         cat = obj.primary_category or obj.categories.first()
         return {'id': cat.id, 'name': cat.name, 'slug': cat.slug} if cat else None
 
+    def get_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
+    def get_primary_category_slug(self, obj):
+        cat = obj.primary_category or obj.categories.first()
+        return str(getattr(cat, 'slug', '') or '') if cat else ''
+
     def get_canonical_url(self, obj):
         final_url = article_url(obj)
         return normalized_canonical(obj, final_url)

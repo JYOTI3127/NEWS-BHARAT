@@ -3504,9 +3504,7 @@ def _format_article(article, request=None, highlight=None):
     img_url = None
     if article.image:
         try:
-            base  = request.build_absolute_uri(article.image.url) if request else article.image.url
-            mtime = article.image.storage.get_modified_time(article.image.name)
-            img_url = f"{base}?v={int(mtime.timestamp())}"
+            img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
         except Exception:
             img_url = request.build_absolute_uri(article.image.url) if request else article.image.url
 

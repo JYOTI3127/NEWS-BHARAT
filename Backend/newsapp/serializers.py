@@ -461,9 +461,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         if obj.image:
             try:
                 raw_base = request.build_absolute_uri(obj.image.url) if request else obj.image.url
-                base = _public_newsletter_asset_url(raw_base) or raw_base
-                mtime = obj.image.storage.get_modified_time(obj.image.name)
-                return f"{base}?v={int(mtime.timestamp())}"
+                return _public_newsletter_asset_url(raw_base) or raw_base
             except Exception:
                 try:
                     raw_url = request.build_absolute_uri(obj.image.url) if request else obj.image.url

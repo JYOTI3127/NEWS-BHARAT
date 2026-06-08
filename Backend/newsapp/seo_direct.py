@@ -30,6 +30,7 @@ import bleach
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -45,6 +46,12 @@ SEO = {
     "TWITTER":        getattr(settings, "SEO_TWITTER",          "@news4bharat"),
     "FB_APP_ID":      getattr(settings, "SEO_FB_APP_ID",        ""),
     "LOGO_URL":       getattr(settings, "SEO_LOGO_URL",         "https://news4bharat.com/images/logo.png"),
+    "ORG_ALT_NAME":   getattr(settings, "SEO_ORG_ALT_NAME",     "News 4 Bharat"),
+    "ORG_DESCRIPTION": getattr(
+        settings,
+        "SEO_ORG_DESCRIPTION",
+        "News4Bharat is an independent digital news platform committed to factual, balanced, and public-interest journalism.",
+    ),
     "INDEXNOW_KEY":   getattr(settings, "SEO_INDEXNOW_KEY",     "your-indexnow-key"),
     "GOOGLE_VERIFY":  getattr(settings, "SEO_GOOGLE_VERIFY",    ""),
     "BING_VERIFY":    getattr(settings, "SEO_BING_VERIFY",      ""),
@@ -444,7 +451,6 @@ Disallow: /editor/
 Disallow: /login
 Disallow: /register
 Disallow: /preview/
-Disallow: /category/news4bharat
 Disallow: /*?utm_*
 Disallow: /*?ref=*
 Disallow: /search?*
@@ -453,38 +459,35 @@ Crawl-delay: 1
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
-Disallow: /category/news4bharat
 Crawl-delay: 0
 
 User-agent: Google-InspectionTool
 Allow: /
 Disallow: /admin/
-Disallow: /category/news4bharat
 Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
-Disallow: /category/news4bharat
 Crawl-delay: 1
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /admin/
-Disallow: /category/news4bharat
 Crawl-delay: 1
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /admin/
-Disallow: /category/news4bharat
 Crawl-delay: 1
 
 User-agent: SemrushBot
-Disallow: /
+Allow: /
+Disallow: /admin/
 
 User-agent: AhrefsBot
-Disallow: /
+Allow: /
+Disallow: /admin/
 
 Sitemap: {base}/sitemap.xml
 Sitemap: {base}/sitemap_index.xml
@@ -551,14 +554,16 @@ class SitemapEngine:
     def _build_news() -> str:
         from newsapp.models import Article
         base  = SEO["SITE_URL"]
-        since = timezone.now() - timedelta(days=2)
+        now = timezone.now()
+        since = now - timedelta(hours=48)
 
-        # Tera Article mein `categories` ManyToMany hai
         articles = (
             Article.objects
-            .filter(status="published", in_sitemap=True, published_at__gte=since)
+            .filter(status="published", in_sitemap=True)
+            .annotate(news_anchor_at=Coalesce("published_at", "created_at"))
+            .filter(news_anchor_at__gte=since, news_anchor_at__lte=now)
             .prefetch_related("categories")
-            .order_by("-published_at")[:1000]
+            .order_by("-news_anchor_at")[:1000]
         )
 
         ET.register_namespace("",      "http://www.sitemaps.org/schemas/sitemap/0.9")
@@ -572,15 +577,16 @@ class SitemapEngine:
         })
 
         for a in articles:
+            publication_dt = getattr(a, "news_anchor_at", None) or a.published_at or getattr(a, "created_at", None) or now
             url = ET.SubElement(root, "url")
             ET.SubElement(url, "loc").text     = article_url(a, base)
-            ET.SubElement(url, "lastmod").text = _iso(a.published_at)
+            ET.SubElement(url, "lastmod").text = _iso(publication_dt)
 
             news_el = ET.SubElement(url, "news:news")
             pub_el  = ET.SubElement(news_el, "news:publication")
             ET.SubElement(pub_el, "news:name").text     = SEO["SITE_NAME"]
             ET.SubElement(pub_el, "news:language").text = "en"
-            ET.SubElement(news_el, "news:publication_date").text = _iso(a.published_at)
+            ET.SubElement(news_el, "news:publication_date").text = _iso(publication_dt)
             ET.SubElement(news_el, "news:title").text            = a.title
 
             # focus_keyword + tags → news:keywords
@@ -786,10 +792,11 @@ class SchemaEngine:
         same_as = _schema_json_list(
             getattr(article, "schema_organization_sameas", []) if article else [],
             [
-                "https://www.facebook.com/news4bharat",
-                "https://twitter.com/news4bharat",
-                "https://www.instagram.com/news4bharat",
-                "https://www.youtube.com/c/news4bharat",
+                "https://www.facebook.com/share/1GxJQvxefr/",
+                "https://www.instagram.com/news4_bharat",
+                "https://x.com/news4_bharat",
+                "https://www.youtube.com/@News4_Bharat1",
+                "https://www.linkedin.com/company/news4bharat",
             ],
         )
         return {
@@ -797,9 +804,23 @@ class SchemaEngine:
             "@type": org_type,
             "@id": f"{base}/#organization",
             "name": org_name,
+            "alternateName": SEO["ORG_ALT_NAME"],
             "url":  base,
-            "logo": {"@type": "ImageObject", "url": logo_url},
+            "logo": {"@type": "ImageObject", "url": logo_url, "width": 200, "height": 60},
+            "description": SEO["ORG_DESCRIPTION"],
             "sameAs": same_as,
+            "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "IN",
+            },
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "editorial",
+                "url": f"{base}/contact-us",
+            },
+            "publishingPrinciples": f"{base}/editorial-policy",
+            "diversityPolicy": f"{base}/editorial-policy",
+            "masthead": f"{base}/about-us",
         }
 
     @staticmethod
@@ -817,6 +838,7 @@ class SchemaEngine:
             "name": site_name,
             "description": SEO["TAGLINE"],
             "publisher": {"@id": f"{base}/#organization"},
+            "inLanguage": "en-IN",
             "potentialAction": {
                 "@type": "SearchAction",
                 "target": {"@type": "EntryPoint", "urlTemplate": f"{base}/search?q={{search_term_string}}"},
@@ -862,7 +884,6 @@ class SchemaEngine:
         author_pos = article.author_display_position or ""
         author_url = (
             str(getattr(article, "schema_author_url", "") or "").strip()
-            or f"{base}/author/{article.author_id}"
         )
 
         # Category
@@ -905,12 +926,13 @@ class SchemaEngine:
             "dateModified":  _iso(date_modified),
             "url": url,
             "mainEntityOfPage": {"@type": "WebPage", "@id": url},
+            "isPartOf": {"@id": f"{base}/#website"},
             "publisher": {"@id": f"{base}/#organization"},
             "isAccessibleForFree": not article.is_paid,
             "author": {
                 "@type": "Person",
                 "name":  author_name,
-                "url":   author_url,
+                **({"url": author_url} if author_url else {}),
                 **({"jobTitle": author_pos} if author_pos else {}),
                 **({"image": {"@type": "ImageObject", "url": article.author_display_photo}}
                    if article.author_display_photo else {}),
@@ -926,6 +948,8 @@ class SchemaEngine:
                 "@type":   "ImageObject",
                 "url":     img_url,
                 "caption": article.image_alt or article.title,
+                "width": 1200,
+                "height": 675,
             }
             schema["thumbnailUrl"] = img_url
 

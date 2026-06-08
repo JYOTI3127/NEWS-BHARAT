@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from newsapp.models import Article
+from newsapp.views import _unique_article_image_name
 from PIL import Image as PILImage
 import io
 import requests
@@ -54,7 +55,7 @@ class Command(BaseCommand):
                 img.save(output, format='WEBP', quality=88, optimize=True)
                 output.seek(0)
 
-                filename = f"articles/{article.slug}.webp"
+                filename = _unique_article_image_name(article, article.slug or article.title, ".webp")
                 article.image = ContentFile(output.read(), name=filename)
                 article.image_url = ''  # url clear karo
                 article.save(update_fields=['image', 'image_url'])

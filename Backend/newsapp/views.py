@@ -362,8 +362,18 @@ def _normalize_faq_schema_items(raw_value):
 def _unique_article_image_name(article, original_filename, extension):
     base_name = os.path.splitext(os.path.basename(original_filename or 'article-image'))[0]
     safe_base = slugify(base_name)[:45] or 'article-image'
-    safe_slug = slugify(getattr(article, 'slug', '') or getattr(article, 'title', ''))[:45] or 'article'
-    return f"{safe_slug}-{uuid.uuid4().hex[:10]}-{safe_base}{extension}"
+    safe_slug = slugify(getattr(article, 'slug', '') or getattr(article, 'title', ''))[:80] or 'article'
+    article_id = str(getattr(article, 'pk', '') or '').strip()
+
+    name_parts = [safe_slug]
+    if safe_base and safe_base != safe_slug:
+        name_parts.append(safe_base)
+    if article_id:
+        name_parts.append(article_id)
+
+    clean_name = "-".join(part for part in name_parts if part).strip("-")
+    clean_name = re.sub(r"-{2,}", "-", clean_name)
+    return f"articles/{clean_name}{extension}"
 
 
 def _unique_inline_image_name(original_filename, extension):
@@ -1054,6 +1064,8 @@ def _ensure_category_manager(request):
 
 
 def category_detail_page(request, slug):
+    if clean_url_segment(slug).lower() == 'news4bharat':
+        return redirect('/', permanent=True)
     category = get_object_or_404(Category, slug=slug)
     articles = category.articles.filter(status='published').order_by('-created_at')
     paginator = Paginator(articles, 6)

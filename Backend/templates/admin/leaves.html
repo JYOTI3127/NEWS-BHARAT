@@ -47,6 +47,9 @@
   .leaves-field label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b}
   .leaves-field input,.leaves-field select,.leaves-field textarea{width:100%;border:1px solid #dbe3ef;background:#f8fafc;border-radius:10px;padding:11px 12px;font:inherit;color:#0f172a;box-sizing:border-box}
   .leaves-field textarea{min-height:96px;resize:vertical}
+  .leaves-check{display:flex;align-items:flex-start;gap:10px;border:1px solid #dbeafe;background:#f8fbff;border-radius:10px;padding:11px 12px;color:#0f172a;font-size:13px;font-weight:800}
+  .leaves-check input{margin-top:2px}
+  .leaves-check span{display:block;color:#64748b;font-size:12px;font-weight:700;margin-top:2px;line-height:1.4}
   .leaves-btn{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;background:#17337a;color:#fff;box-shadow:0 8px 18px rgba(23,51,122,.18)}
   .leaves-btn.secondary{background:#f8fafc;color:#17337a;border:1px solid #cbd5e1;box-shadow:none}
   .leaves-btn.approve{background:#16a34a}
@@ -86,10 +89,11 @@
       <div>
         <div class="leaves-kicker">Monthly Attendance</div>
         <h2 class="leaves-month-title">{{ month_label }} present days</h2>
-        <p class="leaves-month-meta">This month, see how many working days each employee has attended.</p>
+        <p class="leaves-month-meta">Present days are counted from the start of the month up to today; approved leaves are shown separately.</p>
       </div>
       <div class="leaves-month-summary">
         <span class="leaves-month-soft-pill">{{ monthly_attendance_rows|length }} employees</span>
+        <span class="leaves-month-soft-pill">{{ elapsed_days_in_month }} days elapsed</span>
         <span class="leaves-month-pill">{{ total_days_in_month }} days in {{ today|date:"F" }}</span>
       </div>
     </div>
@@ -264,6 +268,16 @@
         <form method="post" class="leaves-form">
           {% csrf_token %}
           <input type="hidden" name="leave_action" value="submit_leave">
+          {% if request.user.is_superuser %}
+          <div class="leaves-field">
+            <label for="leaveUser">Employee</label>
+            <select id="leaveUser" name="leave_user_id" required>
+              {% for member in staff_users %}
+                <option value="{{ member.pk }}">{{ member.get_full_name|default:member.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
           <div class="leaves-form-grid">
             <div class="leaves-field">
               <label for="startDate">Start Date</label>
@@ -278,6 +292,15 @@
             <label for="leaveReason">Reason</label>
             <textarea id="leaveReason" name="reason" placeholder="Leave reason" required></textarea>
           </div>
+          {% if request.user.is_superuser %}
+          <label class="leaves-check">
+            <input type="checkbox" name="direct_approve" value="1" checked>
+            <div>
+              Mark as approved
+              <span>Use this when you are adding leave on behalf of an employee.</span>
+            </div>
+          </label>
+          {% endif %}
           <button type="submit" class="leaves-btn">Submit Leave</button>
         </form>
       </div>

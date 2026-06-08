@@ -1590,6 +1590,19 @@ class NewsAdminSite(AdminSite):
             action = (request.POST.get('leave_action') or '').strip()
 
             if action == 'submit_leave':
+                selected_user = request.user
+                direct_approve = False
+                if request.user.is_superuser:
+                    selected_user_id = request.POST.get('leave_user_id')
+                    if selected_user_id:
+                        selected_user = get_object_or_404(
+                            User,
+                            Q(profile__is_guest_profile=False) | Q(profile__isnull=True),
+                            pk=selected_user_id,
+                            is_staff=True,
+                            is_active=True,
+                        )
+                    direct_approve = request.POST.get('direct_approve') == '1'
                 start_date = parse_date((request.POST.get('start_date') or '').strip())
                 end_date = parse_date((request.POST.get('end_date') or '').strip())
                 reason = (request.POST.get('reason') or '').strip()
@@ -1597,16 +1610,26 @@ class NewsAdminSite(AdminSite):
                     messages.error(request, 'Start date, end date and reason are required.')
                     return redirect('newsadmin:leaves')
                 leave_request = LeaveRequest(
-                    user=request.user,
+                    user=selected_user,
                     start_date=start_date,
                     end_date=end_date,
                     reason=reason,
                 )
+                if direct_approve:
+                    leave_request.status = LeaveRequest.STATUS_APPROVED
+                    leave_request.reviewed_by = request.user
+                    leave_request.reviewed_at = timezone.now()
                 try:
                     leave_request.full_clean()
                     leave_request.save()
                 except ValidationError as exc:
                     messages.error(request, '; '.join(exc.messages))
+                    return redirect('newsadmin:leaves')
+                if direct_approve:
+                    messages.success(
+                        request,
+                        f'Approved leave marked for {selected_user.get_full_name() or selected_user.username}.',
+                    )
                     return redirect('newsadmin:leaves')
                 recipients_count = send_leave_request_submission_email(leave_request, request)
                 if recipients_count:
@@ -1680,26 +1703,7 @@ class NewsAdminSite(AdminSite):
         month_start = date(today.year, today.month, 1)
         month_end = today
         _, total_days_in_month = monthrange(today.year, today.month)
-        month_off_dates = {
-            off_date for off_date in _build_month_off_dates(today.year, today.month)
-            if month_start <= off_date <= month_end
-        }
-        working_days_so_far = max((month_end - month_start).days + 1 - len(month_off_dates), 0)
-        monthly_records = (
-            AttendanceRecord.objects
-            .filter(user__in=users, date__gte=month_start, date__lte=month_end)
-            .select_related('user')
-        )
-        monthly_present_dates_by_user = {}
-        for record in monthly_records:
-            is_present = (
-                _attendance_record_seconds(record) > 0
-                or record.last_clock_in_at
-                or record.last_clock_out_at
-            )
-            if is_present:
-                monthly_present_dates_by_user.setdefault(record.user_id, set()).add(record.date)
-
+        elapsed_days_in_month = (month_end - month_start).days + 1
         base_leave_requests = LeaveRequest.objects.select_related('user', 'reviewed_by').filter(user__in=users)
         monthly_taken_leave_days_by_user = {}
         monthly_approved_leaves = base_leave_requests.filter(
@@ -1734,16 +1738,14 @@ class NewsAdminSite(AdminSite):
         monthly_attendance_rows = []
         for member in users:
             snapshot = get_attendance_snapshot(member)
-            present_dates = monthly_present_dates_by_user.setdefault(member.pk, set())
-            if snapshot['clock_in_at'] or snapshot['clock_out_at'] or snapshot['display_seconds'] > 0:
-                present_dates.add(today)
-            present_days = len(present_dates)
+            leaves_taken_days = monthly_taken_leave_days_by_user.get(member.pk, 0)
+            present_days = max(elapsed_days_in_month - leaves_taken_days, 0)
             monthly_attendance_rows.append({
                 'user': member,
                 'present_days': present_days,
                 'month_days': total_days_in_month,
-                'working_days': working_days_so_far,
-                'leaves_taken_days': monthly_taken_leave_days_by_user.get(member.pk, 0),
+                'elapsed_days': elapsed_days_in_month,
+                'leaves_taken_days': leaves_taken_days,
                 'attendance_percent': min(round((present_days / total_days_in_month) * 100), 100) if total_days_in_month else 0,
                 'is_active': snapshot['is_active'],
             })
@@ -1761,7 +1763,7 @@ class NewsAdminSite(AdminSite):
             'today': today,
             'month_label': today.strftime('%B %Y'),
             'total_days_in_month': total_days_in_month,
-            'working_days_so_far': working_days_so_far,
+            'elapsed_days_in_month': elapsed_days_in_month,
             'monthly_attendance_rows': monthly_attendance_rows,
             'user_rows': user_rows,
             'leave_requests': all_requests,

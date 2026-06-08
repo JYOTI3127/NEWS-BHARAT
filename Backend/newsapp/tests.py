@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.test import Client, TestCase
 from django.test.utils import override_settings
 from django.test.client import RequestFactory
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 import json
@@ -14,10 +15,29 @@ from io import StringIO
 from unittest.mock import patch
 from urllib.parse import urlparse
 
-from .admin import ArticleAdmin, ArticleAssignmentAdmin, _build_editorial_calendar_events, admin_site
+from .admin import (
+    ArticleAdmin,
+    ArticleAssignmentAdmin,
+    _build_editorial_calendar_events,
+    _sync_guest_profile_state_for_profile,
+    admin_site,
+)
 from .attendance import clock_in_attendance
 from .attendance_reminders import process_attendance_reminders
-from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
+from .models import (
+    Article,
+    ArticleAssignment,
+    ArticleVersion,
+    AttendanceRecord,
+    Category,
+    HomepageSlot,
+    Notification,
+    Permission,
+    PushNotificationLog,
+    PushSubscription,
+    Report,
+    Role,
+)
 from .seo_direct import SitemapEngine, _iso, article_related_urls, article_schema_payloads, submit_article_everywhere
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
@@ -622,6 +642,69 @@ class AttendanceReminderTests(TestCase):
         record = self.employee.attendance_records.get(date=timezone.localdate(clock_in_time))
         self.assertIsNotNone(record.last_clock_out_at)
         self.assertIsNotNone(record.auto_clocked_out_at)
+
+
+class GuestProfileDirectoryTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin_user = User.objects.create_superuser(
+            username='guestadmin',
+            email='guestadmin@example.com',
+            password='testpass123',
+        )
+        self.client.force_login(self.admin_user)
+
+    def test_inactive_staff_member_moves_to_guest_profiles(self):
+        active_user = User.objects.create_user(
+            username='activeteam',
+            email='active@example.com',
+            password='testpass123',
+            is_staff=True,
+            is_active=True,
+        )
+        active_user.profile.status = 'active'
+        active_user.profile.last_seen = timezone.now()
+        active_user.profile.save(update_fields=['status', 'last_seen'])
+        AttendanceRecord.objects.create(
+            user=active_user,
+            date=timezone.localdate(),
+            last_activity_at=timezone.now(),
+        )
+
+        inactive_user = User.objects.create_user(
+            username='guestteam',
+            email='guest@example.com',
+            password='testpass123',
+            is_staff=True,
+            is_active=True,
+        )
+        old_time = timezone.now() - timedelta(days=8)
+        inactive_user.profile.status = 'active'
+        inactive_user.profile.last_seen = old_time
+        inactive_user.profile.save(update_fields=['status', 'last_seen'])
+        AttendanceRecord.objects.create(
+            user=inactive_user,
+            date=timezone.localdate(old_time),
+            last_activity_at=old_time,
+        )
+
+        _sync_guest_profile_state_for_profile(active_user.profile)
+        _sync_guest_profile_state_for_profile(inactive_user.profile)
+        active_user.profile.refresh_from_db()
+        inactive_user.profile.refresh_from_db()
+
+        self.assertFalse(active_user.profile.is_guest_profile)
+        self.assertTrue(inactive_user.profile.is_guest_profile)
+
+        team_response = self.client.get(reverse('newsadmin:auth_user_changelist'))
+        self.assertEqual(team_response.status_code, 200)
+        self.assertContains(team_response, 'activeteam')
+        self.assertNotContains(team_response, 'guestteam')
+
+        guest_response = self.client.get(reverse('newsadmin:auth_user_guest_profiles'))
+        self.assertEqual(guest_response.status_code, 200)
+        self.assertContains(guest_response, 'guestteam')
+        self.assertNotContains(guest_response, 'activeteam')
 
 
 class ArticleDetailUpdatedFieldsTests(TestCase):

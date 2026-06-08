@@ -40,7 +40,7 @@
 <div class="up-page">
 
   <div class="up-breadcrumb">
-    <a href="{% url 'newsadmin:auth_user_changelist' %}">Our Team</a>
+    <a href="{% url directory_url_name %}">{{ directory_label|default:"Our Team" }}</a>
     <span class="sep">›</span>
     <span class="current">{{ profile.user.username }}</span>
     <span class="sep">›</span>
@@ -82,6 +82,9 @@
             {% else %}
               <span class="status-badge inactive"><span class="dot"></span>Inactive</span>
             {% endif %}
+            {% if profile.is_guest_profile %}
+              <span class="status-badge" style="background:#fff7ed;color:#c2410c;border-color:#fdba74"><span class="dot" style="background:#f97316"></span>Guest Profile</span>
+            {% endif %}
           </div>
 
           {% if request.user.is_superuser %}
@@ -95,6 +98,21 @@
               Change Password
             </a>
           </div>
+          <form method="post" style="margin-top:12px;width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;display:flex;flex-direction:column;gap:10px">
+            {% csrf_token %}
+            <input type="hidden" name="_save_guest_profile" value="1">
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+              <input type="checkbox" name="guest_profile" {% if profile.is_guest_profile %}checked{% endif %} style="margin-top:2px;width:16px;height:16px;accent-color:#1d4ed8">
+              <span style="display:flex;flex-direction:column;gap:3px">
+                <span style="font-size:13px;font-weight:700;color:#0f172a">Guest Profile</span>
+                <span style="font-size:12px;line-height:1.5;color:#64748b">Sirf super admin is user ko Guest Profiles me move ya restore kar sakta hai.</span>
+              </span>
+            </label>
+            <button type="submit" class="btn-admin-edit" style="width:100%;justify-content:center;background:#0f172a;box-shadow:0 2px 8px rgba(15,23,42,0.18)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Update Guest Status
+            </button>
+          </form>
           {% endif %}
         </div>
 

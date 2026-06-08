@@ -1036,6 +1036,9 @@ class UserProfile(models.Model):
     digilocker_verified_payload = models.JSONField(default=dict, blank=True)
 
     last_seen = models.DateTimeField(null=True, blank=True)
+    is_guest_profile = models.BooleanField(default=False)
+    guest_profile_manual = models.BooleanField(default=False)
+    guest_since = models.DateTimeField(null=True, blank=True)
 
     def is_online(self):
         from django.utils import timezone

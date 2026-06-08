@@ -20,7 +20,7 @@ from datetime import timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html, strip_tags
-from django.urls import path
+from django.urls import path, reverse
 from django.templatetags.static import static
 from django.conf import settings
 from urllib.parse import quote
@@ -34,6 +34,7 @@ from .seo_direct import article_url
 
 SLUG_EDITOR_USERNAME = "sheenu"
 SLUG_EDITOR_EMAIL = "sheenaas013@gmail.com"
+GUEST_PROFILE_INACTIVITY_DAYS = 7
 
 
 def _can_manage_slug(user):
@@ -49,6 +50,77 @@ def _format_duration(total_seconds):
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{hours} hr {minutes} min {seconds} sec"
+
+
+def _profile_last_activity_at(profile):
+    anchors = [
+        getattr(profile, 'last_seen', None),
+        getattr(profile.user, 'last_login', None),
+        getattr(profile, 'created_at', None),
+    ]
+
+    latest_attendance = (
+        AttendanceRecord.objects
+        .filter(user=profile.user)
+        .order_by('-date', '-updated_at')
+        .only(
+            'last_activity_at',
+            'last_clock_out_at',
+            'last_clock_in_at',
+            'updated_at',
+            'created_at',
+        )
+        .first()
+    )
+    if latest_attendance:
+        anchors.extend([
+            latest_attendance.last_activity_at,
+            latest_attendance.last_clock_out_at,
+            latest_attendance.last_clock_in_at,
+            latest_attendance.updated_at,
+            latest_attendance.created_at,
+        ])
+
+    anchors = [anchor for anchor in anchors if anchor is not None]
+    return max(anchors) if anchors else None
+
+
+def _sync_guest_profile_state_for_profile(profile, now=None):
+    now = now or timezone.now()
+    if getattr(profile, 'guest_profile_manual', False):
+        should_be_guest = True
+    elif not getattr(profile.user, 'is_staff', False):
+        should_be_guest = False
+    else:
+        latest_activity = _profile_last_activity_at(profile)
+        inactivity_cutoff = now - timedelta(days=GUEST_PROFILE_INACTIVITY_DAYS)
+        should_be_guest = bool(latest_activity and latest_activity < inactivity_cutoff)
+
+    update_fields = []
+    if profile.is_guest_profile != should_be_guest:
+        profile.is_guest_profile = should_be_guest
+        update_fields.append('is_guest_profile')
+
+    next_guest_since = profile.guest_since
+    if should_be_guest and profile.guest_since is None:
+        next_guest_since = now
+    elif not should_be_guest and profile.guest_since is not None:
+        next_guest_since = None
+
+    if profile.guest_since != next_guest_since:
+        profile.guest_since = next_guest_since
+        update_fields.append('guest_since')
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+
+    return should_be_guest
+
+
+def _sync_guest_profiles(queryset=None, now=None):
+    profiles = queryset if queryset is not None else UserProfile.objects.select_related('user').all()
+    for profile in profiles:
+        _sync_guest_profile_state_for_profile(profile, now=now)
 
 
 def _attendance_record_seconds(record):
@@ -831,11 +903,24 @@ class UserAdmin(BaseUserAdmin):
             return '—'
     get_failed_attempts.short_description = "Failed Attempts"
 
-    def changelist_view(self, request, extra_context=None):
+    def _render_directory_view(self, request, *, guest_mode=False, extra_context=None):
         self._current_request = request
         extra_context = extra_context or {}
 
-        qs = self.get_queryset(request)
+        _sync_guest_profiles(
+            UserProfile.objects.select_related('user').filter(user__is_staff=True),
+            now=timezone.now(),
+        )
+
+        qs = self.get_queryset(request).select_related('profile').filter(is_staff=True)
+        if guest_mode:
+            qs = qs.filter(profile__is_guest_profile=True)
+        else:
+            qs = qs.filter(
+                is_active=True,
+                profile__status='active',
+                profile__is_guest_profile=False,
+            )
 
         q = request.GET.get('q', '')
         if q:
@@ -866,9 +951,16 @@ class UserAdmin(BaseUserAdmin):
         page_obj  = paginator.get_page(request.GET.get('page', 1))
 
         extra_context.update({
-            'users':    page_obj.object_list,
+            'users': page_obj.object_list,
             'page_obj': page_obj,
             'can_manage_users': bool(request.user.is_superuser),
+            'page_title': 'Guest Profiles' if guest_mode else 'Our Team',
+            'directory_mode': 'guest' if guest_mode else 'team',
+            'directory_description': (
+                'Profiles automatically moved here after more than 7 days of inactivity.'
+                if guest_mode else
+                'Only active team members are shown here.'
+            ),
         })
 
         return TemplateResponse(
@@ -876,6 +968,12 @@ class UserAdmin(BaseUserAdmin):
             'admin/user_list_page.html',
             {**self.admin_site.each_context(request), **extra_context}
         )
+
+    def changelist_view(self, request, extra_context=None):
+        return self._render_directory_view(request, guest_mode=False, extra_context=extra_context)
+
+    def guest_profiles_view(self, request):
+        return self._render_directory_view(request, guest_mode=True)
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         self._current_request = request
@@ -926,6 +1024,11 @@ class UserAdmin(BaseUserAdmin):
     def get_urls(self):
         urls   = super().get_urls()
         custom = [
+            path(
+                'guest-profiles/',
+                self.admin_site.admin_view(self.guest_profiles_view),
+                name='auth_user_guest_profiles',
+            ),
             path('add/',
                  self.admin_site.admin_view(self.custom_add_view),
                  name='auth_user_add'),
@@ -1083,6 +1186,7 @@ News4Bharat
             raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
         user    = get_object_or_404(User, pk=user_id)
         profile = get_object_or_404(UserProfile, user=user)
+        now = timezone.now()
         can_edit_personal = bool(request.user.is_superuser or request.user.pk == user.pk)
         can_add_own_kra = bool(request.user.pk == user.pk and not (profile.kra or '').strip())
         can_manage_kra = bool(request.user.is_superuser or can_add_own_kra)
@@ -1100,6 +1204,27 @@ News4Bharat
                     "KRA updated successfully." if request.user.is_superuser else "KRA added successfully.",
                 )
                 return redirect(request.path)
+
+            if '_save_guest_profile' in request.POST:
+                if not request.user.is_superuser:
+                    raise PermissionDenied("Only super admin can manage guest profiles.")
+
+                move_to_guest = str(request.POST.get('guest_profile') or '').strip().lower() in {'1', 'true', 'on', 'yes'}
+                profile.guest_profile_manual = move_to_guest
+                profile.is_guest_profile = move_to_guest
+                profile.guest_since = now if move_to_guest else None
+                profile.save(update_fields=['guest_profile_manual', 'is_guest_profile', 'guest_since'])
+                _sync_guest_profile_state_for_profile(profile, now=now)
+                messages.success(
+                    request,
+                    "Profile moved to Guest Profiles." if move_to_guest else "Profile moved back to Our Team.",
+                )
+                target_url = (
+                    reverse('newsadmin:auth_user_guest_profiles')
+                    if move_to_guest else
+                    reverse('newsadmin:auth_user_changelist')
+                )
+                return redirect(target_url)
 
             if not can_edit_personal:
                 raise PermissionDenied("You do not have permission to edit this profile.")
@@ -1160,7 +1285,6 @@ News4Bharat
             messages.success(request, "Personal info updated successfully.")
             return redirect(request.path)
 
-        now = timezone.now()
         today = timezone.localdate()
 
         authored_articles_qs = (
@@ -1216,6 +1340,9 @@ News4Bharat
         )['total_seconds'] or 0
         attendance_last_record = attendance_qs.first()
         attendance_entry_count = attendance_qs.count()
+        _sync_guest_profile_state_for_profile(profile, now=now)
+        directory_url_name = 'newsadmin:auth_user_guest_profiles' if profile.is_guest_profile else 'newsadmin:auth_user_changelist'
+        directory_label = 'Guest Profiles' if profile.is_guest_profile else 'Our Team'
 
         return TemplateResponse(request, 'admin/user_profile.html', {
             **self.admin_site.each_context(request),
@@ -1237,6 +1364,8 @@ News4Bharat
             'attendance_total_duration': _format_duration(attendance_total_seconds),
             'attendance_last_record': attendance_last_record,
             'monthly_performance': monthly_performance,
+            'directory_url_name': directory_url_name,
+            'directory_label': directory_label,
         })
 
 
@@ -1244,7 +1373,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'staff_id', 'status', 'digilocker_status', 'updated_kra')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'staff_id', 'kra')
     list_filter = ('status', 'digilocker_status')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('is_guest_profile', 'guest_profile_manual', 'guest_since', 'created_at',)
     fields = (
         'user',
         'staff_id',
@@ -1256,6 +1385,9 @@ class UserProfileAdmin(admin.ModelAdmin):
         'roles',
         'assigned_categories',
         'status',
+        'is_guest_profile',
+        'guest_profile_manual',
+        'guest_since',
         'digilocker_status',
         'digilocker_reference_id',
         'digilocker_last_verified_at',

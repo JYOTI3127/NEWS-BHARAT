@@ -14,7 +14,7 @@
   <!-- TOP BAR -->
   <div class="um-topbar">
     <div class="um-title">
-      <h1>Our Team</h1>
+      <h1>{{ page_title|default:"Our Team" }}</h1>
       <span class="badge-count" id="total-count">{{ users|length }}</span>
     </div>
     {% if can_manage_users %}
@@ -24,6 +24,12 @@
     </a>
     {% endif %}
   </div>
+
+  {% if directory_description %}
+  <div style="margin:-6px 0 18px;color:#64748b;font-size:14px;line-height:1.6">
+    {{ directory_description }}
+  </div>
+  {% endif %}
 
   <!-- STATS PILLS -->
   <div class="um-stats">

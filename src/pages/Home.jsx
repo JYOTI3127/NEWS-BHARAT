@@ -20,6 +20,7 @@ import LatestUpdatesRail from '../components/LatestUpdatesRail';
 import { trackSocialFollow } from '../lib/analytics';
 
 const VisualStoriesWithScore = lazy(() => import('../components/Visualstories'));
+const VideoSection = lazy(() => import('../components/Video'));
 const NewsPortalSection = lazy(() => import('../components/Newsportalsection'));
 const StateNews = lazy(() => import('../components/Statenews'));
 const MoreStoriesSection = lazy(() => import('../components/MoreStoriesSection'));
@@ -488,6 +489,10 @@ const Home = () => {
             />
           </Profiler>
         </div>
+
+        <DeferredSection id="VideoSection" minHeight={420} forceRender={shouldForceDeferredRender} className="home-section-align">
+          <VideoSection />
+        </DeferredSection>
 
         <div className="home-section-align">
           <Profiler id="EditorialSection" onRender={onRenderCallback}>

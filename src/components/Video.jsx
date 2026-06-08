@@ -1,151 +1,182 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import "./Video.css";
+import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
 
-// ── DATA ──────────────────────────────────────────────────────
 const videos = [
-  { id: 1, title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", thumb: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=400&q=80", duration: "2:34" },
-  { id: 2, title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", thumb: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80", duration: "4:12" },
-  { id: 3, title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", thumb: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80", duration: "1:58", featured: true },
-  { id: 4, title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", thumb: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&q=80", duration: "3:45" },
-  { id: 5, title: "Samajwadi Party Leader Dies in Accident in Pratapgarh, CCTV Footage Captured", thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80", duration: "5:20" },
+  {
+    id: 1,
+    title: "Latest News Video: Ground Report and Key Updates",
+    category: "Featured",
+    duration: "Watch",
+    url: "https://www.youtube.com/watch?v=bOmqeFgGqrI",
+    embedUrl: "https://www.youtube.com/embed/bOmqeFgGqrI",
+    preview: true,
+  },
+  {
+    id: 2,
+    title: "News4Bharat Special: Big Story in Focus",
+    category: "Featured",
+    duration: "Watch",
+    url: "https://www.youtube.com/watch?v=ldpGBR-HXic",
+    embedUrl: "https://www.youtube.com/embed/ldpGBR-HXic",
+    preview: true,
+  },
+  {
+    id: 3,
+    title: "CJP Founders Face Questions at Jantar Mantar",
+    category: "Short",
+    duration: "N4B Shorts",
+    url: "https://www.youtube.com/shorts/_0ArfiXAYyY",
+    embedUrl: "https://www.youtube.com/embed/_0ArfiXAYyY",
+    autoplay: true,
+  },
+  {
+    id: 4,
+    title: "Another Major Fire Reported in Ghaziabad",
+    category: "Short",
+    duration: "N4B Shorts",
+    url: "https://www.youtube.com/shorts/iJ93jGvOp_Q",
+    embedUrl: "https://www.youtube.com/embed/iJ93jGvOp_Q",
+  },
+  {
+    id: 5,
+    title: "Breaking Visuals: Fire Incident Caught on Camera",
+    category: "Short",
+    duration: "N4B Shorts",
+    url: "https://www.youtube.com/shorts/ObXnnO-AtZ0",
+    embedUrl: "https://www.youtube.com/embed/ObXnnO-AtZ0",
+  },
+  {
+    id: 6,
+    title: "Massive Fire Video Goes Viral Online",
+    category: "Short",
+    duration: "N4B Shorts",
+    url: "https://www.youtube.com/shorts/57Jrjlw8SPw",
+    embedUrl: "https://www.youtube.com/embed/57Jrjlw8SPw",
+  },
+  {
+    id: 7,
+    title: "Cockroach Janta Party Meme Takes Over Internet",
+    category: "Short",
+    duration: "N4B Shorts",
+    url: "https://www.youtube.com/shorts/gVV4OL8wMSM",
+    embedUrl: "https://www.youtube.com/embed/gVV4OL8wMSM",
+  },
 ];
 
-// ── HOOK ──────────────────────────────────────────────────────
-function useWindowWidth() {
-  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const h = () => setW(window.innerWidth);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
-  }, []);
-  return w;
-}
+const getRealTitleUrl = (video) =>
+  `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(video.url)}`;
 
-// ── Play Button ────────────────────────────────────────────────
-function PlayBtn({ size = 44 }) {
-  const sizeClass = size === 36 ? "w-9 h-9" : size === 48 ? "w-12 h-12" : "w-11 h-11";
-
-  return (
-    <div className={`vs-play-btn ${sizeClass}`}>
-      <svg width={size * 0.38} height={size * 0.38} viewBox="0 0 12 14" fill="white">
-        <path d="M1 1l10 6L1 13V1z" />
-      </svg>
-    </div>
+const applyRealTitles = async (videoList, signal) => {
+  const updatedVideos = await Promise.all(
+    videoList.map(async (video) => {
+      try {
+        const response = await fetch(getRealTitleUrl(video), { signal });
+        if (!response.ok) return video;
+        const data = await response.json();
+        return data?.title ? { ...video, title: data.title } : video;
+      } catch {
+        return video;
+      }
+    })
   );
-}
 
-// ── Small Card ─────────────────────────────────────────────────
-function SmallCard({ video, isActive, onClick }) {
-  const [hovered, setHovered] = useState(false);
+  return updatedVideos;
+};
 
+const getEmbedSrc = (video) => {
+  if (!video.autoplay) return video.embedUrl;
+  const videoId = video.embedUrl.split("/").pop();
+  return `${video.embedUrl}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${videoId}`;
+};
+
+function PreviewCard({ video }) {
   return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className={`vs-small-card${isActive ? "" : " vs-small-card--inactive"}`}
-    >
-      <div className={`vs-small-thumb-wrap${isActive ? " vs-small-thumb-wrap--active" : ""}`}>
-        <img
-          src={video.thumb}
-          alt={video.title}
-          className={`transition-opacity duration-200 ${hovered ? "opacity-[0.75]" : "opacity-[0.55]"}`}
+    <article className="vs-news-preview">
+      <div className="vs-news-video-frame">
+        <iframe
+          src={getEmbedSrc(video)}
+          title={video.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
         />
-        <div className="vs-small-play-overlay">
-          <div className={`transition-transform duration-200 ${hovered ? "scale-[1.12]" : "scale-100"}`}>
-            <PlayBtn size={36} />
-          </div>
-        </div>
-        <span className="vs-duration-badge">{video.duration}</span>
       </div>
-      <p className={`vs-small-card-title${isActive ? " vs-small-card-title--active" : ""}`}>
-        {video.title}
-      </p>
-    </div>
+      <div className="vs-news-preview-caption">
+        <span className="vs-news-title-mark" aria-hidden="true" />
+        <h3>{video.title}</h3>
+      </div>
+    </article>
   );
 }
 
-// ── Featured Player ────────────────────────────────────────────
-function FeaturedPlayer({ video }) {
-  const [hovered, setHovered] = useState(false);
-
+function ShotCard({ video, index }) {
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="vs-featured-wrap"
-    >
-      <img
-        src={video.thumb}
-        alt={video.title}
-        className={`transition-opacity duration-200 ${hovered ? "opacity-[0.65]" : "opacity-50"}`}
-      />
-      <div className="vs-featured-play-overlay">
-        <div className={`transition-transform duration-200 ${hovered ? "scale-[1.08]" : "scale-100"}`}>
-          <PlayBtn size={48} />
-        </div>
+    <article className="vs-news-shot">
+      <span className="vs-news-shot-thumb">
+        <iframe
+          src={getEmbedSrc(video)}
+          title={video.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+        <span className="vs-news-shot-count">{String(index + 1).padStart(2, "0")}</span>
+      </span>
+      <div className="vs-news-shot-caption">
+        <span className="vs-news-title-mark" aria-hidden="true" />
+        <strong>{video.title}</strong>
       </div>
-      <div className="vs-featured-bottom-bar">
-        <p className="vs-featured-title">{video.title}</p>
-        <span className="vs-featured-duration">{video.duration}</span>
-      </div>
-    </div>
+    </article>
   );
 }
 
-// ── Section Header ─────────────────────────────────────────────
-function SectionHeader({ title, align = "left" }) {
-  return (
-    <div className={`vs-header-wrap${align === "right" ? " vs-header-wrap--right" : ""}`}>
-      {align === "left"  && <div className="vs-header-bar" />}
-      <span className="vs-header-text">{title}</span>
-      {align === "right" && <div className="vs-header-bar" />}
-    </div>
-  );
-}
-
-// ── MAIN ──────────────────────────────────────────────────────
 export default function VideoSection() {
-  const [activeId, setActiveId] = useState(3);
-  const width     = useWindowWidth();
-  const isDesktop = width >= 900;
+  const [videoItems, setVideoItems] = useState(videos);
 
-  const leftVideos  = [videos[0], videos[1]];
-  const rightVideos = [videos[3], videos[4]];
-  const featured    = videos.find(v => v.id === activeId) || videos[2];
+  useEffect(() => {
+    const controller = new AbortController();
+
+    applyRealTitles(videos, controller.signal).then((updatedVideos) => {
+      if (!controller.signal.aborted) setVideoItems(updatedVideos);
+    });
+
+    return () => controller.abort();
+  }, []);
+
+  const previewItems = videoItems.filter((video) => video.preview).slice(0, 2);
+  const shotItems = videoItems.filter((video) => !video.preview).slice(0, 5);
 
   return (
-    <div className="vs-wrap">
-      <div className="vs-inner">
-        <div className="vs-grid">
-
-          {/* Left Column */}
-          <div className="vs-side-col">
-            <SectionHeader title="VIDEOS" align="left" />
-            <div className="vs-side-row">
-              {leftVideos.map(v => (
-                <SmallCard key={v.id} video={v} isActive={activeId === v.id} onClick={() => setActiveId(v.id)} />
-              ))}
-            </div>
-          </div>
-
-          {/* Center Featured */}
-          <div className="vs-featured-col">
-            {isDesktop && <div className="mb-12" />}
-            <FeaturedPlayer video={featured} />
-          </div>
-
-          {/* Right Column */}
-          <div className="vs-side-col">
-            <SectionHeader title="STILL MORE" align="right" />
-            <div className="vs-side-row">
-              {rightVideos.map(v => (
-                <SmallCard key={v.id} video={v} isActive={activeId === v.id} onClick={() => setActiveId(v.id)} />
-              ))}
-            </div>
-          </div>
-
+    <section className="vs-news-desk" aria-labelledby="video-desk-heading">
+      <div className="vs-news-head">
+        <div>
+          <h2 id="video-desk-heading">Video Desk</h2>
+        </div>
+        <div className="vs-news-actions">
+          <a className="vs-news-subscribe" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener noreferrer">
+            <span className="vs-news-subscribe-pulse" aria-hidden="true" />
+            Subscribe Now
+          </a>
         </div>
       </div>
-    </div>
+
+      <div className="vs-news-preview-grid" aria-label="Featured video previews">
+        {previewItems.map((video) => (
+          <PreviewCard key={video.id} video={video} />
+        ))}
+      </div>
+
+      <div className="vs-news-shots-head">
+        <span>Short Shots</span>
+        <strong>{shotItems.length} videos</strong>
+      </div>
+
+      <div className="vs-news-shots-grid" aria-label="Short video shots">
+        {shotItems.map((video, index) => (
+          <ShotCard key={video.id} video={video} index={index} />
+        ))}
+      </div>
+    </section>
   );
 }

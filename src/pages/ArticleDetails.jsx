@@ -299,6 +299,35 @@ const formatArticleDateTimeForDisplay = (articleOrDate) =>
     .replace(/\s+at\s+/gi, " - ")
     .trim();
 
+const getArticlePublishedDateValue = (article) =>
+  article?.published_at ||
+  article?.published_date ||
+  article?.created_at ||
+  article?.date ||
+  "";
+
+const getArticleUpdatedLabel = (article) => {
+  const explicitDisplay = String(article?.updated_display || "").trim();
+  if (explicitDisplay) {
+    return explicitDisplay.replace(/\s+at\s+/gi, " - ").trim();
+  }
+
+  const updatedAt = article?.updated_at;
+  if (!updatedAt) return "";
+
+  const publishedAt = getArticlePublishedDateValue(article);
+  const updatedTime = new Date(updatedAt).getTime();
+  const publishedTime = publishedAt ? new Date(publishedAt).getTime() : 0;
+  const hasMeaningfulUpdatedTime =
+    Number.isFinite(updatedTime) &&
+    (!Number.isFinite(publishedTime) || publishedTime <= 0 || updatedTime - publishedTime > 60000);
+
+  if (!article?.is_updated && !hasMeaningfulUpdatedTime) return "";
+
+  const formatted = formatArticleDateTimeForDisplay(updatedAt);
+  return formatted ? `Updated ${formatted}` : "";
+};
+
 const normalizeKeywordPhrase = (value) =>
   String(value || "").replace(/^\s*hy(\b)/i, "why$1").trim();
 
@@ -2334,6 +2363,7 @@ export default function ArticleDetails() {
 
   const date = getArticleDateValue(article);
   const modifiedDate = article.updated_at || getArticleDateValue(article);
+  const articleUpdatedLabel = getArticleUpdatedLabel(article);
   const imageUrl = getArticleImage(article);
   const imageAlt = getPlainText(seoEndpointOg.image_alt) || article.image_alt?.trim() || article.title;
   const imageSource = article.image_source?.trim() || "";
@@ -2665,9 +2695,7 @@ export default function ArticleDetails() {
             {date && (
               <span className="flex items-center gap-1.5 text-gray-500">
                 <Clock size={13} />
-                {article.updated_display
-                  ? String(article.updated_display).replace(/\s+at\s+/gi, " - ").trim()
-                  : formatArticleDateTimeForDisplay(article)}
+                {articleUpdatedLabel || formatArticleDateTimeForDisplay(article)}
               </span>
             )}
 

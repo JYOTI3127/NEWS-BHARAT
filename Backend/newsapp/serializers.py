@@ -9,6 +9,42 @@ from .utils import get_article_render_content
 from urllib.parse import urljoin
 
 
+ARTICLE_UPDATED_GRACE_PERIOD = timedelta(seconds=1)
+
+
+def _effective_published_at(obj):
+    return getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+
+
+def _effective_updated_at(obj):
+    return (
+        getattr(obj, 'updated_at', None)
+        or _effective_published_at(obj)
+        or getattr(obj, 'created_at', None)
+    )
+
+
+def _is_article_updated(obj):
+    updated_at = _effective_updated_at(obj)
+    published_at = _effective_published_at(obj)
+    if not updated_at or not published_at:
+        return False
+    return updated_at > published_at + ARTICLE_UPDATED_GRACE_PERIOD
+
+
+def _format_updated_display(obj):
+    if not _is_article_updated(obj):
+        return ''
+    updated_at = _effective_updated_at(obj)
+    if not updated_at:
+        return ''
+    updated_at = timezone.localtime(updated_at)
+    month = updated_at.strftime('%B')
+    time_label = updated_at.strftime('%I:%M %p').lstrip('0')
+    tz_label = updated_at.tzname() or 'IST'
+    return f"Updated {month} {updated_at.day}, {updated_at.year} - {time_label} {tz_label}"
+
+
 def _public_newsletter_asset_url(raw_url):
     raw_url = str(raw_url or '').strip()
     if not raw_url:
@@ -384,31 +420,17 @@ class ArticleSerializer(serializers.ModelSerializer):
         return article_schema_payloads(obj)
 
     def get_effective_updated_at(self, obj):
-        return (
-            getattr(obj, 'updated_at', None)
-            or getattr(obj, 'published_at', None)
-            or getattr(obj, 'created_at', None)
-        )
+        return _effective_updated_at(obj)
 
     def get_updated_at(self, obj):
         updated_at = self.get_effective_updated_at(obj)
         return updated_at.isoformat() if updated_at else None
 
     def get_updated_display(self, obj):
-        if not self.get_is_updated(obj):
-            return ''
-        updated_at = self.get_effective_updated_at(obj)
-        if not updated_at:
-            return ''
-        updated_at = timezone.localtime(updated_at)
-        return f"Updated on {updated_at.strftime('%B %d, %Y at %I:%M %p')}"
+        return _format_updated_display(obj)
 
     def get_is_updated(self, obj):
-        updated_at = self.get_effective_updated_at(obj)
-        published_at = getattr(obj, 'published_at', None)
-        if updated_at and published_at:
-            return updated_at > published_at + timedelta(minutes=1)
-        return False
+        return _is_article_updated(obj)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -671,7 +693,7 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         return article_url(obj)
 
     def get_effective_published_at(self, obj):
-        return getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+        return _effective_published_at(obj)
 
     def get_published_at(self, obj):
         published_at = self.get_effective_published_at(obj)
@@ -691,31 +713,17 @@ class ArticleHomepageSerializer(serializers.ModelSerializer):
         return ''
 
     def get_effective_updated_at(self, obj):
-        return (
-            getattr(obj, 'updated_at', None)
-            or self.get_effective_published_at(obj)
-            or getattr(obj, 'created_at', None)
-        )
+        return _effective_updated_at(obj)
 
     def get_updated_at(self, obj):
         updated_at = self.get_effective_updated_at(obj)
         return updated_at.isoformat() if updated_at else None
 
     def get_updated_display(self, obj):
-        if not self.get_is_updated(obj):
-            return ''
-        updated_at = self.get_effective_updated_at(obj)
-        if not updated_at:
-            return ''
-        updated_at = timezone.localtime(updated_at)
-        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
+        return _format_updated_display(obj)
 
     def get_is_updated(self, obj):
-        updated_at = self.get_effective_updated_at(obj)
-        published_at = self.get_effective_published_at(obj)
-        if updated_at and published_at:
-            return updated_at > published_at + timedelta(minutes=1)
-        return False
+        return _is_article_updated(obj)
 
 
 class ArticleListSerializer(serializers.ModelSerializer):
@@ -776,21 +784,18 @@ class ArticleListSerializer(serializers.ModelSerializer):
         return str(getattr(cat, 'slug', '') or '') if cat else ''
 
     def get_published_at(self, obj):
-        published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
+        published_at = _effective_published_at(obj)
         return published_at.isoformat() if published_at else None
 
     def get_updated_at(self, obj):
-        return obj.updated_at.isoformat() if obj.updated_at else None
+        updated_at = _effective_updated_at(obj)
+        return updated_at.isoformat() if updated_at else None
 
     def get_is_updated(self, obj):
-        published_at = getattr(obj, 'published_at', None) or getattr(obj, 'created_at', None)
-        return bool(obj.updated_at and published_at and obj.updated_at > published_at + timedelta(minutes=1))
+        return _is_article_updated(obj)
 
     def get_updated_display(self, obj):
-        if not self.get_is_updated(obj) or not obj.updated_at:
-            return ''
-        updated_at = timezone.localtime(obj.updated_at)
-        return f"Updated on {updated_at.strftime('%b %d, %Y at %I:%M %p')}"
+        return _format_updated_display(obj)
 
     def get_public_url(self, obj):
         return article_url(obj)

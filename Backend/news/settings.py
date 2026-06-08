@@ -216,6 +216,7 @@ DIGILOCKER_SCOPE = os.environ.get("DIGILOCKER_SCOPE", "").strip()
 
 CRONJOBS = [
     ('*/1 * * * *', 'newsapp.scheduling.publish_due_articles_cron'),
+    ('*/1 * * * *', 'newsapp.attendance_reminders.process_attendance_reminders_cron'),
 ]
 
 FRONTEND_BUILD_HOOK_URL = os.environ.get("FRONTEND_BUILD_HOOK_URL", "")

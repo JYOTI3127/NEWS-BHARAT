@@ -6,6 +6,7 @@ from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.urls import reverse
 from django.utils import timezone
+import logging
 
 from .attendance import clock_in_attendance, get_or_create_attendance_record, pause_attendance
 from .models import AttendanceRecord
@@ -21,6 +22,7 @@ EVENING_SECOND_REMINDER = dt_time(18, 30)
 AUTO_CLOCK_OUT_TIME = dt_time(20, 0)
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def build_attendance_email_action_token(*, user_id, action, date_value):
@@ -208,3 +210,18 @@ def process_attendance_reminders(*, now=None):
             summary["auto_clocked_out"] += 1
 
     return summary
+
+
+def process_attendance_reminders_cron():
+    summary = process_attendance_reminders()
+    logger.info(
+        "Attendance reminder job completed. "
+        "Clock-in reminders: %s first, %s second. "
+        "Clock-out reminders: %s first, %s second. "
+        "Auto clock-outs: %s.",
+        summary["clock_in_first_sent"],
+        summary["clock_in_second_sent"],
+        summary["clock_out_first_sent"],
+        summary["clock_out_second_sent"],
+        summary["auto_clocked_out"],
+    )

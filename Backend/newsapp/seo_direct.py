@@ -282,6 +282,14 @@ def _iso(dt) -> str:
     return dt.replace(microsecond=0).isoformat(timespec="seconds")
 
 
+def _article_was_updated(article, grace_period: timedelta = timedelta(seconds=1)) -> bool:
+    published_at = getattr(article, "published_at", None) or getattr(article, "created_at", None)
+    updated_at = getattr(article, "updated_at", None)
+    if not published_at or not updated_at:
+        return False
+    return updated_at > published_at + grace_period
+
+
 def _cached(key, fn, ttl):
     """Django cache-aside (works with DB cache — Redis nahi chahiye)."""
     hit = cache.get(key)
@@ -876,11 +884,13 @@ class SchemaEngine:
             or _strip(article.content, 160)
         )
         date_published = getattr(article, "schema_date_published", None) or article.published_at
-        date_modified = (
-            getattr(article, "schema_date_modified", None)
-            or getattr(article, "updated_at", None)
-            or article.published_at
-        )
+        if _article_was_updated(article):
+            date_modified = getattr(article, "updated_at", None) or article.published_at
+        else:
+            date_modified = (
+                getattr(article, "schema_date_modified", None)
+                or article.published_at
+            )
 
         schema = {
             "@context": "https://schema.org",
@@ -1078,7 +1088,7 @@ class MetaEngine:
         Complete <head> HTML block return karta hai.
         Template mein: {{ seo_head|safe }}
         """
-        schemas = schemas or []
+        schemas = schemas or [] 
         e = html.escape
 
         og_tags = "\n".join(

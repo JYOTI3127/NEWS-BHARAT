@@ -196,43 +196,56 @@ def _build_editorial_calendar_events(year):
 
 
 def _build_public_holiday_rows(year):
-    holiday_titles = {
-        "New Year's Day",
-        "Makar Sankranti / Pongal",
-        "Republic Day",
-        "Holi",
-        "Id-ul-Fitr",
-        "Ram Navami",
-        "Mahavir Jayanti",
-        "Good Friday",
-        "Baisakhi",
-        "Ambedkar Jayanti",
-        "Labour Day / Buddha Purnima",
-        "Bakrid (Id-ul-Zuha)",
-        "Muharram",
-        "Independence Day",
-        "Onam / Milad-un-Nabi",
-        "Raksha Bandhan",
-        "Janmashtami",
-        "Ganesh Chaturthi / Hindi Diwas",
-        "Gandhi Jayanti",
-        "Dussehra",
-        "Diwali",
-        "Chhath Puja",
-        "Guru Nanak Jayanti",
-        "Christmas Day",
-    }
-    holiday_rows = []
-    for item in _build_editorial_calendar_events(year):
-        if item["title"] not in holiday_titles:
-            continue
-        holiday_rows.append({
-            "date": item["date"],
-            "title": item["title"],
-            "tag": item["tag"],
-            "note": item["note"],
-        })
-    return holiday_rows
+    return [
+        {
+            "date": date(year, 8, 15),
+            "title": "Independence Day",
+            "tag": "National",
+            "note": "",
+        },
+        {
+            "date": date(year, 8, 28),
+            "title": "Raksha Bandhan",
+            "tag": "Festival",
+            "note": "",
+        },
+        {
+            "date": date(year, 9, 4),
+            "title": "Janmashtmi",
+            "tag": "Festival",
+            "note": "",
+        },
+        {
+            "date": date(year, 10, 2),
+            "title": "Gandhi Jayanti",
+            "tag": "National",
+            "note": "",
+        },
+        {
+            "date": date(year, 10, 20),
+            "title": "Dussehra",
+            "tag": "Festival",
+            "note": "",
+        },
+        {
+            "date": date(year, 11, 9),
+            "title": "Diwali",
+            "tag": "Festival",
+            "note": "",
+        },
+        {
+            "date": date(year, 11, 11),
+            "title": "Bhai Duj",
+            "tag": "Festival",
+            "note": "",
+        },
+        {
+            "date": date(year, 12, 25),
+            "title": "Christmas",
+            "tag": "Festival",
+            "note": "",
+        },
+    ]
 
 
 def _build_month_off_dates(year, month):

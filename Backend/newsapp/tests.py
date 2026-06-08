@@ -9,7 +9,7 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 from rest_framework.test import APIClient
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -18,7 +18,7 @@ from .admin import ArticleAdmin, ArticleAssignmentAdmin, _build_editorial_calend
 from .attendance import clock_in_attendance
 from .attendance_reminders import process_attendance_reminders
 from .models import Article, ArticleAssignment, ArticleVersion, Category, HomepageSlot, Notification, Permission, PushNotificationLog, PushSubscription, Report, Role
-from .seo_direct import SitemapEngine, _iso, article_related_urls, submit_article_everywhere
+from .seo_direct import SitemapEngine, _iso, article_related_urls, article_schema_payloads, submit_article_everywhere
 from .utils import build_article_review_action_token, merge_soft_split_paragraphs, sanitize_article_html
 from .views import _hero_slot_queryset, _latest_news_queryset, custom_permission_denied_view, send_push_to_all
 
@@ -655,9 +655,32 @@ class ArticleDetailUpdatedFieldsTests(TestCase):
         self.assertIn('updated_display', payload)
         self.assertEqual(payload['updated_at'], updated_at.isoformat())
         self.assertTrue(payload['is_updated'])
-        self.assertIn('Updated on', payload['updated_display'])
+        self.assertEqual(payload['updated_display'], 'Updated June 6, 2026 - 4:36 PM IST')
         self.assertIn('category_slug', payload)
         self.assertIn('primary_category_slug', payload)
+
+    def test_article_schema_uses_updated_at_for_date_modified_after_edit(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Schema updated article',
+            content='Body',
+            status='published',
+        )
+        published_at = timezone.make_aware(datetime(2026, 6, 6, 10, 0))
+        updated_at = timezone.make_aware(datetime(2026, 6, 6, 11, 6, 41))
+        Article.objects.filter(pk=article.pk).update(
+            published_at=published_at,
+            updated_at=updated_at,
+            schema_date_modified=published_at,
+        )
+        article.refresh_from_db()
+
+        article_schema = next(
+            item for item in article_schema_payloads(article)
+            if item.get('@id', '').endswith('#article')
+        )
+
+        self.assertEqual(article_schema['dateModified'], _iso(updated_at))
 
 
 class ArticleCategorySlugPayloadTests(TestCase):

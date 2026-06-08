@@ -1473,8 +1473,8 @@ const normalizeArticleContent = (html) => {
     }
   }
 
-  // Incoming CMS/editor HTML may carry utility classes (e.g. flex/w-fit) that can break layout.
-  // Keep only internal placeholders; drop all other classes before style normalization.
+  // Keep editor layout classes that carry authoring intent (image alignment,
+  // captions, quote cards), while still dropping random utility classes.
   Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
     const classAttr = element.getAttribute("class");
     if (!classAttr) return;
@@ -1482,7 +1482,18 @@ const normalizeArticleContent = (html) => {
       .split(/\s+/)
       .map((name) => name.trim())
       .filter(Boolean)
-      .filter((name) => name === "react-tweet-placeholder");
+      .filter((name) =>
+        name === "react-tweet-placeholder" ||
+        name.startsWith("article-") ||
+        name.startsWith("image") ||
+        name.startsWith("ck-") ||
+        name.startsWith("ql-") ||
+        name.startsWith("wp-") ||
+        /^align(?:left|right|center|none)$/i.test(name) ||
+        /^caption$/i.test(name) ||
+        /^media$/i.test(name) ||
+        /^quote(?:-|_)?/i.test(name)
+      );
     if (keep.length > 0) element.setAttribute("class", keep.join(" "));
     else element.removeAttribute("class");
   });
@@ -1495,16 +1506,30 @@ const normalizeArticleContent = (html) => {
     ]).has(tagName);
     if (isTableStructuralElement) return;
 
-    element.removeAttribute("width");
-    element.removeAttribute("height");
-    element.removeAttribute("align");
+    const isMediaOrEditorLayoutElement = new Set([
+      "IMG", "FIGURE", "FIGCAPTION", "BLOCKQUOTE", "DIV", "SECTION", "ASIDE",
+    ]).has(tagName);
+    const isIntrinsicMediaElement = new Set(["IMG", "VIDEO", "IFRAME"]).has(tagName);
+
+    if (!isIntrinsicMediaElement) {
+      element.removeAttribute("width");
+      element.removeAttribute("height");
+    }
+    if (!isMediaOrEditorLayoutElement) {
+      element.removeAttribute("align");
+    }
 
     const style = element.getAttribute("style");
     if (!style) return;
     const blockedProps = new Set([
-      "float", "clear", "position", "left", "right", "top", "bottom",
-      "width", "min-width", "max-width", "height", "min-height", "max-height",
-      "display", "columns", "column-count", "column-width", "transform",
+      "position", "left", "right", "top", "bottom",
+      "columns", "column-count", "column-width", "transform",
+    ]);
+    const mediaLayoutProps = new Set([
+      "float", "clear", "width", "min-width", "max-width", "height", "min-height",
+      "max-height", "display", "text-align", "margin", "margin-left", "margin-right",
+      "margin-top", "margin-bottom", "vertical-align", "object-fit", "aspect-ratio",
+      "gap", "align-items", "justify-content", "flex-direction", "flex-wrap",
     ]);
     const cleanedStyle = style
       .split(";")
@@ -1512,7 +1537,10 @@ const normalizeArticleContent = (html) => {
       .filter(Boolean)
       .filter((rule) => {
         const prop = rule.split(":")[0]?.trim().toLowerCase();
-        return prop && !blockedProps.has(prop);
+        if (!prop) return false;
+        if (blockedProps.has(prop)) return false;
+        if (mediaLayoutProps.has(prop)) return isMediaOrEditorLayoutElement || isIntrinsicMediaElement;
+        return true;
       })
       .join("; ");
 
@@ -2780,8 +2808,93 @@ export default function ArticleDetails() {
 .article-content img {
   display: block;
   max-width: 100%;
+  height: auto;
   margin: 16px 0;
   border-radius: 8px;
+}
+.article-content figure,
+.article-content .image,
+.article-content .image_resized,
+.article-content .wp-caption {
+  max-width: 100%;
+  margin: 18px 0;
+}
+.article-content figure img,
+.article-content .image img,
+.article-content .wp-caption img {
+  width: 100%;
+  max-width: 100%;
+}
+.article-content figure[style*="width"] img,
+.article-content .image_resized[style*="width"] img,
+.article-content .wp-caption[style*="width"] img {
+  width: 100%;
+}
+.article-content figcaption,
+.article-content .wp-caption-text,
+.article-content .caption {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  font-weight: 500;
+  text-align: inherit;
+}
+.article-content .alignleft,
+.article-content .image-style-align-left,
+.article-content figure[align="left"],
+.article-content img[align="left"] {
+  float: left !important;
+  margin: 6px 18px 12px 0 !important;
+}
+.article-content .alignright,
+.article-content .image-style-align-right,
+.article-content figure[align="right"],
+.article-content img[align="right"] {
+  float: right !important;
+  margin: 6px 0 12px 18px !important;
+}
+.article-content .aligncenter,
+.article-content .image-style-align-center,
+.article-content figure[align="center"],
+.article-content img[align="center"] {
+  float: none !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center;
+}
+.article-content .image-style-side {
+  float: right !important;
+  margin: 6px 0 12px 18px !important;
+  max-width: 50%;
+}
+.article-content :where(.quote, .quote-box, .ck-block-quote, blockquote) img:first-child {
+  width: 72px;
+  max-width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 999px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.article-content :where(.quote, .quote-box, .ck-block-quote, blockquote):has(img) {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .article-content .alignleft,
+  .article-content .alignright,
+  .article-content .image-style-align-left,
+  .article-content .image-style-align-right,
+  .article-content .image-style-side {
+    float: none !important;
+    max-width: 100% !important;
+    margin: 16px 0 !important;
+  }
+  .article-content :where(.quote, .quote-box, .ck-block-quote, blockquote):has(img) {
+    flex-direction: column;
+  }
 }
             .article-content .article-dropcap-first::first-letter {
               float: left;

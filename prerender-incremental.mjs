@@ -133,13 +133,13 @@ const getCleanPathSegments = (value) =>
 
 const getPrerenderOutputPath = (baseDir, route) => {
   const cleanSegments = getCleanPathSegments(route)
-  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')
+  if (cleanSegments.length === 0) return path.join(baseDir, '__prerender', 'index.html')  // ← fix
   return path.join(baseDir, '__prerender', `${cleanSegments.join('/')}.html`)
 }
 
 const getRouteIndexOutputPath = (baseDir, route) => {
   const cleanSegments = getCleanPathSegments(route)
-  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')
+  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')  
   return path.join(baseDir, ...cleanSegments, 'index.html')
 }
 

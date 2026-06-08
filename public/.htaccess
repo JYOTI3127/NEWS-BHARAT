@@ -3,6 +3,10 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  
+  RewriteRule ^sitemap\.xml$ sitemap_index.xml.php [L]
+  RewriteRule ^sitemap_index\.xml$ sitemap_index.xml.php [L]
+  RewriteRule ^(sitemap-[a-z0-9\-]+)\.xml$ $1.xml.php [L]
 
   # Force HTTPS and non-www canonical domain
   RewriteCond %{HTTPS} !=on [OR]

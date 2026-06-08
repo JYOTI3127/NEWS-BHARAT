@@ -137,6 +137,12 @@ const getPrerenderOutputPath = (baseDir, route) => {
   return path.join(baseDir, '__prerender', `${cleanSegments.join('/')}.html`)
 }
 
+const getRouteIndexOutputPath = (baseDir, route) => {
+  const cleanSegments = getCleanPathSegments(route)
+  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')
+  return path.join(baseDir, ...cleanSegments, 'index.html')
+}
+
 const pickCategoryPrerenderSeeds = (categories) =>
   (Array.isArray(categories) ? categories : [])
     .map(pickCategoryPrerenderSeed)
@@ -308,6 +314,11 @@ for (const route of routes) {
       const outputPath = getPrerenderOutputPath(OUT_DIR, r)
       fs.mkdirSync(path.dirname(outputPath), { recursive: true })
       fs.writeFileSync(outputPath, cleanHtml, 'utf8')
+
+      const routeIndexPath = getRouteIndexOutputPath(OUT_DIR, r)
+      fs.mkdirSync(path.dirname(routeIndexPath), { recursive: true })
+      fs.writeFileSync(routeIndexPath, cleanHtml, 'utf8')
+
       console.log(`  OK ${r}`)
       success++
     })

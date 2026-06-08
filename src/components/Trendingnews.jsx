@@ -432,7 +432,7 @@ const LiveUpdates = memo(({ is2K }) => {
     const step = () => {
       if (autoScrollRef.current) {
         frame++;
-        if (frame % 3 === 0) {
+        if (frame % 48 === 0) {
           el.scrollTop += 1;
           if (el.scrollTop + el.clientHeight >= el.scrollHeight) el.scrollTop = 0;
         }

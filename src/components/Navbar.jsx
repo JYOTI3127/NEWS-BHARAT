@@ -116,7 +116,7 @@ const CATEGORY_ICON_MAP = {
   "States of Bharat": MapPin,
   "Bharat's BFSI": BarChart2,
   "Bharat in Numbers": Hash,
-  "Bharat Opinions": BookOpen,
+  "Bharat's Opinions": BookOpen,
   "Bharat's Startups": Zap,
   "Bharat 2047": Target,
   "Bharat By 2047": Target,
@@ -560,7 +560,7 @@ const orderDrawerSections = (sections = []) =>
 const NAV_SECTIONS = [
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+{ label: "Bharat's Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
   {
     label: "Business",
@@ -2160,7 +2160,7 @@ const Header = () => {
                   <Linkedin size={14} aria-hidden="true" />
                 </a>
                 <a
-                  href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr"
+                  href="https://www.instagram.com/news4_bharat"
                   target="_blank"
                   rel="noreferrer"
                   className="top-social-link"
@@ -2180,7 +2180,7 @@ const Header = () => {
                   <Youtube size={14} aria-hidden="true" />
                 </a>
                 <a
-                  href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ"
+                  href="https://x.com/news4_bharat"
                   target="_blank"
                   rel="noreferrer"
                   className="top-social-link"
@@ -2245,17 +2245,6 @@ const Header = () => {
                 </div>
 
                 <div className="top-actions search-actions" aria-label="Search tools">
-                  <button
-                    type="button"
-                    className="top-action-btn"
-                    onClick={handleTranslateToHindi}
-                    disabled={isTranslating}
-                    aria-label="Translate this page from English to Hindi"
-                    title={translationStatus || "Translate this page from English to Hindi"}
-                  >
-                    <Languages size={14} aria-hidden="true" />
-                    <span>{isTranslating ? "Translating..." : translationStatus === "Wait 1m" ? "Wait 1m" : translationDone ? "Hindi" : hasTranslatedContent ? "Continue HI" : "EN to HI"}</span>
-                  </button>
                   <button
                     type="button"
                     className={desktopNotificationClassName}
@@ -2403,22 +2392,6 @@ const Header = () => {
             )}
 
             <div className="mobile-nav-actions">
-              <button
-                type="button"
-                className="btn-flag navbar-hindi-btn"
-                onClick={handleTranslateToHindi}
-                disabled={isTranslating}
-                aria-label="Translate this page from English to Hindi"
-                title={translationStatus || "Translate this page from English to Hindi"}
-              >
-                <svg width="14" height="10" viewBox="0 0 16 11">
-                  <rect width="16" height="3.67" fill="#FF9933" />
-                  <rect y="3.67" width="16" height="3.67" fill="white" />
-                  <rect y="7.33" width="16" height="3.67" fill="#138808" />
-                  <circle cx="8" cy="5.5" r="1.5" fill="#000080" />
-                </svg>
-                {isTranslating ? "..." : translationStatus === "Wait 1m" ? "Wait" : translationDone ? "Hindi" : hasTranslatedContent ? "More HI" : "EN to HI"}
-              </button>
               <button
                 type="button"
                 className={mobileNotificationClassName}

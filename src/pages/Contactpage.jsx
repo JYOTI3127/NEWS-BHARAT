@@ -56,8 +56,8 @@ const offices = [
 
 const socialLinks = [
   { icon: <Linkedin size={18} />, label: "LinkedIn", href: "https://www.linkedin.com/company/news4bharat" },
-  { icon: <Twitter size={18} />, label: "Twitter", href: "https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" },
-  { icon: <Instagram size={18} />, label: "Instagram", href: "https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" },
+  { icon: <Twitter size={18} />, label: "Twitter", href: "https://x.com/news4_bharat" },
+  { icon: <Instagram size={18} />, label: "Instagram", href: "https://www.instagram.com/news4_bharat" },
   { icon: <Facebook size={18} />, label: "Facebook", href: "https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" },
 ];
 

@@ -29,7 +29,7 @@ const footerLinks = {
   ],
 
   All_About_Bharat: [
-    { name: "Bharat Opinions", slug: "bharat-opinions" },
+    { name: "Bharat's Opinions", slug: "bharat-opinions" },
     { name: "Bharat Explainers", slug: "bharat-explainers" },
     { name: "Bharat in Numbers", slug: "bharat-in-numbers" },
     { name: "Bharat's Startups", slug: "bharat-startups" },
@@ -170,8 +170,8 @@ export default function Footer() {
 
           <div className="ft-social-row">
             <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" className="ft-soc" onClick={() => trackSocialFollow("facebook", { placement: "footer" })}><Facebook size={18} /></a>
-            <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" className="ft-soc" onClick={() => trackSocialFollow("instagram", { placement: "footer" })}><Instagram size={18} /></a>
-            <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="ft-soc" title="X" onClick={() => trackSocialFollow("x", { placement: "footer" })}>
+            <a href="https://www.instagram.com/news4_bharat" className="ft-soc" onClick={() => trackSocialFollow("instagram", { placement: "footer" })}><Instagram size={18} /></a>
+            <a href="https://x.com/news4_bharat" target="_blank" rel="noreferrer" className="ft-soc" title="X" onClick={() => trackSocialFollow("x", { placement: "footer" })}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
                 <path d="M18.244 2H21l-6.56 7.5L22 22h-6.828l-5.35-7.002L3.5 22H1l7.02-8.02L2 2h6.9l4.86 6.41L18.244 2zm-2.39 18h1.885L8.15 4H6.2l9.654 16z" />
               </svg>
@@ -242,7 +242,7 @@ export default function Footer() {
                         to="/category/bharat-opinions"
                         className="ft-col-title ft-col-title-tight ft-col-title-link"
                       >
-                        Bharats Opinions
+                        Bharat's Opinions
                       </Link>
                     ) : (
                       <span className={`ft-col-title${TIGHT_FOOTER_HEADINGS.has(heading) ? " ft-col-title-tight" : ""}`}>

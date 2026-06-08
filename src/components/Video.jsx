@@ -85,7 +85,8 @@ const applyRealTitles = async (videoList, signal) => {
 };
 
 const getEmbedSrc = (video) => {
-  if (!video.autoplay) return video.embedUrl;
+  const shouldAutoplay = video.autoplay || video.category === "Short";
+  if (!shouldAutoplay) return video.embedUrl;
   const videoId = video.embedUrl.split("/").pop();
   return `${video.embedUrl}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${videoId}`;
 };

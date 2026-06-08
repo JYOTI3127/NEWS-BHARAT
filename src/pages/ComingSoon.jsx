@@ -439,8 +439,8 @@ export default function ComingSoon() {
           {/* SOCIAL */}
           <div className="social-row">
             <a href="https://www.facebook.com/share/1GxJQvxefr/?mibextid=wwXIfr" target="_blank" rel="noreferrer" className="s-link" title="Facebook"><FaFacebookF /></a>
-            <a href="https://www.instagram.com/news4_bharat?igsh=MWlxem53bjNobHl2Zw%3D%3D&utm_source=qr" target="_blank" rel="noreferrer" className="s-link" title="Instagram"><FaInstagram /></a>
-            <a href="https://x.com/news4_bharat?s=21&t=QmL3UuRgMMfwt2JDGmB3mQ" target="_blank" rel="noreferrer" className="s-link" title="X / Twitter"><FaXTwitter /></a>
+            <a href="https://www.instagram.com/news4_bharat" target="_blank" rel="noreferrer" className="s-link" title="Instagram"><FaInstagram /></a>
+            <a href="https://x.com/news4_bharat" target="_blank" rel="noreferrer" className="s-link" title="X / Twitter"><FaXTwitter /></a>
             <a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noreferrer" className="s-link" title="YouTube"><FaYoutube /></a>
             <a href="https://www.linkedin.com/company/news4bharat/" target="_blank" rel="noreferrer" className="s-link" title="LinkedIn"><FaLinkedin /></a>
           </div>

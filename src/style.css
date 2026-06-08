@@ -783,12 +783,12 @@ img {
   align-items: center;
   flex-wrap: nowrap;
   width: max-content;
-  animation: liveTickerMove 18s linear infinite;
+  animation: liveTickerMove 56s linear infinite;
 }
 
 .latest-updates-rail__ticker-track--single {
   width: 100%;
-  animation: liveTickerMoveSingle 14s linear infinite;
+  animation: liveTickerMoveSingle 44s linear infinite;
 }
 
 .latest-updates-rail__ticker-item {

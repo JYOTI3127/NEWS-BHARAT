@@ -29,7 +29,7 @@ const CATEGORY_ICON_MAP = {
   "States of Bharat": MapPin,   // Globe tha — ab MapPin
   "Bharat's BFSI": BarChart2,
   "Bharat in Numbers": Hash,    // BarChart2 tha — ab Hash
-  "Bharat Opinions": PenLine,
+  "Bharat's Opinions": PenLine,
   "Bharat's Startups": Zap,
   "Bharat 2047": Target,        // Flame tha — ab Target
   "Bharat By 2047": Target,
@@ -245,7 +245,7 @@ const sortByMenuOrder = (sections) =>
 const NAV_SECTIONS = [
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu, links: ["Artificial Intelligence"] },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame, links: ["Bharat By 2047"] },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Bharat's Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
   {
     label: "Business",

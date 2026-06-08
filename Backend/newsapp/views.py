@@ -46,6 +46,7 @@ from urllib.parse import quote, urlparse, urlencode
 from openai import OpenAI
 from django.urls import reverse
 from django.templatetags.static import static
+from django.utils.html import escape
 from django.utils.dateparse import parse_datetime
 from django.core.cache import cache
 from django.core.validators import validate_email
@@ -61,6 +62,10 @@ from .attendance import clock_in_attendance, get_attendance_snapshot, pause_atte
 from .attendance_reminders import (
     execute_attendance_email_action,
     read_attendance_email_action_token,
+)
+from .leave_requests import (
+    execute_leave_request_action,
+    read_leave_request_action_token,
 )
 from django.core import signing
 
@@ -5191,6 +5196,47 @@ def attendance_email_action(request):
 
 
 # ═══════════════════════════════════════════════════════
+@require_GET
+def leave_request_email_action(request):
+    token = str(request.GET.get("token") or "").strip()
+    if not token:
+        return HttpResponse("Missing leave request token.", status=403)
+
+    try:
+        payload = read_leave_request_action_token(token)
+    except signing.BadSignature:
+        return HttpResponse("This leave request link is invalid or has expired.", status=403)
+
+    action = str(payload.get("action") or "").strip().lower()
+    try:
+        leave_request = execute_leave_request_action(token, action)
+    except signing.BadSignature:
+        return HttpResponse("This leave request link is invalid.", status=403)
+    except LeaveRequest.DoesNotExist:
+        return HttpResponse("Leave request was not found.", status=404)
+
+    action_label = leave_request.get_status_display()
+    employee_name = escape(leave_request.user.get_full_name() or leave_request.user.username)
+    return HttpResponse(
+        f"""
+        <html>
+          <head><title>Leave {action_label}</title></head>
+          <body style="font-family:Arial,sans-serif;background:#f5f7fb;padding:40px;color:#1f2937">
+            <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:32px;text-align:center">
+              <h1 style="margin:0 0 14px;font-size:28px;color:#10235c">Leave {action_label}</h1>
+              <p style="margin:0 0 10px;font-size:15px;line-height:1.7">
+                {employee_name}'s leave request has been marked as <strong>{action_label}</strong>.
+              </p>
+              <p style="margin:0;font-size:13px;color:#6b7280">
+                The dashboard status has been updated. You may now close this page.
+              </p>
+            </div>
+          </body>
+        </html>
+        """
+    )
+
+
 # LIVE CRICKET
 # ═══════════════════════════════════════════════════════
 

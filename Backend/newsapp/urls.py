@@ -57,6 +57,7 @@ urlpatterns = [
     path('attendance/email-action/', views.attendance_email_action, name='attendance_email_action'),
     path('attendance/heartbeat/', views.attendance_heartbeat_api, name='attendance_heartbeat'),
     path('attendance/disconnect/', views.attendance_disconnect_api, name='attendance_disconnect'),
+    path('leaves/email-action/', views.leave_request_email_action, name='leave_request_email_action'),
     path('admin/online-status/', online_status_view, name='online_status'),
     path('live-cricket/', live_cricket),
     path('settings/tag-creation-perm/', views.save_tag_creation_perm, name='save_tag_perm'),

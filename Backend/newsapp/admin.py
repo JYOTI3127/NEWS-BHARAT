@@ -16,7 +16,7 @@ from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
 import csv
-from datetime import timedelta, date
+from datetime import datetime, timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html, strip_tags
@@ -30,6 +30,7 @@ from .serializers import ArticleHomepageSerializer
 from .utils import has_permission
 from .attendance import clock_in_attendance, get_attendance_snapshot, pause_attendance
 from .seo_direct import article_url
+from .leave_requests import send_leave_request_submission_email
 
 
 SLUG_EDITOR_USERNAME = "sheenu"
@@ -143,6 +144,46 @@ def _attendance_record_seconds(record):
         return max(int((last_activity_at - current_session_started_at).total_seconds()), 0)
 
     return 0
+
+
+def _build_attendance_datetime(target_date, raw_time):
+    parsed_time = parse_time(str(raw_time or '').strip())
+    if parsed_time is None:
+        raise ValidationError("Please provide a valid time.")
+    naive_value = datetime.combine(target_date, parsed_time)
+    return timezone.make_aware(naive_value, timezone.get_current_timezone())
+
+
+def _save_manual_attendance(*, user, target_date, clock_in_time, clock_out_time=''):
+    clock_in_at = _build_attendance_datetime(target_date, clock_in_time)
+    clock_out_at = _build_attendance_datetime(target_date, clock_out_time) if str(clock_out_time or '').strip() else None
+    if clock_out_at and clock_out_at < clock_in_at:
+        raise ValidationError("Clock-out time cannot be before clock-in time.")
+
+    record, _created = AttendanceRecord.objects.get_or_create(user=user, date=target_date)
+    record.last_clock_in_at = clock_in_at
+    record.clock_in_first_reminder_sent_at = None
+    record.clock_in_second_reminder_sent_at = None
+    record.clock_out_first_reminder_sent_at = None
+    record.clock_out_second_reminder_sent_at = None
+    record.auto_clocked_out_at = None
+
+    if clock_out_at:
+        record.last_clock_out_at = clock_out_at
+        record.current_session_started_at = None
+        record.last_activity_at = clock_out_at
+        record.total_active_seconds = max(int((clock_out_at - clock_in_at).total_seconds()), 0)
+    else:
+        activity_at = clock_in_at
+        if target_date == timezone.localdate():
+            activity_at = max(clock_in_at, timezone.now())
+        record.last_clock_out_at = None
+        record.current_session_started_at = clock_in_at
+        record.last_activity_at = activity_at
+        record.total_active_seconds = max(int((activity_at - clock_in_at).total_seconds()), 0)
+
+    record.save()
+    return record
 
 
 try:
@@ -1470,6 +1511,11 @@ class NewsAdminSite(AdminSite):
                 name='attendance_records',
             ),
             path(
+                'leaves/',
+                self.admin_view(self.leaves_view),
+                name='leaves',
+            ),
+            path(
                 'newsletter/',
                 self.admin_view(self.newsletter_view),
                 name='newsletter',
@@ -1537,6 +1583,201 @@ class NewsAdminSite(AdminSite):
             },
             status=403,
         )
+
+    def leaves_view(self, request):
+        today = timezone.localdate()
+        if request.method == 'POST':
+            action = (request.POST.get('leave_action') or '').strip()
+
+            if action == 'submit_leave':
+                start_date = parse_date((request.POST.get('start_date') or '').strip())
+                end_date = parse_date((request.POST.get('end_date') or '').strip())
+                reason = (request.POST.get('reason') or '').strip()
+                if not start_date or not end_date or not reason:
+                    messages.error(request, 'Start date, end date and reason are required.')
+                    return redirect('newsadmin:leaves')
+                leave_request = LeaveRequest(
+                    user=request.user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    reason=reason,
+                )
+                try:
+                    leave_request.full_clean()
+                    leave_request.save()
+                except ValidationError as exc:
+                    messages.error(request, '; '.join(exc.messages))
+                    return redirect('newsadmin:leaves')
+                recipients_count = send_leave_request_submission_email(leave_request, request)
+                if recipients_count:
+                    messages.success(request, 'Leave request submitted. Super admin ko approval mail bhej di gayi hai.')
+                else:
+                    messages.warning(request, 'Leave request submitted, but no super admin email address was found.')
+                return redirect('newsadmin:leaves')
+
+            if action in {LeaveRequest.STATUS_APPROVED, LeaveRequest.STATUS_REJECTED}:
+                _ensure_superuser(request)
+                leave_id = request.POST.get('leave_id')
+                review_note = (request.POST.get('review_note') or '').strip()
+                leave_request = get_object_or_404(LeaveRequest, pk=leave_id)
+                leave_request.status = action
+                leave_request.review_note = review_note
+                leave_request.reviewed_by = request.user
+                leave_request.reviewed_at = timezone.now()
+                leave_request.save(update_fields=[
+                    'status',
+                    'review_note',
+                    'reviewed_by',
+                    'reviewed_at',
+                    'updated_at',
+                ])
+                messages.success(request, f'Leave request {leave_request.get_status_display().lower()} successfully.')
+                return redirect('newsadmin:leaves')
+
+            if action == 'mark_attendance':
+                _ensure_superuser(request)
+                user_id = request.POST.get('user_id')
+                attendance_date = parse_date((request.POST.get('attendance_date') or '').strip()) or today
+                clock_in_time = (request.POST.get('clock_in_time') or '').strip()
+                clock_out_time = (request.POST.get('clock_out_time') or '').strip()
+                member = get_object_or_404(User, pk=user_id, is_staff=True)
+                try:
+                    record = _save_manual_attendance(
+                        user=member,
+                        target_date=attendance_date,
+                        clock_in_time=clock_in_time,
+                        clock_out_time=clock_out_time,
+                    )
+                except ValidationError as exc:
+                    messages.error(request, '; '.join(exc.messages))
+                    return redirect('newsadmin:leaves')
+                messages.success(
+                    request,
+                    f'Attendance marked for {member.get_full_name() or member.username} on {record.date.strftime("%d %b %Y")}.',
+                )
+                return redirect('newsadmin:leaves')
+
+        search = (request.GET.get('q') or '').strip()
+        status_filter = (request.GET.get('status') or 'all').strip()
+        users = (
+            User.objects
+            .filter(is_staff=True, is_active=True)
+            .filter(Q(profile__is_guest_profile=False) | Q(profile__isnull=True))
+            .select_related('profile')
+            .order_by('first_name', 'username')
+        )
+        if not request.user.is_superuser:
+            users = users.filter(pk=request.user.pk)
+        if search:
+            users = users.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
+            )
+        users = list(users)
+
+        month_start = date(today.year, today.month, 1)
+        month_end = today
+        _, total_days_in_month = monthrange(today.year, today.month)
+        month_off_dates = {
+            off_date for off_date in _build_month_off_dates(today.year, today.month)
+            if month_start <= off_date <= month_end
+        }
+        working_days_so_far = max((month_end - month_start).days + 1 - len(month_off_dates), 0)
+        monthly_records = (
+            AttendanceRecord.objects
+            .filter(user__in=users, date__gte=month_start, date__lte=month_end)
+            .select_related('user')
+        )
+        monthly_present_dates_by_user = {}
+        for record in monthly_records:
+            is_present = (
+                _attendance_record_seconds(record) > 0
+                or record.last_clock_in_at
+                or record.last_clock_out_at
+            )
+            if is_present:
+                monthly_present_dates_by_user.setdefault(record.user_id, set()).add(record.date)
+
+        base_leave_requests = LeaveRequest.objects.select_related('user', 'reviewed_by').filter(user__in=users)
+        monthly_taken_leave_days_by_user = {}
+        monthly_approved_leaves = base_leave_requests.filter(
+            status=LeaveRequest.STATUS_APPROVED,
+            start_date__lte=month_end,
+            end_date__gte=month_start,
+        )
+        for leave_item in monthly_approved_leaves:
+            leave_start = max(leave_item.start_date, month_start)
+            leave_end = min(leave_item.end_date, month_end)
+            monthly_taken_leave_days_by_user[leave_item.user_id] = (
+                monthly_taken_leave_days_by_user.get(leave_item.user_id, 0)
+                + max((leave_end - leave_start).days + 1, 0)
+            )
+
+        leave_requests = base_leave_requests
+        if status_filter in {LeaveRequest.STATUS_PENDING, LeaveRequest.STATUS_APPROVED, LeaveRequest.STATUS_REJECTED}:
+            leave_requests = leave_requests.filter(status=status_filter)
+
+        leave_rows_by_user = {}
+        user_stats = {
+            user.pk: {'pending': 0, 'approved': 0, 'rejected': 0, 'total': 0}
+            for user in users
+        }
+        for item in leave_requests:
+            leave_rows_by_user.setdefault(item.user_id, []).append(item)
+            if item.user_id in user_stats:
+                user_stats[item.user_id][item.status] += 1
+                user_stats[item.user_id]['total'] += 1
+
+        user_rows = []
+        monthly_attendance_rows = []
+        for member in users:
+            snapshot = get_attendance_snapshot(member)
+            present_dates = monthly_present_dates_by_user.setdefault(member.pk, set())
+            if snapshot['clock_in_at'] or snapshot['clock_out_at'] or snapshot['display_seconds'] > 0:
+                present_dates.add(today)
+            present_days = len(present_dates)
+            monthly_attendance_rows.append({
+                'user': member,
+                'present_days': present_days,
+                'month_days': total_days_in_month,
+                'working_days': working_days_so_far,
+                'leaves_taken_days': monthly_taken_leave_days_by_user.get(member.pk, 0),
+                'attendance_percent': min(round((present_days / total_days_in_month) * 100), 100) if total_days_in_month else 0,
+                'is_active': snapshot['is_active'],
+            })
+            user_rows.append({
+                'user': member,
+                'leaves': leave_rows_by_user.get(member.pk, []),
+                'stats': user_stats.get(member.pk, {'pending': 0, 'approved': 0, 'rejected': 0, 'total': 0}),
+                'attendance': snapshot,
+            })
+
+        all_requests = list(leave_requests.order_by('-created_at'))
+        return TemplateResponse(request, 'admin/leaves.html', {
+            **self.each_context(request),
+            'title': 'Leaves',
+            'today': today,
+            'month_label': today.strftime('%B %Y'),
+            'total_days_in_month': total_days_in_month,
+            'working_days_so_far': working_days_so_far,
+            'monthly_attendance_rows': monthly_attendance_rows,
+            'user_rows': user_rows,
+            'leave_requests': all_requests,
+            'staff_users': users,
+            'search': search,
+            'status_filter': status_filter,
+            'status_choices': [
+                ('all', 'All Status'),
+                (LeaveRequest.STATUS_PENDING, 'Pending'),
+                (LeaveRequest.STATUS_APPROVED, 'Approved'),
+                (LeaveRequest.STATUS_REJECTED, 'Rejected'),
+            ],
+            'pending_count': sum(1 for item in all_requests if item.status == LeaveRequest.STATUS_PENDING),
+            'approved_count': sum(1 for item in all_requests if item.status == LeaveRequest.STATUS_APPROVED),
+            'rejected_count': sum(1 for item in all_requests if item.status == LeaveRequest.STATUS_REJECTED),
+        })
 
     def attendance_view(self, request):
         if request.method == 'POST':
@@ -3288,6 +3529,29 @@ class PermissionAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
+class LeaveRequestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'start_date', 'end_date', 'status', 'reviewed_by', 'created_at')
+    list_filter = ('status', 'start_date', 'created_at')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'reason')
+    readonly_fields = ('created_at', 'updated_at', 'reviewed_at')
+    ordering = ('-created_at',)
+
+    def has_module_permission(self, request):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_view_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_active', False) and getattr(request.user, 'is_staff', False))
+
+    def has_add_permission(self, request):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_change_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(getattr(request.user, 'is_superuser', False))
+
+
 class ArticleAssignmentAdmin(admin.ModelAdmin):
     change_list_template = 'admin/newsapp/articleassignment/change_list.html'
     list_select_related = ('article', 'user', 'assigned_by')
@@ -3440,6 +3704,7 @@ admin_site.register(Article,                    ArticleAdmin)
 admin_site.register(ArticleAssignment,          ArticleAssignmentAdmin)
 admin_site.register(ArticleVersion,             ArticleVersionAdmin)
 admin_site.register(ArticleWorkflowLog)
+admin_site.register(LeaveRequest,               LeaveRequestAdmin)
 admin_site.register(FactCheck,                  FactCheckAdmin)
 admin_site.register(HomepageSlot,               HomepageSlotAdmin)
 admin_site.register(HomepageAdBanner,           HomepageAdBannerAdmin)

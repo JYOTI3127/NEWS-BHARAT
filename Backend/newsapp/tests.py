@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from io import StringIO
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -31,6 +31,7 @@ from .models import (
     AttendanceRecord,
     Category,
     HomepageSlot,
+    LeaveRequest,
     Notification,
     Permission,
     PushNotificationLog,
@@ -705,6 +706,95 @@ class GuestProfileDirectoryTests(TestCase):
         self.assertEqual(guest_response.status_code, 200)
         self.assertContains(guest_response, 'guestteam')
         self.assertNotContains(guest_response, 'activeteam')
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    DEFAULT_FROM_EMAIL='noreply@example.com',
+    ALLOWED_HOSTS=['testserver'],
+)
+class LeaveRequestAdminTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.employee = User.objects.create_user(
+            username='leaveemployee',
+            password='testpass123',
+            email='leaveemployee@example.com',
+            is_staff=True,
+        )
+        self.super_admin = User.objects.create_user(
+            username='leaveadmin',
+            password='testpass123',
+            email='leaveadmin@example.com',
+            is_staff=True,
+            is_superuser=True,
+        )
+
+    def test_employee_leave_submission_emails_super_admin(self):
+        mail.outbox = []
+        self.client.force_login(self.employee)
+
+        response = self.client.post(
+            reverse('newsadmin:leaves'),
+            {
+                'leave_action': 'submit_leave',
+                'start_date': '2026-06-10',
+                'end_date': '2026-06-11',
+                'reason': 'Family work',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        leave_request = LeaveRequest.objects.get(user=self.employee)
+        self.assertEqual(leave_request.status, LeaveRequest.STATUS_PENDING)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Leave request:', mail.outbox[0].subject)
+        self.assertIn('/api/leaves/email-action/?token=', mail.outbox[0].body)
+
+    def test_email_approve_link_updates_leave_status(self):
+        mail.outbox = []
+        self.client.force_login(self.employee)
+        self.client.post(
+            reverse('newsadmin:leaves'),
+            {
+                'leave_action': 'submit_leave',
+                'start_date': '2026-06-10',
+                'end_date': '2026-06-10',
+                'reason': 'Medical appointment',
+            },
+        )
+        action_url = next(
+            line.strip().replace('Approve: ', '')
+            for line in mail.outbox[0].body.splitlines()
+            if line.startswith('Approve: ')
+        )
+
+        response = self.client.get(urlparse(action_url).path + '?' + urlparse(action_url).query)
+
+        self.assertEqual(response.status_code, 200)
+        leave_request = LeaveRequest.objects.get(user=self.employee)
+        self.assertEqual(leave_request.status, LeaveRequest.STATUS_APPROVED)
+        self.assertIsNotNone(leave_request.reviewed_at)
+
+    def test_super_admin_can_mark_employee_attendance_from_leaves_page(self):
+        self.client.force_login(self.super_admin)
+
+        response = self.client.post(
+            reverse('newsadmin:leaves'),
+            {
+                'leave_action': 'mark_attendance',
+                'user_id': str(self.employee.pk),
+                'attendance_date': '2026-06-10',
+                'clock_in_time': '10:00',
+                'clock_out_time': '18:00',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        record = AttendanceRecord.objects.get(user=self.employee, date=date(2026, 6, 10))
+        self.assertIsNotNone(record.last_clock_in_at)
+        self.assertIsNotNone(record.last_clock_out_at)
+        self.assertEqual(record.total_active_seconds, 8 * 60 * 60)
 
 
 class ArticleDetailUpdatedFieldsTests(TestCase):

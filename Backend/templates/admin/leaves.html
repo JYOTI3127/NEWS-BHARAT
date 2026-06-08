@@ -1,0 +1,324 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Leaves | News Admin{% endblock %}
+{% block content_title %}Leaves{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .leaves-page{padding:22px;display:grid;gap:18px;color:#0f172a}
+  .leaves-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px 20px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
+  .leaves-kicker{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b}
+  .leaves-title{margin:4px 0 2px;font-size:21px;line-height:1.2;color:#07163f}
+  .leaves-copy{margin:0;color:#64748b;font-size:14px;line-height:1.6}
+  .leaves-stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .leaves-stat{min-width:96px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px}
+  .leaves-stat span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}
+  .leaves-stat strong{display:block;margin-top:3px;font-size:20px;color:#0f172a}
+  .leaves-month-board{background:#fff;border:1px solid #dbeafe;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.06);overflow:hidden}
+  .leaves-month-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid #e5eefb;background:#f8fbff}
+  .leaves-month-title{margin:0;font-size:21px;color:#07163f}
+  .leaves-month-meta{margin:4px 0 0;color:#64748b;font-size:13px}
+  .leaves-month-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .leaves-month-pill{display:inline-flex;border-radius:999px;background:#17337a;color:#fff;padding:8px 12px;font-size:12px;font-weight:900;white-space:nowrap}
+  .leaves-month-soft-pill{display:inline-flex;border-radius:999px;background:#eef6ff;color:#17337a;border:1px solid #cfe1ff;padding:8px 12px;font-size:12px;font-weight:900;white-space:nowrap}
+  .leaves-month-list{display:block}
+  .leaves-month-row{display:grid;grid-template-columns:minmax(260px,1.6fr) 110px minmax(220px,1fr) 100px 110px;gap:16px;align-items:center;padding:12px 18px;border-bottom:1px solid #edf2f7}
+  .leaves-month-row.head{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;padding-top:10px;padding-bottom:10px}
+  .leaves-month-row:not(.head):hover{background:#fbfdff}
+  .leaves-month-count{display:flex;align-items:baseline;gap:4px;justify-content:flex-start}
+  .leaves-month-count strong{font-size:24px;line-height:1;color:#17337a}
+  .leaves-month-count span{font-size:12px;color:#64748b;font-weight:800}
+  .leaves-month-bar{height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden}
+  .leaves-month-bar span{display:block;height:100%;background:#16a34a;border-radius:999px}
+  .leaves-month-small{font-size:12px;color:#64748b;font-weight:900;white-space:nowrap}
+  .leaves-status-text{font-size:12px;font-weight:900;white-space:nowrap;text-align:right}
+  .leaves-status-text.active{color:#047857}
+  .leaves-status-text.inactive{color:#64748b}
+  .leaves-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+  .leaves-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 10px 28px rgba(15,23,42,.05);overflow:hidden}
+  .leaves-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #edf2f7;background:#fbfdff}
+  .leaves-card-title{margin:0;font-size:16px;color:#07163f}
+  .leaves-card-body{padding:18px}
+  .leaves-form{display:grid;gap:12px}
+  .leaves-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .leaves-field{display:grid;gap:6px}
+  .leaves-field label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b}
+  .leaves-field input,.leaves-field select,.leaves-field textarea{width:100%;border:1px solid #dbe3ef;background:#f8fafc;border-radius:10px;padding:11px 12px;font:inherit;color:#0f172a;box-sizing:border-box}
+  .leaves-field textarea{min-height:96px;resize:vertical}
+  .leaves-btn{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;background:#17337a;color:#fff;box-shadow:0 8px 18px rgba(23,51,122,.18)}
+  .leaves-btn.secondary{background:#f8fafc;color:#17337a;border:1px solid #cbd5e1;box-shadow:none}
+  .leaves-btn.approve{background:#16a34a}
+  .leaves-btn.reject{background:#dc2626}
+  .leaves-toolbar{display:flex;gap:10px;align-items:end;justify-content:space-between;flex-wrap:wrap}
+  .leaves-filter{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+  .leaves-table-wrap{overflow:auto}
+  .leaves-table{width:100%;border-collapse:collapse}
+  .leaves-table th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:12px 14px;border-bottom:1px solid #e5e7eb}
+  .leaves-table td{padding:13px 14px;border-bottom:1px solid #eef2f7;vertical-align:top;font-size:13px}
+  .leaves-user{display:flex;gap:10px;align-items:center}
+  .leaves-avatar{width:36px;height:36px;border-radius:10px;background:#e0ecff;color:#17337a;display:grid;place-items:center;font-weight:900}
+  .leaves-user strong{display:block;color:#0f172a}
+  .leaves-user span{display:block;color:#64748b;font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .leaves-pill{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+  .leaves-pill.pending{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+  .leaves-pill.approved{background:#ecfdf5;color:#047857;border:1px solid #bbf7d0}
+  .leaves-pill.rejected{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .leaves-user-list{display:grid;gap:10px}
+  .leaves-user-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #edf2f7;background:#fbfdff;border-radius:12px;padding:12px}
+  .leaves-mini-stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .leaves-mini-stats span{font-size:11px;font-weight:800;color:#475569;background:#eef2ff;border-radius:999px;padding:5px 8px}
+  .leaves-actions{display:grid;gap:8px;min-width:240px}
+  .leaves-actions-row{display:flex;gap:8px;align-items:center}
+  .leaves-actions textarea{min-height:42px}
+  .leaves-empty{padding:22px;text-align:center;color:#64748b}
+  @media(max-width:1180px){.leaves-month-row{grid-template-columns:minmax(220px,1.4fr) 90px minmax(160px,1fr) 86px 96px;gap:12px}}
+  @media(max-width:980px){.leaves-grid{grid-template-columns:1fr}.leaves-hero{display:grid}.leaves-stats{justify-content:flex-start}.leaves-form-grid{grid-template-columns:1fr}}
+  @media(max-width:760px){.leaves-month-row{grid-template-columns:1fr;gap:8px}.leaves-month-row.head{display:none}.leaves-status-text{text-align:left}.leaves-user span{max-width:220px}.leaves-month-summary{justify-content:flex-start}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="leaves-page">
+  <section class="leaves-month-board">
+    <div class="leaves-month-head">
+      <div>
+        <div class="leaves-kicker">Monthly Attendance</div>
+        <h2 class="leaves-month-title">{{ month_label }} present days</h2>
+        <p class="leaves-month-meta">This month, see how many working days each employee has attended.</p>
+      </div>
+      <div class="leaves-month-summary">
+        <span class="leaves-month-soft-pill">{{ monthly_attendance_rows|length }} employees</span>
+        <span class="leaves-month-pill">{{ total_days_in_month }} days in {{ today|date:"F" }}</span>
+      </div>
+    </div>
+    <div class="leaves-month-list">
+      <div class="leaves-month-row head">
+        <div>Employee</div>
+        <div>Present</div>
+        <div>Progress</div>
+        <div>Leaves Taken</div>
+        <div style="text-align:right">Status</div>
+      </div>
+      {% for row in monthly_attendance_rows %}
+        <div class="leaves-month-row">
+          <div class="leaves-user">
+            <div class="leaves-avatar">{{ row.user.get_full_name|default:row.user.username|slice:":1"|upper }}</div>
+            <div>
+              <strong>{{ row.user.get_full_name|default:row.user.username }}</strong>
+              <span title="{{ row.user.email|default:row.user.username }}">{{ row.user.email|default:row.user.username }}</span>
+            </div>
+          </div>
+          <div class="leaves-month-count">
+            <strong>{{ row.present_days }}</strong><span>/{{ row.month_days }} days</span>
+          </div>
+          <div class="leaves-month-bar">
+            <span style="width:{{ row.attendance_percent }}%"></span>
+          </div>
+          <div class="leaves-month-small">{{ row.leaves_taken_days }} day{{ row.leaves_taken_days|pluralize }}</div>
+          <div class="leaves-status-text {% if row.is_active %}active{% else %}inactive{% endif %}">{% if row.is_active %}Clocked in{% else %}Not active{% endif %}</div>
+        </div>
+      {% empty %}
+        <div class="leaves-empty">No attendance data found.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="leaves-hero">
+    <div>
+      <div class="leaves-kicker">Team Leaves</div>
+      <h2 class="leaves-title">Leave Requests</h2>
+      <p class="leaves-copy">Team members can submit leave requests and track status. Super admins can approve, reject, and mark missed attendance from here.</p>
+    </div>
+    <div class="leaves-stats">
+      <div class="leaves-stat"><span>Pending</span><strong>{{ pending_count }}</strong></div>
+      <div class="leaves-stat"><span>Approved</span><strong>{{ approved_count }}</strong></div>
+      <div class="leaves-stat"><span>Rejected</span><strong>{{ rejected_count }}</strong></div>
+    </div>
+  </section>
+
+  <div class="leaves-grid">
+    <div class="leaves-card">
+      <div class="leaves-card-head">
+        <h3 class="leaves-card-title">Team Leave Board</h3>
+        <form method="get" class="leaves-filter">
+          <div class="leaves-field">
+            <label for="leaveStatus">Status</label>
+            <select id="leaveStatus" name="status">
+              {% for value,label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="leaves-field">
+            <label for="leaveSearch">Search</label>
+            <input id="leaveSearch" type="search" name="q" value="{{ search }}" placeholder="Name or email">
+          </div>
+          <button type="submit" class="leaves-btn secondary">Filter</button>
+        </form>
+      </div>
+
+      <div class="leaves-card-body">
+        <div class="leaves-user-list">
+          {% for row in user_rows %}
+            <div class="leaves-user-row">
+              <div class="leaves-user">
+                <div class="leaves-avatar">{{ row.user.get_full_name|default:row.user.username|slice:":1"|upper }}</div>
+                <div>
+                  <strong>{{ row.user.get_full_name|default:row.user.username }}</strong>
+                  <span>{{ row.user.email|default:row.user.username }}</span>
+                </div>
+              </div>
+              <div class="leaves-mini-stats">
+                <span>{{ row.stats.total }} total</span>
+                <span>{{ row.stats.pending }} pending</span>
+                <span>{% if row.attendance.is_active %}Clocked in{% else %}Not active{% endif %}</span>
+              </div>
+            </div>
+          {% empty %}
+            <div class="leaves-empty">No team members found.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="leaves-table-wrap">
+        <table class="leaves-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Dates</th>
+              <th>Reason</th>
+              <th>Status</th>
+              {% if request.user.is_superuser %}<th>Action</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in leave_requests %}
+              <tr>
+                <td>
+                  <div class="leaves-user">
+                    <div class="leaves-avatar">{{ item.user.get_full_name|default:item.user.username|slice:":1"|upper }}</div>
+                    <div>
+                      <strong>{{ item.user.get_full_name|default:item.user.username }}</strong>
+                      <span>{{ item.created_at|date:"d M Y, h:i A" }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <strong>{{ item.start_date|date:"d M Y" }}</strong><br>
+                  <span style="color:#64748b">to {{ item.end_date|date:"d M Y" }} · {{ item.total_days }} day{{ item.total_days|pluralize }}</span>
+                </td>
+                <td>
+                  {{ item.reason|linebreaksbr }}
+                  {% if item.review_note %}<div style="margin-top:8px;color:#64748b"><strong>Admin note:</strong> {{ item.review_note }}</div>{% endif %}
+                </td>
+                <td>
+                  <span class="leaves-pill {{ item.status }}">{{ item.get_status_display }}</span>
+                  {% if item.reviewed_by %}<div style="margin-top:6px;color:#64748b;font-size:12px">by {{ item.reviewed_by.get_full_name|default:item.reviewed_by.username }}</div>{% endif %}
+                </td>
+                {% if request.user.is_superuser %}
+                  <td>
+                    {% if item.status == "pending" %}
+                      <div class="leaves-actions">
+                        <form method="post">
+                          {% csrf_token %}
+                          <input type="hidden" name="leave_action" value="approved">
+                          <input type="hidden" name="leave_id" value="{{ item.pk }}">
+                          <div class="leaves-actions-row">
+                            <textarea name="review_note" placeholder="Optional note"></textarea>
+                            <button class="leaves-btn approve" type="submit">Approve</button>
+                          </div>
+                        </form>
+                        <form method="post">
+                          {% csrf_token %}
+                          <input type="hidden" name="leave_action" value="rejected">
+                          <input type="hidden" name="leave_id" value="{{ item.pk }}">
+                          <div class="leaves-actions-row">
+                            <textarea name="review_note" placeholder="Optional note"></textarea>
+                            <button class="leaves-btn reject" type="submit">Reject</button>
+                          </div>
+                        </form>
+                      </div>
+                    {% else %}
+                      <span style="color:#64748b">Reviewed</span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{% if request.user.is_superuser %}5{% else %}4{% endif %}" class="leaves-empty">No leave requests found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside class="leaves-card">
+      <div class="leaves-card-head">
+        <h3 class="leaves-card-title">Add Leave</h3>
+      </div>
+      <div class="leaves-card-body">
+        <form method="post" class="leaves-form">
+          {% csrf_token %}
+          <input type="hidden" name="leave_action" value="submit_leave">
+          <div class="leaves-form-grid">
+            <div class="leaves-field">
+              <label for="startDate">Start Date</label>
+              <input id="startDate" type="date" name="start_date" required>
+            </div>
+            <div class="leaves-field">
+              <label for="endDate">End Date</label>
+              <input id="endDate" type="date" name="end_date" required>
+            </div>
+          </div>
+          <div class="leaves-field">
+            <label for="leaveReason">Reason</label>
+            <textarea id="leaveReason" name="reason" placeholder="Leave reason" required></textarea>
+          </div>
+          <button type="submit" class="leaves-btn">Submit Leave</button>
+        </form>
+      </div>
+    </aside>
+
+    {% if request.user.is_superuser %}
+    <aside class="leaves-card">
+      <div class="leaves-card-head">
+        <h3 class="leaves-card-title">Mark Attendance</h3>
+      </div>
+      <div class="leaves-card-body">
+        <form method="post" class="leaves-form">
+          {% csrf_token %}
+          <input type="hidden" name="leave_action" value="mark_attendance">
+          <div class="leaves-field">
+            <label for="attendanceUser">Employee</label>
+            <select id="attendanceUser" name="user_id" required>
+              {% for member in staff_users %}
+                <option value="{{ member.pk }}">{{ member.get_full_name|default:member.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="leaves-field">
+            <label for="attendanceDate">Date</label>
+            <input id="attendanceDate" type="date" name="attendance_date" value="{{ today|date:'Y-m-d' }}" required>
+          </div>
+          <div class="leaves-form-grid">
+            <div class="leaves-field">
+              <label for="clockInTime">Clock In</label>
+              <input id="clockInTime" type="time" name="clock_in_time" required>
+            </div>
+            <div class="leaves-field">
+              <label for="clockOutTime">Clock Out</label>
+              <input id="clockOutTime" type="time" name="clock_out_time">
+            </div>
+          </div>
+          <button type="submit" class="leaves-btn">Mark Attendance</button>
+        </form>
+      </div>
+    </aside>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

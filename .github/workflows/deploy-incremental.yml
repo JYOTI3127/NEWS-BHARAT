@@ -19,7 +19,7 @@ concurrency:
 jobs:
   incremental-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -40,9 +40,7 @@ jobs:
         id: resolve_slug
         shell: bash
         run: |
-          # Backend se aaya slug
           DISPATCH_SLUG="${{ github.event.client_payload.slug }}"
-          # Manually dala slug
           MANUAL_SLUG="${{ github.event.inputs.article_slug }}"
 
           if [ -n "$DISPATCH_SLUG" ]; then
@@ -78,57 +76,84 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Prerender only changed article + homepage + category
-        run: node prerender-incremental.mjs
-        env:
-          ARTICLE_SLUG: ${{ steps.resolve_slug.outputs.slug }}
-          VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
-
-      - name: Check incremental output
-        id: incremental_output
-        shell: bash
-        run: |
-          if [ -d build-incremental ] && find build-incremental -type f | grep -q .; then
-            echo "deploy_needed=true" >> "$GITHUB_OUTPUT"
-            echo "Incremental output found."
-          else
-            echo "deploy_needed=false" >> "$GITHUB_OUTPUT"
-            echo "No incremental output found; skipping SSH deploy."
-          fi
-
-      - name: Deploy only changed pages
-        if: steps.incremental_output.outputs.deploy_needed == 'true'
+      - name: Deploy build shell to Hostinger
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "build-incremental/*"
-          target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
+          source: "build/*"
+          target: "/home/u243022050/incremental-workspace"
           strip_components: 1
           overwrite: true
           tar_dereference: true
-          timeout: 60s
+          timeout: 120s
           command_timeout: 10m
 
-      - name: Bust cache
-        if: steps.incremental_output.outputs.deploy_needed == 'true'
+      - name: Copy prerender scripts to Hostinger
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          source: "prerender-incremental.mjs,src/lib/articleUrl.js,package.json,package-lock.json"
+          target: "/home/u243022050/incremental-workspace"
+          overwrite: true
+          timeout: 60s
+          command_timeout: 5m
+
+      - name: Run prerender ON Hostinger + deploy to public_html
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          timeout: 180s
-          command_timeout: 10m
+          timeout: 300s
+          command_timeout: 20m
           script: |
-            touch "${{ secrets.HOSTINGER_SSH_TARGET_DIR }}/index.html"
+            set -e
+            WORKSPACE="/home/u243022050/incremental-workspace"
+            PUBLIC_HTML="/home/u243022050/domains/news4bharat.com/public_html"
+            SLUG="${{ steps.resolve_slug.outputs.slug }}"
+            API_TARGET="${{ secrets.VITE_API_TARGET }}"
 
-      - name: Ping Google to reindex sitemap
-        if: steps.incremental_output.outputs.deploy_needed == 'true'
+            echo "=== Step 1: npm install on Hostinger ==="
+            cd "$WORKSPACE"
+            npm ci --prefer-offline 2>&1 | tail -5
+
+            echo "=== Step 2: Prerender on Hostinger (API accessible here!) ==="
+            ARTICLE_SLUG="$SLUG" \
+            VITE_API_TARGET="$API_TARGET" \
+            node prerender-incremental.mjs
+
+            echo "=== Step 3: Copy prerendered files to public_html ==="
+            if [ -d "$WORKSPACE/build-incremental/__prerender" ]; then
+              cp -r "$WORKSPACE/build-incremental/__prerender/." "$PUBLIC_HTML/__prerender/"
+              echo "✅ __prerender files copied"
+            fi
+
+            # Assets bhi update karo (naye hashed files)
+            if [ -d "$WORKSPACE/build-incremental/assets" ]; then
+              cp -r "$WORKSPACE/build-incremental/assets/." "$PUBLIC_HTML/assets/"
+              echo "✅ assets copied"
+            fi
+
+            # index.html update karo
+            if [ -f "$WORKSPACE/build-incremental/index.html" ]; then
+              cp "$WORKSPACE/build-incremental/index.html" "$PUBLIC_HTML/index.html"
+              echo "✅ index.html updated"
+            fi
+
+            echo "=== Step 4: Cleanup workspace ==="
+            rm -rf "$WORKSPACE/build-incremental"
+            rm -rf "$WORKSPACE/node_modules"
+
+            echo "=== ✅ Done! Slug: $SLUG ==="
+
+      - name: Ping Google sitemap
         run: |
-          ARTICLE_SLUG="${{ steps.resolve_slug.outputs.slug }}"
-          echo "Pinging Google sitemap for new article: $ARTICLE_SLUG"
           curl -sf "https://www.google.com/ping?sitemap=https://news4bharat.com/sitemap.xml" || true
           echo "Sitemap ping done."

@@ -461,6 +461,7 @@ const Home = () => {
       </aside>
 
       <main className="home-main-column">
+        <h1 className="sr-only">News4Bharat - India News, Economy, Politics and Explainers</h1>
         <a
           href="https://chat.whatsapp.com/GsvvmLgv29GC6TKnhZXlDx"
           className="home-whatsapp-float"

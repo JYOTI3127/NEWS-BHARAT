@@ -36,6 +36,9 @@ const formatViews = (v) => {
 
 const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "").trim();
 const SITE_URL = "https://news4bharat.com";
+const SITE_NAME = "News4Bharat";
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
+const TWITTER_HANDLE = "@news4_bharat";
 const CATEGORY_ARTICLE_LIMIT = 100;
 const STATE_ARTICLE_LIMIT = 10;
 const MORE_IN_ARTICLES_LIMIT = 17;
@@ -619,11 +622,45 @@ export default function CategoryPage() {
   const shouldClampWorldNewsHeader = isWorldNewsCategory && viewportWidth <= 1440;
   const shouldClampWorldNewsParagraph = isWorldNewsCategory && viewportWidth >= 768 && viewportWidth <= 1440;
   const categoryDisplayName = normalizeCategoryDisplayName(category?.name, slug);
-  const categorySeoTitle = getCategorySeoTitle(category, categoryDisplayName);
-  const categorySeoDescription = getCategorySeoDescription(category, categoryDisplayName);
-  const categoryCanonicalUrl = subFilter
-    ? `${SITE_URL}/category/${slug}?subcategory=${encodeURIComponent(subFilter)}`
+  const categorySeoTitle =
+    getCategorySeoTitle(category, categoryDisplayName) ||
+    `${categoryDisplayName || String(slug || "").replace(/-/g, " ")} News | ${SITE_NAME}`;
+  const categorySeoDescription =
+    getCategorySeoDescription(category, categoryDisplayName) ||
+    `Read the latest ${categoryDisplayName || String(slug || "").replace(/-/g, " ")} news, updates, analysis and explainers on ${SITE_NAME}.`;
+  const categoryCanonicalUrl = stateName
+    ? `${SITE_URL}/category/${slug}/${encodeURIComponent(canonicalizeRegionName(subFilter) || subFilter)}`
+    : subFilter
+      ? `${SITE_URL}/category/${slug}?subcategory=${encodeURIComponent(subFilter)}`
     : `${SITE_URL}/category/${slug}`;
+  const categoryBreadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: categoryDisplayName,
+        item: `${SITE_URL}/category/${slug}`,
+      },
+      ...(subFilter
+        ? [
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: canonicalizeRegionName(subFilter) || subFilter,
+              item: categoryCanonicalUrl,
+            },
+          ]
+        : []),
+    ],
+  };
   const shellStyle = {
     width: "var(--site-content-width)",
     maxWidth: "var(--site-content-width)",
@@ -663,23 +700,28 @@ export default function CategoryPage() {
   return (
     <div className="min-h-screen bg-[#f7f4f0] font-[Poppins,_sans-serif]">
       <Helmet>
-        {categorySeoTitle ? <title>{categorySeoTitle}</title> : null}
-        {categorySeoDescription ? <meta name="description" content={categorySeoDescription} /> : null}
+        <title>{categorySeoTitle}</title>
+        <meta name="description" content={categorySeoDescription} />
         <meta name="robots" content="index,follow,max-image-preview:large" />
         <link rel="canonical" href={categoryCanonicalUrl} />
 
         <meta property="og:type" content="website" />
-        {categorySeoTitle ? <meta property="og:title" content={categorySeoTitle} /> : null}
-        {categorySeoDescription ? <meta property="og:description" content={categorySeoDescription} /> : null}
+        <meta property="og:title" content={categorySeoTitle} />
+        <meta property="og:description" content={categorySeoDescription} />
         <meta property="og:url" content={categoryCanonicalUrl} />
+        <meta property="og:image" content={DEFAULT_SHARE_IMAGE} />
+        <meta property="og:image:alt" content={SITE_NAME} />
         <meta property="og:site_name" content="News4Bharat" />
         <meta property="og:locale" content="en_IN" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@news4_bharat" />
-        {categorySeoTitle ? <meta name="twitter:title" content={categorySeoTitle} /> : null}
-        {categorySeoDescription ? <meta name="twitter:description" content={categorySeoDescription} /> : null}
+        <meta name="twitter:site" content={TWITTER_HANDLE} />
+        <meta name="twitter:title" content={categorySeoTitle} />
+        <meta name="twitter:description" content={categorySeoDescription} />
         <meta name="twitter:url" content={categoryCanonicalUrl} />
+        <meta name="twitter:image" content={DEFAULT_SHARE_IMAGE} />
+        <meta name="twitter:image:alt" content={SITE_NAME} />
+        <script type="application/ld+json">{JSON.stringify(categoryBreadcrumbSchema)}</script>
       </Helmet>
 
       <aside className="home-layout-ad home-layout-ad--left" aria-label="Left advertisement">

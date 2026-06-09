@@ -9,6 +9,7 @@
     "build:static": "vite build",
     "build:vite": "vite build",
     "check:states": "node scripts/check-state-coverage.mjs",
+    "seo:validate": "node scripts/validate-seo.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "prerender": "node prerender.mjs"

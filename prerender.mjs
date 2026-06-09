@@ -1031,6 +1031,45 @@ function buildWebsiteSchemaTag() {
   return `<script type="application/ld+json">${JSON.stringify(websiteSchema)}</script>`
 }
 
+function buildCategoryBreadcrumbSchemaJson(route, meta, categoryMap) {
+  const parts = String(route || '').split('/').filter(Boolean)
+  if (parts[0] !== 'category' || !parts[1]) return null
+
+  const slug = parts[1].trim().toLowerCase()
+  const category = categoryMap.get(slug)
+  const categoryName = String(category?.name || slug.replace(/-/g, ' ')).trim()
+  const canonical = String(meta?.canonical || `${BASE_URL}/category/${slug}`).trim()
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${BASE_URL}/`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: categoryName,
+        item: `${BASE_URL}/category/${slug}`,
+      },
+      ...(parts[2]
+        ? [
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: decodeURIComponent(parts[2]).replace(/[-_]+/g, ' '),
+              item: canonical,
+            },
+          ]
+        : []),
+    ],
+  }
+}
+
 const stripCapturedAnalyticsScripts = (html) =>
   String(html || '')
     .replace(
@@ -1388,6 +1427,21 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       if (schemaChunks.length > 0) {
         cleaned = cleaned.replace('</head>', `\n${schemaChunks.join('\n')}\n</head>`)
         console.log(`    Injected missing JSON-LD fallback for ${route}`)
+      }
+    }
+  }
+
+  if (route.startsWith('/category/')) {
+    const hasBreadcrumbSchema = htmlHasSchemaType(cleaned, 'BreadcrumbList')
+
+    if (!hasBreadcrumbSchema) {
+      const breadcrumbSchema = buildCategoryBreadcrumbSchemaJson(route, meta, categoryMap)
+      if (breadcrumbSchema) {
+        cleaned = cleaned.replace(
+          '</head>',
+          `\n<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>\n</head>`
+        )
+        console.log(`    Injected category BreadcrumbList JSON-LD for ${route}`)
       }
     }
   }

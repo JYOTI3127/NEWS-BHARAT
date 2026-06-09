@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 
 const SITE_URL = "https://news4bharat.com";
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/news4bharat-share.png`;
+const SITE_NAME = "News4Bharat";
+const TWITTER_HANDLE = "@news4_bharat";
 
 const getCanonicalPath = (path = "/") => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -37,6 +40,34 @@ export default function PageSeo({ title, description, keywords = "", path = "/" 
   const normalizedPath = getCanonicalPath(path);
   const canonicalUrl = `${SITE_URL}${normalizedPath}`;
   const keywordContent = Array.isArray(keywords) ? keywords.join(", ") : keywords;
+  const breadcrumbName =
+    normalizedPath === "/"
+      ? "Home"
+      : String(title || "")
+        .replace(/\s*\|\s*News4Bharat.*$/i, "")
+        .trim();
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/`,
+      },
+      ...(normalizedPath === "/"
+        ? []
+        : [
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: breadcrumbName || SITE_NAME,
+              item: canonicalUrl,
+            },
+          ]),
+    ],
+  };
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -96,11 +127,17 @@ export default function PageSeo({ title, description, keywords = "", path = "/" 
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:site_name" content="News4Bharat" />
       <meta property="og:locale" content="en_IN" />
+      <meta property="og:image" content={DEFAULT_SHARE_IMAGE} />
+      <meta property="og:image:alt" content={SITE_NAME} />
 
-      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={TWITTER_HANDLE} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:url" content={canonicalUrl} />
+      <meta name="twitter:image" content={DEFAULT_SHARE_IMAGE} />
+      <meta name="twitter:image:alt" content={SITE_NAME} />
+      <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
     </Helmet>
   );
 }

@@ -165,16 +165,19 @@
   </script>
 
   <!-- NewsMediaOrganization Schema -->
-  <script type="application/ld+json">
+<script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "NewsMediaOrganization",
+  "@id": "https://news4bharat.com/#organization",
   "name": "News4Bharat",
   "alternateName": "N4B",
   "url": "https://news4bharat.com/",
   "logo": {
     "@type": "ImageObject",
-    "url": "https://news4bharat.com/logo.png"
+    "url": "https://news4bharat.com/logo.png",
+    "width": 160,
+    "height": 160
   },
   "description": "News4Bharat is an independent Indian digital news platform covering breaking news, economy, politics, startups, states, and explainers with credibility and clarity.",
   "foundingDate": "2024",
@@ -182,37 +185,142 @@
   "ethicsPolicy": "https://news4bharat.com/editorial-policy",
   "correctionsPolicy": "https://news4bharat.com/editorial-policy",
   "missionCoveragePrioritiesPolicy": "https://news4bharat.com/founders-note",
-  "contactPoint": {
-    "@type": "ContactPoint",
-    "contactType": "customer support",
-    "url": "https://news4bharat.com/contact-us"
+  "founder": {
+    "@type": "Person",
+    "name": "Srajan Agrawal"
   },
-  "sameAs": ["https://x.com/news4_bharat", "https://news4bharat.com/about-us"],
+  "contactPoint": [
+    {
+      "@type": "ContactPoint",
+      "contactType": "Editorial Office",
+      "email": "editorial@news4bharat.com",
+      "url": "https://news4bharat.com/contact-us"
+    },
+    {
+      "@type": "ContactPoint",
+      "contactType": "Customer Support",
+      "email": "info@news4bharat.com"
+    }
+  ],
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "B-904, iThum Tower, Block B, Sector 62",
+    "addressLocality": "Noida",
+    "addressRegion": "Uttar Pradesh",
+    "postalCode": "201301",
+    "addressCountry": "IN"
+  },
+  "sameAs": [
+    "https://x.com/news4_bharat",
+    "https://www.facebook.com/people/News4Bharat/61583748748524/",
+    "https://www.instagram.com/news4_bharat",
+    "https://www.linkedin.com/company/news4bharat",
+    "https://www.youtube.com/@News4_Bharat1"
+  ],
   "isAccessibleForFree": true,
   "isPartOf": {
     "@type": "Product",
     "productID": "CAow6K_GDA:openaccess"
   }
 }
-  </script>
+</script>
 
   <!-- WebSite + SearchAction Schema -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "News4Bharat",
-    "url": "https://news4bharat.com/",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://news4bharat.com/search?q={search_term_string}"
-      },
-      "query-input": "required name=search_term_string"
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["Organization", "NewsMediaOrganization"],
+  "@id": "https://news4bharat.com/#organization",
+  "name": "News4Bharat",
+  "alternateName": "N4B",
+  "legalName": "News4Bharat",
+  "url": "https://news4bharat.com/",
+  "description": "News4Bharat is a best news channel who delivers breaking India news, politics, economy and explainers with verified reporting and current updates in India for informed readers.",
+  "foundingDate": "2024",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://news4bharat.com/logo.png",
+    "width": 160,
+    "height": 160
+  },
+  "image": "https://news4bharat.com/logo.png",
+  "founder": {
+    "@type": "Person",
+    "name": "Srajan Agrawal"
+  },
+  "publishingPrinciples": "https://news4bharat.com/editorial-policy",
+  "ethicsPolicy": "https://news4bharat.com/editorial-policy",
+  "correctionsPolicy": "https://news4bharat.com/editorial-policy",
+  "missionCoveragePrioritiesPolicy": "https://news4bharat.com/founders-note",
+  "contactPoint": [
+    {
+      "@type": "ContactPoint",
+      "contactType": "Editorial Office",
+      "email": "editorial@news4bharat.com",
+      "telephone": "+91-8279993074",
+      "url": "https://news4bharat.com/contact-us",
+      "availableLanguage": ["English", "Hindi"]
+    },
+    {
+      "@type": "ContactPoint",
+      "contactType": "Press & Communications",
+      "email": "press@news4bharat.com"
+    },
+    {
+      "@type": "ContactPoint",
+      "contactType": "Advertising",
+      "email": "advertisement@news4bharat.com"
+    },
+    {
+      "@type": "ContactPoint",
+      "contactType": "Customer Support",
+      "email": "info@news4bharat.com",
+      "telephone": "+91-562-4004545"
     }
-  }
-  </script>
+  ],
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "B-904, iThum Tower, Block B, Sector 62",
+    "addressLocality": "Noida",
+    "addressRegion": "Uttar Pradesh",
+    "postalCode": "201301",
+    "addressCountry": "IN"
+  },
+  "location": {
+    "@type": "Place",
+    "name": "News4Bharat Agra Office",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "405, 4th Floor, Maruti Plaza, Sanjay Place",
+      "addressLocality": "Agra",
+      "addressRegion": "Uttar Pradesh",
+      "addressCountry": "IN"
+    }
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "India"
+  },
+  "sameAs": [
+    "https://x.com/news4_bharat",
+    "https://www.facebook.com/people/News4Bharat/61583748748524/",
+    "https://www.instagram.com/news4_bharat",
+    "https://www.linkedin.com/company/news4bharat",
+    "https://www.youtube.com/@News4_Bharat1"
+  ],
+  "knowsAbout": [
+    "Breaking News",
+    "Current Updates in India",
+    "Indian Politics",
+    "Business News",
+    "Economy",
+    "Startups",
+    "Technology",
+    "Current Affairs"
+  ],
+  "isAccessibleForFree": true
+}
+</script>
 
 </head>
 

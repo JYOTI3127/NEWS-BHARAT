@@ -723,11 +723,39 @@ const schemaHasType = (schema, expectedType) =>
   )
 
 const htmlHasSchemaType = (html, expectedType) => {
-  const pattern = new RegExp(
-    `"@type"\\s*:\\s*(?:"${expectedType}"|\\[[^\\]]*"${expectedType}")`,
-    'i'
-  )
-  return pattern.test(String(html || ''))
+  // Only match NewsArticle as a standalone @type, not inside NewsMediaOrganization array
+  const safeHtml = String(html || '')
+  const expected = String(expectedType || '').toLowerCase()
+  
+  // Find all ld+json script blocks and check each one
+  const scriptPattern = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let match
+  while ((match = scriptPattern.exec(safeHtml)) !== null) {
+    try {
+      const schema = JSON.parse(match[1])
+      const schemas = Array.isArray(schema) ? schema : [schema]
+      for (const s of schemas) {
+        const types = Array.isArray(s['@type']) 
+          ? s['@type'].map(t => String(t).toLowerCase())
+          : [String(s['@type'] || '').toLowerCase()]
+        
+        // Skip if this schema is NewsMediaOrganization type (global org schema)
+        if (types.includes('newsmediaorganization') || types.includes('organization')) {
+          continue
+        }
+        
+        if (types.includes(expected)) return true
+      }
+    } catch {
+      // If JSON parse fails, fall back to regex
+      const pattern = new RegExp(
+        `"@type"\\s*:\\s*(?:"${expectedType}"|\\[[^\\]]*"${expectedType}")`,
+        'i'
+      )
+      if (pattern.test(match[1])) return true
+    }
+  }
+  return false
 }
 
 const getBackendArticleSchemas = (article) =>

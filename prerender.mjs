@@ -391,7 +391,8 @@ const toCanonicalSiteUrl = (value) => {
     const parsed = new URL(absolute)
     if (parsed.origin !== BASE_URL) return absolute
     parsed.pathname = `/${getCleanPathSegments(parsed.pathname).join('/')}`
-    return parsed.toString().replace(/\/$/, '')
+    const normalized = parsed.toString().replace(/\/$/, '')
+    return normalized === BASE_URL ? `${BASE_URL}/` : `${normalized}/`
   } catch {
     return absolute
   }
@@ -450,6 +451,7 @@ const sanitizeArticleBodyHtml = (value) => {
     .replace(/\sstyle="[^"]*"/gi, '')
     .replace(/\sstyle='[^']*'/gi, '')
     .replace(/\s(href|src)=["']\s*javascript:[^"']*["']/gi, '')
+    .replace(/(<li\b[^>]*>[\s\S]*?)(?:\s*<br\s*\/?>\s*)+<\/li>/gi, '$1</li>')
     .trim()
   )
 }
@@ -487,7 +489,7 @@ const buildArticleFallbackHtml = (article, route, meta) => {
   const bodyTextFallback = stripHtml(article?.content || summary || title)
 
   const bodyMarkup = bodyHtml || `<p>${escapeHtml(bodyTextFallback)}</p>`
-  const articleUrl = meta?.canonical || `${BASE_URL}${route}`
+  const articleUrl = meta?.canonical || toCanonicalSiteUrl(`${BASE_URL}${route}`) || `${BASE_URL}${route}`
 
   return `
   <main data-prerender-article="true" style="max-width:820px;margin:24px auto;padding:0 16px;font-family:Arial,sans-serif;color:#1f2937;line-height:1.7;">
@@ -505,7 +507,7 @@ const buildArticleFallbackHtml = (article, route, meta) => {
 const buildArticleSchemaJson = (article, route, meta) => {
   if (!article) return null
 
-  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`).trim()
+  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || toCanonicalSiteUrl(`${BASE_URL}${route}`) || `${BASE_URL}${route}`).trim()
   const title = String(article?.title || meta?.articleHeadline || meta?.title || SITE_NAME).trim()
   const description = String(
     article?.meta_description ||
@@ -580,7 +582,7 @@ return {
 const buildBreadcrumbSchemaJson = (article, route, meta) => {
   if (!article) return null
 
-  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`).trim()
+  const canonical = String(meta?.canonical || getCanonicalArticleUrl(article) || toCanonicalSiteUrl(`${BASE_URL}${route}`) || `${BASE_URL}${route}`).trim()
   const title = String(article?.title || meta?.articleHeadline || meta?.title || SITE_NAME).trim()
   const { slug: categorySlug, name: categoryName } = getArticleCategory(article)
 
@@ -1323,6 +1325,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
     .replace(/<meta[^>]+name=["']twitter:[^"']*["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+property=["']twitter:[^"']*["'][^>]*>\s*/gi, '')
     .replace(/<meta[^>]+property=["']article:[^"']*["'][^>]*>\s*/gi, '')
+    .replace(/<link\b(?=[^>]*\brel=["']preload["'])(?=[^>]*\bas=["']image["'])[^>]*>\s*/gi, '')
 
   const injectedTags = `
   ${safeTitle ? `<title>${safeTitle}</title>` : ''}
@@ -1356,11 +1359,17 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   ${meta.publishedAt ? `<meta property="article:published_time" content="${meta.publishedAt}">` : ''}
   ${meta.modifiedAt ? `<meta property="article:modified_time" content="${meta.modifiedAt}">` : ''}`
 
+  const preloadImage =
+    route === '/'
+      ? meta.lcpImage
+      : isSeoArticleRoute(route)
+        ? meta.ogImage
+        : ''
   const preloadTags =
-    route === '/' && meta.lcpImage
+    preloadImage
       ? `
   <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
-  <link rel="preload" as="image" href="${meta.lcpImage}" fetchpriority="high">`
+  <link rel="preload" as="image" href="${preloadImage}" fetchpriority="high">`
       : ''
 
   cleaned = cleaned.replace('</head>', `${preloadTags}${injectedTags}\n</head>`)
@@ -1380,7 +1389,13 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
       /data-prerender-article-body/i.test(cleaned)
     const hasNewsArticleSchema = htmlHasSchemaType(cleaned, 'NewsArticle')
     const hasBreadcrumbSchema = htmlHasSchemaType(cleaned, 'BreadcrumbList')
-    const backendSchemas = article ? getBackendArticleSchemas(article) : []
+    const backendSchemas = article
+      ? getBackendArticleSchemas(article).filter((schema) =>
+          !schemaHasType(schema, 'NewsArticle') &&
+          !schemaHasType(schema, 'Article') &&
+          !schemaHasType(schema, 'BreadcrumbList')
+        )
+      : []
     const missingBackendSchemas = backendSchemas.filter((schema) =>
       getSchemaTypeTokens(schema).every((type) => !htmlHasSchemaType(cleaned, type))
     )

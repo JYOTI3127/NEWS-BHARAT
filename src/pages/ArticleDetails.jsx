@@ -409,7 +409,8 @@ const toCanonicalSiteUrl = (value) => {
     const parsed = new URL(absolute);
     if (parsed.origin !== SITE_URL) return absolute;
     parsed.pathname = `/${getCleanSegments(parsed.pathname).join("/")}`;
-    return parsed.toString().replace(/\/$/, "");
+    const normalized = parsed.toString().replace(/\/$/, "");
+    return normalized === SITE_URL ? `${SITE_URL}/` : `${normalized}/`;
   } catch {
     return absolute;
   }
@@ -419,7 +420,7 @@ const buildCanonicalFromRoute = (categorySlug, articleSlug) => {
   const category = normalizeSlugValue(categorySlug);
   const slug = normalizeSlugValue(articleSlug);
   if (!category || !slug) return "";
-  return `${SITE_URL}/${category}/${slug}`;
+  return `${SITE_URL}/${category}/${slug}/`;
 };
 
 const getSeoEndpointMeta = (payload) =>
@@ -1128,6 +1129,20 @@ const normalizeArticleContent = (html) => {
   const doc = new DOMParser().parseFromString(normalized, "text/html");
   Array.from(doc.body.querySelectorAll("head, title, meta, link, base, script, noscript")).forEach((node) => node.remove());
   normalizeHeadingStructure(doc);
+  Array.from(doc.body.querySelectorAll("li")).forEach((item) => {
+    while (item.lastChild) {
+      const lastChild = item.lastChild;
+      if (lastChild.nodeType === Node.TEXT_NODE && !String(lastChild.textContent || "").trim()) {
+        lastChild.remove();
+        continue;
+      }
+      if (lastChild.nodeType === Node.ELEMENT_NODE && lastChild.tagName === "BR") {
+        lastChild.remove();
+        continue;
+      }
+      break;
+    }
+  });
   Array.from(doc.body.querySelectorAll("*")).forEach((element) => {
     Array.from(element.childNodes).forEach((node) => {
       if (node.nodeType !== Node.TEXT_NODE) return;
@@ -2547,20 +2562,17 @@ export default function ArticleDetails() {
     ...articlePayloadSchemas,
   ]);
   const resolvedJsonLdSchemas = (() => {
-    if (backendPreferredSchemas.length === 0) {
-      return [articleSchema, breadcrumbSchema];
-    }
+    const extraBackendSchemas = backendPreferredSchemas.filter((schema) =>
+      !schemaHasType(schema, "NewsArticle") &&
+      !schemaHasType(schema, "Article") &&
+      !schemaHasType(schema, "BreadcrumbList")
+    );
 
-    const merged = [...backendPreferredSchemas];
-    const hasArticleSchema =
-      backendPreferredSchemas.some((schema) => schemaHasType(schema, "NewsArticle")) ||
-      backendPreferredSchemas.some((schema) => schemaHasType(schema, "Article"));
-    const hasBreadcrumbSchema = backendPreferredSchemas.some((schema) => schemaHasType(schema, "BreadcrumbList"));
-
-    if (!hasArticleSchema) merged.push(articleSchema);
-    if (!hasBreadcrumbSchema) merged.push(breadcrumbSchema);
-
-    return dedupeStructuredSchemas(merged);
+    return dedupeStructuredSchemas([
+      articleSchema,
+      breadcrumbSchema,
+      ...extraBackendSchemas,
+    ]);
   })();
   // Frontend FAQ accordion shows article-authored FAQ content, including backend FAQ schema fields.
   const visualFaqItems = dedupeFaqItems(

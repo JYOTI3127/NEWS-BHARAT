@@ -61,6 +61,19 @@ const useCardsPerPage = () => {
   return cardsPerPage;
 };
 
+const useIsMobileCarousel = () => {
+  const getValue = () => (typeof window !== "undefined" ? window.innerWidth <= 425 : false);
+  const [isMobile, setIsMobile] = useState(getValue);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(getValue());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return isMobile;
+};
+
 export default function CategoryMiniCarousel({
   title,
   slugs,
@@ -71,6 +84,7 @@ export default function CategoryMiniCarousel({
 }) {
   const navigate = useNavigate();
   const cardsPerPage = useCardsPerPage();
+  const isMobileCarousel = useIsMobileCarousel();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -81,6 +95,12 @@ export default function CategoryMiniCarousel({
     () => (Array.isArray(slugs) ? slugs.filter(Boolean) : [slugs].filter(Boolean)),
     [slugs]
   );
+  const shouldUseMobileStack = slugList.some((slug) =>
+    ["bharat-in-numbers", "bharat-startups", "bharats-startups"].includes(
+      String(slug || "").trim().toLowerCase()
+    )
+  );
+  const shouldStackMobileLayout = isMobileCarousel && shouldUseMobileStack;
   const seededArticles = useMemo(() => {
     if (!Array.isArray(passedArticles) || passedArticles.length === 0 || slugList.length === 0) return [];
     const slugSet = new Set(slugList.map((slug) => String(slug).trim().toLowerCase()));
@@ -168,14 +188,51 @@ export default function CategoryMiniCarousel({
     };
   }, [cardsPerPage, loading, visibleArticles.length]);
 
+  const mobileRootStyle = shouldStackMobileLayout
+    ? { boxSizing: "border-box", width: "100%", maxWidth: "100%", padding: "8px 10px 16px" }
+    : undefined;
+  const mobileShellStyle = shouldStackMobileLayout
+    ? {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        gap: 14,
+        gridTemplateColumns: "none",
+        width: "100%",
+        maxWidth: "100%",
+      }
+    : undefined;
+  const mobileFullWidthStyle = shouldStackMobileLayout
+    ? { boxSizing: "border-box", width: "100%", maxWidth: "100%", minWidth: 0 }
+    : undefined;
+  const mobileHeaderStyle = shouldStackMobileLayout
+    ? { alignItems: "center", gap: 10, marginBottom: 12 }
+    : undefined;
+  const mobileTitleStyle = shouldStackMobileLayout
+    ? { overflow: "visible", textOverflow: "clip", whiteSpace: "normal", fontSize: 18, lineHeight: 1.25 }
+    : undefined;
+  const mobileCardRowStyle = shouldStackMobileLayout
+    ? { display: "grid", gridTemplateColumns: "1fr", gap: 12, width: "100%", maxWidth: "100%" }
+    : undefined;
+  const mobileAdStyle = shouldStackMobileLayout
+    ? { ...mobileFullWidthStyle, "--cmc-card-row-height": undefined, minHeight: 0, alignSelf: "stretch" }
+    : cardRowHeight > 0
+      ? { "--cmc-card-row-height": `${cardRowHeight}px` }
+      : undefined;
+
   return (
-    <section className="cmc-root" aria-label={title}>
-      <div className="cmc-shell">
-        <div className="cmc-content">
-          <div className="cmc-header">
+    <section
+      className="cmc-root"
+      aria-label={title}
+      data-mobile-stack={shouldUseMobileStack ? "true" : undefined}
+      style={mobileRootStyle}
+    >
+      <div className="cmc-shell" style={mobileShellStyle}>
+        <div className="cmc-content" style={mobileFullWidthStyle}>
+          <div className="cmc-header" style={mobileHeaderStyle}>
             <div className="cmc-title-wrap">
               <div className="cmc-title-bar" />
-              <h2 className="cmc-title">{title}</h2>
+              <h2 className="cmc-title" style={mobileTitleStyle}>{title}</h2>
             </div>
             <button
               className="cmc-read-more"
@@ -186,7 +243,7 @@ export default function CategoryMiniCarousel({
             </button>
           </div>
 
-          <div className="cmc-card-row" ref={cardRowRef}>
+          <div className="cmc-card-row" ref={cardRowRef} style={mobileCardRowStyle}>
             {loading
               ? Array.from({ length: cardsPerPage }).map((_, index) => (
                   <div className="cmc-card cmc-card--skeleton" key={index}>
@@ -200,6 +257,7 @@ export default function CategoryMiniCarousel({
                 : visibleArticles.map((article, index) => (
                     <Link
                       className="cmc-card"
+                      style={mobileFullWidthStyle}
                       key={article.id || article.slug || index}
                       to={getArticlePath(article) || categoryPath || `/category/${slugList[0] || ""}`}
                     >
@@ -250,7 +308,7 @@ export default function CategoryMiniCarousel({
         <div
           className="cmc-ad-column"
           aria-label={`${title} advertisement space`}
-          style={cardRowHeight > 0 ? { "--cmc-card-row-height": `${cardRowHeight}px` } : undefined}
+          style={mobileAdStyle}
         >
           {adPlacement ? (
             <AdvertisementSlot

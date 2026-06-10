@@ -230,9 +230,9 @@ export function EntertainmentSection({ articles: passedArticles = [] }) {
         gridTemplateColumns: "720px minmax(0, 1fr)",
         gridTemplateRows: "auto",
         gap: 18,
-        alignItems: "stretch",
+        alignItems: "start",
       }
-    : { gridTemplateRows: "auto", alignItems: "stretch" };
+    : { gridTemplateRows: "auto", alignItems: "start" };
   const featuredStyle = is2K ? { height: 360, borderRadius: 10, width: "100%" } : undefined;
   const midColStyle = is2K
     ? { height: 470, paddingLeft: 18, gridRow: "auto", gridColumn: "auto" }

@@ -285,29 +285,53 @@ const SectionFallback = memo(({ title, path }) => (
 
 const EditorialSection = memo(({ section, articles }) => {
   const featured  = articles[0];
-  const sideItems = articles.slice(1, 5);
+  const isWorldNews = section.key === "world-news";
+  const leftSecondaryItems = isWorldNews ? articles.slice(1, 3) : [];
+  const sideItems = isWorldNews ? articles.slice(3, 7) : articles.slice(1, 5);
   if (!featured) return <SectionFallback title={section.title} path={section.path} />;
   return (
-    <section className="hcs-section">
+    <section className={`hcs-section${isWorldNews ? " hcs-section-world-news" : ""}`}>
       <SectionHeader title={section.title} path={section.path} />
       <div className="hcs-editorial">
-        <StoryLink
-          article={featured}
-          className={`hcs-editorial-featured${section.key === "world-news" ? " hcs-editorial-featured--world" : ""}${section.key === "ai" ? " hcs-editorial-featured--ai" : ""}`}
-        >
-          <div className="hcs-editorial-image-wrap">
-            <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-editorial-image" />
-            <div className="hcs-editorial-overlay" />
-          </div>
-          <div className="hcs-editorial-copy">
-            {shouldShowCategoryLabel(section) ? (
-              <CategoryKicker article={featured} fallback={section.title} />
-            ) : null}
-            <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
-            <p className="hcs-summary">{getArticleSummary(featured)}</p>
-            <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
-          </div>
-        </StoryLink>
+        <div className={isWorldNews ? "hcs-world-news-left" : "hcs-editorial-featured-shell"}>
+          <StoryLink
+            article={featured}
+            className={`hcs-editorial-featured${section.key === "world-news" ? " hcs-editorial-featured--world" : ""}${section.key === "ai" ? " hcs-editorial-featured--ai" : ""}`}
+          >
+            <div className="hcs-editorial-image-wrap">
+              <ArticleThumb article={featured} alt={getArticleTitle(featured)} className="hcs-editorial-image" />
+              <div className="hcs-editorial-overlay" />
+            </div>
+            <div className="hcs-editorial-copy">
+              {shouldShowCategoryLabel(section) ? (
+                <CategoryKicker article={featured} fallback={section.title} />
+              ) : null}
+              <h3 className="hcs-featured-title">{getSectionArticleTitle(featured, section)}</h3>
+              <p className="hcs-summary">{getArticleSummary(featured)}</p>
+              <span className="hcs-meta">{formatDate(getArticleDateValue(featured))}</span>
+            </div>
+          </StoryLink>
+          {isWorldNews && leftSecondaryItems.length > 0 ? (
+            <div className="hcs-world-news-left-rail">
+              {leftSecondaryItems.map((article) => (
+                <StoryLink key={article.id || article.slug} article={article} className="hcs-world-news-left-card">
+                  <ArticleThumb
+                    article={article}
+                    alt={getArticleTitle(article)}
+                    className="hcs-world-news-left-thumb"
+                  />
+                  <div className="hcs-world-news-left-copy">
+                    <h4 className="hcs-world-news-left-title">{getArticleTitle(article)}</h4>
+                    {getArticleSummary(article) ? (
+                      <p className="hcs-world-news-left-summary">{getArticleSummary(article)}</p>
+                    ) : null}
+                    <span className="hcs-meta">{formatDate(getArticleDateValue(article))}</span>
+                  </div>
+                </StoryLink>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div className="hcs-editorial-side">
           {sideItems.map((article) => (
             <StoryLink key={article.id || article.slug} article={article} className="hcs-side-card">

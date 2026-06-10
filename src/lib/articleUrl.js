@@ -109,9 +109,10 @@ export const getCanonicalArticleUrl = (article) => {
   if (canonical) {
     const cleanPath = `/${getCleanSegments(canonical.pathname).join("/")}`;
     if (isArticlePath(cleanPath)) {
-      return `${canonical.origin}${cleanPath}`;
+      return `${canonical.origin}${cleanPath}/`;
     }
   }
 
-  return getAbsoluteArticleUrl(article);
+  const absoluteUrl = getAbsoluteArticleUrl(article);
+  return absoluteUrl ? `${absoluteUrl}/` : "";
 };

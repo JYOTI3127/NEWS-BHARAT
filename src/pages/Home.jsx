@@ -220,7 +220,7 @@ function DeferredSection({
   }, [alwaysRender, rootMargin]);
 
   return (
-    <div id={anchorId} ref={ref} className={className} style={{ minHeight, scrollMarginTop: '120px' }}>
+    <div id={anchorId || id} ref={ref} className={className} style={{ minHeight, scrollMarginTop: '120px' }}>
       {shouldRender ? (
         <Suspense fallback={<div style={{ minHeight, background: '#f8f8f8' }} />}>
           <Profiler id={id} onRender={onRenderCallback}>

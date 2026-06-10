@@ -220,10 +220,8 @@ function AnalyticsPageView() {
 
 const shouldInitSwgBasic = (pathname) => {
   const parts = String(pathname || "/").split("/").filter(Boolean);
-  if (parts.length === 0) return true;
-  if (parts[0] === "tag" && parts.length >= 2) return true;
-  if (parts.length === 2 && !["category", "author", "article", "news", "60-seconds"].includes(parts[0])) return true;
-  return false;
+  if (parts.length !== 2) return false;
+  return !["category", "author", "article", "news", "tag", "60-seconds"].includes(parts[0]);
 };
 
 function SwgBasicInit() {

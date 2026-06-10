@@ -19179,3 +19179,767 @@ img {
     flex: 0 0 78%;
   }
 }
+
+/* Bharat Explainers responsive final overrides */
+.nps-entertainment .nps-ent-layout {
+  width: 100% !important;
+  max-width: 100% !important;
+  align-items: flex-start !important;
+}
+
+.nps-entertainment .nps-ent-left-mid {
+  align-items: start !important;
+}
+
+.nps-entertainment .hs-left-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  height: auto !important;
+}
+
+.nps-entertainment .hs-left-col .hs-featured-card {
+  flex: none !important;
+}
+
+.nps-entertainment .hs-left-col .hs-featured-img-wrap {
+  height: 300px !important;
+  min-height: 0 !important;
+}
+
+.nps-entertainment .hs-small-stack {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.nps-entertainment .hs-small-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.nps-entertainment .hs-mid-col {
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: start !important;
+}
+
+.nps-entertainment .hs-mid-card {
+  flex: none !important;
+  min-height: 0 !important;
+}
+
+@media (min-width: 1441px) and (max-width: 2560px) {
+  .nps-entertainment .nps-ent-left-mid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.95fr) minmax(460px, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  .nps-entertainment .hs-left-col .hs-featured-img-wrap {
+    height: 340px !important;
+  }
+
+  .nps-entertainment .hs-small-img {
+    width: 132px !important;
+    min-width: 132px !important;
+    height: 92px !important;
+  }
+
+  .nps-entertainment .hs-mid-col {
+    padding-left: 18px !important;
+  }
+
+  .nps-entertainment .hs-mid-card {
+    padding: 10px 6px !important;
+  }
+
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 138px !important;
+    min-width: 138px !important;
+    flex: 0 0 138px !important;
+    height: 96px !important;
+    min-height: 96px !important;
+  }
+}
+
+@media (max-width: 1440px) {
+  .nps-entertainment .nps-ent-left-mid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(380px, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .nps-entertainment .hs-left-col .hs-featured-img-wrap {
+    height: 285px !important;
+  }
+
+  .nps-entertainment .hs-featured-title {
+    font-size: 14px !important;
+  }
+
+  .nps-entertainment .hs-small-img {
+    width: 118px !important;
+    min-width: 118px !important;
+    height: 84px !important;
+  }
+
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 118px !important;
+    min-width: 118px !important;
+    flex: 0 0 118px !important;
+    height: 88px !important;
+    min-height: 88px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .nps-entertainment {
+    width: min(100%, calc(100% - 28px)) !important;
+    margin: 0 auto 22px !important;
+  }
+
+  .nps-entertainment .nps-ent-layout,
+  .nps-entertainment .nps-ent-left-mid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .nps-entertainment .hs-left-col .hs-featured-img-wrap {
+    height: auto !important;
+    aspect-ratio: 16 / 8 !important;
+  }
+
+  .nps-entertainment .hs-small-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .nps-entertainment .hs-small-img {
+    width: 142px !important;
+    min-width: 142px !important;
+    height: 96px !important;
+  }
+
+  .nps-entertainment .hs-mid-col {
+    border-left: none !important;
+    border-top: 1px solid #e0e0e0 !important;
+    padding: 12px 0 0 !important;
+  }
+
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 156px !important;
+    min-width: 156px !important;
+    flex: 0 0 156px !important;
+    height: 104px !important;
+    min-height: 104px !important;
+  }
+
+  .nps-entertainment .hs-mid-title {
+    font-size: 14px !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nps-entertainment {
+    width: calc(100% - 20px) !important;
+    margin: 0 auto 20px !important;
+  }
+
+  .nps-entertainment .nps-ent-layout,
+  .nps-entertainment .nps-ent-left-mid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .nps-entertainment .hs-left-col .hs-featured-img-wrap {
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    border-radius: 12px !important;
+  }
+
+  .nps-entertainment .hs-featured-overlay {
+    padding: 44px 12px 12px !important;
+  }
+
+  .nps-entertainment .hs-featured-title {
+    font-size: 13px !important;
+    line-height: 1.42 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+  }
+
+  .nps-entertainment .hs-small-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    display: grid !important;
+    grid-template-columns: 132px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 10px !important;
+    padding: 8px !important;
+  }
+
+  .nps-entertainment .hs-small-img,
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 132px !important;
+    min-width: 0 !important;
+    flex: none !important;
+    height: 92px !important;
+    min-height: 92px !important;
+  }
+
+  .nps-entertainment .hs-mid-col {
+    border-left: none !important;
+    border-top: 1px solid #e0e0e0 !important;
+    padding: 10px 0 0 !important;
+  }
+
+  .nps-entertainment .hs-small-title,
+  .nps-entertainment .hs-mid-title {
+    font-size: 12px !important;
+    line-height: 1.38 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+  }
+}
+
+@media (max-width: 425px) {
+  .nps-entertainment {
+    width: calc(100% - 16px) !important;
+    margin-bottom: 18px !important;
+  }
+
+  .nps-entertainment .hs-left-col .hs-featured-img-wrap {
+    aspect-ratio: 16 / 10 !important;
+  }
+
+  .nps-entertainment .hs-featured-overlay {
+    padding: 38px 10px 10px !important;
+  }
+
+  .nps-entertainment .hs-featured-title {
+    font-size: 12px !important;
+  }
+
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    grid-template-columns: 108px minmax(0, 1fr) !important;
+    gap: 9px !important;
+    border-radius: 10px !important;
+  }
+
+  .nps-entertainment .hs-small-img,
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 108px !important;
+    height: 78px !important;
+    min-height: 78px !important;
+  }
+
+  .nps-entertainment .hs-small-title,
+  .nps-entertainment .hs-mid-title {
+    font-size: 11.5px !important;
+  }
+
+  .nps-entertainment .hs-small-text p:not(.hs-small-title),
+  .nps-entertainment .hs-mid-text p:not(.hs-mid-title) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .nps-entertainment .hs-small-img,
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 100% !important;
+    height: 150px !important;
+    min-height: 150px !important;
+  }
+}
+
+/* Bharat Explainers: keep title and description visible on small screens */
+@media (max-width: 425px) {
+  .nps-entertainment .hs-small-text p:not(.hs-small-title),
+  .nps-entertainment .hs-mid-text p:not(.hs-mid-title) {
+    display: -webkit-box !important;
+    margin: 3px 0 !important;
+    color: #666 !important;
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
+    -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .nps-entertainment .hs-small-text p:not(.hs-small-title),
+  .nps-entertainment .hs-mid-text p:not(.hs-mid-title) {
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+  }
+}
+
+/* Bharat Explainers: show full title and description on mobile */
+@media (max-width: 425px) {
+  .nps-entertainment .hs-featured-title,
+  .nps-entertainment .hs-small-title,
+  .nps-entertainment .hs-mid-title {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+  }
+
+  .nps-entertainment .hs-featured-overlay p:not(.hs-featured-title),
+  .nps-entertainment .hs-small-text p:not(.hs-small-title),
+  .nps-entertainment .hs-mid-text p:not(.hs-mid-title) {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    white-space: normal !important;
+  }
+
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    align-items: start !important;
+    min-height: 0 !important;
+  }
+}
+
+/* Bharat Explainers: let mobile text use full card width */
+@media (max-width: 425px) {
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .nps-entertainment .hs-small-text,
+  .nps-entertainment .hs-mid-text {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  .nps-entertainment .hs-small-img,
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+}
+
+/* Bharat Startups: fix 425px mobile layout */
+@media (max-width: 425px) {
+  #BharatStartups.home-section-align,
+  #BharatStartups .cmc-root,
+  #BharatStartups .cmc-shell,
+  #BharatStartups .cmc-content,
+  #BharatStartups .cmc-card-row,
+  #BharatStartups .cmc-card,
+  #BharatStartups .cmc-ad-column,
+  #BharatStartups .cmc-section-ad {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #BharatStartups .cmc-root {
+    margin: 0 auto 18px !important;
+    padding: 8px 10px 16px !important;
+  }
+
+  #BharatStartups .cmc-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    grid-template-columns: none !important;
+  }
+
+  #BharatStartups .cmc-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  #BharatStartups .cmc-title-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  #BharatStartups .cmc-title {
+    display: block !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+    max-width: 100% !important;
+  }
+
+  #BharatStartups .cmc-read-more {
+    flex: 0 0 auto !important;
+    font-size: 12px !important;
+  }
+
+  #BharatStartups .cmc-card-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  #BharatStartups .cmc-card-title {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  #BharatStartups .cmc-image-wrap,
+  #BharatStartups .cmc-image-skeleton {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  #BharatStartups .cmc-ad-column {
+    display: block !important;
+    order: 3 !important;
+    justify-self: stretch !important;
+    margin-top: 4px !important;
+  }
+
+  #BharatStartups .cmc-section-ad,
+  #BharatStartups .cmc-section-ad .home-ad-frame {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: min(300px, 100%) !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* Bharat In Numbers: fix 425px mobile layout */
+@media (max-width: 425px) {
+  #BharatInNumbers.home-section-align,
+  #BharatInNumbers .cmc-root,
+  #BharatInNumbers .cmc-shell,
+  #BharatInNumbers .cmc-content,
+  #BharatInNumbers .cmc-card-row,
+  #BharatInNumbers .cmc-card,
+  #BharatInNumbers .cmc-ad-column,
+  #BharatInNumbers .cmc-section-ad {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #BharatInNumbers .cmc-root {
+    margin: 0 auto 18px !important;
+    padding: 8px 10px 16px !important;
+  }
+
+  #BharatInNumbers .cmc-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    grid-template-columns: none !important;
+  }
+
+  #BharatInNumbers .cmc-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  #BharatInNumbers .cmc-title-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  #BharatInNumbers .cmc-title {
+    display: block !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+    max-width: 100% !important;
+  }
+
+  #BharatInNumbers .cmc-read-more {
+    flex: 0 0 auto !important;
+    font-size: 12px !important;
+  }
+
+  #BharatInNumbers .cmc-card-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  #BharatInNumbers .cmc-card-title {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  #BharatInNumbers .cmc-image-wrap,
+  #BharatInNumbers .cmc-image-skeleton {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  #BharatInNumbers .cmc-ad-column {
+    display: block !important;
+    order: 3 !important;
+    justify-self: stretch !important;
+    margin-top: 4px !important;
+  }
+
+  #BharatInNumbers .cmc-section-ad,
+  #BharatInNumbers .cmc-section-ad .home-ad-frame {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: min(300px, 100%) !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* Bharat Explainers: fix text overlap on 375px/mobile cards */
+@media (max-width: 425px) {
+  .nps-entertainment .hs-small-stack,
+  .nps-entertainment .hs-mid-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .nps-entertainment .hs-small-card,
+  .nps-entertainment .hs-mid-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .nps-entertainment .hs-small-img,
+  .nps-entertainment .hs-mid-img,
+  .nps-entertainment .hs-mid-img.hs-mid-img--right,
+  .nps-entertainment .hs-mid-col .hs-mid-img.hs-mid-img--right {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9 !important;
+    flex: none !important;
+    border-radius: 10px !important;
+  }
+
+  .nps-entertainment .hs-small-text,
+  .nps-entertainment .hs-mid-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .nps-entertainment .hs-small-title,
+  .nps-entertainment .hs-mid-title {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    color: #111 !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+  }
+
+  .nps-entertainment .hs-small-text p:not(.hs-small-title),
+  .nps-entertainment .hs-mid-text p:not(.hs-mid-title) {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    color: #666 !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+  }
+
+  .nps-entertainment .hs-small-text .hs-date,
+  .nps-entertainment .hs-mid-text .hs-date {
+    display: block !important;
+    margin-top: 2px !important;
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+}
+
+/* Category mini carousel: hard mobile stack for Bharat In Numbers/Startups */
+@media (max-width: 425px) {
+  .cmc-root[data-mobile-stack="true"] {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto 18px !important;
+    padding: 8px 10px 16px !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-content,
+  .cmc-root[data-mobile-stack="true"] .cmc-card-row,
+  .cmc-root[data-mobile-stack="true"] .cmc-card,
+  .cmc-root[data-mobile-stack="true"] .cmc-ad-column {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-card-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-title-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-title {
+    display: block !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-read-more {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-image-wrap,
+  .cmc-root[data-mobile-stack="true"] .cmc-image-skeleton {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-card-title {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    width: 100% !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-ad-column {
+    display: block !important;
+    order: 3 !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+  }
+
+  .cmc-root[data-mobile-stack="true"] .cmc-section-ad,
+  .cmc-root[data-mobile-stack="true"] .cmc-section-ad .home-ad-frame {
+    width: min(300px, 100%) !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}

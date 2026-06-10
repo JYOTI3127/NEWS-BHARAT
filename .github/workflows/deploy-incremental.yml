@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       article_slug:
-        description: 'Article slug (khali chodo = latest article automatic)'
+        description: 'Article slug'
         required: false
         default: ''
   repository_dispatch:
@@ -50,7 +50,7 @@ jobs:
             echo "slug=$MANUAL_SLUG" >> "$GITHUB_OUTPUT"
             echo "Source: manual input → $MANUAL_SLUG"
           else
-            echo "Slug nahi mila — API se latest article fetch kar rahe hain..."
+            echo "Slug nahi mila — API se latest fetch kar rahe hain..."
             LATEST_SLUG=$(curl -s "https://news4bharat.cloud/api/articles/?page=1&limit=1" | node -e "
               const chunks = [];
               process.stdin.on('data', c => chunks.push(c));
@@ -63,7 +63,7 @@ jobs:
               });
             ")
             if [ -z "$LATEST_SLUG" ]; then
-              echo "ERROR: Koi bhi slug nahi mila!"
+              echo "ERROR: Slug nahi mila!"
               exit 1
             fi
             echo "slug=$LATEST_SLUG" >> "$GITHUB_OUTPUT"
@@ -76,82 +76,66 @@ jobs:
           CI: "true"
           VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
 
-      - name: Deploy build shell to Hostinger
+      - name: Run incremental prerender (GitHub Actions pe)
+        run: node prerender-incremental.mjs
+        env:
+          ARTICLE_SLUG: ${{ steps.resolve_slug.outputs.slug }}
+          VITE_API_TARGET: ${{ secrets.VITE_API_TARGET }}
+
+      - name: Deploy prerendered files to Hostinger
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "build/*"
-          target: "/home/u243022050/incremental-workspace"
-          strip_components: 1
+          source: "build-incremental/__prerender/*"
+          target: "/home/u243022050/domains/news4bharat.com/public_html/__prerender/"
+          strip_components: 2
           overwrite: true
-          tar_dereference: true
           timeout: 120s
           command_timeout: 10m
 
-      - name: Copy prerender scripts to Hostinger
+      - name: Deploy assets to Hostinger
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "prerender-incremental.mjs,src/lib/articleUrl.js,package.json,package-lock.json"
-          target: "/home/u243022050/incremental-workspace"
+          source: "build-incremental/assets/*"
+          target: "/home/u243022050/domains/news4bharat.com/public_html/assets/"
+          strip_components: 2
           overwrite: true
-          timeout: 60s
-          command_timeout: 5m
+          timeout: 120s
+          command_timeout: 10m
 
-      - name: Run prerender ON Hostinger + deploy to public_html
-        uses: appleboy/ssh-action@v1
+      - name: Deploy index.html to Hostinger
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          timeout: 300s
-          command_timeout: 20m
-          script: |
-            set -e
-            WORKSPACE="/home/u243022050/incremental-workspace"
-            PUBLIC_HTML="/home/u243022050/domains/news4bharat.com/public_html"
-            SLUG="${{ steps.resolve_slug.outputs.slug }}"
-            API_TARGET="${{ secrets.VITE_API_TARGET }}"
+          source: "build-incremental/index.html"
+          target: "/home/u243022050/domains/news4bharat.com/public_html/"
+          strip_components: 1
+          overwrite: true
+          timeout: 60s
 
-            echo "=== Step 1: npm install on Hostinger ==="
-            cd "$WORKSPACE"
-            npm ci --prefer-offline 2>&1 | tail -5
-
-            echo "=== Step 2: Prerender on Hostinger (API accessible here!) ==="
-            ARTICLE_SLUG="$SLUG" \
-            VITE_API_TARGET="$API_TARGET" \
-            node prerender-incremental.mjs
-
-            echo "=== Step 3: Copy prerendered files to public_html ==="
-            if [ -d "$WORKSPACE/build-incremental/__prerender" ]; then
-              cp -r "$WORKSPACE/build-incremental/__prerender/." "$PUBLIC_HTML/__prerender/"
-              echo "✅ __prerender files copied"
-            fi
-
-            # Assets bhi update karo (naye hashed files)
-            if [ -d "$WORKSPACE/build-incremental/assets" ]; then
-              cp -r "$WORKSPACE/build-incremental/assets/." "$PUBLIC_HTML/assets/"
-              echo "✅ assets copied"
-            fi
-
-            # index.html update karo
-            if [ -f "$WORKSPACE/build-incremental/index.html" ]; then
-              cp "$WORKSPACE/build-incremental/index.html" "$PUBLIC_HTML/index.html"
-              echo "✅ index.html updated"
-            fi
-
-            echo "=== Step 4: Cleanup workspace ==="
-            rm -rf "$WORKSPACE/build-incremental"
-            rm -rf "$WORKSPACE/node_modules"
-
-            echo "=== ✅ Done! Slug: $SLUG ==="
+      - name: Deploy route index.html files to Hostinger
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          source: "build-incremental/**/*.html"
+          target: "/home/u243022050/domains/news4bharat.com/public_html/"
+          strip_components: 1
+          overwrite: true
+          timeout: 120s
+          command_timeout: 10m
 
       - name: Ping Google sitemap
         run: |

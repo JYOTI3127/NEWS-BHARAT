@@ -18,6 +18,7 @@ import { buildAuthorSlug, getArticleAuthorSlug } from "../lib/authors";
 import {
   getCanonicalArticleUrl,
   getArticlePath,
+  normalizeCanonicalUrl,
 } from "../lib/articleUrl";
 import { trackSocialShare } from "../lib/analytics";
 import { YOUTUBE_CHANNEL_URL } from "../lib/socialLinks";
@@ -409,8 +410,7 @@ const toCanonicalSiteUrl = (value) => {
     const parsed = new URL(absolute);
     if (parsed.origin !== SITE_URL) return absolute;
     parsed.pathname = `/${getCleanSegments(parsed.pathname).join("/")}`;
-    const normalized = parsed.toString().replace(/\/$/, "");
-    return normalized === SITE_URL ? `${SITE_URL}/` : `${normalized}/`;
+    return normalizeCanonicalUrl(parsed.toString());
   } catch {
     return absolute;
   }
@@ -420,7 +420,7 @@ const buildCanonicalFromRoute = (categorySlug, articleSlug) => {
   const category = normalizeSlugValue(categorySlug);
   const slug = normalizeSlugValue(articleSlug);
   if (!category || !slug) return "";
-  return `${SITE_URL}/${category}/${slug}/`;
+  return normalizeCanonicalUrl(`${SITE_URL}/${category}/${slug}`);
 };
 
 const getSeoEndpointMeta = (payload) =>

@@ -7,6 +7,7 @@ import {
   getArticlePath,
   getCanonicalArticleUrl,
   isArticlePath,
+  normalizeCanonicalUrl,
 } from './src/lib/articleUrl.js'
 import { STATIC_PAGE_SEO as SHARED_STATIC_PAGE_SEO } from './src/lib/staticPageSeo.js'
 
@@ -391,8 +392,7 @@ const toCanonicalSiteUrl = (value) => {
     const parsed = new URL(absolute)
     if (parsed.origin !== BASE_URL) return absolute
     parsed.pathname = `/${getCleanPathSegments(parsed.pathname).join('/')}`
-    const normalized = parsed.toString().replace(/\/$/, '')
-    return normalized === BASE_URL ? `${BASE_URL}/` : `${normalized}/`
+    return normalizeCanonicalUrl(parsed.toString())
   } catch {
     return absolute
   }
@@ -826,11 +826,29 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       .map((value) => normalizeText(value))
       .find(Boolean)
   }
+  const getCategorySeoKeywords = (category, catName) => {
+    const fromCategory = [
+      category?.meta_keywords,
+      category?.metaKeywords,
+      category?.seo_keywords,
+      category?.seoKeywords,
+      category?.keywords,
+      category?.seo?.meta_keywords,
+      category?.seo?.metaKeywords,
+      category?.seo?.keywords,
+    ]
+      .map((value) => normalizeText(value))
+      .find(Boolean)
+
+    if (fromCategory) return fromCategory
+    return catName ? `${catName} news, ${catName} latest updates, ${catName} analysis` : ''
+  }
   // Homepage
   if (route === '/') {
     return {
       title: 'News4Bharat - India News, Economy, Politics & Explainers',
       description: 'News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers.',
+      keywords: 'India news, breaking news India, latest news India, economy news, politics news, Bharat news',
       canonical: `${BASE_URL}/`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
@@ -988,6 +1006,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       description:
         getCategorySeoDescription(category, catName) ||
         `Read the latest ${catName} news, updates, analysis and explainers on ${SITE_NAME}.`,
+      keywords: getCategorySeoKeywords(category, catName),
       canonical: `${BASE_URL}/category/${slug}`,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',

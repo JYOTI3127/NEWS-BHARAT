@@ -253,6 +253,28 @@ const getCategorySeoDescription = (category, displayName) => {
     .find(Boolean);
 };
 
+const getCategorySeoKeywords = (category, displayName) => {
+  const fromCategory = [
+    category?.meta_keywords,
+    category?.metaKeywords,
+    category?.seo_keywords,
+    category?.seoKeywords,
+    category?.keywords,
+    category?.seo?.meta_keywords,
+    category?.seo?.metaKeywords,
+    category?.seo?.keywords,
+  ]
+    .map(getPlainText)
+    .find(Boolean);
+
+  if (fromCategory) return fromCategory;
+
+  const name = getPlainText(displayName);
+  return name
+    ? `${name} news, ${name} latest updates, ${name} analysis`
+    : "";
+};
+
 const getPossibleStateValues = (article) => {
   const values = [
     article?.selected_state_name,
@@ -628,6 +650,7 @@ export default function CategoryPage() {
   const categorySeoDescription =
     getCategorySeoDescription(category, categoryDisplayName) ||
     `Read the latest ${categoryDisplayName || String(slug || "").replace(/-/g, " ")} news, updates, analysis and explainers on ${SITE_NAME}.`;
+  const categorySeoKeywords = getCategorySeoKeywords(category, categoryDisplayName);
   const categoryCanonicalUrl = stateName
     ? `${SITE_URL}/category/${slug}/${encodeURIComponent(canonicalizeRegionName(subFilter) || subFilter)}`
     : subFilter
@@ -702,6 +725,7 @@ export default function CategoryPage() {
       <Helmet>
         <title>{categorySeoTitle}</title>
         <meta name="description" content={categorySeoDescription} />
+        {categorySeoKeywords && <meta name="keywords" content={categorySeoKeywords} />}
         <meta name="robots" content="index,follow,max-image-preview:large" />
         <link rel="canonical" href={categoryCanonicalUrl} />
 

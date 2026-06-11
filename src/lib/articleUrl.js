@@ -104,15 +104,24 @@ export const getAbsoluteArticleUrl = (article) => {
   return path ? `${SITE_URL}${path}` : "";
 };
 
+export const normalizeCanonicalUrl = (value) => {
+  const parsed = getValidSiteUrl(value);
+  if (!parsed) return "";
+
+  const cleanPath = `/${getCleanSegments(parsed.pathname).join("/")}`;
+  const normalizedPath = cleanPath === "/" ? "/" : cleanPath.replace(/\/+$/, "");
+  return `${parsed.origin}${normalizedPath}`;
+};
+
 export const getCanonicalArticleUrl = (article) => {
   const canonical = getValidSiteUrl(article?.canonical_url);
   if (canonical) {
     const cleanPath = `/${getCleanSegments(canonical.pathname).join("/")}`;
     if (isArticlePath(cleanPath)) {
-      return `${canonical.origin}${cleanPath}/`;
+      return normalizeCanonicalUrl(`${canonical.origin}${cleanPath}`);
     }
   }
 
   const absoluteUrl = getAbsoluteArticleUrl(article);
-  return absoluteUrl ? `${absoluteUrl}/` : "";
+  return normalizeCanonicalUrl(absoluteUrl);
 };

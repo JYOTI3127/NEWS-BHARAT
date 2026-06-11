@@ -83,7 +83,6 @@ export default function FoundersNote() {
                     <br />
                     Srajan Agarwal
                     <br />
-                    (Sign)
                   </span>
                 </div>
               </div>

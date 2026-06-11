@@ -10,9 +10,10 @@ from newsapp.frontend_prerender import (
     NonRetryablePrerenderError,
     RetryablePrerenderError,
     _read_prerender_status,
+    _output_file_path,
     run_prerender_pipeline,
 )
-from newsapp.models import Article
+from newsapp.models import Article, Category
 from newsapp.frontend_prerender import _slug_url
 
 
@@ -44,8 +45,6 @@ def test_trigger_frontend_build_spawns_local_prerender(mock_popen, staff_user):
 
 
 def test_slug_url_uses_category_slug_from_article(staff_user):
-    from newsapp.models import Category
-
     category = Category.objects.create(name="Automobile", slug="automobile", status="active")
     article = _make_article(staff_user)
     article.primary_category = category
@@ -53,6 +52,17 @@ def test_slug_url_uses_category_slug_from_article(staff_user):
     article.categories.add(category)
 
     assert _slug_url(article.slug) == "https://news4bharat.com/automobile/prerender-story"
+
+
+def test_output_file_path_uses_category_slug_html_format(staff_user, settings):
+    settings.FRONTEND_PRERENDER_OUTPUT_DIR = str(_workspace_temp_dir(settings) / "__prerender")
+    category = Category.objects.create(name="Automobile", slug="automobile", status="active")
+    article = _make_article(staff_user)
+    article.primary_category = category
+    article.save(update_fields=["primary_category"])
+    article.categories.add(category)
+
+    assert _output_file_path(article.slug) == Path(settings.FRONTEND_PRERENDER_OUTPUT_DIR) / "automobile" / "prerender-story.html"
 
 
 def _workspace_temp_dir(settings):
@@ -66,18 +76,19 @@ def test_run_prerender_pipeline_retries_retryable_errors_then_succeeds(monkeypat
     settings.FRONTEND_PRERENDER_OUTPUT_DIR = str(temp_root / "__prerender")
     settings.FRONTEND_PRERENDER_LOCK_DIR = str(temp_root / "__locks")
     attempts = {"render": 0, "upload": 0}
-    local_dir = temp_root / "__prerender" / "retry-story"
-    local_dir.mkdir(parents=True, exist_ok=True)
+    local_file = temp_root / "__prerender" / "automobile" / "retry-story.html"
+    local_file.parent.mkdir(parents=True, exist_ok=True)
+    local_file.write_text("<html></html>", encoding="utf-8")
 
     def fake_render(slug):
         attempts["render"] += 1
         if attempts["render"] == 1:
             raise RetryablePrerenderError("temporary timeout")
-        return local_dir
+        return local_file
 
     def fake_upload(path, slug):
         attempts["upload"] += 1
-        assert Path(path) == local_dir
+        assert Path(path) == local_file
 
     monkeypatch.setattr("newsapp.frontend_prerender._render_once", fake_render)
     monkeypatch.setattr("newsapp.frontend_prerender._upload_once", fake_upload)

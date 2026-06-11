@@ -4,6 +4,7 @@ import subprocess
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from shlex import quote as sh_quote
 
 from django.conf import settings
 
@@ -58,6 +59,36 @@ def _slug_url(slug):
         raise NonRetryablePrerenderError(f"Article with slug '{slug}' does not exist.") from exc
 
     return article_url(article, base_url)
+
+
+def _article_for_slug(slug):
+    from newsapp.models import Article
+
+    try:
+        return (
+            Article.objects
+            .select_related("primary_category")
+            .prefetch_related("categories")
+            .get(slug=slug)
+        )
+    except Article.DoesNotExist as exc:
+        raise NonRetryablePrerenderError(f"Article with slug '{slug}' does not exist.") from exc
+
+
+def _output_file_path(slug):
+    try:
+        from newsapp.seo_direct import primary_category_slug
+    except Exception as exc:
+        raise NonRetryablePrerenderError("Could not import category helpers for prerender output path.") from exc
+
+    article = _article_for_slug(slug)
+    category_slug = (primary_category_slug(article) or "").strip()
+    if not category_slug:
+        raise NonRetryablePrerenderError(f"Published article '{slug}' has no category slug for prerender output path.")
+
+    output_dir = _output_root() / category_slug
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir / f"{slug}.html"
 
 
 def _output_root():
@@ -153,9 +184,7 @@ def _render_once(slug):
         ) from exc
 
     target_url = _slug_url(slug)
-    output_path = _output_root() / slug
-    html_file = output_path / "index.html"
-    output_path.mkdir(parents=True, exist_ok=True)
+    html_file = _output_file_path(slug)
 
     _log(logging.INFO, "Prerender start slug=%s url=%s", slug, target_url)
     with sync_playwright() as playwright:
@@ -180,10 +209,10 @@ def _render_once(slug):
 
     html_file.write_text(html, encoding="utf-8")
     _log(logging.INFO, "Prerender HTML saved slug=%s file=%s", slug, html_file)
-    return output_path
+    return html_file
 
 
-def _upload_once(local_dir, slug):
+def _upload_once(local_file, slug):
     remote_user = str(getattr(settings, "FRONTEND_PRERENDER_REMOTE_USER", "") or "").strip()
     remote_host = str(getattr(settings, "FRONTEND_PRERENDER_REMOTE_HOST", "") or "").strip()
     remote_path = str(getattr(settings, "FRONTEND_PRERENDER_REMOTE_PATH", "") or "").strip()
@@ -193,6 +222,32 @@ def _upload_once(local_dir, slug):
     if not all([remote_user, remote_host, remote_path, ssh_key]):
         raise NonRetryablePrerenderError("Remote upload settings are incomplete.")
 
+    local_file = Path(local_file)
+    relative_path = local_file.relative_to(_output_root())
+    remote_target = f"{remote_user}@{remote_host}:{remote_path.rstrip('/')}/{relative_path.as_posix()}"
+
+    mkdir_command = [
+        "ssh",
+        "-p",
+        remote_port,
+        "-i",
+        ssh_key,
+        "-o",
+        "StrictHostKeyChecking=no",
+        f"{remote_user}@{remote_host}",
+        f"mkdir -p {sh_quote((Path(remote_path) / relative_path.parent).as_posix())}",
+    ]
+
+    try:
+        subprocess.run(mkdir_command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as exc:
+        stderr_preview = (exc.stderr or exc.stdout or "").strip()
+        if len(stderr_preview) > 500:
+            stderr_preview = stderr_preview[:500] + "..."
+        raise RetryablePrerenderError(
+            f"Remote directory creation failed for slug '{slug}'. {stderr_preview}"
+        ) from exc
+
     command = [
         "scp",
         "-P",
@@ -201,9 +256,8 @@ def _upload_once(local_dir, slug):
         ssh_key,
         "-o",
         "StrictHostKeyChecking=no",
-        "-r",
-        str(local_dir),
-        f"{remote_user}@{remote_host}:{remote_path}",
+        str(local_file),
+        remote_target,
     ]
     try:
         subprocess.run(command, check=True, capture_output=True, text=True)
@@ -215,7 +269,7 @@ def _upload_once(local_dir, slug):
             f"SCP upload failed for slug '{slug}'. {stderr_preview}"
         ) from exc
 
-    _log(logging.INFO, "Prerender upload success slug=%s remote_path=%s", slug, remote_path)
+    _log(logging.INFO, "Prerender upload success slug=%s remote_path=%s", slug, remote_target)
 
 
 def run_prerender_pipeline(*, slug, reason="article_updated"):

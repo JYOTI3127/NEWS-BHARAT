@@ -1,5 +1,6 @@
 import Prerenderer from '@prerenderer/prerenderer'
 import PuppeteerRenderer from '@prerenderer/renderer-puppeteer'
+import puppeteer from 'puppeteer'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
@@ -19,6 +20,9 @@ const ARTICLE_SLUG = process.env.ARTICLE_SLUG || ''
 const FETCH_TIMEOUT_MS = Number(process.env.PRERENDER_FETCH_TIMEOUT_MS || 30000)
 const PRERENDER_DATA_SCRIPT_PATTERN =
   /<script>window\.__N4B_PRERENDER_DATA__=[\s\S]*?<\/script>\s*/g
+
+// Live site URL — fallback mein yahan se render hoga
+const LIVE_SITE = 'https://news4bharat.com'
 
 if (!ARTICLE_SLUG) {
   console.error('ERROR: ARTICLE_SLUG env variable is required')
@@ -82,19 +86,39 @@ const normalizeNextApiUrl = (value) => {
 
 async function fetchArticleBySlug(slug) {
   const cacheBust = `_=${Date.now()}`
-  const detail = await fetchWithRetry(`${API_BASE}/articles/slug/${encodeURIComponent(slug)}/?${cacheBust}`)
-  const seoEndpoint = await fetchWithRetry(`${API_BASE}/seo/article/${encodeURIComponent(slug)}/?${cacheBust}`)
-    .catch((error) => {
+
+  try {
+    const detail = await fetchWithRetry(
+      `${API_BASE}/articles/slug/${encodeURIComponent(slug)}/?${cacheBust}`
+    )
+    const seoEndpoint = await fetchWithRetry(
+      `${API_BASE}/seo/article/${encodeURIComponent(slug)}/?${cacheBust}`
+    ).catch((error) => {
       console.log(`  SEO endpoint skipped: ${error?.message || error}`)
       return null
     })
 
-  const article = Array.isArray(detail) ? detail[0] : detail
-  if (!article) throw new Error(`Article not found for slug: ${slug}`)
+    const article = Array.isArray(detail) ? detail[0] : detail
+    if (!article) throw new Error(`Article not found for slug: ${slug}`)
 
-  return seoEndpoint
-    ? { ...article, seo_endpoint: seoEndpoint, seo_meta: isPlainObject(seoEndpoint?.meta) ? seoEndpoint.meta : {} }
-    : article
+    return seoEndpoint
+      ? {
+          ...article,
+          seo_endpoint: seoEndpoint,
+          seo_meta: isPlainObject(seoEndpoint?.meta) ? seoEndpoint.meta : {},
+        }
+      : article
+
+  } catch (apiError) {
+    // ✅ API fail hui? Fallback mode on
+    console.log(`  ⚠️ API unreachable (${apiError?.message}). Switching to live-site fallback.`)
+    return {
+      slug: slug,
+      title: slug,
+      category_slug: '',
+      _fallback: true,
+    }
+  }
 }
 
 async function fetchRecentArticles(limit = 50) {
@@ -133,13 +157,13 @@ const getCleanPathSegments = (value) =>
 
 const getPrerenderOutputPath = (baseDir, route) => {
   const cleanSegments = getCleanPathSegments(route)
-  if (cleanSegments.length === 0) return path.join(baseDir, '__prerender', 'index.html')  // ← fix
+  if (cleanSegments.length === 0) return path.join(baseDir, '__prerender', 'index.html')
   return path.join(baseDir, '__prerender', `${cleanSegments.join('/')}.html`)
 }
 
 const getRouteIndexOutputPath = (baseDir, route) => {
   const cleanSegments = getCleanPathSegments(route)
-  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')  
+  if (cleanSegments.length === 0) return path.join(baseDir, 'index.html')
   return path.join(baseDir, ...cleanSegments, 'index.html')
 }
 
@@ -172,11 +196,18 @@ function getRoutesForIncremental(article) {
 
   // Article route
   const articlePath = getArticlePath(article)
-  if (articlePath) routes.add(articlePath)
+  if (articlePath) {
+    routes.add(articlePath)
+  } else if (article?.slug) {
+    // ✅ Fallback: slug se seedha route banao
+    routes.add(`/${article.slug}`)
+  }
 
-  // Category route
-  const catSlug = getArticleCategorySlug(article)
-  if (catSlug) routes.add(`/category/${catSlug}`)
+  // Category route — sirf tab jab API se data mila ho
+  if (!article._fallback) {
+    const catSlug = getArticleCategorySlug(article)
+    if (catSlug) routes.add(`/category/${catSlug}`)
+  }
 
   // Homepage always
   routes.add('/')
@@ -222,6 +253,51 @@ const replacePrerenderDataScript = (html, route, article, allArticles, categorie
   return cleaned.replace('</head>', `${dataScript}\n</head>`)
 }
 
+// ─── Fallback: Live site se render karo ─────────────────────────────────────
+
+async function renderLiveUrl(liveUrl) {
+  console.log(`  Opening: ${liveUrl}`)
+
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+    ],
+  })
+
+  try {
+    const page = await browser.newPage()
+
+    // Page fully load hone ka wait karo
+    await page.goto(liveUrl, {
+      waitUntil: 'networkidle0',
+      timeout: 60000,
+    })
+
+    // prerender-ready event ka wait karo (15 sec max)
+    await page.waitForFunction(
+      () => {
+        const meta = document.querySelector('meta[name="prerender-status"]')
+        return meta || document.readyState === 'complete'
+      },
+      { timeout: 15000 }
+    ).catch(() => {
+      console.log('  prerender-ready timeout — using current HTML')
+    })
+
+    // Thoda aur wait karo rendering ke liye
+    await new Promise((r) => setTimeout(r, 2000))
+
+    const html = await page.content()
+    return html
+  } finally {
+    await browser.close()
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 console.log('Fetching article data...')
@@ -229,106 +305,138 @@ let article = null
 
 try {
   article = await fetchArticleBySlug(ARTICLE_SLUG)
+  console.log(
+    article._fallback
+      ? `⚠️  Fallback mode ON — will render from live site`
+      : `✅ Article fetched from API: "${article.title || ARTICLE_SLUG}"`
+  )
 } catch (error) {
-  console.error(`Unable to fetch article "${ARTICLE_SLUG}" from ${API_BASE}.`)
-  console.error(error?.message || error)
-  console.log('Incremental prerender skipped because the API is unreachable from GitHub Actions.')
-  console.log('The next successful full deploy will still rebuild the page.')
-  process.exit(0)
-}
-
-const [recentResult, categoriesResult] = await Promise.allSettled([
-  fetchRecentArticles(30),
-  fetchCategories(),
-])
-
-const recentArticles =
-  recentResult.status === 'fulfilled' && Array.isArray(recentResult.value)
-    ? recentResult.value
-    : [article]
-const allArticles = dedupeArticles([article, ...recentArticles])
-const categories =
-  categoriesResult.status === 'fulfilled' && Array.isArray(categoriesResult.value)
-    ? categoriesResult.value
-    : []
-
-if (recentResult.status !== 'fulfilled') {
-  console.log(`Recent articles skipped: ${recentResult.reason?.message || recentResult.reason}`)
-}
-if (categoriesResult.status !== 'fulfilled') {
-  console.log(`Categories skipped: ${categoriesResult.reason?.message || categoriesResult.reason}`)
+  console.error(`Unexpected error: ${error?.message || error}`)
+  process.exit(1)
 }
 
 const routes = getRoutesForIncremental(article)
 console.log(`Routes to prerender: ${routes.join(', ')}`)
 
-// Use existing build as static dir
+// Build output directory setup
 const BUILD_DIR = path.join(__dirname, 'build')
 const OUT_DIR = path.join(__dirname, 'build-incremental')
 
-// Copy build shell to incremental dir
 fs.mkdirSync(OUT_DIR, { recursive: true })
 const shellHtml = fs.readFileSync(path.join(BUILD_DIR, 'index.html'), 'utf8')
 fs.writeFileSync(path.join(OUT_DIR, 'index.html'), shellHtml, 'utf8')
 
-// Copy assets folder
 const assetsDir = path.join(BUILD_DIR, 'assets')
 if (fs.existsSync(assetsDir)) {
   fs.cpSync(assetsDir, path.join(OUT_DIR, 'assets'), { recursive: true })
 }
 
-const prerenderer = new Prerenderer({
-  staticDir: OUT_DIR,
-  server: {
-    host: '127.0.0.1',
-    listenHost: '127.0.0.1',
-    port: 0,
-  },
-  renderer: new PuppeteerRenderer({
-    renderAfterDocumentEvent: 'prerender-ready',
-    timeout: 60000,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
-    consoleHandler: () => {},
-  }),
-})
-
-await prerenderer.initialize()
-console.log('Prerenderer ready\n')
-
 let success = 0
 let failed = 0
 
-for (const route of routes) {
-  try {
-    const rendered = await prerenderer.renderRoutes([route])
+// ─── FALLBACK MODE — Live site se render karo ───────────────────────────────
+if (article._fallback) {
+  console.log('\n📡 Fallback mode: rendering from live site (API was unreachable)\n')
 
-    rendered.forEach(({ route: r, html }) => {
-      // Inject fresh prerender data
-      const cleanHtml = replacePrerenderDataScript(html, r, article, allArticles, categories)
+  for (const route of routes) {
+    try {
+      const liveUrl = `${LIVE_SITE}${route}`
+      const html = await renderLiveUrl(liveUrl)
 
-      const outputPath = getPrerenderOutputPath(OUT_DIR, r)
+      // __prerender folder mein save karo
+      const outputPath = getPrerenderOutputPath(OUT_DIR, route)
       fs.mkdirSync(path.dirname(outputPath), { recursive: true })
-      fs.writeFileSync(outputPath, cleanHtml, 'utf8')
+      fs.writeFileSync(outputPath, html, 'utf8')
 
-      const routeIndexPath = getRouteIndexOutputPath(OUT_DIR, r)
+      // route/index.html mein bhi save karo
+      const routeIndexPath = getRouteIndexOutputPath(OUT_DIR, route)
       fs.mkdirSync(path.dirname(routeIndexPath), { recursive: true })
-      fs.writeFileSync(routeIndexPath, cleanHtml, 'utf8')
+      fs.writeFileSync(routeIndexPath, html, 'utf8')
 
-      console.log(`  OK ${r}`)
+      console.log(`  ✅ OK ${route}`)
       success++
-    })
-  } catch (e) {
-    console.log(`  FAIL ${route} — ${e.message}`)
-    failed++
+    } catch (e) {
+      console.log(`  ❌ FAIL ${route} — ${e.message}`)
+      failed++
+    }
   }
-}
 
-await prerenderer.destroy()
+// ─── NORMAL MODE — Local prerenderer use karo (API available hai) ────────────
+} else {
+  console.log('\n🚀 Normal mode: rendering via local prerenderer\n')
+
+  // Recent articles aur categories fetch karo (sirf normal mode mein)
+  const [recentResult, categoriesResult] = await Promise.allSettled([
+    fetchRecentArticles(30),
+    fetchCategories(),
+  ])
+
+  const recentArticles =
+    recentResult.status === 'fulfilled' && Array.isArray(recentResult.value)
+      ? recentResult.value
+      : [article]
+  const allArticles = dedupeArticles([article, ...recentArticles])
+  const categories =
+    categoriesResult.status === 'fulfilled' && Array.isArray(categoriesResult.value)
+      ? categoriesResult.value
+      : []
+
+  if (recentResult.status !== 'fulfilled') {
+    console.log(`Recent articles skipped: ${recentResult.reason?.message || recentResult.reason}`)
+  }
+  if (categoriesResult.status !== 'fulfilled') {
+    console.log(`Categories skipped: ${categoriesResult.reason?.message || categoriesResult.reason}`)
+  }
+
+  const prerenderer = new Prerenderer({
+    staticDir: OUT_DIR,
+    server: {
+      host: '127.0.0.1',
+      listenHost: '127.0.0.1',
+      port: 0,
+    },
+    renderer: new PuppeteerRenderer({
+      renderAfterDocumentEvent: 'prerender-ready',
+      timeout: 60000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
+      consoleHandler: () => {},
+    }),
+  })
+
+  await prerenderer.initialize()
+  console.log('Prerenderer ready\n')
+
+  for (const route of routes) {
+    try {
+      const rendered = await prerenderer.renderRoutes([route])
+
+      rendered.forEach(({ route: r, html }) => {
+        const cleanHtml = replacePrerenderDataScript(html, r, article, allArticles, categories)
+
+        const outputPath = getPrerenderOutputPath(OUT_DIR, r)
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+        fs.writeFileSync(outputPath, cleanHtml, 'utf8')
+
+        const routeIndexPath = getRouteIndexOutputPath(OUT_DIR, r)
+        fs.mkdirSync(path.dirname(routeIndexPath), { recursive: true })
+        fs.writeFileSync(routeIndexPath, cleanHtml, 'utf8')
+
+        console.log(`  ✅ OK ${r}`)
+        success++
+      })
+    } catch (e) {
+      console.log(`  ❌ FAIL ${route} — ${e.message}`)
+      failed++
+    }
+  }
+
+  await prerenderer.destroy()
+}
 
 console.log(`\nDone! Success: ${success}, Failed: ${failed}`)
 console.log(`Output: build-incremental/`)

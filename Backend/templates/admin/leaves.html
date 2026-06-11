@@ -120,7 +120,7 @@
           <div class="leaves-month-bar">
             <span style="width:{{ row.attendance_percent }}%"></span>
           </div>
-          <div class="leaves-month-small">{{ row.leaves_taken_days }} day{{ row.leaves_taken_days|pluralize }}</div>
+          <div class="leaves-month-small">{{ row.leaves_taken_days|floatformat:"-1" }} day{{ row.leaves_taken_days|pluralize }}</div>
           <div class="leaves-status-text {% if row.is_active %}active{% else %}inactive{% endif %}">{% if row.is_active %}Clocked in{% else %}Not active{% endif %}</div>
         </div>
       {% empty %}
@@ -288,6 +288,13 @@
               <input id="endDate" type="date" name="end_date" required>
             </div>
           </div>
+          <label class="leaves-check">
+            <input type="checkbox" name="is_half_day" value="1">
+            <div>
+              Half day leave
+              <span>Tick this for a single-date leave request. It will count as 0.5 day leave.</span>
+            </div>
+          </label>
           <div class="leaves-field">
             <label for="leaveReason">Reason</label>
             <textarea id="leaveReason" name="reason" placeholder="Leave reason" required></textarea>

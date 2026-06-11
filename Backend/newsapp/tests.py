@@ -796,6 +796,47 @@ class LeaveRequestAdminTests(TestCase):
         self.assertIsNotNone(record.last_clock_out_at)
         self.assertEqual(record.total_active_seconds, 8 * 60 * 60)
 
+    def test_super_admin_can_add_half_day_leave(self):
+        self.client.force_login(self.super_admin)
+
+        response = self.client.post(
+            reverse('newsadmin:leaves'),
+            {
+                'leave_action': 'submit_leave',
+                'leave_user_id': str(self.employee.pk),
+                'start_date': '2026-06-10',
+                'end_date': '2026-06-10',
+                'reason': 'Half day personal work',
+                'is_half_day': '1',
+                'direct_approve': '1',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        leave_request = LeaveRequest.objects.get(user=self.employee, start_date=date(2026, 6, 10))
+        self.assertTrue(leave_request.is_half_day)
+        self.assertEqual(leave_request.total_days, 0.5)
+        self.assertEqual(leave_request.status, LeaveRequest.STATUS_APPROVED)
+
+    def test_half_day_leave_requires_same_start_and_end_date(self):
+        self.client.force_login(self.super_admin)
+
+        response = self.client.post(
+            reverse('newsadmin:leaves'),
+            {
+                'leave_action': 'submit_leave',
+                'leave_user_id': str(self.employee.pk),
+                'start_date': '2026-06-10',
+                'end_date': '2026-06-11',
+                'reason': 'Invalid half day range',
+                'is_half_day': '1',
+                'direct_approve': '1',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(LeaveRequest.objects.filter(user=self.employee, reason='Invalid half day range').exists())
+
 
 class ArticleDetailUpdatedFieldsTests(TestCase):
     def setUp(self):

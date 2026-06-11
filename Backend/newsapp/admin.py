@@ -1606,6 +1606,7 @@ class NewsAdminSite(AdminSite):
                 start_date = parse_date((request.POST.get('start_date') or '').strip())
                 end_date = parse_date((request.POST.get('end_date') or '').strip())
                 reason = (request.POST.get('reason') or '').strip()
+                is_half_day = request.POST.get('is_half_day') == '1'
                 if not start_date or not end_date or not reason:
                     messages.error(request, 'Start date, end date and reason are required.')
                     return redirect('newsadmin:leaves')
@@ -1613,6 +1614,7 @@ class NewsAdminSite(AdminSite):
                     user=selected_user,
                     start_date=start_date,
                     end_date=end_date,
+                    is_half_day=is_half_day,
                     reason=reason,
                 )
                 if direct_approve:
@@ -1714,9 +1716,10 @@ class NewsAdminSite(AdminSite):
         for leave_item in monthly_approved_leaves:
             leave_start = max(leave_item.start_date, month_start)
             leave_end = min(leave_item.end_date, month_end)
+            leave_days = 0.5 if leave_item.is_half_day else max((leave_end - leave_start).days + 1, 0)
             monthly_taken_leave_days_by_user[leave_item.user_id] = (
                 monthly_taken_leave_days_by_user.get(leave_item.user_id, 0)
-                + max((leave_end - leave_start).days + 1, 0)
+                + leave_days
             )
 
         leave_requests = base_leave_requests
@@ -3532,8 +3535,8 @@ class PermissionAdmin(admin.ModelAdmin):
 
 
 class LeaveRequestAdmin(admin.ModelAdmin):
-    list_display = ('user', 'start_date', 'end_date', 'status', 'reviewed_by', 'created_at')
-    list_filter = ('status', 'start_date', 'created_at')
+    list_display = ('user', 'start_date', 'end_date', 'is_half_day', 'status', 'reviewed_by', 'created_at')
+    list_filter = ('status', 'is_half_day', 'start_date', 'created_at')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'reason')
     readonly_fields = ('created_at', 'updated_at', 'reviewed_at')
     ordering = ('-created_at',)

@@ -1108,6 +1108,7 @@ class LeaveRequest(models.Model):
     )
     start_date = models.DateField()
     end_date = models.DateField()
+    is_half_day = models.BooleanField(default=False)
     reason = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     review_note = models.TextField(blank=True, default='')
@@ -1134,11 +1135,15 @@ class LeaveRequest(models.Model):
         super().clean()
         if self.end_date and self.start_date and self.end_date < self.start_date:
             raise ValidationError({'end_date': 'End date cannot be before start date.'})
+        if self.is_half_day and self.start_date and self.end_date and self.start_date != self.end_date:
+            raise ValidationError({'is_half_day': 'Half-day leave can only be applied for a single day.'})
 
     @property
     def total_days(self):
         if not self.start_date or not self.end_date:
             return 0
+        if self.is_half_day:
+            return 0.5
         return (self.end_date - self.start_date).days + 1
 
 

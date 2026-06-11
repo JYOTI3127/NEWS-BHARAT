@@ -13,19 +13,21 @@ from newsapp.frontend_prerender import (
     run_prerender_pipeline,
 )
 from newsapp.models import Article
+from newsapp.frontend_prerender import _slug_url
 
 
 pytestmark = pytest.mark.django_db
 
 
 def _make_article(staff_user):
-    return Article.objects.create(
+    article = Article.objects.create(
         author=staff_user,
         title="Prerender Story",
         content="Body",
         status="published",
         slug="prerender-story",
     )
+    return article
 
 
 @override_settings(FRONTEND_BUILD_MODE="local_prerender")
@@ -39,6 +41,18 @@ def test_trigger_frontend_build_spawns_local_prerender(mock_popen, staff_user):
     command = mock_popen.call_args.args[0]
     assert "prerender_article" in command
     assert "prerender-story" in command
+
+
+def test_slug_url_uses_category_slug_from_article(staff_user):
+    from newsapp.models import Category
+
+    category = Category.objects.create(name="Automobile", slug="automobile", status="active")
+    article = _make_article(staff_user)
+    article.primary_category = category
+    article.save(update_fields=["primary_category"])
+    article.categories.add(category)
+
+    assert _slug_url(article.slug) == "https://news4bharat.com/automobile/prerender-story"
 
 
 def _workspace_temp_dir(settings):

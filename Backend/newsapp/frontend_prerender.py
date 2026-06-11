@@ -41,7 +41,23 @@ def _slug_url(slug):
     base_url = str(getattr(settings, "FRONTEND_PRERENDER_BASE_URL", "") or "").rstrip("/")
     if not base_url:
         raise NonRetryablePrerenderError("FRONTEND_PRERENDER_BASE_URL is not configured.")
-    return f"{base_url}/{slug.strip('/')}/"
+    try:
+        from newsapp.models import Article
+        from newsapp.seo_direct import article_url
+    except Exception as exc:
+        raise NonRetryablePrerenderError("Could not import article URL helpers for prerender.") from exc
+
+    try:
+        article = (
+            Article.objects
+            .select_related("primary_category")
+            .prefetch_related("categories")
+            .get(slug=slug)
+        )
+    except Article.DoesNotExist as exc:
+        raise NonRetryablePrerenderError(f"Article with slug '{slug}' does not exist.") from exc
+
+    return article_url(article, base_url)
 
 
 def _output_root():

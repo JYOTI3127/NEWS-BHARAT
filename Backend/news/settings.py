@@ -234,6 +234,28 @@ FRONTEND_BUILD_EVENT_FALLBACK = os.environ.get(
     "FRONTEND_BUILD_EVENT_FALLBACK",
     "rebuild-frontend",
 )
+FRONTEND_BUILD_MODE = os.environ.get("FRONTEND_BUILD_MODE", "hook").strip().lower()
+FRONTEND_PRERENDER_BASE_URL = os.environ.get("FRONTEND_PRERENDER_BASE_URL", "https://news4bharat.com").rstrip("/")
+FRONTEND_PRERENDER_OUTPUT_DIR = os.environ.get("FRONTEND_PRERENDER_OUTPUT_DIR", "/tmp/prerender_output/__prerender")
+FRONTEND_PRERENDER_MAX_ATTEMPTS = int(os.environ.get("FRONTEND_PRERENDER_MAX_ATTEMPTS", "3"))
+FRONTEND_PRERENDER_TIMEOUT_MS = int(os.environ.get("FRONTEND_PRERENDER_TIMEOUT_MS", "30000"))
+FRONTEND_PRERENDER_READY_SELECTOR = os.environ.get(
+    "FRONTEND_PRERENDER_READY_SELECTOR",
+    'meta[name="prerender-status-code"][content]',
+).strip()
+FRONTEND_PRERENDER_SUCCESS_STATUS = os.environ.get("FRONTEND_PRERENDER_SUCCESS_STATUS", "200").strip()
+FRONTEND_PRERENDER_NON_RETRY_STATUSES = tuple(
+    status.strip()
+    for status in os.environ.get("FRONTEND_PRERENDER_NON_RETRY_STATUSES", "404,500").split(",")
+    if status.strip()
+)
+FRONTEND_PRERENDER_REMOTE_USER = os.environ.get("FRONTEND_PRERENDER_REMOTE_USER", "").strip()
+FRONTEND_PRERENDER_REMOTE_HOST = os.environ.get("FRONTEND_PRERENDER_REMOTE_HOST", "").strip()
+FRONTEND_PRERENDER_REMOTE_PORT = os.environ.get("FRONTEND_PRERENDER_REMOTE_PORT", "22").strip()
+FRONTEND_PRERENDER_REMOTE_PATH = os.environ.get("FRONTEND_PRERENDER_REMOTE_PATH", "").strip()
+FRONTEND_PRERENDER_SSH_KEY = os.environ.get("FRONTEND_PRERENDER_SSH_KEY", "").strip()
+FRONTEND_PRERENDER_LOG_FILE = os.environ.get("FRONTEND_PRERENDER_LOG_FILE", "").strip()
+FRONTEND_PRERENDER_LOCK_DIR = os.environ.get("FRONTEND_PRERENDER_LOCK_DIR", "").strip()
 
 
 # ── Elasticsearch Connection ─────────────────────────────────────────

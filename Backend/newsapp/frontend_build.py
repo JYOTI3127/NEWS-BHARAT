@@ -1,4 +1,7 @@
 import logging
+import os
+import subprocess
+import sys
 
 import requests
 from django.conf import settings
@@ -6,6 +9,10 @@ from django.db import transaction
 
 
 logger = logging.getLogger(__name__)
+
+
+def _build_mode():
+    return str(getattr(settings, "FRONTEND_BUILD_MODE", "hook") or "hook").strip().lower()
 
 
 def _build_article_dispatch_payload(article):
@@ -103,6 +110,37 @@ def _post_frontend_hook(*, event_type, client_payload):
     return True
 
 
+def _spawn_local_prerender(*, reason, article):
+    slug = str(getattr(article, "slug", "") or "").strip()
+    if not slug:
+        logger.warning("Local prerender skipped because article slug is empty.")
+        return False
+
+    manage_py = os.path.join(getattr(settings, "BASE_DIR", ""), "manage.py")
+    command = [
+        sys.executable,
+        manage_py,
+        "prerender_article",
+        slug,
+        "--reason",
+        reason,
+    ]
+
+    try:
+        subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=str(getattr(settings, "BASE_DIR", "") or None),
+        )
+    except Exception as exc:
+        logger.warning("Local prerender spawn failed. slug=%s reason=%s error=%s", slug, reason, exc)
+        return False
+
+    logger.info("Local prerender spawned. slug=%s reason=%s", slug, reason)
+    return True
+
+
 def trigger_frontend_build(*, reason="article_updated", article=None, force=False, extra_payload=None):
     event_type = _event_type_for_reason(reason)
     client_payload = {
@@ -119,13 +157,18 @@ def trigger_frontend_build(*, reason="article_updated", article=None, force=Fals
         client_payload.update(extra_payload)
 
     try:
-        triggered = _post_frontend_hook(
-            event_type=event_type,
-            client_payload=client_payload,
-        )
+        mode = _build_mode()
+        if mode == "local_prerender":
+            triggered = _spawn_local_prerender(reason=reason, article=article)
+        else:
+            triggered = _post_frontend_hook(
+                event_type=event_type,
+                client_payload=client_payload,
+            )
         if triggered:
             logger.info(
-                "Frontend build hook triggered. reason=%s event_type=%s slug=%s previous_status=%s status=%s",
+                "Frontend build flow triggered. mode=%s reason=%s event_type=%s slug=%s previous_status=%s status=%s",
+                mode,
                 reason,
                 event_type,
                 client_payload["slug"],
@@ -135,7 +178,8 @@ def trigger_frontend_build(*, reason="article_updated", article=None, force=Fals
         return triggered
     except Exception as exc:
         logger.warning(
-            "Frontend build hook failed. reason=%s event_type=%s slug=%s error=%s",
+            "Frontend build flow failed. mode=%s reason=%s event_type=%s slug=%s error=%s",
+            _build_mode(),
             reason,
             event_type,
             client_payload["slug"],

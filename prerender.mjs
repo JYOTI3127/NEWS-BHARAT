@@ -403,12 +403,12 @@ const getArticleCategory = (article) => {
 
   const primaryCategory = Array.isArray(article?.category_details)
     ? article.category_details[0]
-    : article?.category_details || article?.category || null
+    : article?.category_details || article?.primary_category_details || article?.primary_category || article?.category || null
 
   const slug = String(
-    primaryCategory?.slug || primaryCategory?.category_slug || article?.category_slug || ''
+    primaryCategory?.slug || primaryCategory?.category_slug || article?.primary_category_slug || article?.category_slug || ''
   ).trim()
-  const name = String(primaryCategory?.name || article?.category_name || '').trim()
+  const name = String(primaryCategory?.name || article?.primary_category_name || article?.category_name || '').trim()
   return { slug, name }
 }
 
@@ -433,6 +433,24 @@ const getArticleTags = (article) => {
   return Array.from(
     new Set(fromArray.map((value) => String(value || '').trim()).filter(Boolean))
   )
+}
+
+const getFallbackArticleKeywords = (article, title = '', categoryName = '') => {
+  const values = []
+  const cleanTitle = normalizeText(title || article?.title || '')
+  const cleanCategory = normalizeText(categoryName || getArticleCategory(article).name)
+  const slugTitle = normalizeText(String(article?.slug || '').replace(/[-_]+/g, ' '))
+
+  if (cleanTitle) values.push(cleanTitle)
+  if (slugTitle && slugTitle.toLowerCase() !== cleanTitle.toLowerCase()) values.push(slugTitle)
+  if (cleanCategory) {
+    values.push(cleanCategory)
+    values.push(`${cleanCategory} news`)
+    values.push(`${cleanCategory} latest updates`)
+  }
+  values.push('News4Bharat')
+
+  return Array.from(new Set(values.map(normalizeKeywordPhrase).filter(Boolean))).slice(0, 8)
 }
 
 const sanitizeArticleBodyHtml = (value) => {
@@ -945,8 +963,11 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       const modifiedAt = article.updated_at || article.published_at || article.created_at || ''
       const primaryCategory = Array.isArray(article.category_details)
         ? article.category_details[0]
-        : article.category_details || article.category || null
+        : article.category_details || article.primary_category_details || article.primary_category || article.category || null
       const categoryName = String(primaryCategory?.name || '').trim()
+      const resolvedKeywords = keywords.length > 0
+        ? keywords
+        : getFallbackArticleKeywords(article, rawTitle || title, categoryName)
       const authorName = normalizeText(
         endpointMeta.author ||
           article.display_author_name ||
@@ -970,7 +991,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
         author: authorName,
         articleSection: categoryName,
         articleTags,
-        keywords: keywords.join(', '),
+        keywords: resolvedKeywords.join(', '),
         newsKeywords: articleTags.join(', '),
         focusKeyword: normalizeKeywordPhrase(article.focus_keyword),
         secondaryKeywords: secondaryKeywords.join(', '),

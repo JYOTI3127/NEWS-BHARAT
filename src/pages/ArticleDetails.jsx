@@ -530,6 +530,8 @@ const normalizeCategoryToken = (value) => String(value || "").trim().toLowerCase
 const getArticleCategoryDetails = (article) => {
   const candidates = [
     ...toCategoryArray(article?.category_details),
+    ...toCategoryArray(article?.primary_category_details),
+    ...toCategoryArray(article?.primary_category),
     ...toCategoryArray(article?.category),
     ...(Array.isArray(article?.categories) ? article.categories : []),
   ].filter((value) => value && typeof value === "object");
@@ -559,6 +561,22 @@ const getArticleCategoryTokens = (article) => {
 const getArticleTags = (article) => {
   if (Array.isArray(article?.tags_list)) return article.tags_list.filter(Boolean);
   return String(article?.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+};
+
+const getFallbackArticleKeywords = (article, title = "", categoryName = "") => {
+  const cleanTitle = getPlainText(title || article?.title || "");
+  const cleanCategory = getPlainText(categoryName);
+  const slugTitle = getPlainText(String(article?.slug || "").replace(/[-_]+/g, " "));
+  const values = [
+    cleanTitle,
+    slugTitle && slugTitle.toLowerCase() !== cleanTitle.toLowerCase() ? slugTitle : "",
+    cleanCategory,
+    cleanCategory ? `${cleanCategory} news` : "",
+    cleanCategory ? `${cleanCategory} latest updates` : "",
+    SITE_NAME,
+  ];
+
+  return Array.from(new Set(values.map(normalizeKeywordPhrase).filter(Boolean))).slice(0, 8);
 };
 
 const getArticleTimestamp = (article) =>
@@ -2177,8 +2195,7 @@ export default function ArticleDetails() {
     const emitReady = () => {
       if (emitted) return;
       emitted = true;
-      window.prerenderReady = true;
-      document.dispatchEvent(new Event("prerender-ready"));
+      signalPrerenderReady(article ? 200 : 404);
     };
 
     // Normal browser — turant emit karo
@@ -2360,7 +2377,7 @@ export default function ArticleDetails() {
 
   if (notFound) return (
     <>
-      <Helmet><title>Article Not Found | News4Bharat</title><meta name="robots" content="noindex, nofollow" /><meta name="description" content="This article is unavailable." /></Helmet>
+      <Helmet><title>Article Not Found | News4Bharat</title><meta name="prerender-status-code" content="404" /><meta name="robots" content="noindex, nofollow" /><meta name="description" content="This article is unavailable." /></Helmet>
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <Newspaper size={48} color="#ccc" />
         <p className="text-xl font-bold text-gray-700 mt-4">Article not found</p>
@@ -2371,7 +2388,7 @@ export default function ArticleDetails() {
 
   if (loadError && !isPrerenderRequest) return (
     <>
-      <Helmet><title>Article Unavailable | News4Bharat</title><meta name="description" content="We could not load this article right now." /><meta name="robots" content="noindex, nofollow" /></Helmet>
+      <Helmet><title>Article Unavailable | News4Bharat</title><meta name="prerender-status-code" content="404" /><meta name="description" content="We could not load this article right now." /><meta name="robots" content="noindex, nofollow" /></Helmet>
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <Newspaper size={48} color="#ccc" />
         <p className="text-xl font-bold text-gray-700 mt-4">Article is temporarily unavailable</p>
@@ -2383,7 +2400,7 @@ export default function ArticleDetails() {
 
   if (loadError && isPrerenderRequest) return (
     <>
-      <Helmet><title>Article Unavailable | News4Bharat</title><meta name="description" content="We could not load this article right now." /><meta name="robots" content="noindex, nofollow" /></Helmet>
+      <Helmet><title>Article Unavailable | News4Bharat</title><meta name="prerender-status-code" content="404" /><meta name="description" content="We could not load this article right now." /><meta name="robots" content="noindex, nofollow" /></Helmet>
       <div className="min-h-[1px]" />
     </>
   );
@@ -2503,9 +2520,11 @@ export default function ArticleDetails() {
   const secondaryKeywords = Array.isArray(article.secondary_keywords_list) ? article.secondary_keywords_list.map(normalizeKeywordPhrase).filter(Boolean) : String(article.secondary_keywords || "").split(",").map((item) => normalizeKeywordPhrase(item)).filter(Boolean);
   const focusKeyword = normalizeKeywordPhrase(article.focus_keyword);
   const seoKeywords = splitSeoKeywordText(seoEndpointMeta.keywords);
-  const metaKeywords = seoKeywords.length > 0
+  const baseMetaKeywords = seoKeywords.length > 0
     ? Array.from(new Set(seoKeywords)).join(", ")
     : Array.from(new Set([focusKeyword, ...secondaryKeywords, ...tags].map((item) => String(item || "").trim()).filter(Boolean))).join(", ");
+  const fallbackMetaKeywords = getFallbackArticleKeywords(article, article.title, categoryName).join(", ");
+  const metaKeywords = baseMetaKeywords || fallbackMetaKeywords;
   const seoArticleTags = splitSeoKeywordText(seoEndpointOg["article:tag"]);
   const articleTags = (seoArticleTags.length > 0 ? seoArticleTags : tags).filter(Boolean);
   const robotsContent = getPlainText(seoEndpointMeta.robots) || getRobotsContent(article);
@@ -2608,6 +2627,7 @@ export default function ArticleDetails() {
 
       <Helmet>
         <title>{seoTitle}</title>
+        <meta name="prerender-status-code" content="200" />
         <meta name="description" content={metaDescription} />
         <meta name="author" content={authorDisplayName} />
         {metaKeywords && <meta name="keywords" content={metaKeywords} />}

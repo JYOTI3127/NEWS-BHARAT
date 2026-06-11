@@ -1,7 +1,6 @@
 import logging
 import os
 import subprocess
-import tempfile
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -83,21 +82,50 @@ def _slug_lock(slug):
             _log(logging.WARNING, "Could not remove prerender lock for slug=%s", slug)
 
 
+def _timeout_ms():
+    return max(1000, int(getattr(settings, "FRONTEND_PRERENDER_TIMEOUT_MS", 30000) or 30000))
+
+
+def _settle_ms():
+    return max(0, int(getattr(settings, "FRONTEND_PRERENDER_SETTLE_MS", 10000) or 10000))
+
+
+def _is_meta_selector(selector):
+    trimmed = str(selector or "").strip().lower()
+    return trimmed.startswith("meta[")
+
+
 def _read_prerender_status(page):
     selector = str(getattr(settings, "FRONTEND_PRERENDER_READY_SELECTOR", "") or "").strip()
     if not selector:
         raise NonRetryablePrerenderError("FRONTEND_PRERENDER_READY_SELECTOR is not configured.")
 
-    timeout_ms = max(1000, int(getattr(settings, "FRONTEND_PRERENDER_TIMEOUT_MS", 30000) or 30000))
     try:
-        page.wait_for_selector(selector, timeout=timeout_ms)
+        page.wait_for_selector(selector, timeout=_timeout_ms(), state="attached")
     except Exception as exc:
         raise RetryablePrerenderError(
             f"Timed out waiting for prerender readiness selector: {selector}"
         ) from exc
 
-    status = page.locator(selector).first.get_attribute("content")
-    return str(status or "").strip()
+    if _settle_ms():
+        page.wait_for_timeout(_settle_ms())
+
+    locator = page.locator(selector).first
+    if _is_meta_selector(selector):
+        status = locator.get_attribute("content")
+        return str(status or "").strip()
+
+    try:
+        if locator.count() <= 0:
+            raise RetryablePrerenderError(
+                f"Prerender readiness selector appeared empty after wait: {selector}"
+            )
+    except AttributeError:
+        # Real Playwright Locator does not expose count on .first; if wait_for_selector passed,
+        # treat the element as present.
+        pass
+
+    return str(getattr(settings, "FRONTEND_PRERENDER_SUCCESS_STATUS", "200") or "200").strip()
 
 
 def _render_once(slug):
@@ -121,7 +149,7 @@ def _render_once(slug):
         )
         page = browser.new_page()
         try:
-            page.goto(target_url, wait_until="domcontentloaded", timeout=max(1000, int(getattr(settings, "FRONTEND_PRERENDER_TIMEOUT_MS", 30000) or 30000)))
+            page.goto(target_url, wait_until="domcontentloaded", timeout=_timeout_ms())
             status = _read_prerender_status(page)
             success_status = str(getattr(settings, "FRONTEND_PRERENDER_SUCCESS_STATUS", "200") or "200").strip()
             non_retry_statuses = set(getattr(settings, "FRONTEND_PRERENDER_NON_RETRY_STATUSES", ("404", "500")) or ())

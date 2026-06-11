@@ -9,6 +9,7 @@ from newsapp.frontend_build import trigger_frontend_build
 from newsapp.frontend_prerender import (
     NonRetryablePrerenderError,
     RetryablePrerenderError,
+    _read_prerender_status,
     run_prerender_pipeline,
 )
 from newsapp.models import Article
@@ -88,3 +89,59 @@ def test_run_prerender_pipeline_does_not_retry_non_retryable_errors(monkeypatch,
         run_prerender_pipeline(slug="missing-story", reason="article_updated")
 
     assert attempts["render"] == 1
+
+
+@override_settings(
+    FRONTEND_PRERENDER_READY_SELECTOR='meta[name="prerender-status-code"][content]',
+    FRONTEND_PRERENDER_SUCCESS_STATUS="200",
+    FRONTEND_PRERENDER_SETTLE_MS=0,
+)
+def test_read_prerender_status_from_meta_selector():
+    class FakeLocator:
+        def __init__(self, content):
+            self._content = content
+            self.first = self
+
+        def get_attribute(self, name):
+            assert name == "content"
+            return self._content
+
+    class FakePage:
+        def wait_for_selector(self, selector, timeout, state):
+            assert selector == 'meta[name="prerender-status-code"][content]'
+            assert state == "attached"
+
+        def wait_for_timeout(self, timeout):
+            assert timeout >= 0
+
+        def locator(self, selector):
+            return FakeLocator("200")
+
+    assert _read_prerender_status(FakePage()) == "200"
+
+
+@override_settings(
+    FRONTEND_PRERENDER_READY_SELECTOR="article",
+    FRONTEND_PRERENDER_SUCCESS_STATUS="200",
+    FRONTEND_PRERENDER_SETTLE_MS=0,
+)
+def test_read_prerender_status_from_generic_selector():
+    class FakeLocator:
+        def __init__(self):
+            self.first = self
+
+        def count(self):
+            return 1
+
+    class FakePage:
+        def wait_for_selector(self, selector, timeout, state):
+            assert selector == "article"
+            assert state == "attached"
+
+        def wait_for_timeout(self, timeout):
+            assert timeout >= 0
+
+        def locator(self, selector):
+            return FakeLocator()
+
+    assert _read_prerender_status(FakePage()) == "200"

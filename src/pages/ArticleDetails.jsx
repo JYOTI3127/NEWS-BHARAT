@@ -2559,7 +2559,6 @@ export default function ArticleDetails() {
       { "@type": "ListItem", position: normalizedCategorySlug ? 3 : 2, name: article.title, ...(articleUrlForSchema ? { item: articleUrlForSchema } : {}) },
     ],
   };
-
   const articlePayloadSchemas = dedupeStructuredSchemas(
     extractStructuredDataSchemas({
       structured_datakey: article?.structured_datakey,

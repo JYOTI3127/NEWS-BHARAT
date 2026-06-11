@@ -81,7 +81,7 @@ export default function FoundersNote() {
                   <span className="fn-sig-text">
                     Founder,
                     <br />
-                    News4Bharat
+                    Srajan Agarwal
                     <br />
                     (Sign)
                   </span>

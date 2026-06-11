@@ -253,6 +253,17 @@ const replacePrerenderDataScript = (html, route, article, allArticles, categorie
   return cleaned.replace('</head>', `${dataScript}\n</head>`)
 }
 
+const normalizeSiteUrlsInHtml = (html) =>
+  String(html || '').replace(
+    /https:\/\/news4bharat\.com\/([^"'<>\s?#]+(?:\/[^"'<>\s?#]+)*)\/(?=["'<>\s?#])/g,
+    'https://news4bharat.com/$1'
+  )
+
+const cleanupIncrementalHtml = (html, route, article, allArticles, categories) =>
+  normalizeSiteUrlsInHtml(
+    replacePrerenderDataScript(html, route, article, allArticles, categories)
+  )
+
 // ─── Fallback: Live site se render karo ─────────────────────────────────────
 
 async function renderLiveUrl(liveUrl) {
@@ -341,7 +352,13 @@ if (article._fallback) {
   for (const route of routes) {
     try {
       const liveUrl = `${LIVE_SITE}${route}`
-      const html = await renderLiveUrl(liveUrl)
+      const html = cleanupIncrementalHtml(
+        await renderLiveUrl(liveUrl),
+        route,
+        article,
+        [article],
+        []
+      )
 
       // __prerender folder mein save karo
       const outputPath = getPrerenderOutputPath(OUT_DIR, route)
@@ -416,7 +433,7 @@ if (article._fallback) {
       const rendered = await prerenderer.renderRoutes([route])
 
       rendered.forEach(({ route: r, html }) => {
-        const cleanHtml = replacePrerenderDataScript(html, r, article, allArticles, categories)
+        const cleanHtml = cleanupIncrementalHtml(html, r, article, allArticles, categories)
 
         const outputPath = getPrerenderOutputPath(OUT_DIR, r)
         fs.mkdirSync(path.dirname(outputPath), { recursive: true })

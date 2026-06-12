@@ -938,6 +938,22 @@ class ArticleDetailUpdatedFieldsTests(TestCase):
 
         self.assertEqual(article_schema['dateModified'], _iso(updated_at))
 
+    def test_article_schema_prefers_newsarticle_without_duplicate_article_type(self):
+        article = Article.objects.create(
+            author=self.author,
+            title='Schema type article',
+            content='Body',
+            status='published',
+            schema_types='NewsArticle,Article',
+        )
+
+        article_schema = next(
+            item for item in article_schema_payloads(article)
+            if item.get('@id', '').endswith('#article')
+        )
+
+        self.assertEqual(article_schema['@type'], ['NewsArticle'])
+
 
 class ArticleCategorySlugPayloadTests(TestCase):
     def setUp(self):

@@ -162,6 +162,23 @@ def _schema_type_values(schema_obj) -> list[str]:
     return normalized
 
 
+def _normalize_article_schema_types(raw_value) -> list[str]:
+    schema_types = _schema_csv(raw_value, ["NewsArticle"])
+    normalized = []
+    for item in schema_types:
+        text = str(item or "").strip()
+        if not text or text in normalized:
+            continue
+        normalized.append(text)
+
+    # `NewsArticle` already inherits from `Article`; emitting both has caused
+    # noisy/duplicate interpretations in Search Console for some URLs.
+    if "NewsArticle" in normalized and "Article" in normalized:
+        normalized = [item for item in normalized if item != "Article"]
+
+    return normalized or ["NewsArticle"]
+
+
 def _dedupe_schema_payloads(schema_items: list[dict]) -> list[dict]:
     deduped = []
     seen_faq_page = False
@@ -892,7 +909,7 @@ class SchemaEngine:
             str(getattr(article, "schema_article_section", "") or "").strip()
             or (str(primary_cat) if primary_cat else "")
         )
-        schema_types = _schema_csv(getattr(article, "schema_types", ""), ["NewsArticle", "Article"])
+        schema_types = _normalize_article_schema_types(getattr(article, "schema_types", ""))
         headline = str(getattr(article, "schema_headline", "") or "").strip() or article.title
         alt_headline = (
             str(getattr(article, "schema_alternative_headline", "") or "").strip()

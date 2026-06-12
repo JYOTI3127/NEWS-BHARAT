@@ -163,7 +163,7 @@ class Article(models.Model):
     noindex          = models.BooleanField(default=False)
     nofollow         = models.BooleanField(default=False)
     in_sitemap       = models.BooleanField(default=True)
-    schema_types = models.CharField(max_length=120, blank=True, default='NewsArticle,Article')
+    schema_types = models.CharField(max_length=120, blank=True, default='NewsArticle')
     schema_headline = models.CharField(max_length=255, blank=True, default='')
     schema_alternative_headline = models.CharField(max_length=255, blank=True, default='')
     schema_description = models.TextField(blank=True, default='')

@@ -1992,7 +1992,7 @@ grammarly-button,
         <div class="seo-field-label">Structured Data (JSON-LD) <span class="seo-tag seo-tag--editable">Editable</span></div>
         <div class="seo-schema-box">
           <div class="schema-type-row"><span class="schema-type-chip">Article</span><span class="schema-type-chip">NewsArticle</span><span class="schema-type-chip">Organization</span><span class="schema-type-chip">WebSite</span></div>
-          <div class="seo-field" style="margin-top:12px"><div class="seo-field-label">Schema Types</div><input type="text" class="seo-inp" id="ui_schema_types" placeholder="NewsArticle, Article" value="{{ original.schema_types|default:'NewsArticle,Article' }}"></div>
+          <div class="seo-field" style="margin-top:12px"><div class="seo-field-label">Schema Types</div><input type="text" class="seo-inp" id="ui_schema_types" placeholder="NewsArticle" value="{{ original.schema_types|default:'NewsArticle' }}"></div>
           <div class="seo-field"><div class="seo-field-label">Schema Headline</div><input type="text" class="seo-inp" id="ui_schema_headline" placeholder="Leave blank to use article headline" value="{{ original.schema_headline|default:'' }}"></div>
           <div class="seo-field"><div class="seo-field-label">Alternative Headline</div><input type="text" class="seo-inp" id="ui_schema_alt_headline" placeholder="Leave blank to use subtitle" value="{{ original.schema_alternative_headline|default:'' }}"></div>
           <div class="seo-field"><div class="seo-field-label">Schema Description</div><textarea class="seo-inp seo-meta-textarea" id="ui_schema_description" rows="3" placeholder="Leave blank to use meta description">{{ original.schema_description|default:'' }}</textarea></div>

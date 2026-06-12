@@ -16,10 +16,12 @@ from django.db.models import Prefetch
 from django.db.models.functions import TruncMonth
 import json
 import csv
+import uuid
 from datetime import datetime, timedelta, date
 from django.contrib.admin import AdminSite
 from django.utils import timezone
 from django.utils.html import format_html, strip_tags
+from django.utils.text import slugify
 from django.urls import path, reverse
 from django.templatetags.static import static
 from django.conf import settings
@@ -1526,6 +1528,11 @@ class NewsAdminSite(AdminSite):
                 name='editorial_calendar',
             ),
             path(
+                'video-conferencing/',
+                self.admin_view(self.video_conferencing_view),
+                name='video_conferencing',
+            ),
+            path(
                 'my-assignments/',
                 self.admin_view(self.my_assignments_view),
                 name='my_assignments',
@@ -2249,6 +2256,34 @@ class NewsAdminSite(AdminSite):
             'newsletter_logo_url': str(getattr(settings, 'NEWSLETTER_LOGO_URL', '') or '').strip() or request.build_absolute_uri(static('images/NEWS4BHARAT_LOGO.png')),
         }
         return TemplateResponse(request, 'admin/newsletter.html', context)
+
+    def video_conferencing_view(self, request):
+        room_name = ''
+        meeting_link = ''
+        provider_room_link = ''
+
+        if request.method == 'POST':
+            requested_room = (request.POST.get('room_name') or '').strip()
+            room_name = slugify(requested_room.replace('_', '-'))[:80] if requested_room else ''
+
+            if not room_name:
+                room_name = f"newsbharat-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
+
+            meeting_link = request.build_absolute_uri(
+                reverse('video_meeting_room', kwargs={'room_name': room_name})
+            )
+            provider_room_link = f"https://{getattr(settings, 'VIDEO_CONFERENCE_DOMAIN', 'meet.jit.si').strip().strip('/')}/{room_name}"
+            messages.success(request, 'A new meeting link has been created. You can now share it with participants.')
+
+        context = {
+            **self.each_context(request),
+            'title': 'Video Conferencing',
+            'generated_room_name': room_name,
+            'generated_meeting_link': meeting_link,
+            'generated_provider_room_link': provider_room_link,
+            'video_conference_domain': getattr(settings, 'VIDEO_CONFERENCE_DOMAIN', 'meet.jit.si').strip().strip('/'),
+        }
+        return TemplateResponse(request, 'admin/video_conferencing.html', context)
 
     def editorial_calendar_view(self, request):
         active_year = timezone.localdate().year

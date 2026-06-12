@@ -42,6 +42,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5173',
 ]
 
+VIDEO_CONFERENCE_DOMAIN = os.environ.get('VIDEO_CONFERENCE_DOMAIN', 'meet.jit.si').strip().strip('/')
+
 # Application definition
 
 INSTALLED_APPS = [

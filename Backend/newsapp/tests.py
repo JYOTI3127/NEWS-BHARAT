@@ -119,6 +119,48 @@ class ArticleStatusFlowTests(TestCase):
         self.assertEqual(article.status, 'draft')
         self.assertEqual(article.content, 'Draft body from JSON')
 
+
+class VideoConferencingFeatureTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.staff_user = User.objects.create_user(
+            username='videoadmin',
+            password='testpass123',
+            is_staff=True,
+        )
+
+    def test_staff_user_can_open_video_conferencing_page(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.get('/admin/video-conferencing/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertContains(response, 'Create New Meeting')
+
+    def test_create_meeting_generates_shareable_join_link(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.post('/admin/video-conferencing/', {'room_name': 'Desk Sync Meeting'})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertContains(response, '/meet/desk-sync-meeting/')
+
+    def test_public_meeting_room_page_is_accessible_without_login(self):
+        response = self.client.get('/meet/open-newsroom-sync/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertContains(response, 'open-newsroom-sync')
+
+
+class ArticlePublishingDateTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username='editor-date-tests',
+            password='testpass123',
+        )
+        self.client.force_authenticate(self.user)
+
     def test_republish_from_draft_with_original_date_restores_old_timestamps(self):
         article = Article.objects.create(
             author=self.user,

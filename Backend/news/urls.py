@@ -11,6 +11,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 urlpatterns = [
     path('', lambda request: redirect('admin/'), name='home'),
+    path('meet/<str:room_name>/', views.video_meeting_room, name='video_meeting_room'),
 
     # ── Inbox & Notifications — admin/ se PEHLE ──────────────
     path('admin/inbox/',                          views.inbox_view,         name='admin_inbox'),

@@ -1,0 +1,284 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Video Conferencing | Admin{% endblock %}
+{% block content_title %}Video Conferencing{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .vc-page {
+    max-width: 1240px;
+  }
+
+  .vc-page .vc-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .vc-page .vc-board {
+    padding: 32px;
+  }
+
+  .vc-page .vc-form {
+    display: grid;
+    gap: 18px;
+  }
+
+  .vc-page .vc-input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .vc-page .vc-input,
+  .vc-page .vc-link-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    font-size: 15px;
+    background: #fff;
+  }
+
+  .vc-page .vc-hint {
+    margin: 10px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .vc-page .vc-actions,
+  .vc-page .vc-link-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .vc-page .vc-actions > a,
+  .vc-page .vc-actions > button,
+  .vc-page .vc-link-actions > a,
+  .vc-page .vc-link-actions > button {
+    min-width: 170px;
+    min-height: 52px;
+    padding: 12px 20px !important;
+    border-radius: 18px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.3;
+    flex: 0 0 auto;
+  }
+
+  .vc-page .vc-share-box {
+    margin-top: 28px;
+    padding: 22px;
+    border: 1px solid #dbe3f0;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+  }
+
+  .vc-page .vc-share-title {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .vc-page .vc-share-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .vc-page .vc-sidebar {
+    min-width: 0;
+  }
+
+  .vc-page .vc-sidebar-card {
+    padding: 22px;
+  }
+
+  .vc-page .vc-steps {
+    display: grid;
+    gap: 14px;
+  }
+
+  .vc-page .vc-step {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    padding: 18px;
+    border: 1px solid #dbe3f0;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+  }
+
+  .vc-page .vc-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .vc-page .vc-step-title {
+    margin: 2px 0 6px;
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .vc-page .vc-step-note {
+    margin: 0;
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.75;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  @media (max-width: 1100px) {
+    .vc-page .vc-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .vc-page .vc-board,
+    .vc-page .vc-sidebar-card {
+      padding: 22px;
+    }
+
+    .vc-page .vc-actions,
+    .vc-page .vc-link-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .vc-page .vc-actions > a,
+    .vc-page .vc-actions > button,
+    .vc-page .vc-link-actions > a,
+    .vc-page .vc-link-actions > button {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edcal-shell vc-page">
+  <div class="edcal-hero" style="margin-bottom:24px;">
+    <div>
+      <div class="edcal-eyebrow">Newsroom Collaboration</div>
+      <h1 class="edcal-title" style="margin-bottom:8px;">Create and share a live meeting in seconds</h1>
+      <p class="edcal-subtitle" style="max-width:760px;">Create a new meeting, copy the generated link, and share it with anyone who needs to join. Participants can open the link and join the meeting directly.</p>
+    </div>
+    <div class="edcal-hero-card">
+      <div class="edcal-hero-label">Provider</div>
+      <div class="edcal-hero-value">{{ video_conference_domain }}</div>
+      <div class="edcal-hero-note">Browser-based video room</div>
+    </div>
+  </div>
+
+  <div class="vc-layout">
+    <section class="edcal-board vc-board">
+      <form method="post" class="vc-form">
+        {% csrf_token %}
+        <div>
+          <label for="room_name" class="vc-input-label">Meeting room name</label>
+          <input
+            id="room_name"
+            name="room_name"
+            type="text"
+            value="{{ generated_room_name }}"
+            placeholder="For example: morning-editorial-meet"
+            class="vc-input"
+          >
+          <p class="vc-hint">Leave this blank if you want the system to generate a unique meeting room automatically.</p>
+        </div>
+        <div class="vc-actions">
+          <button type="submit" class="topbar-add-btn" style="border:none;cursor:pointer;">Create New Meeting</button>
+          {% if generated_meeting_link %}
+          <a href="{{ generated_meeting_link }}" target="_blank" rel="noopener noreferrer" class="topbar-icon-btn" style="height:auto;padding:12px 18px;border-radius:999px;text-decoration:none;">Open Meeting Page</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if generated_meeting_link %}
+      <div class="vc-share-box">
+        <div class="vc-share-title">Shareable link</div>
+        <div class="vc-share-grid">
+          <input id="meetingShareLink" type="text" value="{{ generated_meeting_link }}" readonly class="vc-link-input">
+          <div class="vc-link-actions">
+            <button type="button" onclick="copyMeetingLink()" class="topbar-add-btn" style="border:none;cursor:pointer;">Copy Link</button>
+            <a href="{{ generated_provider_room_link }}" target="_blank" rel="noopener noreferrer" class="topbar-icon-btn" style="height:auto;padding:12px 18px;border-radius:999px;text-decoration:none;">Open Provider Room</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </section>
+
+    <aside class="edcal-sidebar vc-sidebar">
+      <div class="edcal-sidebar-card vc-sidebar-card">
+        <div class="edcal-side-label">How it works</div>
+        <div class="vc-steps">
+          <article class="vc-step">
+            <div class="vc-step-number">1</div>
+            <div>
+              <h3 class="vc-step-title">Create room</h3>
+              <p class="vc-step-note">Enter a custom room name or let the system generate a unique meeting room automatically.</p>
+            </div>
+          </article>
+          <article class="vc-step">
+            <div class="vc-step-number">2</div>
+            <div>
+              <h3 class="vc-step-title">Share link</h3>
+              <p class="vc-step-note">Share the generated meeting URL through WhatsApp, email, or any chat platform.</p>
+            </div>
+          </article>
+          <article class="vc-step">
+            <div class="vc-step-number">3</div>
+            <div>
+              <h3 class="vc-step-title">Everyone joins</h3>
+              <p class="vc-step-note">When participants open the link, the browser-based meeting page will load and they can join immediately.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+{% if generated_meeting_link %}
+<script>
+function copyMeetingLink() {
+  var input = document.getElementById('meetingShareLink');
+  if (!input) return;
+  input.select();
+  input.setSelectionRange(0, input.value.length);
+  navigator.clipboard.writeText(input.value).then(function() {
+    if (window.showAdminToast) {
+      window.showAdminToast('Meeting link copied', 'success');
+    }
+  }).catch(function() {
+    document.execCommand('copy');
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -73,6 +73,7 @@ User = get_user_model()
 IST = ZoneInfo("Asia/Kolkata")
 SLUG_EDITOR_USERNAME = "sheenu"
 SLUG_EDITOR_EMAIL = "sheenaas013@gmail.com"
+VIDEO_MEETING_ROOM_RE = re.compile(r'[^a-zA-Z0-9_-]+')
 
 
 def _parse_ist_datetime(raw_value):
@@ -88,6 +89,30 @@ def _parse_ist_datetime(raw_value):
         return timezone.make_aware(parsed_value, IST)
 
     return parsed_value.astimezone(IST)
+
+
+def _normalize_video_room_name(room_name):
+    cleaned = VIDEO_MEETING_ROOM_RE.sub('-', str(room_name or '').strip()).strip('-_')
+    return cleaned[:80]
+
+
+@require_GET
+def video_meeting_room(request, room_name):
+    normalized_room = _normalize_video_room_name(room_name)
+    if not normalized_room:
+        raise Http404("Meeting room not found.")
+
+    share_url = request.build_absolute_uri(
+        reverse('video_meeting_room', kwargs={'room_name': normalized_room})
+    )
+    context = {
+        'page_title': f'{normalized_room} | Video Meeting',
+        'meeting_label': f'News Bharat Meeting: {normalized_room}',
+        'room_name': normalized_room,
+        'share_url': share_url,
+        'video_conference_domain': getattr(settings, 'VIDEO_CONFERENCE_DOMAIN', 'meet.jit.si').strip().strip('/'),
+    }
+    return render(request, 'video_meeting_room.html', context)
 
 
 def _digilocker_credentials_configured():

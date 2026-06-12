@@ -49,6 +49,7 @@ const getArticleSummary = (article) =>
   );
 
 const getArticleImage = (article) => article?.image_url || article?.image || "";
+const hasArticleImage = (article) => Boolean(String(getArticleImage(article) || "").trim());
 
 const isQ4Article = (article) => {
   const q4Tokens = ["q4", "q-4", "q 4", "quarterly results", "q4 results"];
@@ -385,8 +386,10 @@ const buildBuckets = (articles) => {
     return true;
   });
 
-  const hero = unique[0] || null;
-  const centerCards = unique.slice(1); // backend order preserved
+  const heroIndex = unique.findIndex(hasArticleImage);
+  const selectedHeroIndex = heroIndex >= 0 ? heroIndex : 0;
+  const hero = unique[selectedHeroIndex] || null;
+  const centerCards = unique.filter((_, index) => index !== selectedHeroIndex);
   const topRail = unique;
 
   return { topRail, hero, centerCards };

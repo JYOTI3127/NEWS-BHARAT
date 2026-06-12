@@ -38,6 +38,9 @@ const getPrerenderData = () => {
   return window.__N4B_PRERENDER_DATA__ || {};
 };
 
+const getUsablePrerenderArticles = (articles) =>
+  (Array.isArray(articles) ? articles : []).filter((article) => !article?._fallback);
+
 const normalizeCategoryToken = (value) =>
   String(value || '')
     .trim()
@@ -236,7 +239,7 @@ const Home = () => {
   const isPrerender = React.useMemo(() => isPrerenderUserAgent(), []);
   const prerenderData = React.useMemo(() => getPrerenderData(), []);
   const prerenderArticles = React.useMemo(
-    () => (Array.isArray(prerenderData.articles) ? prerenderData.articles : []),
+    () => getUsablePrerenderArticles(prerenderData.articles),
     [prerenderData]
   );
   const prerenderCategories = React.useMemo(

@@ -7,9 +7,18 @@ export const apiUrl = (path = "") => {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
+const withCacheBust = (url) => {
+  const separator = String(url).includes("?") ? "&" : "?";
+  return `${url}${separator}_=${Date.now()}`;
+};
+
 export const fetchJson = async (path) => {
- const response = await fetch(apiUrl(path), {
+ const response = await fetch(withCacheBust(apiUrl(path)), {
   cache: "no-store",
+  headers: {
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+  },
 });
 
   if (!response.ok) {
@@ -136,9 +145,13 @@ export const fetchPaginatedArticles = async ({
 
   while (pages < maxPages) {
 const response = await fetch(
-  nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full })),
+  withCacheBust(nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full }))),
   {
     cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
   }
 );
 

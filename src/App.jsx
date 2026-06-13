@@ -218,30 +218,7 @@ function AnalyticsPageView() {
   return null;
 }
 
-const shouldInitSwgBasic = (pathname) => {
-  const parts = String(pathname || "/").split("/").filter(Boolean);
-  if (parts.length !== 2) return false;
-  return !["category", "author", "article", "news", "tag", "60-seconds"].includes(parts[0]);
-};
-
 function SwgBasicInit() {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!shouldInitSwgBasic(location.pathname)) return;
-
-    window.SWG_BASIC = window.SWG_BASIC || [];
-    window.SWG_BASIC.push(function (basicSubscriptions) {
-      basicSubscriptions.init({
-        type: "NewsArticle",
-        isPartOfType: ["Product"],
-        isPartOfProductId: "CAow6K_GDA:openaccess",
-        clientOptions: { theme: "light", lang: "en-GB" },
-      });
-    });
-  }, [location.pathname]);
-
   return null;
 }
 

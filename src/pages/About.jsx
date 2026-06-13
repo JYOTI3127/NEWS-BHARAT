@@ -55,7 +55,7 @@ export default function AboutPage() {
           <div className="hero-bg" style={{ position: "relative", overflow: "hidden" }}>
             <img
               src={heroBg}
-              alt=""
+              alt="About News4Bharat"
               style={{
                 position: "absolute",
                 inset: 0,

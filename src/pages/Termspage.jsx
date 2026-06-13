@@ -335,6 +335,7 @@ export default function TermsPage() {
 
           {/* ── CHAPTER 1: TERMS & CONDITIONS ── */}
           <section className="terms-chapter" id="terms">
+            <h1 className="sr-only">Terms and Conditions</h1>
             <FadeIn>
               <div className="terms-chapter-head">
                 <div className="terms-chapter-icon-wrap">{icons.scroll}</div>
@@ -483,4 +484,3 @@ export default function TermsPage() {
     </>
   );
 }
-

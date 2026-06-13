@@ -552,7 +552,7 @@ const buildArticleSchemaJson = (article, route, meta) => {
 
 return {
   '@context': 'https://schema.org',
-  '@type': ['NewsArticle', 'Article'],
+  '@type': 'NewsArticle',
   ...(canonical ? { '@id': `${canonical}#article` } : {}),
   headline: title,
   alternativeHeadline: description,
@@ -592,8 +592,7 @@ return {
   ...(tags.length > 0 ? { keywords: tags.join(', ') } : {}),
   isAccessibleForFree: true,
   isPartOf: {
-    '@type': 'Product',
-    productID: 'CAow6K_GDA:openaccess',
+    '@id': `${BASE_URL}/#website`,
   },
 }
 }

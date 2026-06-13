@@ -1941,6 +1941,78 @@ export default function ArticleDetails() {
   useEffect(() => {
     const root = articleContentRef.current;
     if (!root) return;
+    const fallbackAlt = String(article?.title || SITE_NAME).trim();
+
+    const replaceAnchorWithSpan = (anchor) => {
+      const span = document.createElement("span");
+      Array.from(anchor.attributes || []).forEach((attribute) => {
+        if (!/^href$|^target$|^rel$/i.test(attribute.name)) {
+          span.setAttribute(attribute.name, attribute.value);
+        }
+      });
+      span.className = anchor.className;
+      span.textContent = anchor.textContent || anchor.getAttribute("href") || "";
+      anchor.replaceWith(span);
+    };
+
+    const normalizeArticleLink = (anchor) => {
+      const rawHref = String(anchor.getAttribute("href") || "").trim();
+      if (!rawHref) {
+        replaceAnchorWithSpan(anchor);
+        return;
+      }
+
+      const decodedHref = decodeHtmlEntities(rawHref).trim();
+      const lowerHref = decodedHref.toLowerCase();
+      const isAllowedHref =
+        lowerHref.startsWith("http://") ||
+        lowerHref.startsWith("https://") ||
+        lowerHref.startsWith("/") ||
+        lowerHref.startsWith("#") ||
+        lowerHref.startsWith("mailto:");
+
+      if (/\s/.test(decodedHref)) {
+        replaceAnchorWithSpan(anchor);
+        return;
+      }
+
+      if (isAllowedHref) {
+        if (lowerHref.startsWith("http://") || lowerHref.startsWith("https://")) {
+          anchor.setAttribute("target", "_blank");
+          anchor.setAttribute("rel", "noopener noreferrer");
+        }
+        return;
+      }
+
+      try {
+        const externalUrl = new URL(`https://${decodedHref}`);
+        if (!externalUrl.hostname.includes(".")) {
+          replaceAnchorWithSpan(anchor);
+          return;
+        }
+        anchor.setAttribute("href", externalUrl.toString());
+        anchor.setAttribute("target", "_blank");
+        anchor.setAttribute("rel", "noopener noreferrer");
+      } catch {
+        replaceAnchorWithSpan(anchor);
+      }
+    };
+
+    Array.from(root.querySelectorAll("a[href]")).forEach(normalizeArticleLink);
+
+    Array.from(root.querySelectorAll("h1")).forEach((heading) => {
+      const replacement = document.createElement("h2");
+      Array.from(heading.attributes || []).forEach((attribute) => {
+        replacement.setAttribute(attribute.name, attribute.value);
+      });
+      replacement.innerHTML = heading.innerHTML;
+      heading.replaceWith(replacement);
+    });
+
+    Array.from(root.querySelectorAll("img")).forEach((image) => {
+      const alt = String(image.getAttribute("alt") || "").trim();
+      if (!alt) image.setAttribute("alt", fallbackAlt);
+    });
 
     const normalizeRenderedAlsoRead = (node) => {
       if (!node || node.closest?.("table, thead, tbody, tfoot, tr, td, th, blockquote, .article-table-wrapper, .article-media-frame, .react-tweet-placeholder")) return;
@@ -1977,7 +2049,7 @@ export default function ArticleDetails() {
     };
 
     Array.from(root.querySelectorAll("p, div, span, h1, h2, h3, h4, h5, h6")).forEach(normalizeRenderedAlsoRead);
-  }, [normalizedContent]);
+  }, [article?.title, normalizedContent]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -2531,7 +2603,7 @@ export default function ArticleDetails() {
 
   const articleSchema = {
     "@context": "https://schema.org",
-    "@type": ["NewsArticle", "Article"],
+    "@type": "NewsArticle",
     ...(canonicalUrl ? { "@id": `${canonicalUrl}#article` } : {}),
     headline: article.title,
     alternativeHeadline: visibleSummary || article.title,
@@ -2580,6 +2652,9 @@ export default function ArticleDetails() {
     ...articlePayloadSchemas,
   ]);
   const resolvedJsonLdSchemas = (() => {
+    const backendArticleSchema = backendPreferredSchemas.find((schema) =>
+      schemaHasType(schema, "NewsArticle")
+    );
     const extraBackendSchemas = backendPreferredSchemas.filter((schema) =>
       !schemaHasType(schema, "NewsArticle") &&
       !schemaHasType(schema, "Article") &&
@@ -2587,7 +2662,7 @@ export default function ArticleDetails() {
     );
 
     return dedupeStructuredSchemas([
-      articleSchema,
+      backendArticleSchema || articleSchema,
       breadcrumbSchema,
       ...extraBackendSchemas,
     ]);

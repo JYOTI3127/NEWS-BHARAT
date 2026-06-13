@@ -298,6 +298,7 @@ export default function PrivacyPage() {
 
           {/* ── MAIN CONTENT ── */}
           <main className="priv-content">
+            <h1 className="sr-only">Privacy Policy</h1>
 
             {/* Intro */}
             <FadeIn>
@@ -718,4 +719,3 @@ export default function PrivacyPage() {
     </>
   );
 }
-

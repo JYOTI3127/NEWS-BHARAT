@@ -19943,3 +19943,179 @@ img {
     margin-right: auto !important;
   }
 }
+
+
+/* Bharat Explainers: prevent desktop left-card text overlap */
+.nps-entertainment .hs-small-card {
+  overflow: hidden !important;
+}
+
+@media (min-width: 1441px) and (max-width: 2560px) {
+  .nps-entertainment .hs-small-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+  }
+
+  .nps-entertainment .hs-small-img {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 126px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .nps-entertainment .hs-small-text {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Bharat Explainers: laptop and desktop card layout fix */
+@media (min-width: 1025px) and (max-width: 2560px) {
+  .nps-entertainment .hs-small-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .nps-entertainment .hs-small-img {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 126px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .nps-entertainment .hs-small-text {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Bharat Explainers: allow both left-stack articles to occupy separate cells */
+.nps-entertainment .hs-small-stack > .hs-small-card {
+  grid-column: auto !important;
+  grid-row: auto !important;
+  position: relative !important;
+}
+
+@media (min-width: 1025px) {
+  .nps-entertainment .hs-small-stack {
+    align-items: stretch !important;
+  }
+
+  .nps-entertainment .hs-small-stack > .hs-small-card {
+    height: auto !important;
+  }
+
+  .nps-entertainment .hs-small-title {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+  }
+}
+
+/* Editorial Policy: balanced readable layout */
+.ep-page .ep-policy-section {
+  padding: clamp(28px, 4vw, 56px) 0 !important;
+}
+
+.ep-page .ep-container {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  padding: 0 clamp(16px, 3vw, 32px) !important;
+  box-sizing: border-box;
+}
+
+.ep-page .ep-section-header {
+  margin-bottom: clamp(18px, 2.5vw, 28px) !important;
+}
+
+.ep-page .ep-label {
+  font-size: 11px !important;
+  letter-spacing: 2.2px !important;
+  margin-bottom: 8px !important;
+}
+
+.ep-page .ep-section-title {
+  font-size: clamp(28px, 3vw, 40px) !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0 !important;
+  margin: 0 !important;
+}
+
+.ep-page .ep-section-divider {
+  margin-top: 14px !important;
+}
+
+.ep-page .ep-policy-document {
+  width: 100%;
+  margin: 0;
+  padding: clamp(18px, 2.6vw, 32px);
+  background: #fff;
+  border: 1px solid #e7eaf0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+}
+
+.ep-page .ep-policy-intro {
+  max-width: 74ch;
+  margin: 0 0 20px;
+  color: #334155;
+  font-size: clamp(16px, 1.15vw, 18px);
+  line-height: 1.7;
+}
+
+.ep-page .ep-policy-row {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #edf0f5;
+}
+
+.ep-page .ep-policy-heading {
+  margin: 0 0 8px;
+  color: #071b4d;
+  font-size: clamp(20px, 1.7vw, 25px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.ep-page .ep-policy-body {
+  max-width: 78ch;
+  margin: 0;
+  color: #475569;
+  font-size: clamp(15px, 1.05vw, 17px);
+  line-height: 1.72;
+}
+
+@media (min-width: 1024px) {
+  .ep-page .ep-policy-document {
+    padding: 32px 36px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ep-page .ep-policy-section {
+    padding: 24px 0 !important;
+  }
+
+  .ep-page .ep-policy-row {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .ep-page .ep-policy-document {
+    border-radius: 10px;
+  }
+}

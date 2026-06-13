@@ -216,6 +216,7 @@ export default function DisclaimerPage() {
       {/* ══════ BODY ══════ */}
       <div className="terms-body">
         <section className="terms-chapter" id="disclaimer">
+          <h1 className="sr-only">Disclaimer</h1>
 
           <FadeIn>
             <div className="terms-chapter-head">
@@ -280,4 +281,3 @@ export default function DisclaimerPage() {
     </>
   );
 }
-

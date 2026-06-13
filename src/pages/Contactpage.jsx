@@ -290,7 +290,7 @@ export default function ContactPage() {
         <section className="ct-hero relative w-full max-[768px]:!h-auto max-[768px]:!min-h-0 max-[768px]:aspect-[3/2]">
           <img
             src={contactBg}
-            alt=""
+            alt="Contact News4Bharat"
             className="absolute inset-0 z-0 h-full w-full object-cover object-center"
           />
           <div className="ct-hero-overlay" />
@@ -313,6 +313,7 @@ export default function ContactPage() {
         {/* ══════════ CONTACT + FORM ══════════ */}
         <section className="ct-main">
           <div className="ct-container">
+            <h1 className="sr-only">Contact News4Bharat</h1>
             <div className="ct-split">
 
               {/* LEFT — contact info */}

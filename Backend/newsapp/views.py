@@ -30,6 +30,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from rest_framework import status
 from .serializers import *
+from PIL import Image
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -412,6 +413,23 @@ def _unique_inline_image_name(original_filename, extension):
     return f"articles/inline/{safe_base}-{uuid.uuid4().hex[:10]}{extension}"
 
 
+def _resize_image_to_max_width(img, max_width):
+    if not max_width:
+        return img
+    try:
+        current_width = int(getattr(img, 'width', 0) or 0)
+        current_height = int(getattr(img, 'height', 0) or 0)
+    except (TypeError, ValueError):
+        return img
+
+    if current_width <= 0 or current_height <= 0 or current_width <= max_width:
+        return img
+
+    ratio = max_width / float(current_width)
+    resized_height = max(1, int(current_height * ratio))
+    return img.resize((max_width, resized_height), Image.LANCZOS)
+
+
 def _normalize_inline_image_format(uploaded_file):
     content_type = (getattr(uploaded_file, 'content_type', '') or '').lower().strip()
     extension = os.path.splitext(getattr(uploaded_file, 'name', '') or '')[1].lower()
@@ -435,12 +453,11 @@ def _normalize_inline_image_format(uploaded_file):
     raise ValidationError('Only JPG, PNG, and WEBP inline images are allowed.')
 
 
-def _compress_uploaded_image(uploaded_file, output_name, output_format='WEBP', quality=88):
-    from PIL import Image as PILImage
-    import io
-
+def _compress_uploaded_image(uploaded_file, output_name, output_format='WEBP', quality=88, max_width=None):
     uploaded_file.seek(0)
-    img = PILImage.open(uploaded_file)
+    img = Image.open(uploaded_file)
+    img.load()
+    img = _resize_image_to_max_width(img, max_width)
 
     if output_format in {"JPEG", "WEBP"} and img.mode in ("RGBA", "P", "LA"):
         img = img.convert("RGB")
@@ -499,12 +516,13 @@ def inline_image_upload(request):
         return Response({"error": "Only image uploads are allowed."}, status=400)
 
     try:
-        output_format, extension, response_content_type = _normalize_inline_image_format(uploaded_file)
+        _normalize_inline_image_format(uploaded_file)
         compressed_file = _compress_uploaded_image(
             uploaded_file,
-            _unique_inline_image_name(uploaded_file.name, extension),
-            output_format=output_format,
-            quality=88,
+            _unique_inline_image_name(uploaded_file.name, '.webp'),
+            output_format='WEBP',
+            quality=82,
+            max_width=1400,
         )
         stored_name = default_storage.save(compressed_file.name, compressed_file)
     except Exception as exc:
@@ -513,7 +531,7 @@ def inline_image_upload(request):
     return Response({
         "url": default_storage.url(stored_name),
         "name": stored_name,
-        "content_type": response_content_type,
+        "content_type": 'image/webp',
     }, status=201)
 
 
@@ -607,17 +625,12 @@ def crop_image_api(request):
         return Response({'error': 'Crop area is outside the image bounds.'}, status=400)
 
     cropped = img.crop((x, y, x + width, y + height))
-    has_alpha = cropped.mode in ('RGBA', 'LA') or (cropped.mode == 'P' and 'transparency' in cropped.info)
+    cropped.load()
+    cropped = _resize_image_to_max_width(cropped, 1600)
     output = io.BytesIO()
 
-    if has_alpha:
-        cropped.save(output, format='PNG', optimize=True)
-        mime = 'image/png'
-    else:
-        if cropped.mode not in ('RGB', 'L'):
-            cropped = cropped.convert('RGB')
-        cropped.save(output, format='JPEG', quality=92, optimize=True)
-        mime = 'image/jpeg'
+    cropped.save(output, format='WEBP', quality=84, optimize=True)
+    mime = 'image/webp'
 
     encoded = base64.b64encode(output.getvalue()).decode('ascii')
     return Response({
@@ -1417,6 +1430,7 @@ def _save_article_from_request(request, article=None):
     category_list_raw = _data_getlist('categories')
 
     cat_ids = []
+
     if len(category_list_raw) > 1:
         for c in category_list_raw:
             for part in str(c).split(','):
@@ -1622,26 +1636,14 @@ def _save_article_from_request(request, article=None):
     if 'image' in files and files['image']:
         uploaded_file = files['image']
         try:
-            from PIL import Image as PILImage
-            import io
-            from django.core.files.base import ContentFile
-
-            img = PILImage.open(uploaded_file)
-
-            if img.mode in ("RGBA", "P", "LA"):
-                img = img.convert("RGB")
-
-            if img.width > 1200:
-                ratio = 1200 / img.width
-                new_height = int(img.height * ratio)
-                img = img.resize((1200, new_height), PILImage.LANCZOS)
-
-            output = io.BytesIO()
-            img.save(output, format='WEBP', quality=95, optimize=True)
-            output.seek(0)
-
             original_name = _unique_article_image_name(article, uploaded_file.name, '.webp')
-            article.image     = ContentFile(output.read(), name=original_name)
+            article.image = _compress_uploaded_image(
+                uploaded_file,
+                original_name,
+                output_format='WEBP',
+                quality=84,
+                max_width=1200,
+            )
             article.image_url = ''
 
         except Exception:

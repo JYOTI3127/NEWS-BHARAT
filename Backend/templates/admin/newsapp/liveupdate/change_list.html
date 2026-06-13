@@ -345,6 +345,14 @@
       font-weight: 700;
     }
 
+    .live-admin-table-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .live-admin-table-scroll {
       overflow-x: auto;
     }
@@ -453,6 +461,12 @@
       border-color: #fecdd3;
     }
 
+    .live-admin-btn--delete-all {
+      background: #be123c;
+      color: #fff;
+      border-color: #be123c;
+    }
+
     .live-admin-empty {
       padding: 34px 26px;
       text-align: center;
@@ -515,6 +529,14 @@
 
       .live-admin-table-wrap {
         padding: 16px;
+      }
+
+      .live-admin-table-head {
+        align-items: stretch;
+      }
+
+      .live-admin-table-tools {
+        justify-content: flex-start;
       }
     }
   </style>
@@ -647,7 +669,16 @@
         <h3>Saved Live Updates</h3>
         <p>Use the action buttons to edit, reschedule, or delete any existing update.</p>
       </div>
-      <span class="live-admin-chip">{{ live_updates_total }} saved updates</span>
+      <div class="live-admin-table-tools">
+        <span class="live-admin-chip">{{ live_updates_total }} saved updates</span>
+        {% if live_updates_total %}
+          <form method="post" onsubmit="return confirm('Delete all live updates? This action cannot be undone.');" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="_delete_all_live_updates" value="1">
+            <button type="submit" class="live-admin-btn live-admin-btn--delete-all">Delete All</button>
+          </form>
+        {% endif %}
+      </div>
     </div>
 
     {% if live_updates_page_obj and live_updates_page_obj.object_list %}

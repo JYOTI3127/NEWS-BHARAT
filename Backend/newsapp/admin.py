@@ -469,6 +469,22 @@ class LiveUpdateAdmin(admin.ModelAdmin):
         form = self.LiveUpdateQuickForm()
 
         if request.method == 'POST':
+            if '_delete_all_live_updates' in request.POST:
+                deleted_count = LiveUpdate.objects.count()
+                if deleted_count:
+                    LiveUpdate.objects.all().delete()
+                else:
+                    deleted_count = 0
+                if deleted_count:
+                    self.message_user(
+                        request,
+                        f"Deleted {deleted_count} live update(s) successfully.",
+                        level=messages.SUCCESS,
+                    )
+                else:
+                    self.message_user(request, "No live updates were found to delete.", level=messages.WARNING)
+                return redirect('/admin/newsapp/liveupdate/')
+
             if '_delete_live_update' in request.POST:
                 update_id = request.POST.get('live_update_id')
                 if str(update_id).isdigit():

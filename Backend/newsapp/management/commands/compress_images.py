@@ -25,6 +25,9 @@ class Command(BaseCommand):
 
         for i, article in enumerate(articles, 1):
             try:
+                old_created_at = article.created_at
+                old_published_at = article.published_at
+                old_updated_at = article.updated_at
                 img_data = None
 
                 # Pehle uploaded image check karo
@@ -59,12 +62,17 @@ class Command(BaseCommand):
                 article.image = ContentFile(output.read(), name=filename)
                 article.image_url = ''  # url clear karo
                 article.save(update_fields=['image', 'image_url'])
+                Article.objects.filter(pk=article.pk).update(
+                    created_at=old_created_at,
+                    published_at=old_published_at,
+                    updated_at=old_updated_at,
+                )
 
-                self.stdout.write(f"[{i}/{total}] ✅ Done: {article.slug}")
+                self.stdout.write(f"[{i}/{total}] DONE: {article.slug}")
                 success += 1
 
             except Exception as e:
-                self.stdout.write(f"[{i}/{total}] ❌ Failed: {article.slug} — {e}")
+                self.stdout.write(f"[{i}/{total}] FAILED: {article.slug} - {e}")
                 failed += 1
 
-        self.stdout.write(f"\n✅ Success: {success} | ❌ Failed: {failed}")
+        self.stdout.write(f"\nSuccess: {success} | Failed: {failed}")

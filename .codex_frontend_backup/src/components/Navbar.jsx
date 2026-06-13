@@ -100,7 +100,7 @@ const CATEGORY_ICON_MAP = {
   "States of Bharat": Globe,
   "Bharat's BFSI": BarChart2,
   "Bharat in Numbers": BarChart2,
-  "Bharat Opinions": PenLine,
+  "Bharat's Opinions": PenLine,
   "Bharat's Startups": Zap,
   "Bharat 2047": Flame,
   "Bharat By 2047": Flame,
@@ -417,7 +417,7 @@ const NAV_SECTIONS = [
     ],
   },
   { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Bharat's Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Technology", slug: "technology", Icon: Cpu },
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
@@ -1396,7 +1396,7 @@ const Header = () => {
         <div className="drawer-foot">
           <div className="drawer-foot-title">Quick Access</div>
           <div className="drawer-foot-pills">
-            {["Live TV", "Newsletter", "Podcast", "60 Second", "Bharat Opinion"].map((t) => (
+            {["Live TV", "Newsletter", "Podcast", "60 Second", "Bharat's Opinions"].map((t) => (
               <span key={t} className="drawer-foot-pill">{t}</span>
             ))}
           </div>

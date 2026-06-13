@@ -26,8 +26,8 @@ const StateNews = lazy(() => import('../components/Statenews'));
 const MoreStoriesSection = lazy(() => import('../components/MoreStoriesSection'));
 const Newsletter = lazy(() => import('../components/Newsletter'));
 
-const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers'];
-const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups'];
+const BHARAT_NUMBERS_SLUGS = ['bharat-in-numbers', 'bharat-numbers'];
+const BHARAT_STARTUPS_SLUGS = ['bharat-startups', 'bharats-startups', 'bharat-startup', 'bharats-startup'];
 const Q4_CATEGORY_SLUGS = ['q4-results', 'q4-performance-strategic-outlook'];
 const BREAKING_NEWS_SLUGS = ['breaking-news'];
 const EDITORIAL_CATEGORY_SLUGS = ['business', 'bharat-economy'];
@@ -291,14 +291,12 @@ const Home = () => {
   const { data: freshPopularData, isLoading: freshPopularLoading } = useQuery({
     queryKey: ['fresh-popular-showcase'],
     queryFn: fetchFreshPopularShowcase,
-    initialData: prerenderArticles.length > 0
-      ? { articles: prerenderArticles.slice(0, 12), display_count: 12 }
-      : undefined,
-    initialDataUpdatedAt: 0,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
     refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: 60 * 1000,
   });
 
   const freshPopularArticles = React.useMemo(
@@ -539,7 +537,7 @@ const Home = () => {
 
         <DeferredSection id="BharatStartups" minHeight={260} forceRender={shouldForceDeferredRender} className="home-section-align">
           <CategoryMiniCarousel
-            title="Bharat's of Startups"
+            title="Bharat's Startups"
             slugs={BHARAT_STARTUPS_SLUGS}
             categoryPath="/category/bharat-startups"
             adPlacement="home_bharat_startups_right"

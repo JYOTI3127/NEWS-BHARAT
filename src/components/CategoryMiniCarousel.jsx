@@ -12,6 +12,15 @@ const PRERENDER_UA_PATTERN = /HeadlessChrome|prerender/i;
 const getArticleImage = (article) => article?.image_url || article?.image || "";
 const getArticleTitle = (article) => article?.title || article?.headline || "Untitled";
 
+const normalizeCategoryToken = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const normalizeArticles = (data) => {
   return data
     .filter((item) => item && getArticleTitle(item))
@@ -21,7 +30,8 @@ const normalizeArticles = (data) => {
 const getCategorySlugsFromArticle = (article) => {
   const details = Array.isArray(article?.category_details) ? article.category_details : [];
   const detailSlugs = details
-    .map((item) => String(item?.slug || "").trim().toLowerCase())
+    .flatMap((item) => [item?.slug, item?.category_slug, item?.name])
+    .map(normalizeCategoryToken)
     .filter(Boolean);
   const slugs = [
     ...detailSlugs,
@@ -31,7 +41,7 @@ const getCategorySlugsFromArticle = (article) => {
     article?.primary_category?.slug,
     article?.primary_category?.name,
   ]
-    .map((value) => String(value || "").trim().toLowerCase())
+    .map(normalizeCategoryToken)
     .filter(Boolean);
   return [...new Set(slugs)];
 };
@@ -103,7 +113,7 @@ export default function CategoryMiniCarousel({
   const shouldStackMobileLayout = isMobileCarousel && shouldUseMobileStack;
   const seededArticles = useMemo(() => {
     if (!Array.isArray(passedArticles) || passedArticles.length === 0 || slugList.length === 0) return [];
-    const slugSet = new Set(slugList.map((slug) => String(slug).trim().toLowerCase()));
+    const slugSet = new Set(slugList.map(normalizeCategoryToken));
     return normalizeArticles(
       passedArticles.filter((article) =>
         getCategorySlugsFromArticle(article).some((slug) => slugSet.has(slug))
@@ -128,19 +138,23 @@ export default function CategoryMiniCarousel({
         setLoading(true);
       }
 
+      const articleMap = new Map();
       for (const slug of slugList) {
         try {
           const data = await fetchPaginatedArticles({ category: slug, limit: 10 });
           const nextArticles = normalizeArticles(data);
-          if (nextArticles.length > 0) {
-            if (!ignore) setArticles(nextArticles);
-            break;
-          }
+          nextArticles.forEach((article, index) => {
+            const key = String(article?.id || article?.slug || article?.public_url || article?.title || index).trim();
+            if (key && !articleMap.has(key)) articleMap.set(key, article);
+          });
         } catch {
           // Try the next possible slug.
         }
       }
 
+      if (!ignore && articleMap.size > 0) {
+        setArticles(normalizeArticles([...articleMap.values()]));
+      }
       if (!ignore) setLoading(false);
     };
 

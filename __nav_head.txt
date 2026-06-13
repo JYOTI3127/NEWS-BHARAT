@@ -104,7 +104,7 @@ const CATEGORY_ICON_MAP = {
   "States of Bharat": MapPin,
   "Bharat's BFSI": BarChart2,
   "Bharat in Numbers": Hash,
-  "Bharat Opinions": BookOpen,
+  "Bharat's Opinions": BookOpen,
   "Bharat's Startups": Zap,
   "Bharat 2047": Target,
   "Bharat By 2047": Target,
@@ -436,7 +436,7 @@ const NAV_SECTIONS = [
     ],
   },
   { label: "Bharat's BFSI", slug: "bfsi", Icon: BarChart2, links: ["Banking", "NBFCs", "Fintech", "Stock Market", "Insurance"] },
-  { label: "Bharat Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
+  { label: "Bharat's Opinions", slug: "bharat-opinions", Icon: PenLine, links: ["Editorials", "Expert Opinions", "Industry Voices", "Articles", "Interviews", "Debates & Counterpoints", "Policy Perspective"] },
   { label: "Technology", slug: "technology", Icon: Cpu },
   { label: "Artificial Intelligence", slug: "ai", Icon: Cpu },
   { label: "Bharat By 2047", slug: "bharat-2047", Icon: Flame },
@@ -1461,7 +1461,7 @@ const Header = () => {
             {[
               { label: "Newsletter", path: "/newsletter" },
               { label: "60 Second", path: "/60-second-read" },
-              { label: "Bharat Opinion", path: "/bharat-opinions" },
+              { label: "Bharat's Opinions", path: "/bharat-opinions" },
             ].map((item) => (
               <button
                 type="button"

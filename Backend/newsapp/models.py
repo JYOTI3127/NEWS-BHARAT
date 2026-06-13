@@ -7,7 +7,6 @@ from .workflow import ALLOWED_TRANSITIONS
 from django.core.exceptions import ValidationError
 from django.core.files.images import get_image_dimensions
 import re
-import uuid
 
 
 class Role(models.Model):
@@ -37,6 +36,25 @@ def _normalize_version_html(value):
     text = re.sub(r">\s+<", "><", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def _build_unique_article_slug(*, title="", requested_slug="", article_id=None):
+    base_source = str(requested_slug or "").strip() or str(title or "").strip()
+    base_slug = slugify(base_source)[:100].strip("-") or "article"
+    candidate = base_slug
+    suffix = 2
+
+    while True:
+        qs = Article.objects.filter(slug=candidate)
+        if article_id:
+            qs = qs.exclude(pk=article_id)
+        if not qs.exists():
+            return candidate
+
+        suffix_text = f"-{suffix}"
+        trimmed_base = base_slug[: max(1, 100 - len(suffix_text))].strip("-") or "article"
+        candidate = f"{trimmed_base}{suffix_text}"
+        suffix += 1
 
 
 _CHATGPT_SECTION_RE = re.compile(
@@ -220,6 +238,7 @@ class Article(models.Model):
         from .utils import ARTICLE_CLEAN_VERSION, sanitize_article_html, strip_pasted_document_markup
 
         is_update = self.pk is not None
+        old_article = Article.objects.get(pk=self.pk) if is_update else None
         update_fields = kwargs.get('update_fields')
         should_ping_sitemap = False
         push_payload = None
@@ -245,12 +264,17 @@ class Article(models.Model):
             update_fields.update({'content_raw', 'content_clean', 'content', 'clean_version'})
             kwargs['update_fields'] = update_fields
     
-        # ✅ SLUG AUTO GENERATE
-        if not self.slug:
-            self.slug = slugify(self.title) + "-" + str(uuid.uuid4())[:5]
-    
+        requested_slug = str(self.slug or "").strip()
+        if not requested_slug:
+            self.slug = _build_unique_article_slug(title=self.title, article_id=self.pk)
+        elif not is_update or (old_article and requested_slug != old_article.slug):
+            self.slug = _build_unique_article_slug(
+                title=self.title,
+                requested_slug=requested_slug,
+                article_id=self.pk,
+            )
+
         if is_update:
-            old_article = Article.objects.get(pk=self.pk)
             pushworthy_update = any(
                 getattr(old_article, field.attname) != getattr(self, field.attname)
                 for field in self._meta.concrete_fields

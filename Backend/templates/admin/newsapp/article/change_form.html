@@ -5938,12 +5938,6 @@ function updateSlugPrefix(){
   var prefixEl=document.getElementById('ui_slug_prefix');
   if(prefixEl)prefixEl.textContent=_getSlugPrefixPath();
 }
-function _slugSuffix(){
-  var now=new Date();
-  var ymd=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
-  var rand=Math.random().toString(36).slice(2,6);
-  return ymd+'-'+rand;
-}
 function generateSlug(){
   var titleEl=document.getElementById('ui_title');
   var inp=document.getElementById('ui_slug');
@@ -5952,8 +5946,7 @@ function generateSlug(){
   if(!title)return;
   var base=_buildBaseSlug(title);
   if(!base)return;
-  var finalSlug=base+'-'+_slugSuffix();
-  inp.value=finalSlug;
+  inp.value=base;
   updateCanonicalFromSlug();
   updateSeoScore();
   updateEditorPreview();

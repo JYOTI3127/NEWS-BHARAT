@@ -290,7 +290,7 @@ const navLinks = [
 const footerPills = [
   { label: "Newsletter", path: "/newsletter" },
   { label: "60 Second", path: "/60-second-read" },
-  { label: "Bharat Opinion", path: "/bharat-opinions" },
+  { label: "Bharat's Opinions", path: "/bharat-opinions" },
 ];
 
 // ── Article Image with fallback ──

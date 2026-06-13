@@ -665,7 +665,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                             className="font-bold text-[#111] uppercase"
                             style={{ fontSize: is4K ? "30px" : isMobile ? "16px" : "21px", fontFamily: "Poppins, sans-serif" }}
                         >
-                            Bharat Opinion
+                            Bharat's Opinions
                         </span>
                         </div>
                         <button
@@ -679,7 +679,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
 
                     <div className="relative">
                         <button
-                            aria-label="Previous Bharat Opinion stories"
+                            aria-label="Previous Bharat's Opinions stories"
                             onClick={() => scrollStories(-1)}
                             disabled={!isMobile && !canPrev}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canPrev ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:-translate-x-0.5"
@@ -817,7 +817,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                         </div>
 
                         <button
-                            aria-label="Next Bharat Opinion stories"
+                            aria-label="Next Bharat's Opinions stories"
                             onClick={() => scrollStories(1)}
                             disabled={!isMobile && !canNext}
                             className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full flex items-center justify-center transition-all duration-200 ${!isMobile && !canNext ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:shadow-lg hover:translate-x-0.5"

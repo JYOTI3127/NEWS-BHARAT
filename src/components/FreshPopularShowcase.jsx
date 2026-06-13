@@ -106,7 +106,7 @@ const CATEGORY_LABEL_BY_SLUG = {
   politics: "POLITICS",
   political: "POLITICS",
   trending: "TRENDING",
-  "bharat-opinions": "BHARAT OPINIONS",
+  "Bharat's Opinions": "BHARAT'S OPINIONS",
   "bharat-explainers": "BHARAT EXPLAINERS",
   "bharat-in-numbers": "BHARAT IN NUMBERS",
   "bharat-startups": "BHARAT STARTUPS",
@@ -372,12 +372,12 @@ const getArticleIdentityKey = (article, index = 0) =>
 const getViewportWidth = () =>
   typeof window !== "undefined" ? window.innerWidth : 1440;
 
-// ─── Middle section: backend order, no sort, no filter ───────────────────────
+// Middle section: backend order, no sort, no filter
 const buildBuckets = (articles) => {
   const list = Array.isArray(articles) ? articles : articles?.results || [];
   const filtered = list.filter((item) => item && (item.title || item.headline));
 
-  // Only deduplicate — no sort, no exclude
+  // Only deduplicate, no sort, no exclude
   const seen = new Set();
   const unique = filtered.filter((article, index) => {
     const key = getArticleIdentityKey(article, index);

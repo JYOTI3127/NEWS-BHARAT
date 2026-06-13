@@ -17029,7 +17029,7 @@ img {
 
 
 /* ============================================================
-   VIDEO SECTION — PREMIUM NEWSROOM REDESIGN (FINAL OVERRIDE)
+   VIDEO SECTION ï¿½ PREMIUM NEWSROOM REDESIGN (FINAL OVERRIDE)
    ============================================================ */
 .home-section-align .vs-wrap,
 .vs-wrap {
@@ -17465,7 +17465,7 @@ img {
 }
 
 /* ============================================================
-   VIDEO SECTION — SHORTS-FIRST LAYOUT OVERRIDE
+   VIDEO SECTION ï¿½ SHORTS-FIRST LAYOUT OVERRIDE
    ============================================================ */
 .vs-wrap--shorts,
 .home-section-align .vs-wrap--shorts {
@@ -20062,9 +20062,9 @@ img {
   margin: 0;
   padding: clamp(18px, 2.6vw, 32px);
   background: #fff;
-  border: 1px solid #e7eaf0;
+  /* border: 1px solid #e7eaf0; */
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  /* box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); */
   box-sizing: border-box;
 }
 
@@ -20118,4 +20118,120 @@ img {
   .ep-page .ep-policy-document {
     border-radius: 10px;
   }
+}
+
+/* Editorial Policy: align heading with document text */
+.ep-page .ep-policy-section .ep-section-header {
+  padding-left: clamp(18px, 2.6vw, 32px) !important;
+  padding-right: clamp(18px, 2.6vw, 32px) !important;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .ep-page .ep-policy-section .ep-section-header {
+    padding-left: 36px !important;
+    padding-right: 36px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ep-page .ep-policy-section .ep-section-header {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+}
+
+/* Contact page: full contact copy layout */
+.contact-page .ct-content-title {
+  margin: 0 0 10px;
+  color: #071b4d;
+  font-size: clamp(24px, 2.2vw, 34px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.contact-page .ct-content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.contact-page .ct-content-row {
+  padding-top: 18px;
+  border-top: 1px solid #edf0f5;
+}
+
+.contact-page .ct-content-heading {
+  margin: 0 0 6px;
+  color: #071b4d;
+  font-size: clamp(17px, 1.25vw, 20px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.contact-page .ct-content-body {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.contact-page .ct-contact-desc {
+  max-width: 74ch;
+}
+
+.contact-page .ct-office-city {
+  font-size: 0.9rem;
+}
+
+.contact-page .ct-office-addr {
+  font-size: 0.86rem;
+  color: #4b5563;
+}
+
+@media (max-width: 640px) {
+  .contact-page .ct-content-list {
+    gap: 15px;
+    margin-top: 16px;
+  }
+
+  .contact-page .ct-content-row {
+    padding-top: 15px;
+  }
+}
+
+/* Contact page: right-column contact blocks */
+.contact-page .ct-split-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.contact-page .ct-split-left {
+  gap: 1.4rem;
+}
+
+/* Contact page: restore original layout after content experiment */
+.contact-page .ct-split-left {
+  gap: 2rem;
+}
+
+.contact-page .ct-split-right {
+  display: block;
+}
+
+.contact-page .ct-contact-desc {
+  max-width: none;
+}
+
+.contact-page .ct-office-city {
+  font-size: 0.82rem;
+}
+
+.contact-page .ct-office-addr {
+  color: #666;
+  font-size: 0.8rem;
 }

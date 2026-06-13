@@ -316,7 +316,7 @@ export default function ContactPage() {
             <h1 className="sr-only">Contact News4Bharat</h1>
             <div className="ct-split">
 
-              {/* LEFT â€” contact info */}
+              {/* LEFT — contact info */}
               <div className="ct-split-left">
 
                 {/* Contact Emails */}
@@ -324,7 +324,7 @@ export default function ContactPage() {
                   <div className="ct-info-block">
                     <span className="ct-label">Contact Us</span>
                     <p className="ct-contact-desc">
-                      We'd be glad to hear from you. We aim to respond to all queries within 24â€“48 hours.
+                      We'd be glad to hear from you. We aim to respond to all queries within 24–48 hours.
                     </p>
                     <div className="ct-email-list">
                       {contactEmails.map(({ label, email }) => (
@@ -386,7 +386,7 @@ export default function ContactPage() {
 
               </div>
 
-              {/* RIGHT â€” form */}
+              {/* RIGHT — form */}
               <div className="ct-split-right">
                 <FadeIn direction="right" delay={0.1}>
                   <div className="ct-form-card">

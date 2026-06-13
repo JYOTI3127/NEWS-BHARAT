@@ -92,60 +92,17 @@ export default function EditorialPolicy() {
               <div className="ep-section-divider" />
             </div>
 
-            <article
-              style={{
-                background: "#fff",
-                border: "1px solid #e7eaf0",
-                borderRadius: 16,
-                boxShadow: "0 12px 36px rgba(15, 23, 42, 0.06)",
-                width: "100%",
-                margin: 0,
-                padding: "clamp(20px, 3vw, 40px)",
-              }}
-            >
-              <p
-                style={{
-                  color: "#334155",
-                  fontSize: "clamp(17px, 1.6vw, 21px)",
-                  lineHeight: 1.8,
-                  margin: "0 0 28px",
-                }}
-              >
+            <article className="ep-policy-document">
+              <p className="ep-policy-intro">
                 At News4Bharat, our editorial mission is to provide accurate,
                 balanced, independent, and public-interest journalism that informs
                 and empowers readers.
               </p>
 
               {policySections.map((section) => (
-                <section
-                  key={section.title}
-                  style={{
-                    borderTop: "1px solid #edf0f5",
-                    paddingTop: 24,
-                    marginTop: 24,
-                  }}
-                >
-                  <h2
-                    style={{
-                      color: "#071b4d",
-                      fontSize: "clamp(22px, 2.2vw, 30px)",
-                      fontWeight: 800,
-                      lineHeight: 1.25,
-                      margin: "0 0 10px",
-                    }}
-                  >
-                    {section.title}
-                  </h2>
-                  <p
-                    style={{
-                      color: "#475569",
-                      fontSize: "clamp(16px, 1.4vw, 19px)",
-                      lineHeight: 1.8,
-                      margin: 0,
-                    }}
-                  >
-                    {section.body}
-                  </p>
+                <section key={section.title} className="ep-policy-row">
+                  <h2 className="ep-policy-heading">{section.title}</h2>
+                  <p className="ep-policy-body">{section.body}</p>
                 </section>
               ))}
             </article>

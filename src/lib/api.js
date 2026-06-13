@@ -15,10 +15,6 @@ const withCacheBust = (url) => {
 export const fetchJson = async (path) => {
  const response = await fetch(withCacheBust(apiUrl(path)), {
   cache: "no-store",
-  headers: {
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-  },
 });
 
   if (!response.ok) {
@@ -148,10 +144,6 @@ const response = await fetch(
   withCacheBust(nextUrl || apiUrl(buildArticlesPath({ page, limit, category, full }))),
   {
     cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
   }
 );
 

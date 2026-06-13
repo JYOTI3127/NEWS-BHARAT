@@ -273,8 +273,10 @@ const Home = () => {
     queryKey: ['articles'],
     queryFn: () => fetchPaginatedArticles({ limit: 100, maxPages: 5, full: true }),
     initialData: prerenderArticles.length > 0 ? prerenderArticles : undefined,
-    staleTime: 5 * 60 * 1000,
+    initialDataUpdatedAt: 0,
+    staleTime: 0,
     gcTime: 10 * 60 * 1000,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
@@ -292,8 +294,10 @@ const Home = () => {
     initialData: prerenderArticles.length > 0
       ? { articles: prerenderArticles.slice(0, 12), display_count: 12 }
       : undefined,
-    staleTime: 2 * 60 * 1000,
+    initialDataUpdatedAt: 0,
+    staleTime: 0,
     gcTime: 5 * 60 * 1000,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 

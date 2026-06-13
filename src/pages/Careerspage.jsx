@@ -383,7 +383,7 @@ export default function CareersPage() {
           <div className="cp-hero-bg">
             <img
               src={careerBg}
-              alt=""
+              alt="Careers at News4Bharat"
               className="absolute inset-0 z-0 h-full w-full object-cover object-center"
             />
           </div>
@@ -392,6 +392,7 @@ export default function CareersPage() {
         {/* ══════════ OPEN ROLES ══════════ */}
         <section className="cp-section cp-bg-grey">
           <div className="cp-container">
+            <h1 className="sr-only">Careers at News4Bharat</h1>
             <FadeIn>
               <div className="cp-sec-hd cp-center">
                 <span className="cp-label">Open Roles</span>

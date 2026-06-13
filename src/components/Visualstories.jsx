@@ -741,8 +741,7 @@ export default function VisualStoriesWithScore({ articles: passedArticles = [] }
                                                 <>
                                                     <img
                                                         src={article.image_url}
-                                                        alt=""
-                                                        aria-hidden="true"
+                                                        alt={`${article.title || "Visual story"} background`}
                                                         className="absolute inset-0 w-full h-full transition-transform duration-500 ease-in-out group-hover:scale-110"
                                                         style={{
                                                             objectFit: "cover",

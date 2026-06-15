@@ -3,17 +3,27 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
-  RewriteRule ^sitemap\.xml$ sitemap_index.xml.php [L]
-  RewriteRule ^sitemap_index\.xml$ sitemap_index.xml.php [L]
-  RewriteRule ^(sitemap-[a-z0-9\-]+)\.xml$ $1.xml.php [L]
 
-  # Force HTTPS and non-www canonical domain
+  # Force HTTPS and non-www canonical domain (FIRST - before everything)
   RewriteCond %{HTTPS} !=on [OR]
   RewriteCond %{HTTP_HOST} !^news4bharat\.com$ [NC]
   RewriteRule ^ https://news4bharat.com%{REQUEST_URI} [R=301,L,NE]
 
+  # Sitemap rewrites (AFTER the canonical redirect)
+  RewriteRule ^robots\.txt$ robots.txt.php [L]
+  RewriteRule ^sitemap\.xml$ sitemap_index.xml.php [L]
+  RewriteRule ^sitemap_index\.xml$ sitemap_index.xml.php [L]
+  RewriteRule ^(sitemap-[a-z0-9\-]+)\.xml$ $1.xml.php [L]
+
   RewriteRule ^rss\.xml$ https://news4bharat.cloud/rss.xml [R=301,L]
+
+  # Article HTML proxy: keep news4bharat.com URL, fetch full SEO HTML from backend.
+  # Example: /bfsi/article-slug -> /article-proxy.php?category=bfsi&slug=article-slug
+  RewriteCond %{REQUEST_URI} !^/(category|tag|author|news|article|60-seconds|assets|api)(/|$) [NC]
+  RewriteCond %{REQUEST_URI} !^/(about-us|about|contact-us|contact|privacy-policy|terms-and-conditions|terms-conditions|terms-of-service|careers|career|newsletter|disclaimer|commingsoon)(/|$) [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^([a-z0-9-]+)/([a-z0-9-]+)/?$ article-proxy.php?category=$1&slug=$2 [L,QSA,NC]
 
   # Canonicalize prerendered pages to no trailing slash.
   RewriteCond %{DOCUMENT_ROOT}/__prerender/$1.html -f

@@ -51,7 +51,6 @@ jobs:
       - name: Keep server-managed files out of deploy
         run: |
           rm -f build/robots.txt
-          rm -f build/.htaccess
 
       - name: Ensure Hostinger target directory exists
         uses: appleboy/ssh-action@v1
@@ -80,7 +79,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_SSH_USERNAME }}
           password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
           port: ${{ secrets.HOSTINGER_SSH_PORT }}
-          source: "build/*"
+          source: "build/*,build/.htaccess"
           target: ${{ secrets.HOSTINGER_SSH_TARGET_DIR }}
           strip_components: 1
           overwrite: true

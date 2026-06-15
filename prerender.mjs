@@ -866,7 +866,7 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       title: 'News4Bharat - India News, Economy, Politics & Explainers',
       description: 'News4Bharat covers breaking India news, economy, politics, startups, and explainers with verified reporting and clear analysis for Bharat-first readers.',
       keywords: 'India news, breaking news India, latest news India, economy news, politics news, Bharat news',
-      canonical: `${BASE_URL}/`,
+      canonical: BASE_URL,
       ogImage: DEFAULT_IMAGE,
       ogType: 'website',
       lcpImage: siteData.homepageHeroImage || DEFAULT_IMAGE,
@@ -934,7 +934,9 @@ function buildMetaForRoute(route, articleMap, categoryMap, siteData = {}) {
       )
 
       const image = toAbsoluteUrl(endpointOg.image || endpointTwitter.image || article.image_url || article.image) || DEFAULT_IMAGE
-      const canonical = toCanonicalSiteUrl(endpointMeta.canonical) || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
+      const canonical = normalizeCanonicalUrl(
+        toCanonicalSiteUrl(endpointMeta.canonical) || getCanonicalArticleUrl(article) || `${BASE_URL}${route}`
+      )
       const secondaryKeywords = Array.isArray(article.secondary_keywords_list)
         ? article.secondary_keywords_list.map((item) => normalizeKeywordPhrase(item))
         : String(article.secondary_keywords || '')
@@ -1210,6 +1212,22 @@ const pickArticlePrerenderSeeds = (articles, options) =>
     .map((article) => pickArticlePrerenderSeed(article, options))
     .filter(Boolean)
 
+const getArticlePrerenderImage = (article) => {
+  if (!article || typeof article !== 'object') return ''
+
+  const endpointMeta = getSeoEndpointMeta(article)
+  const endpointOg = isPlainObject(endpointMeta.og) ? endpointMeta.og : {}
+  const endpointTwitter = isPlainObject(endpointMeta.twitter) ? endpointMeta.twitter : {}
+
+  return toAbsoluteUrl(
+    endpointOg.image ||
+      endpointTwitter.image ||
+      article.image_url ||
+      article.image ||
+      ''
+  )
+}
+
 const pickCategoryPrerenderSeed = (category) => {
   if (!category || typeof category !== 'object') return null
 
@@ -1245,11 +1263,12 @@ const buildRoutePrerenderPayload = (route, articleMap, siteData = {}) => {
 
   if (isSeoArticleRoute(route)) {
     const currentArticle = articleMap.get(route)
+    const currentArticleImage = getArticlePrerenderImage(currentArticle)
 
     return {
       articles: currentArticle ? [pickArticlePrerenderSeed(currentArticle, { includeBody: true })] : [],
       categories: categorySeeds,
-      homepageHeroImage: siteData?.homepageHeroImage || '',
+      homepageHeroImage: currentArticleImage || siteData?.homepageHeroImage || '',
     }
   }
 
@@ -1355,6 +1374,9 @@ const injectArticleFallbackIntoRoot = (html, fallbackArticleHtml) => {
 // Remove old tags and inject fresh tags from API data.
 function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) {
   const meta = buildMetaForRoute(route, articleMap, categoryMap, siteData)
+  const safeCanonical = route === '/'
+    ? BASE_URL
+    : normalizeCanonicalUrl(meta.canonical) || String(meta.canonical || '').trim()
 
   const safeDesc = String(meta.description || '').replace(/"/g, '&quot;').replace(/\n/g, ' ').trim()
   const safeTitle = String(meta.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1403,12 +1425,12 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   ${safeFocusKeyword ? `<meta name="focus_keyword" content="${safeFocusKeyword}">` : ''}
   ${safeSecondaryKeywords ? `<meta name="secondary_keywords" content="${safeSecondaryKeywords}">` : ''}
   <meta name="robots" content="${safeRobots}">
-  <link rel="canonical" href="${meta.canonical}">
-  ${buildHrefLangTags(meta.canonical)}
+  <link rel="canonical" href="${safeCanonical}">
+  ${buildHrefLangTags(safeCanonical)}
   <meta property="og:type" content="${meta.ogType}">
   ${safeTitle ? `<meta property="og:title" content="${safeTitle}">` : ''}
   ${safeDesc ? `<meta property="og:description" content="${safeDesc}">` : ''}
-  <meta property="og:url" content="${meta.canonical}">
+  <meta property="og:url" content="${safeCanonical}">
   <meta property="og:image" content="${meta.ogImage}">
   ${safeOgImageAlt ? `<meta property="og:image:alt" content="${safeOgImageAlt}">` : ''}
   <meta property="og:site_name" content="News4Bharat">
@@ -1420,7 +1442,7 @@ function cleanupPrerenderedHtml(html, route, articleMap, categoryMap, siteData) 
   ${safeTwitterSite ? `<meta name="twitter:site" content="${safeTwitterSite}">` : ''}
   ${safeTitle ? `<meta name="twitter:title" content="${safeTitle}">` : ''}
   ${safeDesc ? `<meta name="twitter:description" content="${safeDesc}">` : ''}
-  <meta name="twitter:url" content="${meta.canonical}">
+  <meta name="twitter:url" content="${safeCanonical}">
   <meta name="twitter:image" content="${meta.ogImage}">
   ${safeOgImageAlt ? `<meta name="twitter:image:alt" content="${safeOgImageAlt}">` : ''}
   ${meta.publishedAt ? `<meta property="article:published_time" content="${meta.publishedAt}">` : ''}

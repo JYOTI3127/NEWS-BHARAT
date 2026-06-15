@@ -296,9 +296,7 @@ const decodeHtmlEntities = (value) => {
 };
 
 const formatArticleDateTimeForDisplay = (articleOrDate) =>
-  String(formatArticleDateTimeIST(articleOrDate) || "")
-    .replace(/\s+at\s+/gi, " - ")
-    .trim();
+  String(formatArticleDateTimeIST(articleOrDate) || "").trim();
 
 const getArticlePublishedDateValue = (article) =>
   article?.published_at ||
@@ -308,11 +306,6 @@ const getArticlePublishedDateValue = (article) =>
   "";
 
 const getArticleUpdatedLabel = (article) => {
-  const explicitDisplay = String(article?.updated_display || "").trim();
-  if (explicitDisplay) {
-    return explicitDisplay.replace(/\s+at\s+/gi, " - ").trim();
-  }
-
   const updatedAt = article?.updated_at;
   if (!updatedAt) return "";
 
@@ -326,7 +319,7 @@ const getArticleUpdatedLabel = (article) => {
   if (!article?.is_updated && !hasMeaningfulUpdatedTime) return "";
 
   const formatted = formatArticleDateTimeForDisplay(updatedAt);
-  return formatted ? `Updated ${formatted}` : "";
+  return formatted || "";
 };
 
 const normalizeKeywordPhrase = (value) =>
@@ -2446,7 +2439,9 @@ export default function ArticleDetails() {
   const breadcrumbCategoryLabel = categoryName || moreInCategoryLabel || normalizedCategorySlug.replace(/-/g, " ");
   const isWorldNewsArticle = ["world-news", "worldnews"].includes(normalizedCategorySlug);
   const routeCanonicalUrl = buildCanonicalFromRoute(normalizedCategorySlug || categorySlug, article?.slug || articleSlug);
-  const canonicalUrl = toCanonicalSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl;
+  const canonicalUrl = normalizeCanonicalUrl(
+    toCanonicalSiteUrl(seoEndpointMeta.canonical) || getCanonicalArticleUrl(article) || routeCanonicalUrl
+  );
   const articlePath = getArticlePath(article) || (routeCanonicalUrl ? new URL(routeCanonicalUrl).pathname : "");
   const articleUrlForSchema = canonicalUrl || (articlePath ? `${SITE_URL}${articlePath}` : "");
   const displayMoreArticles = categoryMoreArticles.length > 0 ? categoryMoreArticles : moreInArticles;

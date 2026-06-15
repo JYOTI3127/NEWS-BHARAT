@@ -3449,60 +3449,24 @@ def _football_default_season():
     return today.year if today.month >= 7 else today.year - 1
 
 
-FOOTBALL_COMPETITION_ALIASES = {
-    "1": "WC",
-    "2": "CL",
-    "3": "EL",
-    "39": "PL",
-    "61": "FL1",
-    "78": "BL1",
-    "88": "DED",
-    "94": "PPL",
-    "135": "SA",
-    "140": "PD",
-    "world cup": "WC",
-    "fifa world cup": "WC",
-    "uefa champions league": "CL",
-    "champions league": "CL",
-    "uefa europa league": "EL",
-    "europa league": "EL",
-    "premier league": "PL",
-    "la liga": "PD",
-    "serie a": "SA",
-    "bundesliga": "BL1",
-    "ligue 1": "FL1",
-    "primeira liga": "PPL",
-    "eredvisie": "DED",
-}
-FOOTBALL_LIVE_STATUSES = {"LIVE", "IN_PLAY", "PAUSED"}
-FOOTBALL_FINISHED_STATUSES = {"FINISHED", "AWARDED"}
-FOOTBALL_UPCOMING_STATUSES = {"TIMED", "SCHEDULED", "POSTPONED"}
-FOOTBALL_STATUS_LABELS = {
-    "TIMED": "Scheduled",
-    "SCHEDULED": "Scheduled",
-    "LIVE": "Live",
-    "IN_PLAY": "In Play",
-    "PAUSED": "Paused",
-    "FINISHED": "Finished",
-    "POSTPONED": "Postponed",
-    "SUSPENDED": "Suspended",
-    "CANCELLED": "Cancelled",
-    "AWARDED": "Awarded",
-}
-
-
 def _football_api_base_url():
     return str(
-        getattr(settings, "FOOTBALL_API_BASE_URL", "https://api.football-data.org/v4") or
-        "https://api.football-data.org/v4"
+        getattr(settings, "FOOTBALL_API_BASE_URL", "https://api.sportmonks.com/v3/football") or
+        "https://api.sportmonks.com/v3/football"
     ).rstrip("/")
 
 
-def _football_api_headers():
+def _football_api_token():
     api_key = getattr(settings, "FOOTBALL_API_KEY", "").strip()
     if not api_key:
         return None
-    return {"X-Auth-Token": api_key}
+    return api_key
+
+
+def _football_api_headers():
+    if _football_api_token() is None:
+        return None
+    return {"Accept": "application/json"}
 
 
 def _football_safe_json(response):
@@ -3514,13 +3478,15 @@ def _football_safe_json(response):
         }
 
 
-def _football_status_details(status_code):
-    normalized = str(status_code or "").strip().upper()
-    return {
-        "long": FOOTBALL_STATUS_LABELS.get(normalized, normalized.replace("_", " ").title() or None),
-        "short": normalized or None,
-        "elapsed": None,
-    }
+def _football_request(path, *, params=None, headers=None):
+    query = dict(params or {})
+    query["api_token"] = _football_api_token()
+    return external_get(
+        f"{_football_api_base_url()}{path}",
+        params=query,
+        headers=headers or {},
+        timeout=15,
+    )
 
 
 def _football_timestamp(raw_date):
@@ -3528,69 +3494,206 @@ def _football_timestamp(raw_date):
     if not raw_date:
         return None
     try:
-        return int(datetime.fromisoformat(raw_date.replace("Z", "+00:00")).timestamp())
+        return int(datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S").timestamp())
+    except ValueError:
+        try:
+            return int(datetime.fromisoformat(raw_date.replace("Z", "+00:00")).timestamp())
+        except ValueError:
+            return None
+
+
+def _football_parse_datetime(raw_date):
+    raw_date = str(raw_date or "").strip()
+    if not raw_date:
+        return None
+    try:
+        return timezone.make_aware(datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S"), IST)
     except ValueError:
         return None
 
 
+def _football_extract_data(payload):
+    if isinstance(payload, dict):
+        data = payload.get("data")
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return [data]
+    return []
+
+
+def _football_state_block(item):
+    return item.get("state") or {}
+
+
+def _football_state_name(item):
+    state = _football_state_block(item)
+    return " ".join([
+        str(state.get("name") or ""),
+        str(state.get("short_name") or ""),
+        str(state.get("developer_name") or ""),
+    ]).strip().lower()
+
+
+def _football_status_details(item):
+    state = _football_state_block(item)
+    long_name = (
+        state.get("name")
+        or state.get("state")
+        or state.get("developer_name")
+        or "Scheduled"
+    )
+    short_name = (
+        state.get("short_name")
+        or state.get("developer_name")
+        or long_name
+    )
+    scores = item.get("scores") or []
+    elapsed = None
+    for score in scores:
+        description = str(score.get("description") or "").strip().lower()
+        if "current" in description and score.get("participant_id") is not None:
+            elapsed = score.get("score")
+            break
+    return {
+        "long": long_name,
+        "short": short_name,
+        "elapsed": elapsed,
+    }
+
+
+def _football_is_live(item):
+    haystack = _football_state_name(item)
+    return any(token in haystack for token in ("inplay", "live", "half-time", "halftime"))
+
+
+def _football_is_finished(item):
+    haystack = _football_state_name(item)
+    if any(token in haystack for token in ("finished", "fulltime", "full-time", "after penalties", "after extra time")):
+        return True
+    starting_at = _football_parse_datetime(item.get("starting_at"))
+    if starting_at and starting_at < timezone.now() - timedelta(hours=3) and item.get("result_info"):
+        return True
+    return False
+
+
+def _football_is_upcoming(item):
+    if _football_is_live(item) or _football_is_finished(item):
+        return False
+    starting_at = _football_parse_datetime(item.get("starting_at"))
+    return bool(starting_at and starting_at >= timezone.now() - timedelta(minutes=5))
+
+
 def _football_round_label(item):
-    stage = str(item.get("stage") or "").strip()
-    matchday = item.get("matchday")
-    if stage and matchday:
-        return f"{stage} - Matchday {matchday}"
-    if stage:
-        return stage
-    if matchday:
-        return f"Matchday {matchday}"
-    return None
+    round_block = item.get("round") or {}
+    stage_block = item.get("stage") or {}
+    round_name = str(round_block.get("name") or "").strip()
+    stage_name = str(stage_block.get("name") or "").strip()
+    if stage_name and round_name:
+        return f"{stage_name} - {round_name}"
+    return round_name or stage_name or None
 
 
-def _football_competition_code_from_item(item):
-    competition = item.get("competition") or {}
-    return str(competition.get("code") or competition.get("id") or "").strip().upper()
+def _football_participants(item):
+    participants = item.get("participants")
+    return participants if isinstance(participants, list) else []
+
+
+def _football_pick_participant(item, side):
+    participants = _football_participants(item)
+    side = str(side or "").strip().lower()
+    for participant in participants:
+        meta = participant.get("meta") or {}
+        location = str(meta.get("location") or meta.get("position") or "").strip().lower()
+        if location == side:
+            return participant
+    if len(participants) >= 2:
+        return participants[0] if side == "home" else participants[1]
+    if participants:
+        return participants[0]
+    return {}
+
+
+def _football_score_value(item, side):
+    side = str(side or "").strip().lower()
+    target = _football_pick_participant(item, side)
+    target_id = target.get("id")
+    scores = item.get("scores") or []
+    preferred = None
+    fallback = None
+    for score in scores:
+        participant_id = score.get("participant_id")
+        if target_id is not None and participant_id != target_id:
+            continue
+        description = str(score.get("description") or "").strip().lower()
+        if description in {"current", "normal_time"}:
+            preferred = score.get("score")
+            break
+        if fallback is None and description in {"1st_half", "2nd_half", "ft", "fulltime"}:
+            fallback = score.get("score")
+    return preferred if preferred is not None else fallback
+
+
+def _football_competitions(headers):
+    cache_key = "football:sportmonks:leagues"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    response = _football_request(
+        "/leagues",
+        params={
+            "include": "country",
+            "per_page": 1000,
+        },
+        headers=headers,
+    )
+    payload = _football_safe_json(response)
+    if response.status_code != 200:
+        raise ValueError(payload)
+
+    leagues = _football_extract_data(payload)
+    cache.set(cache_key, leagues, 3600)
+    return leagues
+
+
+def _football_league_block(item):
+    return item.get("league") or {}
 
 
 def _football_match_tournament(item, tournament_query):
     if not tournament_query:
         return True
 
-    tournament_query = str(tournament_query or "").strip()
+    tournament_query = str(tournament_query or "").strip().lower()
     if not tournament_query:
         return True
 
-    normalized_query = tournament_query.lower()
-    alias_code = FOOTBALL_COMPETITION_ALIASES.get(normalized_query, "").upper()
-    competition = item.get("competition") or {}
-    area = competition.get("area") or {}
+    league = _football_league_block(item)
+    country = league.get("country") or item.get("country") or {}
     haystack = " ".join([
-        str(competition.get("name") or ""),
-        str(competition.get("code") or ""),
-        str(area.get("name") or ""),
-        str(item.get("stage") or ""),
+        str(league.get("name") or item.get("name") or ""),
+        str(league.get("short_code") or ""),
+        str(country.get("name") or ""),
+        str((item.get("stage") or {}).get("name") or ""),
     ]).lower()
-
-    if alias_code and alias_code == _football_competition_code_from_item(item):
-        return True
-    return normalized_query in haystack
+    return tournament_query in haystack
 
 
 def _football_match_team(item, team_query):
     if not team_query:
         return True
 
-    team_query = str(team_query or "").strip()
-    if not team_query:
+    normalized = str(team_query or "").strip().lower()
+    if not normalized:
         return True
 
-    home_team = item.get("homeTeam") or {}
-    away_team = item.get("awayTeam") or {}
-    normalized = team_query.lower()
-    for team in (home_team, away_team):
+    for team in _football_participants(item):
         if normalized in {
             str(team.get("id") or "").strip().lower(),
             str(team.get("name") or "").strip().lower(),
             str(team.get("shortName") or "").strip().lower(),
-            str(team.get("tla") or "").strip().lower(),
+            str(team.get("short_code") or "").strip().lower(),
         }:
             return True
         if normalized and normalized in str(team.get("name") or "").strip().lower():
@@ -3598,141 +3701,90 @@ def _football_match_team(item, team_query):
     return False
 
 
-def _football_competitions(headers):
-    cache_key = "football:competitions:all"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    response = external_get(
-        f"{_football_api_base_url()}/competitions",
-        headers=headers,
-        timeout=12,
-    )
-    payload = _football_safe_json(response)
-    if response.status_code != 200:
-        raise ValueError(payload)
-
-    competitions = payload.get("competitions") or []
-    cache.set(cache_key, competitions, 3600)
-    return competitions
-
-
 def _football_resolve_competition_code(raw_value, headers):
     value = str(raw_value or "").strip()
     if not value:
         return None
 
-    normalized = value.lower()
-    alias_match = FOOTBALL_COMPETITION_ALIASES.get(normalized)
-    if alias_match:
-        return alias_match
-
-    uppercase_value = value.upper()
-    if uppercase_value.isalnum() and len(uppercase_value) <= 5:
-        return uppercase_value
+    if value.isdigit():
+        return value
 
     try:
-        competitions = _football_competitions(headers)
+        leagues = _football_competitions(headers)
     except Exception:
         return None
 
-    exact_match = None
-    partial_match = None
-    for item in competitions:
-        code = str(item.get("code") or "").strip().upper()
-        name = str(item.get("name") or "").strip().lower()
-        if not code:
-            continue
-        if normalized == name or normalized == code.lower():
-            exact_match = code
-            break
-        if normalized in name and partial_match is None:
-            partial_match = code
-    return exact_match or partial_match
-
-
-def _football_fetch_matches(*, headers, params=None, competition_code=None):
-    path = "/matches"
-    if competition_code:
-        path = f"/competitions/{competition_code}/matches"
-
-    response = external_get(
-        f"{_football_api_base_url()}{path}",
-        params=params or {},
-        headers=headers,
-        timeout=12,
-    )
-    payload = _football_safe_json(response)
-    return response, payload
-
-
-def _football_extract_matches(payload):
-    if isinstance(payload, dict):
-        matches = payload.get("matches")
-        if isinstance(matches, list):
-            return matches
-    return []
+    normalized = value.lower()
+    for league in leagues:
+        name = str(league.get("name") or "").strip().lower()
+        short_code = str(league.get("short_code") or "").strip().lower()
+        if normalized == name or normalized == short_code:
+            return str(league.get("id"))
+    for league in leagues:
+        name = str(league.get("name") or "").strip().lower()
+        if normalized in name:
+            return str(league.get("id"))
+    return None
 
 
 def _football_compact_fixture(item):
-    competition = item.get("competition") or {}
-    area = competition.get("area") or {}
+    league = _football_league_block(item)
+    country = league.get("country") or {}
     season = item.get("season") or {}
-    home_team = item.get("homeTeam") or {}
-    away_team = item.get("awayTeam") or {}
-    score = item.get("score") or {}
-    full_time = score.get("fullTime") or {}
-    half_time = score.get("halfTime") or {}
-    raw_date = item.get("utcDate")
-    status_code = item.get("status")
+    home_team = _football_pick_participant(item, "home")
+    away_team = _football_pick_participant(item, "away")
+    venue = item.get("venue") or {}
+    raw_date = item.get("starting_at")
 
     return {
         "fixture_id": item.get("id"),
         "referee": item.get("referees") or [],
-        "timezone": "UTC",
+        "timezone": "Asia/Kolkata",
         "date": raw_date,
         "timestamp": _football_timestamp(raw_date),
-        "status": _football_status_details(status_code),
+        "status": _football_status_details(item),
         "league": {
-            "id": competition.get("id"),
-            "code": competition.get("code"),
-            "name": competition.get("name"),
-            "country": area.get("name"),
-            "logo": competition.get("emblem"),
-            "flag": area.get("flag"),
-            "season": season.get("startDate", "")[:4] or None,
+            "id": league.get("id") or item.get("league_id"),
+            "code": league.get("short_code"),
+            "name": league.get("name"),
+            "country": country.get("name"),
+            "logo": league.get("image_path"),
+            "flag": country.get("image_path") or country.get("flag"),
+            "season": season.get("name") or item.get("season_id"),
             "round": _football_round_label(item),
         },
         "teams": {
             "home": {
                 "id": home_team.get("id"),
                 "name": home_team.get("name"),
-                "logo": home_team.get("crest"),
-                "winner": item.get("winner") == "HOME_TEAM",
+                "logo": home_team.get("image_path"),
+                "winner": None,
             },
             "away": {
                 "id": away_team.get("id"),
                 "name": away_team.get("name"),
-                "logo": away_team.get("crest"),
-                "winner": item.get("winner") == "AWAY_TEAM",
+                "logo": away_team.get("image_path"),
+                "winner": None,
             },
         },
         "goals": {
-            "home": full_time.get("home"),
-            "away": full_time.get("away"),
+            "home": _football_score_value(item, "home"),
+            "away": _football_score_value(item, "away"),
         },
         "score": {
-            "winner": item.get("winner"),
-            "duration": score.get("duration"),
-            "full_time": full_time,
-            "half_time": half_time,
-            "raw": score,
+            "winner": item.get("result_info"),
+            "duration": item.get("length"),
+            "full_time": {
+                "home": _football_score_value(item, "home"),
+                "away": _football_score_value(item, "away"),
+            },
+            "half_time": {},
+            "raw": item.get("scores") or [],
         },
         "venue": {
-            "id": None,
-            "name": None,
-            "city": None,
+            "id": venue.get("id") or item.get("venue_id"),
+            "name": venue.get("name"),
+            "city": venue.get("city_name") or venue.get("city"),
         },
         "periods": {
             "first": None,
@@ -3742,27 +3794,41 @@ def _football_compact_fixture(item):
 
 
 def _football_compact_standing(item, group_name=None, standing_type=None):
-    team = item.get("team") or {}
+    participant = item.get("participant") or {}
+    details = item.get("details") or []
+
+    def detail_value(keywords):
+        keywords = tuple(str(keyword).lower() for keyword in keywords)
+        for detail in details:
+            column = " ".join([
+                str(detail.get("type") or ""),
+                str((detail.get("type") or {}).get("name") or ""),
+                str(detail.get("value") or ""),
+            ]).lower()
+            if any(keyword in column for keyword in keywords):
+                return detail.get("value")
+        return None
+
     return {
         "rank": item.get("position"),
         "team": {
-            "id": team.get("id"),
-            "name": team.get("name"),
-            "logo": team.get("crest"),
+            "id": participant.get("id") or item.get("participant_id"),
+            "name": participant.get("name"),
+            "logo": participant.get("image_path"),
         },
         "points": item.get("points"),
-        "goals_diff": item.get("goalDifference"),
+        "goals_diff": detail_value(["goal difference", "goaldiff", "goal_diff"]),
         "group": group_name,
         "form": None,
         "status": standing_type,
-        "description": None,
+        "description": item.get("result"),
         "stats": {
-            "played": item.get("playedGames"),
-            "win": item.get("won"),
-            "draw": item.get("draw"),
-            "lose": item.get("lost"),
-            "goals_for": item.get("goalsFor"),
-            "goals_against": item.get("goalsAgainst"),
+            "played": detail_value(["played"]),
+            "win": detail_value(["won", "wins"]),
+            "draw": detail_value(["draw"]),
+            "lose": detail_value(["lost", "loss"]),
+            "goals_for": detail_value(["goals for", "scored"]),
+            "goals_against": detail_value(["goals against", "conceded"]),
         },
         "home": {},
         "away": {},
@@ -3772,13 +3838,13 @@ def _football_compact_standing(item, group_name=None, standing_type=None):
 def _football_fetch_fixture_block(
     *,
     headers,
+    path,
     params,
     cache_key,
     cache_timeout,
     tournament=None,
-    competition_code=None,
     limit=None,
-    statuses=None,
+    predicate=None,
     team=None,
     newest_first=False,
 ):
@@ -3787,11 +3853,12 @@ def _football_fetch_fixture_block(
         return cached
 
     try:
-        response, payload = _football_fetch_matches(
-            headers=headers,
+        response = _football_request(
+            path,
             params=params,
-            competition_code=competition_code,
+            headers=headers,
         )
+        payload = _football_safe_json(response)
     except Exception:
         result = {"success": False, "error": "Football service unavailable", "data": []}
         cache.set(cache_key, result, 60)
@@ -3807,19 +3874,16 @@ def _football_fetch_fixture_block(
         cache.set(cache_key, result, 60)
         return result
 
-    items = _football_extract_matches(payload)
-    if statuses:
-        items = [
-            item for item in items
-            if str(item.get("status") or "").strip().upper() in statuses
-        ]
+    items = _football_extract_data(payload)
+    if predicate:
+        items = [item for item in items if predicate(item)]
     if tournament:
         items = [item for item in items if _football_match_tournament(item, tournament)]
     if team:
         items = [item for item in items if _football_match_team(item, team)]
     items = sorted(
         items,
-        key=lambda match: str(match.get("utcDate") or ""),
+        key=lambda match: str(match.get("starting_at") or ""),
         reverse=newest_first,
     )
     if limit is not None and limit > 0:
@@ -3856,30 +3920,24 @@ def football_leagues_api(request):
         return Response(cached)
 
     try:
-        competitions = _football_competitions(headers)
+        leagues = _football_competitions(headers)
     except Exception:
         return Response({"error": "Football service unavailable"}, status=502)
 
-    items = competitions
+    items = leagues
     if search:
         normalized_search = search.lower()
         items = [
             item for item in items
             if normalized_search in str(item.get("name") or "").lower()
-            or normalized_search == str(item.get("code") or "").lower()
+            or normalized_search == str(item.get("short_code") or "").lower()
         ]
     if current in {"1", "true", "yes"}:
-        items = [item for item in items if item.get("currentSeason")]
-    if season:
-        items = [
-            item for item in items
-            if str((item.get("currentSeason") or {}).get("startDate", ""))[:4] == season
-            or str((item.get("currentSeason") or {}).get("endDate", ""))[:4] == season
-        ]
+        items = [item for item in items if item.get("active")]
 
     result = {
         "success": True,
-        "source": "football-data",
+        "source": "sportmonks",
         "query": {
             "search": search or None,
             "season": season or None,
@@ -3890,13 +3948,13 @@ def football_leagues_api(request):
             {
                 "league": {
                     "id": item.get("id"),
-                    "code": item.get("code"),
+                    "code": item.get("short_code"),
                     "name": item.get("name"),
                     "type": item.get("type"),
-                    "logo": item.get("emblem"),
+                    "logo": item.get("image_path"),
                 },
-                "country": item.get("area"),
-                "seasons": [item.get("currentSeason")] if item.get("currentSeason") else [],
+                "country": item.get("country"),
+                "seasons": [],
             }
             for item in items
         ],
@@ -3917,61 +3975,61 @@ def football_overview_api(request):
     next_week = today + timedelta(days=7)
     recent_from = today - timedelta(days=3)
     competition_code = _football_resolve_competition_code(tournament, headers) if tournament else None
+    filter_params = {
+        "include": "league.country;participants;venue;state;scores;round;stage",
+        "per_page": 50,
+    }
+    if competition_code:
+        filter_params["filters"] = f"fixtureLeagues:{competition_code}"
 
     tournament_cache = slugify(tournament) or "all"
     live_block = _football_fetch_fixture_block(
         headers=headers,
-        params={},
+        path="/livescores/inplay",
+        params=filter_params,
         cache_key=f"football:overview:{tournament_cache}:live",
         cache_timeout=60,
         tournament=tournament,
-        competition_code=competition_code,
         limit=20,
-        statuses=FOOTBALL_LIVE_STATUSES,
+        predicate=_football_is_live,
     )
     today_block = _football_fetch_fixture_block(
         headers=headers,
-        params={"dateFrom": today.isoformat(), "dateTo": today.isoformat()},
+        path=f"/fixtures/date/{today.isoformat()}",
+        params=filter_params,
         cache_key=f"football:overview:{tournament_cache}:today:{today.isoformat()}",
         cache_timeout=300,
         tournament=tournament,
-        competition_code=competition_code,
         limit=20,
     )
     recent_block = _football_fetch_fixture_block(
         headers=headers,
-        params={
-            "dateFrom": recent_from.isoformat(),
-            "dateTo": today.isoformat(),
-        },
+        path=f"/fixtures/between/{recent_from.isoformat()}/{today.isoformat()}",
+        params={**filter_params, "order": "desc"},
         cache_key=f"football:overview:{tournament_cache}:recent:{today.isoformat()}",
         cache_timeout=300,
         tournament=tournament,
-        competition_code=competition_code,
         limit=20,
-        statuses=FOOTBALL_FINISHED_STATUSES,
+        predicate=_football_is_finished,
         newest_first=True,
     )
     upcoming_block = _football_fetch_fixture_block(
         headers=headers,
-        params={
-            "dateFrom": today.isoformat(),
-            "dateTo": next_week.isoformat(),
-        },
+        path=f"/fixtures/between/{today.isoformat()}/{next_week.isoformat()}",
+        params=filter_params,
         cache_key=f"football:overview:{tournament_cache}:upcoming:{today.isoformat()}",
         cache_timeout=300,
         tournament=tournament,
-        competition_code=competition_code,
         limit=20,
-        statuses=FOOTBALL_UPCOMING_STATUSES,
+        predicate=_football_is_upcoming,
     )
 
     response_payload = {
         "success": True,
-        "source": "football-data",
+        "source": "sportmonks",
         "query": {
             "tournament": tournament or None,
-            "competition_code": competition_code,
+            "league_id": competition_code,
             "timezone": timezone_name,
             "today": today.isoformat(),
         },
@@ -4027,76 +4085,60 @@ def football_fixtures_api(request):
     if next_count and last_count:
         return Response({"error": "Use either next or last, not both together"}, status=400)
 
-    params = {"season": season} if competition_code and season else {}
+    params = {
+        "include": "league.country;participants;venue;state;scores;round;stage",
+        "per_page": 50,
+    }
+    if competition_code:
+        params["filters"] = f"fixtureLeagues:{competition_code}"
     cache_scope = "date"
+    path = f"/fixtures/date/{date}"
+    predicate = None
     if live in {"1", "true", "yes"}:
         cache_scope = "live"
+        path = "/livescores/inplay"
+        predicate = _football_is_live
     elif next_count:
-        params["dateFrom"] = timezone.localdate().isoformat()
         cache_scope = f"next:{next_count}"
+        start_date = timezone.localdate().isoformat()
+        end_date = (timezone.localdate() + timedelta(days=30)).isoformat()
+        path = f"/fixtures/between/{start_date}/{end_date}/{team}" if team.isdigit() else f"/fixtures/between/{start_date}/{end_date}"
+        predicate = _football_is_upcoming
     elif last_count:
-        params["dateTo"] = timezone.localdate().isoformat()
         cache_scope = f"last:{last_count}"
-    else:
-        params.update({
-            "dateFrom": date,
-            "dateTo": date,
-        })
+        start_date = (timezone.localdate() - timedelta(days=30)).isoformat()
+        end_date = timezone.localdate().isoformat()
+        path = f"/fixtures/between/{start_date}/{end_date}/{team}" if team.isdigit() else f"/fixtures/between/{start_date}/{end_date}"
+        params["order"] = "desc"
+        predicate = _football_is_finished
+    elif team.isdigit():
+        path = f"/fixtures/between/{date}/{date}/{team}"
 
     cache_key = "football:fixtures:" + urlencode(sorted({
-        **params,
+        **{k: v for k, v in params.items() if k != "include"},
         "league": league,
         "team": team,
         "live": live,
         "next": next_count,
         "last": last_count,
+        "date": date,
     }.items()))
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
 
-    if live in {"1", "true", "yes"}:
-        block = _football_fetch_fixture_block(
-            headers=headers,
-            params=params,
-            cache_key=cache_key,
-            cache_timeout=60,
-            competition_code=competition_code,
-            team=team,
-            statuses=FOOTBALL_LIVE_STATUSES,
-        )
-    elif next_count:
-        block = _football_fetch_fixture_block(
-            headers=headers,
-            params=params,
-            cache_key=cache_key,
-            cache_timeout=300,
-            competition_code=competition_code,
-            team=team,
-            statuses=FOOTBALL_UPCOMING_STATUSES,
-            limit=next_count,
-        )
-    elif last_count:
-        block = _football_fetch_fixture_block(
-            headers=headers,
-            params=params,
-            cache_key=cache_key,
-            cache_timeout=300,
-            competition_code=competition_code,
-            team=team,
-            statuses=FOOTBALL_FINISHED_STATUSES,
-            limit=last_count,
-            newest_first=True,
-        )
-    else:
-        block = _football_fetch_fixture_block(
-            headers=headers,
-            params=params,
-            cache_key=cache_key,
-            cache_timeout=300,
-            competition_code=competition_code,
-            team=team,
-        )
+    block = _football_fetch_fixture_block(
+        headers=headers,
+        path=path,
+        params=params,
+        cache_key=cache_key,
+        cache_timeout=60 if cache_scope == "live" else 300,
+        tournament=None,
+        limit=next_count or last_count or None,
+        predicate=predicate,
+        team="" if team.isdigit() and cache_scope != "live" else team,
+        newest_first=bool(last_count),
+    )
 
     if not block.get("success"):
         return Response(
@@ -4110,10 +4152,10 @@ def football_fixtures_api(request):
     items = block.get("data") or []
     result = {
         "success": True,
-        "source": "football-data",
+        "source": "sportmonks",
         "query": {
             "league": league or None,
-            "competition_code": competition_code,
+            "league_id": competition_code,
             "season": season,
             "team": team or None,
             "date": None if cache_scope == "live" or next_count or last_count else date,
@@ -4139,20 +4181,33 @@ def football_standings_api(request):
     if headers is None:
         return Response({"error": "FOOTBALL_API_KEY is not configured"}, status=503)
 
-    league = str(request.GET.get("league") or request.GET.get("competition") or "PL").strip()
+    league = str(request.GET.get("league") or request.GET.get("competition") or "").strip()
     season = str(request.GET.get("season") or _football_default_season()).strip()
-    competition_code = _football_resolve_competition_code(league, headers) or "PL"
-    cache_key = f"football:standings:{competition_code}:{season}"
+    season_id = str(request.GET.get("season_id") or "").strip()
+    if not season_id and season.isdigit() and int(season) > 1000:
+        season_id = season
+    league_id = _football_resolve_competition_code(league, headers) if league else None
+    if not season_id:
+        return Response(
+            {
+                "error": "season_id is required for Sportmonks standings",
+                "hint": "Pass /api/football/standings/?season_id=23690 or use a known Sportmonks season id.",
+            },
+            status=400,
+        )
+
+    cache_key = f"football:standings:{league_id or 'unknown'}:{season_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return Response(cached)
 
     try:
-        response = external_get(
-            f"{_football_api_base_url()}/competitions/{competition_code}/standings",
-            params={"season": season},
+        response = _football_request(
+            f"/standings/seasons/{season_id}",
+            params={
+                "include": "participant;league.country;details.type",
+            },
             headers=headers,
-            timeout=12,
         )
         payload = _football_safe_json(response)
     except Exception:
@@ -4167,37 +4222,36 @@ def football_standings_api(request):
             status=502,
         )
 
-    standings_groups = payload.get("standings") or []
-    if not standings_groups:
+    standings_rows = _football_extract_data(payload)
+    if not standings_rows:
         return Response({"error": "No standings data found"}, status=404)
 
     table = []
-    for group in standings_groups:
-        group_name = group.get("group")
-        standing_type = group.get("type")
-        for row in group.get("table") or []:
-            table.append(_football_compact_standing(row, group_name=group_name, standing_type=standing_type))
-
-    competition = payload.get("competition") or {}
-    area = payload.get("area") or {}
-    season_block = payload.get("season") or {}
+    league_meta = {}
+    for row in standings_rows:
+        if league_id and str(row.get("league_id")) != str(league_id):
+            continue
+        if not league_meta and row.get("league"):
+            league_meta = row.get("league") or {}
+        table.append(_football_compact_standing(row))
 
     result = {
         "success": True,
-        "source": "football-data",
+        "source": "sportmonks",
         "query": {
             "league": league,
-            "competition_code": competition_code,
+            "league_id": league_id,
             "season": season,
+            "season_id": season_id,
         },
         "league": {
-            "id": competition.get("id"),
-            "code": competition.get("code"),
-            "name": competition.get("name"),
-            "country": area.get("name"),
-            "logo": competition.get("emblem"),
-            "flag": area.get("flag"),
-            "season": season_block.get("startDate", "")[:4] or season,
+            "id": league_meta.get("id") or league_id,
+            "code": league_meta.get("short_code"),
+            "name": league_meta.get("name"),
+            "country": ((league_meta.get("country") or {}).get("name") if isinstance(league_meta.get("country"), dict) else None),
+            "logo": league_meta.get("image_path"),
+            "flag": ((league_meta.get("country") or {}).get("image_path") if isinstance(league_meta.get("country"), dict) else None),
+            "season": season_id,
         },
         "results": len(table),
         "data": table,

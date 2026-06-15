@@ -8,7 +8,7 @@ const TWITTER_HANDLE = "@news4_bharat";
 
 const getCanonicalPath = (path = "/") => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  if (normalized === "/") return "/";
+  if (normalized === "/") return "";
   const [pathname, query = ""] = normalized.split("?");
   const cleanPathname = pathname.replace(/\/+$/, "");
   return query ? `${cleanPathname}?${query}` : cleanPathname;

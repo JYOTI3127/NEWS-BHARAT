@@ -1535,6 +1535,7 @@ class NewsAdminSite(AdminSite):
     site_title     = "News Admin Portal"
     index_title    = "Dashboard"
     login_template = 'admin/login.html'
+    password_change_template = 'admin/password_change_form.html'
 
     def get_urls(self):
         urls = super().get_urls()

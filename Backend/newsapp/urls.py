@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from . import views
+from . import seo_views
 
 urlpatterns = [
     path('categories/', category_list),
@@ -12,6 +13,8 @@ urlpatterns = [
     path('articles/<int:pk>/review-action/<str:action>/', views.article_review_email_action, name='article_review_email_action'),
     path('articles/<int:pk>/', views.article_detail),
     path('articles/slug/<slug:slug>/', views.article_detail_by_slug, name='api_article_by_slug'),
+    path('render/article/<slug:slug>/', seo_views.api_render_article_html, name='api_render_article_html'),
+    path('render/article/<slug:category_slug>/<slug:slug>/', seo_views.api_render_article_html, name='api_render_article_html_with_category'),
     path('articles/by-state/', views.articles_by_state),
     path('dashboard/stats/', views.dashboard_stats_api, name='api_dashboard_stats'),
     path('contact-queries/', views.contact_query_create, name='api_contact_query_create'),

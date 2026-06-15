@@ -241,6 +241,16 @@ def api_seo_article(request, slug):
     }, json_dumps_params={"ensure_ascii": False})
 
 
+@require_GET
+def api_render_article_html(request, slug, category_slug=None):
+    """
+    Explicit HTML render endpoint for frontend proxy/SSR.
+    Returns a full text/html document with article-specific SEO tags.
+    """
+    from newsapp.views import article_detail_page
+    return article_detail_page(request, slug, category_slug=category_slug)
+
+
 @require_POST
 def api_seo_submit(request):
     """

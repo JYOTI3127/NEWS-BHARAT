@@ -81,6 +81,17 @@ if (!is_string($html) || $html === '' || $statusCode >= 400) {
     exit;
 }
 
+$canonicalUrl = sprintf(
+    'https://news4bharat.com/%s/%s',
+    rawurlencode($category),
+    rawurlencode($slug)
+);
+$canonicalUrlWithSlash = $canonicalUrl . '/';
+
+if (stripos($contentType, 'text/html') !== false) {
+    $html = str_replace($canonicalUrlWithSlash, $canonicalUrl, $html);
+}
+
 http_response_code($statusCode);
 header('Content-Type: ' . $contentType);
 header('Cache-Control: public, max-age=300, stale-while-revalidate=60');

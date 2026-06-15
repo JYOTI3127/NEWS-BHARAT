@@ -3444,6 +3444,550 @@ def metal_ticker(request):
 from .utils import external_get, fetch_and_store_metal_rates, fetch_live_index_data, is_valid_metal_price, latest_valid_metal_rate
 
 
+def _football_default_season():
+    today = timezone.localdate()
+    return today.year if today.month >= 7 else today.year - 1
+
+
+def _football_api_headers():
+    api_key = getattr(settings, "FOOTBALL_API_KEY", "").strip()
+    if not api_key:
+        return None
+    return {"x-apisports-key": api_key}
+
+
+def _football_compact_fixture(item):
+    fixture = item.get("fixture") or {}
+    league = item.get("league") or {}
+    teams = item.get("teams") or {}
+    goals = item.get("goals") or {}
+    score = item.get("score") or {}
+    periods = fixture.get("periods") or {}
+    status_block = fixture.get("status") or {}
+    venue = fixture.get("venue") or {}
+    home_team = teams.get("home") or {}
+    away_team = teams.get("away") or {}
+
+    return {
+        "fixture_id": fixture.get("id"),
+        "referee": fixture.get("referee"),
+        "timezone": fixture.get("timezone"),
+        "date": fixture.get("date"),
+        "timestamp": fixture.get("timestamp"),
+        "status": {
+            "long": status_block.get("long"),
+            "short": status_block.get("short"),
+            "elapsed": status_block.get("elapsed"),
+        },
+        "league": {
+            "id": league.get("id"),
+            "name": league.get("name"),
+            "country": league.get("country"),
+            "logo": league.get("logo"),
+            "flag": league.get("flag"),
+            "season": league.get("season"),
+            "round": league.get("round"),
+        },
+        "teams": {
+            "home": {
+                "id": home_team.get("id"),
+                "name": home_team.get("name"),
+                "logo": home_team.get("logo"),
+                "winner": home_team.get("winner"),
+            },
+            "away": {
+                "id": away_team.get("id"),
+                "name": away_team.get("name"),
+                "logo": away_team.get("logo"),
+                "winner": away_team.get("winner"),
+            },
+        },
+        "goals": {
+            "home": goals.get("home"),
+            "away": goals.get("away"),
+        },
+        "score": score,
+        "venue": {
+            "id": venue.get("id"),
+            "name": venue.get("name"),
+            "city": venue.get("city"),
+        },
+        "periods": {
+            "first": periods.get("first"),
+            "second": periods.get("second"),
+        },
+    }
+
+
+def _football_compact_standing(item):
+    team = item.get("team") or {}
+    all_stats = item.get("all") or {}
+    home_stats = item.get("home") or {}
+    away_stats = item.get("away") or {}
+    goals_diff = item.get("goalsDiff")
+
+    return {
+        "rank": item.get("rank"),
+        "team": {
+            "id": team.get("id"),
+            "name": team.get("name"),
+            "logo": team.get("logo"),
+        },
+        "points": item.get("points"),
+        "goals_diff": goals_diff,
+        "group": item.get("group"),
+        "form": item.get("form"),
+        "status": item.get("status"),
+        "description": item.get("description"),
+        "stats": {
+            "played": all_stats.get("played"),
+            "win": all_stats.get("win"),
+            "draw": all_stats.get("draw"),
+            "lose": all_stats.get("lose"),
+            "goals_for": (all_stats.get("goals") or {}).get("for"),
+            "goals_against": (all_stats.get("goals") or {}).get("against"),
+        },
+        "home": home_stats,
+        "away": away_stats,
+    }
+
+
+def _football_match_tournament(item, tournament_query):
+    if not tournament_query:
+        return True
+
+    league = item.get("league") or {}
+    haystack = " ".join([
+        str(league.get("name") or ""),
+        str(league.get("country") or ""),
+        str(league.get("round") or ""),
+    ]).lower()
+
+    normalized_query = str(tournament_query or "").strip().lower()
+    if not normalized_query:
+        return True
+
+    keywords = [normalized_query]
+    if normalized_query == "world cup":
+        keywords.extend(["fifa world cup", "world cup"])
+    if normalized_query == "fifa":
+        keywords.extend(["fifa world cup", "fifa"])
+
+    return any(keyword in haystack for keyword in keywords if keyword)
+
+
+def _football_fetch_fixture_block(*, headers, params, cache_key, cache_timeout, tournament=None, limit=None):
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        response = external_get(
+            "https://v3.football.api-sports.io/fixtures",
+            params=params,
+            headers=headers,
+            timeout=12,
+        )
+        payload = response.json()
+    except Exception:
+        result = {"success": False, "error": "Football service unavailable", "data": []}
+        cache.set(cache_key, result, 60)
+        return result
+
+    if response.status_code != 200:
+        result = {
+            "success": False,
+            "error": "Football API request failed",
+            "details": payload.get("errors") if isinstance(payload, dict) else payload,
+            "data": [],
+        }
+        cache.set(cache_key, result, 60)
+        return result
+
+    if isinstance(payload, dict) and payload.get("errors"):
+        result = {
+            "success": False,
+            "error": "Football API returned an authentication or query error",
+            "details": payload.get("errors"),
+            "data": [],
+        }
+        cache.set(cache_key, result, 60)
+        return result
+
+    items = payload.get("response") or []
+    if tournament:
+        items = [item for item in items if _football_match_tournament(item, tournament)]
+    if limit is not None:
+        items = items[:limit]
+
+    result = {
+        "success": True,
+        "results": len(items),
+        "data": [_football_compact_fixture(item) for item in items],
+    }
+    cache.set(cache_key, result, cache_timeout)
+    return result
+
+
+@api_view(['GET'])
+def football_leagues_api(request):
+    headers = _football_api_headers()
+    if headers is None:
+        return Response({"error": "FOOTBALL_API_KEY is not configured"}, status=503)
+
+    search = str(request.GET.get("search") or "").strip()
+    season = str(request.GET.get("season") or timezone.localdate().year).strip()
+    current = str(request.GET.get("current") or "").strip().lower()
+
+    params = {}
+    if search:
+        params["search"] = search
+    if season:
+        params["season"] = season
+    if current in {"1", "true", "yes"}:
+        params["current"] = "true"
+
+    cache_key = "football:leagues:" + urlencode(sorted(params.items()))
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    try:
+        response = external_get(
+            "https://v3.football.api-sports.io/leagues",
+            params=params,
+            headers=headers,
+            timeout=12,
+        )
+        payload = response.json()
+    except Exception:
+        return Response({"error": "Football service unavailable"}, status=502)
+
+    if response.status_code != 200:
+        errors = payload.get("errors") if isinstance(payload, dict) else None
+        return Response(
+            {
+                "error": "Football API request failed",
+                "details": errors or payload,
+            },
+            status=502,
+        )
+
+    if isinstance(payload, dict) and payload.get("errors"):
+        return Response(
+            {
+                "error": "Football API returned an authentication or query error",
+                "details": payload.get("errors"),
+            },
+            status=502,
+        )
+
+    items = payload.get("response") or []
+    result = {
+        "success": True,
+        "source": "api-football",
+        "query": {
+            "search": search or None,
+            "season": season or None,
+            "current": current in {"1", "true", "yes"},
+        },
+        "results": payload.get("results", len(items)),
+        "data": [
+            {
+                "league": {
+                    "id": (item.get("league") or {}).get("id"),
+                    "name": (item.get("league") or {}).get("name"),
+                    "type": (item.get("league") or {}).get("type"),
+                    "logo": (item.get("league") or {}).get("logo"),
+                },
+                "country": item.get("country"),
+                "seasons": item.get("seasons") or [],
+            }
+            for item in items
+        ],
+    }
+    cache.set(cache_key, result, 3600)
+    return Response(result)
+
+
+@api_view(['GET'])
+def football_overview_api(request):
+    headers = _football_api_headers()
+    if headers is None:
+        return Response({"error": "FOOTBALL_API_KEY is not configured"}, status=503)
+
+    tournament = str(request.GET.get("tournament") or "").strip()
+    timezone_name = str(request.GET.get("timezone") or "Asia/Kolkata").strip() or "Asia/Kolkata"
+    today = timezone.localdate()
+    yesterday = today - timedelta(days=1)
+    next_week = today + timedelta(days=7)
+
+    tournament_cache = slugify(tournament) or "all"
+    live_block = _football_fetch_fixture_block(
+        headers=headers,
+        params={"live": "all", "timezone": timezone_name},
+        cache_key=f"football:overview:{tournament_cache}:live",
+        cache_timeout=60,
+        tournament=tournament,
+        limit=20,
+    )
+    today_block = _football_fetch_fixture_block(
+        headers=headers,
+        params={"date": today.isoformat(), "timezone": timezone_name},
+        cache_key=f"football:overview:{tournament_cache}:today:{today.isoformat()}",
+        cache_timeout=300,
+        tournament=tournament,
+        limit=20,
+    )
+    recent_block = _football_fetch_fixture_block(
+        headers=headers,
+        params={
+            "date": today.isoformat(),
+            "timezone": timezone_name,
+            "status": "FT-AET-PEN",
+        },
+        cache_key=f"football:overview:{tournament_cache}:recent:{today.isoformat()}",
+        cache_timeout=300,
+        tournament=tournament,
+        limit=20,
+    )
+    upcoming_block = _football_fetch_fixture_block(
+        headers=headers,
+        params={
+            "date": today.isoformat(),
+            "timezone": timezone_name,
+            "status": "NS",
+        },
+        cache_key=f"football:overview:{tournament_cache}:upcoming:{today.isoformat()}",
+        cache_timeout=300,
+        tournament=tournament,
+        limit=20,
+    )
+
+    response_payload = {
+        "success": True,
+        "source": "api-football",
+        "query": {
+            "tournament": tournament or None,
+            "timezone": timezone_name,
+            "today": today.isoformat(),
+        },
+        "live": live_block,
+        "today": today_block,
+        "recent": recent_block,
+        "upcoming": upcoming_block,
+    }
+
+    if tournament and not any([
+        live_block.get("results"),
+        today_block.get("results"),
+        recent_block.get("results"),
+        upcoming_block.get("results"),
+    ]):
+        response_payload["message"] = (
+            f"No matches found for tournament '{tournament}'. "
+            "Try removing the tournament filter to verify the API is returning general football fixtures."
+        )
+
+    return Response(response_payload)
+
+
+@api_view(['GET'])
+def football_fixtures_api(request):
+    headers = _football_api_headers()
+    if headers is None:
+        return Response({"error": "FOOTBALL_API_KEY is not configured"}, status=503)
+
+    league = str(request.GET.get("league") or "39").strip()
+    season = str(request.GET.get("season") or _football_default_season()).strip()
+    team = str(request.GET.get("team") or "").strip()
+    live = str(request.GET.get("live") or "").strip().lower()
+    date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
+
+    try:
+        next_count = int(str(request.GET.get("next") or "0").strip() or "0")
+    except ValueError:
+        return Response({"error": "next must be a valid number"}, status=400)
+
+    try:
+        last_count = int(str(request.GET.get("last") or "0").strip() or "0")
+    except ValueError:
+        return Response({"error": "last must be a valid number"}, status=400)
+
+    if next_count < 0 or next_count > 20:
+        return Response({"error": "next must be between 0 and 20"}, status=400)
+
+    if last_count < 0 or last_count > 20:
+        return Response({"error": "last must be between 0 and 20"}, status=400)
+
+    if next_count and last_count:
+        return Response({"error": "Use either next or last, not both together"}, status=400)
+
+    params = {}
+    cache_scope = "date"
+    if live in {"1", "true", "yes"}:
+        params["live"] = "all"
+        cache_scope = "live"
+    elif next_count:
+        params.update({
+            "league": league,
+            "season": season,
+            "next": next_count,
+        })
+        cache_scope = f"next:{next_count}"
+    elif last_count:
+        params.update({
+            "league": league,
+            "season": season,
+            "last": last_count,
+        })
+        cache_scope = f"last:{last_count}"
+    else:
+        params.update({
+            "league": league,
+            "season": season,
+            "date": date,
+        })
+
+    if team:
+        params["team"] = team
+
+    cache_key = "football:fixtures:" + urlencode(sorted(params.items()))
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    try:
+        response = external_get(
+            "https://v3.football.api-sports.io/fixtures",
+            params=params,
+            headers=headers,
+            timeout=12,
+        )
+        payload = response.json()
+    except Exception:
+        return Response({"error": "Football service unavailable"}, status=502)
+
+    if response.status_code != 200:
+        errors = payload.get("errors") if isinstance(payload, dict) else None
+        return Response(
+            {
+                "error": "Football API request failed",
+                "details": errors or payload,
+            },
+            status=502,
+        )
+
+    if isinstance(payload, dict) and payload.get("errors"):
+        return Response(
+            {
+                "error": "Football API returned an authentication or query error",
+                "details": payload.get("errors"),
+            },
+            status=502,
+        )
+
+    items = payload.get("response") or []
+    result = {
+        "success": True,
+        "source": "api-football",
+        "query": {
+            "league": league,
+            "season": season,
+            "team": team or None,
+            "date": None if cache_scope == "live" or next_count or last_count else date,
+            "live": cache_scope == "live",
+            "next": next_count or None,
+            "last": last_count or None,
+        },
+        "results": payload.get("results", len(items)),
+        "data": [_football_compact_fixture(item) for item in items],
+    }
+    if not items:
+        result["message"] = (
+            "No fixtures found for this query. This often happens during the off-season or "
+            "when upcoming fixtures have not been published yet."
+        )
+    cache.set(cache_key, result, 60 if cache_scope == "live" else 300)
+    return Response(result)
+
+
+@api_view(['GET'])
+def football_standings_api(request):
+    headers = _football_api_headers()
+    if headers is None:
+        return Response({"error": "FOOTBALL_API_KEY is not configured"}, status=503)
+
+    league = str(request.GET.get("league") or "39").strip()
+    season = str(request.GET.get("season") or _football_default_season()).strip()
+    cache_key = f"football:standings:{league}:{season}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    try:
+        response = external_get(
+            "https://v3.football.api-sports.io/standings",
+            params={"league": league, "season": season},
+            headers=headers,
+            timeout=12,
+        )
+        payload = response.json()
+    except Exception:
+        return Response({"error": "Football service unavailable"}, status=502)
+
+    if response.status_code != 200:
+        errors = payload.get("errors") if isinstance(payload, dict) else None
+        return Response(
+            {
+                "error": "Football API request failed",
+                "details": errors or payload,
+            },
+            status=502,
+        )
+
+    if isinstance(payload, dict) and payload.get("errors"):
+        return Response(
+            {
+                "error": "Football API returned an authentication or query error",
+                "details": payload.get("errors"),
+            },
+            status=502,
+        )
+
+    response_items = payload.get("response") or []
+    if not response_items:
+        return Response({"error": "No standings data found"}, status=404)
+
+    league_block = response_items[0].get("league") or {}
+    standings_groups = league_block.get("standings") or []
+    table = []
+    for group in standings_groups:
+        for row in group:
+            table.append(_football_compact_standing(row))
+
+    result = {
+        "success": True,
+        "source": "api-football",
+        "query": {
+            "league": league,
+            "season": season,
+        },
+        "league": {
+            "id": league_block.get("id"),
+            "name": league_block.get("name"),
+            "country": league_block.get("country"),
+            "logo": league_block.get("logo"),
+            "flag": league_block.get("flag"),
+            "season": league_block.get("season"),
+        },
+        "results": len(table),
+        "data": table,
+    }
+    cache.set(cache_key, result, 1800)
+    return Response(result)
+
+
 @api_view(['GET'])
 def update_metal_rates(request):
     fetch_and_store_metal_rates(force_refresh=True)

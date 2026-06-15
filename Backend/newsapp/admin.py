@@ -200,6 +200,27 @@ def _ensure_superuser(request):
         raise PermissionDenied("You do not have access to this page. Please contact admin regarding this access.")
 
 
+def _can_bulk_manage_articles(user):
+    return bool(
+        getattr(user, 'is_authenticated', False)
+        and (
+            user.is_superuser
+            or has_permission(user, 'edit_any_article')
+            or has_permission(user, 'publish_article')
+        )
+    )
+
+
+def _bulk_article_settings_queryset():
+    return (
+        Article.objects
+        .filter(status='published', published_at__isnull=False, published_at__lte=timezone.now())
+        .select_related('author', 'assigned_to', 'primary_category')
+        .prefetch_related('categories')
+        .order_by('-published_at', '-updated_at', '-created_at')
+    )
+
+
 def _build_editorial_calendar_events(year):
     seed_rows = [
         (1, 1, "New Year's Day", "occasion", "Planning", "New-year newsroom themes, predictions, year-ahead explainers."),
@@ -1564,6 +1585,16 @@ class NewsAdminSite(AdminSite):
                 name='access_denied',
             ),
             path(
+                'settings/',
+                self.admin_view(self.settings_view),
+                name='settings',
+            ),
+            path(
+                'settings/bulk-edit/',
+                self.admin_view(self.bulk_article_edit_view),
+                name='bulk_article_edit',
+            ),
+            path(
                 'contact-queries/',
                 self.admin_view(self.contact_queries_view),
                 name='contact_queries',
@@ -1606,6 +1637,164 @@ class NewsAdminSite(AdminSite):
             },
             status=403,
         )
+
+    def settings_view(self, request):
+        if _can_bulk_manage_articles(request.user):
+            return redirect('newsadmin:bulk_article_edit')
+        return redirect('admin:password_change')
+
+    def bulk_article_edit_view(self, request):
+        if not _can_bulk_manage_articles(request.user):
+            raise PermissionDenied("You do not have access to bulk article editing.")
+
+        today = timezone.localdate()
+        query = (request.GET.get('q') or '').strip()
+        category_id = (request.GET.get('category') or '').strip()
+        author_id = (request.GET.get('author') or '').strip()
+        order_key = (request.GET.get('sort') or 'published_desc').strip()
+        page_number = request.GET.get('page', 1)
+
+        articles_qs = _bulk_article_settings_queryset()
+
+        if query:
+            articles_qs = articles_qs.filter(
+                Q(title__icontains=query)
+                | Q(slug__icontains=query)
+                | Q(author__username__icontains=query)
+                | Q(author_display_name__icontains=query)
+            )
+
+        if category_id.isdigit():
+            articles_qs = articles_qs.filter(
+                Q(categories__id=int(category_id)) | Q(primary_category_id=int(category_id))
+            ).distinct()
+
+        if author_id.isdigit():
+            articles_qs = articles_qs.filter(author_id=int(author_id))
+
+        sort_options = {
+            'published_desc': ('-published_at', '-updated_at', '-created_at'),
+            'published_asc': ('published_at', 'created_at'),
+            'updated_desc': ('-updated_at', '-published_at'),
+            'title_asc': ('title',),
+            'title_desc': ('-title',),
+        }
+        articles_qs = articles_qs.order_by(*sort_options.get(order_key, sort_options['published_desc']))
+
+        action_choices = [
+            ('draft', 'Move to Draft'),
+            ('review', 'Move to In Review'),
+            ('fact_check', 'Move to Fact Check'),
+            ('legal', 'Move to Legal Review'),
+            ('approved', 'Move to Approved'),
+            ('archived', 'Archive'),
+            ('rejected', 'Reject'),
+            ('published', 'Republish / Keep Published'),
+            ('delete', 'Delete Permanently'),
+        ]
+
+        if request.method == 'POST':
+            selected_ids = [
+                int(raw_id)
+                for raw_id in request.POST.getlist('article_ids')
+                if str(raw_id).isdigit()
+            ]
+            action = (request.POST.get('bulk_action') or '').strip()
+            selected_qs = articles_qs.filter(pk__in=selected_ids)
+
+            if not selected_ids:
+                messages.error(request, 'Select at least one article.')
+                return redirect(request.path + (f'?{request.GET.urlencode()}' if request.GET else ''))
+
+            valid_actions = {key for key, _label in action_choices}
+            if action not in valid_actions:
+                messages.error(request, 'Choose a valid bulk action.')
+                return redirect(request.path + (f'?{request.GET.urlencode()}' if request.GET else ''))
+
+            if action == 'delete' and not request.user.is_superuser:
+                messages.error(request, 'The delete action is available only to super admins.')
+                return redirect(request.path + (f'?{request.GET.urlencode()}' if request.GET else ''))
+
+            affected_count = 0
+            now = timezone.now()
+
+            for article in selected_qs:
+                if action == 'delete':
+                    article.delete()
+                    affected_count += 1
+                    continue
+
+                old_status = article.status
+                article.status = action
+                if action == 'published':
+                    if not article.published_at:
+                        article.published_at = now
+                else:
+                    article.published_at = None
+                if action != 'scheduled':
+                    article.scheduled_at = None
+
+                article.save(update_fields=['status', 'published_at', 'scheduled_at', 'updated_at'])
+
+                latest_log = (
+                    article.workflow_logs
+                    .filter(old_status=old_status, new_status=action)
+                    .order_by('-changed_at')
+                    .first()
+                )
+                if latest_log:
+                    latest_log.changed_by = request.user
+                    latest_log.remarks = 'Bulk action from settings panel'
+                    latest_log.save(update_fields=['changed_by', 'remarks'])
+
+                affected_count += 1
+
+            if action == 'delete':
+                messages.success(request, f'Permanently deleted {affected_count} articles.')
+            else:
+                action_label = dict(action_choices).get(action, action.title())
+                messages.success(request, f'Applied "{action_label}" to {affected_count} articles.')
+
+            return redirect(request.path + (f'?{request.GET.urlencode()}' if request.GET else ''))
+
+        paginator = Paginator(articles_qs, 30)
+        page_obj = paginator.get_page(page_number)
+        page_query_dict = request.GET.copy()
+        if 'page' in page_query_dict:
+            del page_query_dict['page']
+        page_query = page_query_dict.urlencode()
+
+        context = {
+            **self.each_context(request),
+            'title': 'Settings - Bulk Editing',
+            'settings_section': 'bulk_edit',
+            'page_obj': page_obj,
+            'page_query': page_query,
+            'query': query,
+            'selected_category': category_id,
+            'selected_author': author_id,
+            'selected_sort': order_key,
+            'sort_choices': [
+                ('published_desc', 'Newest publish first'),
+                ('published_asc', 'Oldest publish first'),
+                ('updated_desc', 'Recently updated'),
+                ('title_asc', 'Title A-Z'),
+                ('title_desc', 'Title Z-A'),
+            ],
+            'action_choices': action_choices,
+            'category_choices': Category.objects.order_by('name').values('id', 'name'),
+            'author_choices': (
+                User.objects
+                .filter(id__in=_bulk_article_settings_queryset().values_list('author_id', flat=True).distinct())
+                .order_by('username')
+                .values('id', 'username', 'first_name', 'last_name')
+            ),
+            'total_matching_articles': articles_qs.count(),
+            'total_published_articles': _bulk_article_settings_queryset().count(),
+            'published_today_count': _bulk_article_settings_queryset().filter(published_at__date=today).count(),
+            'today_date': today,
+        }
+        return TemplateResponse(request, 'admin/settings_bulk_edit.html', context)
 
     def leaves_view(self, request):
         today = timezone.localdate()

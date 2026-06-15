@@ -1,0 +1,288 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Settings - Bulk Editing{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .settings-breadcrumbs{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:#64748b}
+  .settings-breadcrumbs a{color:#1d4ed8;text-decoration:none;font-weight:600}
+  .settings-page{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}
+  .settings-shell,.settings-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+  .settings-shell{padding:14px;position:sticky;top:16px}
+  .settings-title{margin:0;font-size:22px;font-weight:800;color:#0f172a}
+  .settings-copy{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.5}
+  .settings-nav{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+  .settings-nav a{display:block;padding:10px 12px;border-radius:12px;color:#334155;text-decoration:none;background:#fff;border:1px solid #e2e8f0;font-weight:700}
+  .settings-nav a.active{background:#f8fafc;border-color:#cbd5e1;color:#0f172a}
+  .settings-nav small{display:block;font-size:11px;font-weight:500;color:#64748b;margin-top:4px;line-height:1.4}
+  .settings-main{display:flex;flex-direction:column;gap:20px}
+  .settings-card{padding:18px}
+  .settings-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+  .settings-head h2{margin:0;font-size:20px;color:#0f172a}
+  .settings-head p{margin:6px 0 0;color:#64748b;font-size:13px}
+  .settings-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .metric{padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}
+  .metric-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b}
+  .metric-value{margin-top:4px;font-size:22px;font-weight:800;color:#0f172a}
+  .filters-form{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+  .field-label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
+  .field-input,.field-select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;font:inherit;color:#0f172a}
+  .field-input:focus,.field-select:focus{outline:none;border-color:#1d4ed8;box-shadow:0 0 0 4px rgba(29,78,216,.10)}
+  .filter-actions{display:flex;gap:10px}
+  .btn-primary,.btn-secondary,.btn-danger{border:none;border-radius:10px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  .btn-primary{background:#0f172a;color:#fff}
+  .btn-secondary{background:#eef2ff;color:#1e3a8a}
+  .btn-danger{background:#fee2e2;color:#b91c1c}
+  .bulk-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 220px auto;gap:12px;align-items:end;padding:12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:14px}
+  .table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:14px}
+  .bulk-table{width:100%;border-collapse:collapse;min-width:1080px}
+  .bulk-table th,.bulk-table td{padding:12px 14px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+  .bulk-table th{background:#f8fafc;color:#334155;font-size:12px;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+  .bulk-table tr:hover td{background:#fcfcfd}
+  .bulk-title{font-weight:700;color:#0f172a;text-decoration:none}
+  .bulk-sub{display:block;margin-top:4px;font-size:12px;color:#64748b}
+  .badge{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .badge-published{background:#dcfce7;color:#166534}
+  .badge-draft{background:#e0f2fe;color:#0c4a6e}
+  .badge-review{background:#fef3c7;color:#92400e}
+  .badge-archived{background:#e5e7eb;color:#374151}
+  .muted{color:#64748b;font-size:12px}
+  .table-foot{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-top:16px}
+  .pager{display:flex;gap:8px;flex-wrap:wrap}
+  .pager a,.pager span{min-width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dbe3f0;text-decoration:none;color:#1f2937;background:#fff;font-weight:700}
+  .pager .active{background:#0f172a;color:#fff;border-color:#0f172a}
+  .empty-state{padding:46px 18px;text-align:center;color:#64748b}
+  @media (max-width: 1180px){
+    .settings-page{grid-template-columns:1fr}
+    .settings-shell{position:static}
+    .filters-form,.bulk-toolbar,.settings-metrics{grid-template-columns:1fr}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-breadcrumbs">
+  <a href="{% url 'admin:index' %}">Dashboard</a>
+  <span>/</span>
+  <span>Settings</span>
+  <span>/</span>
+  <span>Bulk Editing</span>
+</div>
+<div class="settings-page">
+  <aside class="settings-shell">
+    <h1 class="settings-title">Settings</h1>
+    <p class="settings-copy">Simple admin tools.</p>
+    <nav class="settings-nav">
+      <a href="{% url 'newsadmin:bulk_article_edit' %}" class="{% if settings_section == 'bulk_edit' %}active{% endif %}">
+        <span>
+          Bulk Editing
+          <small>Update published articles in bulk.</small>
+        </span>
+      </a>
+      <a href="{% url 'admin:password_change' %}">
+        <span>
+          Password
+          <small>Open the password change page.</small>
+        </span>
+      </a>
+    </nav>
+  </aside>
+
+  <section class="settings-main">
+    <div class="settings-card">
+      <div class="settings-head">
+        <div>
+          <h2>Bulk Article Editing</h2>
+          <p>This list shows all published articles up to today. Use search, filters, and bulk actions to manage them.</p>
+        </div>
+      </div>
+
+      <div class="settings-metrics">
+        <div class="metric">
+          <div class="metric-label">Matching Articles</div>
+          <div class="metric-value">{{ total_matching_articles }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">All Published Till Today</div>
+          <div class="metric-value">{{ total_published_articles }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Published Today</div>
+          <div class="metric-value">{{ published_today_count }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <form method="get" class="filters-form">
+        <div>
+          <label class="field-label" for="bulkSearch">Search articles</label>
+          <input id="bulkSearch" class="field-input" type="text" name="q" value="{{ query }}" placeholder="Title, slug, author name...">
+        </div>
+        <div>
+          <label class="field-label" for="bulkCategory">Category</label>
+          <select id="bulkCategory" class="field-select" name="category">
+            <option value="">All categories</option>
+            {% for category in category_choices %}
+              <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="bulkAuthor">Author</label>
+          <select id="bulkAuthor" class="field-select" name="author">
+            <option value="">All authors</option>
+            {% for author in author_choices %}
+              <option value="{{ author.id }}" {% if selected_author == author.id|stringformat:"s" %}selected{% endif %}>
+                {% if author.first_name or author.last_name %}{{ author.first_name }} {{ author.last_name }}{% else %}{{ author.username }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="bulkSort">Sort by</label>
+          <select id="bulkSort" class="field-select" name="sort">
+            {% for value, label in sort_choices %}
+              <option value="{{ value }}" {% if selected_sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="btn-primary">Apply</button>
+          <a href="{% url 'newsadmin:bulk_article_edit' %}" class="btn-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-card">
+      <form method="post">
+        {% csrf_token %}
+        <div class="bulk-toolbar">
+          <div>
+            <label class="field-label" for="bulkAction">Bulk action</label>
+            <select id="bulkAction" class="field-select" name="bulk_action" required>
+              <option value="">Choose action</option>
+              {% for value, label in action_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button type="submit" class="btn-primary">Apply Action</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="bulk-table">
+            <thead>
+              <tr>
+                <th style="width:52px">
+                  <input type="checkbox" id="selectAllArticles">
+                </th>
+                <th>Article</th>
+                <th>Category</th>
+                <th>Author</th>
+                <th>Status</th>
+                <th>Published</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for article in page_obj.object_list %}
+                <tr>
+                  <td>
+                    <input type="checkbox" name="article_ids" value="{{ article.id }}" class="article-check">
+                  </td>
+                  <td>
+                    <a href="{% url 'newsadmin:newsapp_article_change' article.id %}" class="bulk-title">{{ article.title }}</a>
+                    <span class="bulk-sub">{{ article.slug }}</span>
+                  </td>
+                  <td>
+                    {% for category in article.categories.all %}
+                      {{ category.name }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                      {{ article.primary_category.name|default:"-" }}
+                    {% endfor %}
+                  </td>
+                  <td>{{ article.author.get_full_name|default:article.author.username }}</td>
+                  <td>
+                    <span class="badge {% if article.status == 'published' %}badge-published{% elif article.status == 'draft' %}badge-draft{% elif article.status == 'review' %}badge-review{% else %}badge-archived{% endif %}">
+                      {{ article.get_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    {{ article.published_at|date:"d M Y" }}<br>
+                    <span class="muted">{{ article.published_at|date:"h:i A" }}</span>
+                  </td>
+                  <td>
+                    {{ article.updated_at|date:"d M Y" }}<br>
+                    <span class="muted">{{ article.updated_at|date:"h:i A" }}</span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="empty-state">No published articles matched the current filters.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </form>
+
+      {% if page_obj.paginator.count %}
+        <div class="table-foot">
+          <div class="muted">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} published articles up to {{ today_date|date:"d M Y" }}.
+          </div>
+          <div class="pager">
+            {% if page_obj.has_previous %}
+              <a href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+            {% else %}
+              <span>&lsaquo;</span>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+              {% if num == page_obj.number %}
+                <span class="active">{{ num }}</span>
+              {% elif num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
+                <a href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+              <a href="?{% if page_query %}{{ page_query }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+            {% else %}
+              <span>&rsaquo;</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var selectAll = document.getElementById('selectAllArticles');
+    var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.article-check'));
+    if (!selectAll || !checkboxes.length) {
+      return;
+    }
+
+    selectAll.addEventListener('change', function () {
+      checkboxes.forEach(function (checkbox) {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+
+    checkboxes.forEach(function (checkbox) {
+      checkbox.addEventListener('change', function () {
+        var allChecked = checkboxes.every(function (node) { return node.checked; });
+        var anyChecked = checkboxes.some(function (node) { return node.checked; });
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = anyChecked && !allChecked;
+      });
+    });
+  })();
+</script>
+{% endblock %}

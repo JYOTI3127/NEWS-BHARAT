@@ -17,6 +17,13 @@ DirectoryIndex index.html
 
   RewriteRule ^rss\.xml$ https://news4bharat.cloud/rss.xml [R=301,L]
 
+  # Article URLs should have one canonical version: no trailing slash.
+  RewriteCond %{REQUEST_URI} !^/(category|tag|author|news|article|60-seconds|assets|api)(/|$) [NC]
+  RewriteCond %{REQUEST_URI} !^/(about-us|about|contact-us|contact|privacy-policy|terms-and-conditions|terms-conditions|terms-of-service|careers|career|newsletter|disclaimer|commingsoon)(/|$) [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^([a-z0-9-]+)/([a-z0-9-]+)/$ /$1/$2 [R=301,L,NE,NC]
+
   # Article HTML proxy: keep news4bharat.com URL, fetch full SEO HTML from backend.
   # Example: /bfsi/article-slug -> /article-proxy.php?category=bfsi&slug=article-slug
   RewriteCond %{REQUEST_URI} !^/(category|tag|author|news|article|60-seconds|assets|api)(/|$) [NC]

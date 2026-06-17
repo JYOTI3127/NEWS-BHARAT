@@ -1213,18 +1213,18 @@ html {
   }
 
   .topbar-right {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 10px;
     min-width: 0;
-    flex: 0 0 auto;
+    width: 100%;
   }
 
   .topbar-search {
     min-width: 0 !important;
-    width: 180px !important;
-    max-width: 180px !important;
-    flex: 0 0 180px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
     padding: 6px 10px 6px 32px !important;
   }
 
@@ -10717,9 +10717,88 @@ body {
   }
 }
 
+@media (max-width: 700px) {
+  .admin-sidebar {
+    width: min(86vw, 320px);
+    transform: translateX(-100%);
+    transition: transform var(--duration) var(--ease);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  body.sidebar-mobile-open .admin-sidebar-backdrop {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    background: rgba(10, 18, 46, 0.22);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .admin-main {
+    margin-left: 0 !important;
+  }
+
+  .admin-topbar {
+    height: auto;
+    min-height: 72px;
+    padding: 12px 14px;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .mobile-sidebar-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .topbar-left {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .topbar-left .topbar-title {
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .topbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .topbar-search {
+    order: 3;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .topbar-search input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .topbar-add-btn {
+    padding: 8px 14px;
+  }
+
+  .sidebar-user .user-info {
+    display: none;
+  }
+
+  .admin-content {
+    padding: 16px 14px 32px;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    IMAGE SPECS BOX
-═══════════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════ */
 .img-specs-box {
   margin-top: 14px;
   background: #f8faff;

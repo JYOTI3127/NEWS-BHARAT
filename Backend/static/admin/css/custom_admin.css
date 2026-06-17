@@ -569,7 +569,9 @@ body.sidebar-collapsed .admin-main {
   inset: 0;
   border: 0;
   padding: 0;
-  background: rgba(2, 6, 23, 0.42);
+  background: rgba(10, 18, 46, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;

@@ -219,10 +219,18 @@
       <div class="panel-user-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     </a>
   </aside>
+  <button class="admin-sidebar-backdrop" id="adminSidebarBackdrop" type="button" aria-label="Close menu" onclick="closeSidebarMobile()"></button>
 
   <main class="admin-main" id="adminMain">
     <header class="admin-topbar">
       <div class="topbar-left">
+        <button class="mobile-sidebar-toggle" id="mobileSidebarToggle" type="button" aria-label="Open quick menu" aria-controls="adminSidebar" aria-expanded="false" onclick="toggleSidebar()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="7" x2="20" y2="7"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="17" x2="20" y2="17"/>
+          </svg>
+        </button>
         <h1 class="topbar-title" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span>{% block content_title %}News Admin{% endblock %}</span>
           <span id="topbarPresenceBadge" class="{% if current_user_online %}is-online{% else %}is-offline{% endif %}" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;{% if current_user_online %}background:rgba(22,163,74,.12);color:#166534;{% else %}background:rgba(107,114,128,.14);color:#4b5563;{% endif %}">
@@ -404,14 +412,27 @@
 
 <script>
 // Sidebar
-function toggleSidebar(){var s=document.getElementById('adminSidebar');s.classList.toggle('collapsed');localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));}
-(function(){if(localStorage.getItem('sidebarCollapsed')==='true'){var s=document.getElementById('adminSidebar');if(s)s.classList.add('collapsed');}})();
+function isMobileSidebarViewport(){return window.innerWidth<=700;}
+function syncSidebarToggleState(){var t=document.getElementById('mobileSidebarToggle');var s=document.getElementById('adminSidebar');if(t&&s){t.setAttribute('aria-expanded',s.classList.contains('open')?'true':'false');}}
+function openSidebarMobile(){var s=document.getElementById('adminSidebar');if(!s)return;s.classList.add('open');document.body.classList.add('sidebar-mobile-open');syncSidebarToggleState();}
+function closeSidebarMobile(){var s=document.getElementById('adminSidebar');if(!s)return;s.classList.remove('open');document.body.classList.remove('sidebar-mobile-open');syncSidebarToggleState();}
+function toggleSidebar(){var s=document.getElementById('adminSidebar');if(!s)return;if(isMobileSidebarViewport()){if(s.classList.contains('open')){closeSidebarMobile();}else{openSidebarMobile();}return;}s.classList.toggle('collapsed');localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));}
+(function(){var s=document.getElementById('adminSidebar');if(!s)return;if(localStorage.getItem('sidebarCollapsed')==='true'&&!isMobileSidebarViewport()){s.classList.add('collapsed');}syncSidebarToggleState();})();
 function toggleSub(el){var s=document.getElementById('adminSidebar');if(s.classList.contains('collapsed')){s.classList.remove('collapsed');localStorage.setItem('sidebarCollapsed','false');}el.closest('.nav-item').classList.toggle('open');}
 document.querySelectorAll('.nav-link').forEach(function(l){if(l.href===window.location.href)l.closest('.nav-item').classList.add('active');});
 (function(){var b=document.getElementById('overviewQuickBtn');if(b){var u=b.getAttribute('href');if(window.location.pathname===u||window.location.pathname==='/admin/')b.classList.add('active');}})();
 
 // Prefetch media counts for sidebar badges only
 document.addEventListener('DOMContentLoaded',function(){
+  syncSidebarToggleState();
+  window.addEventListener('resize',function(){if(!isMobileSidebarViewport()){closeSidebarMobile();}syncSidebarToggleState();});
+  document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeSidebarMobile();}});
+  document.querySelectorAll('#adminSidebar a, #adminSidebar button').forEach(function(el){
+    if(el.id==='sidebarToggle'){return;}
+    el.addEventListener('click',function(){
+      if(isMobileSidebarViewport()){closeSidebarMobile();}
+    });
+  });
   fetch('/api/media/photos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('dropdownPhotoCount');if(el)el.textContent=(d.items||[]).length;}).catch(function(){});
   fetch('/api/media/videos/',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('dropdownVideoCount');if(el)el.textContent=(d.items||[]).length;}).catch(function(){});
   loadDashboardStats();

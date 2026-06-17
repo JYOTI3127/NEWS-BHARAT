@@ -360,6 +360,279 @@ html {
   color: #7c3aed;
 }
 
+.mobile-overview-shell {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  body.admin-overview-page {
+    background:
+      radial-gradient(circle at top left, rgba(22, 44, 107, 0.08), transparent 34%),
+      linear-gradient(180deg, #f8fafc 0%, #f3f6fb 100%);
+  }
+
+  body.admin-overview-page .mobile-overview-shell {
+    display: block;
+    margin: 0 0 16px;
+  }
+
+  body.admin-overview-page .mobile-overview-hero {
+    background: linear-gradient(155deg, #162c6b 0%, #243f8f 100%);
+    color: #fff;
+    border-radius: 22px;
+    padding: 16px;
+    box-shadow: 0 18px 36px rgba(22, 44, 107, 0.18);
+  }
+
+  body.admin-overview-page .mobile-overview-hero__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.62);
+  }
+
+  body.admin-overview-page .mobile-overview-hero__title {
+    margin: 4px 0 0;
+    font-size: 20px;
+    line-height: 1.15;
+    color: #fff;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__cta {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__meta span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+    font-size: 11px;
+    color: rgba(255,255,255,0.82);
+  }
+
+  body.admin-overview-page .mobile-overview-hero__live {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  body.admin-overview-page .mobile-overview-hero__dot {
+    width: 9px;
+    height: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: #fb7185;
+    box-shadow: 0 0 0 5px rgba(251, 113, 133, 0.16);
+    flex: 0 0 auto;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__live strong,
+  body.admin-overview-page .mobile-overview-hero__live span {
+    display: block;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__live strong {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 700;
+  }
+
+  body.admin-overview-page .mobile-overview-hero__live span {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.72);
+  }
+
+  body.admin-overview-page .mobile-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  body.admin-overview-page .mobile-quick-action {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 18px;
+    padding: 14px 12px;
+    text-decoration: none;
+    color: #0f172a;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  body.admin-overview-page .mobile-quick-action__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.admin-overview-page .mobile-quick-action__icon--blue { background: #e6f0ff; color: #185fa5; }
+  body.admin-overview-page .mobile-quick-action__icon--green { background: #eaf7ef; color: #1f7a46; }
+  body.admin-overview-page .mobile-quick-action__icon--amber { background: #fdf1dc; color: #9a5b12; }
+  body.admin-overview-page .mobile-quick-action__icon--red { background: #fde9e8; color: #b42318; }
+
+  body.admin-overview-page .mobile-quick-action__title {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  body.admin-overview-page .mobile-quick-action__meta {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.45;
+  }
+
+  body.admin-overview-page .dash-subtitle {
+    display: none;
+  }
+
+  body.admin-overview-page .dash-subtitle {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  body.admin-overview-page .dash-card,
+  body.admin-overview-page .kpi-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  body.admin-overview-page .dash-card-header {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  body.admin-overview-page .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  body.admin-overview-page .kpi-card--live-updates {
+    grid-column: 1 / -1;
+  }
+
+  body.admin-overview-page .kpi-card-header {
+    margin-bottom: 10px;
+  }
+
+  body.admin-overview-page .kpi-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  body.admin-overview-page .kpi-value {
+    min-height: 0;
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  body.admin-overview-page .kpi-trend {
+    font-size: 11px;
+  }
+
+  body.admin-overview-page .stat-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0 2px 4px;
+    scrollbar-width: none;
+  }
+
+  body.admin-overview-page .stat-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.admin-overview-page .stat-pill {
+    flex: 0 0 auto;
+    padding: 8px 12px 8px 8px;
+    background: rgba(255,255,255,0.92);
+    border-color: rgba(148, 163, 184, 0.18);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  }
+
+  body.admin-overview-page .stat-pill__icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  body.admin-overview-page .stat-pill__val {
+    font-size: 13px;
+  }
+
+  body.admin-overview-page .stat-pill__label {
+    font-size: 11px;
+  }
+
+  body.admin-overview-page .team-dashboard-section,
+  body.admin-overview-page .attendance-dashboard-row {
+    margin-top: 14px;
+  }
+
+  body.admin-overview-page .team-member-grid,
+  body.admin-overview-page .attendance-dashboard-row,
+  body.admin-overview-page .attendance-dashboard-stats,
+  body.admin-overview-page .attendance-action-panel__highlights {
+    grid-template-columns: 1fr;
+  }
+
+  body.admin-overview-page .team-member-card,
+  body.admin-overview-page .attendance-dashboard-person,
+  body.admin-overview-page .attendance-action-panel {
+    border-radius: 18px;
+  }
+
+  body.admin-overview-page .team-member-card__head,
+  body.admin-overview-page .attendance-dashboard-person {
+    gap: 10px;
+  }
+
+  body.admin-overview-page .attendance-dashboard-person {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  body.admin-overview-page .attendance-dashboard-person__meta,
+  body.admin-overview-page .attendance-dashboard-person__side,
+  body.admin-overview-page .attendance-action-panel__buttons {
+    width: 100%;
+  }
+}
+
 .stat-pill__val {
   font-weight: 700;
   color: var(--clr-text-900);

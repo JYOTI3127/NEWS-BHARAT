@@ -181,6 +181,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://news4bharat.com",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:3000",
 ]
 CORS_PREFLIGHT_MAX_AGE = 3600
 
@@ -470,3 +471,6 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "private_key.pem")
 VAPID_CLAIMS = {
     "sub": f"mailto:{os.environ.get('VAPID_CLAIMS_EMAIL', 'news4bharat11@gmail.com')}"
 }
+
+GOOGLE_ANALYTICS_ID = "G-NR6G1PPS6N"  
+

@@ -199,7 +199,27 @@ def _render_once(slug):
             success_status = str(getattr(settings, "FRONTEND_PRERENDER_SUCCESS_STATUS", "200") or "200").strip()
             non_retry_statuses = set(getattr(settings, "FRONTEND_PRERENDER_NON_RETRY_STATUSES", ("404", "500")) or ())
             if status == success_status:
+                try:
+                    page.wait_for_function(
+                        "() => !!document.querySelector('meta[property=\"og:title\"]')?.getAttribute('content')",
+                        timeout=5000,
+                    )
+                except Exception:
+                    _log(logging.WARNING, "og:title meta tag not found after wait slug=%s", slug)
+
                 html = page.content()
+
+                # GA tags inject karo closing </head> se pehle
+                ga_id = str(getattr(settings, "GOOGLE_ANALYTICS_ID", "") or "").strip()
+                if ga_id:
+                    ga_script = f"""<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
+                    <script>
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){{dataLayer.push(arguments);}}
+                    gtag('js', new Date());
+                    gtag('config', '{ga_id}');
+                    </script>"""
+                    html = html.replace("</head>", ga_script + "</head>", 1)
             elif status in non_retry_statuses:
                 raise NonRetryablePrerenderError(f"Frontend prerender reported terminal status {status} for slug '{slug}'.")
             else:
@@ -210,7 +230,6 @@ def _render_once(slug):
     html_file.write_text(html, encoding="utf-8")
     _log(logging.INFO, "Prerender HTML saved slug=%s file=%s", slug, html_file)
     return html_file
-
 
 def _upload_once(local_file, slug):
     remote_user = str(getattr(settings, "FRONTEND_PRERENDER_REMOTE_USER", "") or "").strip()

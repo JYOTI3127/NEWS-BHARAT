@@ -293,7 +293,7 @@
   <!-- LEFT: POSTED IMAGES -->
   <div class="art-images-section">
     <div class="art-section-header">
-      <div class="art-section-title">
+      <div class="art-section-title">++++++++
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Posted Images
       </div>
@@ -373,7 +373,6 @@
       {% endfor %}
     </div>
   </div>
-
 </div>
 
 <!-- ══════════════════════════════════════════ -->
@@ -393,6 +392,7 @@
     <p class="del-modal__msg">
       Are you sure you want to permanently delete<br>
       <strong id="delArticleTitle"></strong>?<br>
+      
       <span class="del-modal__warn">This action cannot be undone.</span>
     </p>
     <div class="del-modal__actions">
@@ -515,7 +515,7 @@ function fallbackCopyText(text) {
   textarea.style.position = 'fixed';
   textarea.style.opacity = '0';
   document.body.appendChild(textarea);
-  textarea.focus();
+  textarea.focus(); 
   textarea.select();
   document.execCommand('copy');
   document.body.removeChild(textarea);

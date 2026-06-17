@@ -40,7 +40,7 @@ def _normalize_version_html(value):
 
 def _build_unique_article_slug(*, title="", requested_slug="", article_id=None):
     base_source = str(requested_slug or "").strip() or str(title or "").strip()
-    base_slug = slugify(base_source)[:100].strip("-") or "article"
+    base_slug = slugify(base_source)[:255].strip("-") or "article"
     candidate = base_slug
     suffix = 2
 
@@ -52,7 +52,7 @@ def _build_unique_article_slug(*, title="", requested_slug="", article_id=None):
             return candidate
 
         suffix_text = f"-{suffix}"
-        trimmed_base = base_slug[: max(1, 100 - len(suffix_text))].strip("-") or "article"
+        trimmed_base = base_slug[: max(1, 255 - len(suffix_text))].strip("-") or "article"
         candidate = f"{trimmed_base}{suffix_text}"
         suffix += 1
 
@@ -171,7 +171,7 @@ class Article(models.Model):
     author_display_articles_count = models.PositiveIntegerField(default=0)
  
     # ── SEO fields ──
-    slug             = models.SlugField(max_length=100, unique=True, blank=True)
+    slug             = models.SlugField(max_length=255, unique=True, blank=True)
     canonical_url    = models.URLField(blank=True)
     meta_title       = models.TextField(blank=True, default='')
     meta_description = models.TextField(blank=True)

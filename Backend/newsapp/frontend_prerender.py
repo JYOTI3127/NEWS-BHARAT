@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import subprocess
 from contextlib import contextmanager
 from datetime import datetime
@@ -219,7 +220,11 @@ def _render_once(slug):
                     gtag('js', new Date());
                     gtag('config', '{ga_id}');
                     </script>"""
-                    html = html.replace("</head>", ga_script + "</head>", 1)
+                    head_close_pattern = re.compile(r"</head>", re.IGNORECASE)
+                    if head_close_pattern.search(html):
+                        html = head_close_pattern.sub(ga_script + "</head>", html, count=1)
+                    else:
+                        _log(logging.WARNING, "GA4 injection skipped because </head> tag not found for slug=%s", slug)
             elif status in non_retry_statuses:
                 raise NonRetryablePrerenderError(f"Frontend prerender reported terminal status {status} for slug '{slug}'.")
             else:

@@ -4,6 +4,7 @@
 {% if article_version_preview %}
 {{ article_version_preview.content|json_script:"article-version-preview-content" }}
 {% endif %}
+{{ article_inline_comments|json_script:"article-inline-comments-data" }}
 
 {% block title %}Articles Management{% endblock %}
 
@@ -35,6 +36,386 @@ label.image-drop {
   border: 1px solid #dbe3f0;
   border-radius: 16px;
   background: linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
+}
+.inline-comments-panel {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid #dbe3f0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+}
+.inline-comments-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.inline-comments-panel__title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #162c6b;
+}
+.inline-comments-panel__note {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.inline-comments-empty {
+  padding: 12px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+  font-size: 12px;
+  color: #64748b;
+}
+.inline-comments-list {
+  display: grid;
+  gap: 10px;
+}
+.inline-comment-card {
+  padding: 12px 14px;
+  border: 1px solid #dbe3f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.inline-comment-card:hover,
+.inline-comment-card.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+}
+.inline-comment-card.is-resolved {
+  opacity: 0.72;
+}
+.inline-comment-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.inline-comment-card__author {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.inline-comment-card__time {
+  font-size: 11px;
+  color: #64748b;
+}
+.inline-comment-card__quote {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  font-size: 12px;
+  color: #1e3a8a;
+  line-height: 1.5;
+}
+.inline-comment-card__body {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+}
+.inline-comment-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.inline-comment-card__btn {
+  border: none;
+  border-radius: 999px;
+  background: #e8f0ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.inline-comment-card__btn.is-muted {
+  background: #eef2ff;
+  color: #475569;
+}
+.nb-toolbar-comment-btn {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+  color: #fff !important;
+  font-weight: 700;
+}
+.article-inline-comment {
+  background: rgba(250, 204, 21, 0.28);
+  border-bottom: 2px solid rgba(245, 158, 11, 0.95);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.article-inline-comment::after {
+  content: attr(data-comment-marker);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.article-inline-comment.is-active {
+  background: rgba(59, 130, 246, 0.22);
+  border-bottom-color: #2563eb;
+}
+.article-inline-comment.is-resolved {
+  background: rgba(148, 163, 184, 0.18);
+  border-bottom-color: #94a3b8;
+}
+.inline-comment-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+.inline-comment-modal.show {
+  display: flex;
+}
+.inline-comment-modal__panel {
+  width: min(520px, 100%);
+  padding: 18px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.26);
+}
+.inline-comment-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.inline-comment-modal__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.inline-comment-modal__sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+.inline-comment-modal__close {
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+}
+.inline-comment-modal__quote {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.inline-comment-modal__input {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  resize: vertical;
+  font: inherit;
+  color: #0f172a;
+}
+.inline-comment-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.inline-comment-modal__btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inline-comment-modal__btn--ghost {
+  background: #e2e8f0;
+  color: #334155;
+}
+.inline-comment-modal__btn--primary {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+  color: #fff;
+}
+.inline-comment-thread-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2600;
+}
+.inline-comment-thread {
+  position: fixed;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(76vh, 620px);
+  border: 1px solid #dbe3f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.22);
+  pointer-events: auto;
+  overflow: hidden;
+}
+.inline-comment-thread::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 24px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-left: 1px solid #dbe3f0;
+  border-bottom: 1px solid #dbe3f0;
+  transform: rotate(45deg);
+}
+.inline-comment-thread--left::before {
+  left: auto;
+  right: -10px;
+  border-left: none;
+  border-bottom: none;
+  border-right: 1px solid #dbe3f0;
+  border-top: 1px solid #dbe3f0;
+}
+.inline-comment-thread__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);
+}
+.inline-comment-thread__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #162c6b;
+  letter-spacing: 0.03em;
+}
+.inline-comment-thread__quote {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #475569;
+}
+.inline-comment-thread__close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+.inline-comment-thread__list {
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px 16px 10px;
+  display: grid;
+  gap: 12px;
+}
+.inline-comment-bubble {
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.inline-comment-bubble--reply {
+  margin-left: 22px;
+  background: #ffffff;
+}
+.inline-comment-bubble__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.inline-comment-bubble__author {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.inline-comment-bubble__time {
+  font-size: 11px;
+  color: #64748b;
+}
+.inline-comment-bubble__body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
+}
+.inline-comment-thread__composer {
+  padding: 12px 16px 16px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+.inline-comment-thread__input {
+  width: 100%;
+  min-height: 88px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 11px 12px;
+  resize: vertical;
+  font: inherit;
+  color: #0f172a;
+}
+.inline-comment-thread__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+.inline-comment-thread__btn {
+  border: none;
+  border-radius: 999px;
+  padding: 9px 15px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inline-comment-thread__btn--ghost {
+  background: #e2e8f0;
+  color: #334155;
+}
+.inline-comment-thread__btn--primary {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .inline-comments-panel__head,
+  .readability-panel__head,
+  .readability-grid {
+    display: block;
+  }
+  .readability-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .readability-panel__head {
   display: flex;
@@ -1355,6 +1736,9 @@ grammarly-button,
   <button onclick="nbInlineInsertLink()" title="Insert Link" id="nb_it_link">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
   </button>
+  <button onclick="openInlineCommentComposer()" title="Add Comment" id="nb_it_comment" style="padding:4px 8px;min-width:auto;">
+    Comment
+  </button>
   <button onclick="nbInsertInlineImage()" title="Insert Image">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
   </button>
@@ -1537,6 +1921,7 @@ grammarly-button,
         <button type="button" class="ai-spell-btn" onclick="runHumanize()"><div class="ai-dot"></div>&#10022; Humanize</button>
         <button type="button" class="ai-spell-btn" onclick="runSentenceSuggest()"><div class="ai-dot"></div>&#10022; Sentence Suggest</button>
         <button type="button" class="plag-btn" id="nb_plagBtn" onclick="runPlagiarismCheck()" title="Check Plagiarism Score">Plagiarism Check</button>
+        <button type="button" class="nb-toolbar-comment-btn" onclick="openInlineCommentComposer()" title="Add an inline comment to the selected text">Comment</button>
       </div>
 
       <div class="nb-content-area" id="ui_content" contenteditable="true" data-placeholder="Start writing your article..." data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">{% if original %}{{ original.content_raw|default:original.content|default:''|safe }}{% endif %}</div>
@@ -1557,13 +1942,24 @@ grammarly-button,
       </div>
     </div>
 
-    <div class="nb-section-title" id="editorial-comments">Editorial Comments</div>
-    <div class="comment-input-row">
-      <input type="text" id="comment_inp" placeholder="Add a note or editorial comment..." />
-      <button onclick="addComment()">Add</button>
-    </div>
-    <div class="comments-list" id="comments_list">
-      <div style="font-size:12px;color:var(--muted);padding:8px 0;">No comments yet.</div>
+    <div id="inline-comments" class="inline-comment-thread-layer" aria-live="polite">
+      <div class="inline-comment-thread" id="inline_comment_thread" style="display:none;">
+        <div class="inline-comment-thread__head">
+          <div>
+            <div class="inline-comment-thread__title" id="inline_comment_thread_title">Comment Thread</div>
+            <div class="inline-comment-thread__quote" id="inline_comment_quote">Select text in the editor to comment on it.</div>
+          </div>
+          <button type="button" class="inline-comment-thread__close" id="inline_comment_thread_close">&times;</button>
+        </div>
+        <div class="inline-comment-thread__list" id="inline_comment_thread_list"></div>
+        <div class="inline-comment-thread__composer">
+          <textarea id="inline_comment_input" class="inline-comment-thread__input" placeholder="Write a comment or reply in English..."></textarea>
+          <div class="inline-comment-thread__actions">
+            <button type="button" class="inline-comment-thread__btn inline-comment-thread__btn--ghost" id="inline_comment_resolve_btn">Resolve</button>
+            <button type="button" class="inline-comment-thread__btn inline-comment-thread__btn--primary" id="inline_comment_modal_submit">Send</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="readability-panel" id="readability_panel">
       <div class="readability-panel__head">
@@ -5463,27 +5859,395 @@ async function runPlagiarismCheck(){
 /* ══════════════════════════════════════════════
    COMMENTS
 ══════════════════════════════════════════════ */
-const localComments=[];
-function addComment(){
-  const inp=document.getElementById('comment_inp');
-  if(!inp)return;
-  const text=inp.value.trim();
-  if(!text)return;
-  localComments.push({text:text,time:new Date().toLocaleTimeString()});
-  renderComments();
-  inp.value='';
+const inlineCommentsDataEl=document.getElementById('article-inline-comments-data');
+const inlineCommentThread=document.getElementById('inline_comment_thread');
+const inlineCommentInput=document.getElementById('inline_comment_input');
+const inlineCommentQuote=document.getElementById('inline_comment_quote');
+const inlineCommentThreadList=document.getElementById('inline_comment_thread_list');
+const inlineCommentResolveBtn=document.getElementById('inline_comment_resolve_btn');
+let inlineCommentDraftRange=null;
+let activeInlineCommentId='';
+let inlineCommentDraftQuote='';
+const inlineCommentsState=(function(){
+  try{
+    return JSON.parse(inlineCommentsDataEl?inlineCommentsDataEl.textContent:'[]')||[];
+  }catch(err){
+    return [];
+  }
+})();
+function _inlineCommentNowLabel(){
+  return new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
-function renderComments(){
-  const el=document.getElementById('comments_list');
-  if(!el)return;
-  if(!localComments.length){
-    el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No comments yet.</div>';
+function _inlineCommentUid(){
+  return 'ic_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+}
+function _findInlineComment(commentId){
+  return inlineCommentsState.find(function(item){ return item.comment_id===commentId; })||null;
+}
+async function _persistInlineComments(){
+  if(!_asArticleId)return;
+  try{
+    const res=await fetch('/api/articles/'+_asArticleId+'/inline-comments/',{
+      method:'POST',
+      credentials:'same-origin',
+      headers:{
+        'Content-Type':'application/json',
+        'X-CSRFToken':getCsrf()
+      },
+      body:JSON.stringify({
+        inline_comments_payload: JSON.parse(_buildInlineCommentsPayload())
+      })
+    });
+    if(!res.ok)throw new Error('Comment save failed');
+    const data=await res.json().catch(function(){ return {}; });
+    if(Array.isArray(data.comments)){
+      inlineCommentsState.length=0;
+      data.comments.forEach(function(item){ inlineCommentsState.push(item); });
+    }
+    return true;
+  }catch(err){
+    console.warn('Inline comment autosave failed:', err);
+    return false;
+  }
+}
+async function _loadInlineCommentsFromServer(){
+  if(!_asArticleId)return false;
+  try{
+    const res=await fetch('/api/articles/'+_asArticleId+'/inline-comments/',{
+      credentials:'same-origin'
+    });
+    if(!res.ok)throw new Error('Comment load failed');
+    const data=await res.json().catch(function(){ return {}; });
+    if(Array.isArray(data.comments)){
+      inlineCommentsState.length=0;
+      data.comments.forEach(function(item){ inlineCommentsState.push(item); });
+      return true;
+    }
+  }catch(err){
+    console.warn('Inline comment load failed:', err);
+  }
+  return false;
+}
+function _restoreInlineCommentMarkersFromState(){
+  const editor=document.getElementById('ui_content');
+  if(!editor||!inlineCommentsState.length)return;
+  inlineCommentsState.forEach(function(comment){
+    if(!comment||!comment.comment_id)return;
+    if(editor.querySelector('.article-inline-comment[data-comment-id="'+comment.comment_id+'"]'))return;
+    const targetText=String(comment.quoted_text||'').trim();
+    if(!targetText)return;
+    const walker=document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node){
+        if(!node.nodeValue || !node.nodeValue.trim())return NodeFilter.FILTER_REJECT;
+        if(node.parentElement && node.parentElement.closest('.article-inline-comment'))return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const textNodes=[];
+    let fullText='';
+    let current;
+    while((current=walker.nextNode())){
+      textNodes.push({node:current,start:fullText.length,end:fullText.length+current.nodeValue.length});
+      fullText+=current.nodeValue;
+    }
+    const startIndex=fullText.indexOf(targetText);
+    if(startIndex===-1)return;
+    const endIndex=startIndex+targetText.length;
+    let startRef=null, endRef=null;
+    textNodes.forEach(function(entry){
+      if(!startRef && startIndex>=entry.start && startIndex<entry.end){
+        startRef={node:entry.node,offset:startIndex-entry.start};
+      }
+      if(!endRef && endIndex>entry.start && endIndex<=entry.end){
+        endRef={node:entry.node,offset:endIndex-entry.start};
+      }
+    });
+    if(!startRef || !endRef)return;
+    try{
+      const range=document.createRange();
+      range.setStart(startRef.node, startRef.offset);
+      range.setEnd(endRef.node, endRef.offset);
+      _wrapInlineCommentRange(range, comment.comment_id);
+    }catch(err){}
+  });
+}
+function _selectionInsideEditor(){
+  const editor=document.getElementById('ui_content');
+  const selection=window.getSelection?window.getSelection():null;
+  if(!editor||!selection||!selection.rangeCount)return null;
+  const range=selection.getRangeAt(0);
+  const anchor=range.commonAncestorContainer;
+  if(!editor.contains(anchor))return null;
+  return {editor:editor,selection:selection,range:range};
+}
+function _closestInlineCommentNode(node){
+  if(!node)return null;
+  if(node.nodeType===1){
+    return node.closest ? node.closest('.article-inline-comment') : null;
+  }
+  return node.parentElement && node.parentElement.closest ? node.parentElement.closest('.article-inline-comment') : null;
+}
+function _findInlineCommentAnchorFromRange(range){
+  if(!range)return null;
+  var direct=_closestInlineCommentNode(range.commonAncestorContainer)
+    || _closestInlineCommentNode(range.startContainer)
+    || _closestInlineCommentNode(range.endContainer);
+  if(direct)return direct;
+
+  var editor=document.getElementById('ui_content');
+  if(!editor)return null;
+  var matches=Array.from(editor.querySelectorAll('.article-inline-comment[data-comment-id]'));
+  for(var i=0;i<matches.length;i++){
+    var node=matches[i];
+    try{
+      if(range.intersectsNode(node))return node;
+    }catch(err){}
+  }
+  return null;
+}
+function _findInlineCommentByQuotedText(text){
+  var normalized=String(text||'').replace(/\s+/g,' ').trim();
+  if(!normalized)return null;
+  return inlineCommentsState.find(function(item){
+    return String((item&&item.quoted_text)||'').replace(/\s+/g,' ').trim()===normalized;
+  })||null;
+}
+function _normalizeInlineCommentMarkers(){
+  const editor=document.getElementById('ui_content');
+  if(!editor)return;
+  Array.from(editor.querySelectorAll('.article-inline-comment[data-comment-id]')).forEach(function(node,index){
+    node.setAttribute('data-comment-marker', String(index+1));
+    const comment=_findInlineComment(node.getAttribute('data-comment-id')||'');
+    node.classList.toggle('is-resolved', !!(comment&&comment.is_resolved));
+    node.classList.toggle('is-active', (node.getAttribute('data-comment-id')||'')===activeInlineCommentId);
+  });
+}
+function _closeInlineCommentThread(){
+  activeInlineCommentId='';
+  inlineCommentDraftRange=null;
+  inlineCommentDraftQuote='';
+  if(inlineCommentInput)inlineCommentInput.value='';
+  if(inlineCommentThread)inlineCommentThread.style.display='none';
+  _normalizeInlineCommentMarkers();
+}
+function _renderInlineCommentThread(comment){
+  if(!inlineCommentThread||!inlineCommentThreadList||!inlineCommentQuote)return;
+  inlineCommentQuote.textContent=comment&&comment.quoted_text ? '"'+comment.quoted_text+'"' : (inlineCommentDraftQuote || 'Selected text');
+  if(inlineCommentResolveBtn){
+    inlineCommentResolveBtn.textContent=comment&&comment.is_resolved ? 'Reopen' : 'Resolve';
+  }
+  if(!comment){
+    inlineCommentThreadList.innerHTML='';
     return;
   }
-  el.innerHTML=localComments.map(function(c){
-    return '<div class="comment-item"><div class="c-author">You · '+c.time+'</div>'+c.text+'</div>';
-  }).join('');
+  const replies=Array.isArray(comment.replies)?comment.replies:[];
+  inlineCommentThreadList.innerHTML=
+    '<div class="inline-comment-bubble"><div class="inline-comment-bubble__meta"><div class="inline-comment-bubble__author">'+_escapeHtml(comment.author_name||'You')+'</div><div class="inline-comment-bubble__time">'+_escapeHtml(comment.created_at||'Just now')+'</div></div><div class="inline-comment-bubble__body">'+_escapeHtml(comment.body)+'</div></div>'+
+    replies.map(function(reply){
+      return '<div class="inline-comment-bubble inline-comment-bubble--reply"><div class="inline-comment-bubble__meta"><div class="inline-comment-bubble__author">'+_escapeHtml(reply.author_name||'You')+'</div><div class="inline-comment-bubble__time">'+_escapeHtml(reply.created_at||'Just now')+'</div></div><div class="inline-comment-bubble__body">'+_escapeHtml(reply.body||'')+'</div></div>';
+    }).join('');
 }
+function _positionInlineCommentThread(targetNode){
+  if(!inlineCommentThread||!targetNode)return;
+  inlineCommentThread.style.display='block';
+  const rect=targetNode.getBoundingClientRect();
+  const cardRect=inlineCommentThread.getBoundingClientRect();
+  const gap=18;
+  let left=rect.right+gap;
+  let top=Math.max(88, Math.min(rect.top-18, window.innerHeight-cardRect.height-20));
+  let placeLeft=false;
+  if(left+cardRect.width>window.innerWidth-20){
+    left=Math.max(20, rect.left-cardRect.width-gap);
+    placeLeft=true;
+  }
+  if(left<20){
+    left=Math.max(20, window.innerWidth-cardRect.width-20);
+  }
+  inlineCommentThread.style.left=Math.round(left)+'px';
+  inlineCommentThread.style.top=Math.round(top)+'px';
+  inlineCommentThread.classList.toggle('inline-comment-thread--left', placeLeft);
+}
+function _focusThreadForNode(node, commentId){
+  activeInlineCommentId=commentId||'';
+  _normalizeInlineCommentMarkers();
+  const comment=_findInlineComment(commentId);
+  _renderInlineCommentThread(comment);
+  _positionInlineCommentThread(node);
+  if(inlineCommentInput)inlineCommentInput.focus();
+}
+function focusInlineComment(commentId){
+  const marker=document.querySelector('.article-inline-comment[data-comment-id="'+commentId+'"]');
+  if(!marker)return;
+  _focusThreadForNode(marker, commentId);
+}
+function openInlineCommentComposer(){
+  const selectionState=_selectionInsideEditor();
+  if(!selectionState){
+    alert('Select text inside the article editor before adding a comment.');
+    return;
+  }
+  const selectedText=String(selectionState.selection.toString()||'').replace(/\s+/g,' ').trim();
+  if(!selectedText){
+    alert('Please highlight the text you want to comment on.');
+    return;
+  }
+  const anchorNode=selectionState.range.commonAncestorContainer.nodeType===1
+    ? selectionState.range.commonAncestorContainer
+    : selectionState.range.commonAncestorContainer.parentElement;
+  const existingAnchor=_findInlineCommentAnchorFromRange(selectionState.range);
+  if(existingAnchor){
+    focusInlineComment(existingAnchor.getAttribute('data-comment-id')||'');
+    return;
+  }
+  const existingComment=_findInlineCommentByQuotedText(selectedText);
+  if(existingComment){
+    _restoreInlineCommentMarkersFromState();
+    focusInlineComment(existingComment.comment_id||'');
+    return;
+  }
+  const fragment=selectionState.range.cloneContents();
+  if(fragment&&fragment.querySelector&&fragment.querySelector('p,div,ul,ol,li,table,blockquote,h1,h2,h3,h4,h5,h6')){
+    alert('Please select text from a single line or paragraph for one inline comment.');
+    return;
+  }
+  inlineCommentDraftRange=selectionState.range.cloneRange();
+  inlineCommentDraftQuote=selectedText;
+  activeInlineCommentId='';
+  _normalizeInlineCommentMarkers();
+  _renderInlineCommentThread(null);
+  _positionInlineCommentThread(anchorNode.nodeType===1?anchorNode:(anchorNode&&anchorNode.parentElement?anchorNode.parentElement:selectionState.editor));
+  if(inlineCommentInput){
+    inlineCommentInput.value='';
+    inlineCommentInput.focus();
+  }
+}
+function _wrapInlineCommentRange(range, commentId){
+  const span=document.createElement('span');
+  span.className='article-inline-comment';
+  span.setAttribute('data-comment-id', commentId);
+  const fragment=range.extractContents();
+  span.appendChild(fragment);
+  range.insertNode(span);
+  return span;
+}
+async function _submitInlineComment(){
+  if(!inlineCommentInput)return;
+  const body=inlineCommentInput.value.trim();
+  if(!body){
+    alert('Please write a comment before sending it.');
+    return;
+  }
+  if(activeInlineCommentId){
+    const thread=_findInlineComment(activeInlineCommentId);
+    if(!thread)return;
+    if(!Array.isArray(thread.replies))thread.replies=[];
+    thread.replies.push({
+      body:body,
+      author_name:'You',
+      created_at:_inlineCommentNowLabel()
+    });
+    inlineCommentInput.value='';
+    focusInlineComment(activeInlineCommentId);
+    await _persistInlineComments();
+    return;
+  }
+  if(!inlineCommentDraftRange){
+    alert('Select text inside the article editor before adding a comment.');
+    return;
+  }
+  const commentId=_inlineCommentUid();
+  const marker=_wrapInlineCommentRange(inlineCommentDraftRange, commentId);
+  inlineCommentsState.push({
+    comment_id:commentId,
+    body:body,
+    quoted_text:inlineCommentDraftQuote,
+    is_resolved:false,
+    author_name:'You',
+    created_at:_inlineCommentNowLabel(),
+    replies:[]
+  });
+  inlineCommentInput.value='';
+  inlineCommentDraftRange=null;
+  inlineCommentDraftQuote='';
+  _focusThreadForNode(marker, commentId);
+  await _persistInlineComments();
+}
+function _toggleInlineCommentResolved(commentId){
+  const comment=_findInlineComment(commentId);
+  if(!comment)return;
+  comment.is_resolved=!comment.is_resolved;
+  focusInlineComment(commentId);
+  _persistInlineComments();
+}
+function _buildInlineCommentsPayload(){
+  const editor=document.getElementById('ui_content');
+  if(!editor)return JSON.stringify([]);
+  const presentIds=new Set(Array.from(editor.querySelectorAll('.article-inline-comment[data-comment-id]')).map(function(node){
+    return node.getAttribute('data-comment-id')||'';
+  }).filter(Boolean));
+  return JSON.stringify(inlineCommentsState.filter(function(comment){
+    return presentIds.has(comment.comment_id);
+  }).map(function(comment){
+    return {
+      comment_id:comment.comment_id,
+      body:comment.body,
+      quoted_text:comment.quoted_text||'',
+      is_resolved:!!comment.is_resolved,
+      replies:(Array.isArray(comment.replies)?comment.replies:[]).map(function(reply){
+        return { body: reply.body||'' };
+      })
+    };
+  }));
+}
+if(document.getElementById('inline_comment_thread_close')){
+  document.getElementById('inline_comment_thread_close').addEventListener('click',_closeInlineCommentThread);
+}
+if(document.getElementById('inline_comment_modal_submit')){
+  document.getElementById('inline_comment_modal_submit').addEventListener('click',_submitInlineComment);
+}
+if(inlineCommentResolveBtn){
+  inlineCommentResolveBtn.addEventListener('click',function(){
+    if(activeInlineCommentId)_toggleInlineCommentResolved(activeInlineCommentId);
+  });
+}
+if(inlineCommentInput){
+  inlineCommentInput.addEventListener('keydown',function(event){
+    if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){
+      event.preventDefault();
+      _submitInlineComment();
+    }
+  });
+}
+if(document.getElementById('ui_content')){
+  document.getElementById('ui_content').addEventListener('click',function(event){
+    const anchor=event.target.closest('.article-inline-comment');
+    if(anchor){
+      focusInlineComment(anchor.getAttribute('data-comment-id')||'');
+      return;
+    }
+    if(!event.target.closest('#nb_inline_toolbar')){
+      _closeInlineCommentThread();
+    }
+  });
+}
+document.addEventListener('mousedown', function(event){
+  if(!inlineCommentThread||inlineCommentThread.style.display==='none')return;
+  if(event.target.closest('#inline_comment_thread')||event.target.closest('.article-inline-comment')||event.target.closest('#nb_inline_toolbar')||event.target.closest('.nb-toolbar-comment-btn')){
+    return;
+  }
+  _closeInlineCommentThread();
+});
+window.addEventListener('scroll', function(){
+  if(activeInlineCommentId)focusInlineComment(activeInlineCommentId);
+}, {passive:true});
+window.addEventListener('resize', function(){
+  if(activeInlineCommentId)focusInlineComment(activeInlineCommentId);
+});
+(async function initInlineComments(){
+  await _loadInlineCommentsFromServer();
+  _restoreInlineCommentMarkersFromState();
+  _normalizeInlineCommentMarkers();
+})();
 function _readabilityTextFromEditor(){
   var editor=document.getElementById('ui_content');
   if(!editor)return '';
@@ -6784,6 +7548,7 @@ async function submitArticle(forceStatus){
   formData.append('title',title);
   formData.append('subtitle',document.getElementById('ui_subtitle')?document.getElementById('ui_subtitle').value:'');
   formData.append('content',content);
+  formData.append('inline_comments_payload',_buildInlineCommentsPayload());
   formData.append('status',effectiveStatus);
   formData.append('publish_date_mode',publishDateMode);
   formData.append('priority',document.getElementById('ui_priority')?document.getElementById('ui_priority').value:'5');
@@ -7920,14 +8685,17 @@ window.nbInlineInsertLink=window.nbInlineInsertLink;
   if(typeof updateTagPermStatus==='function')updateTagPermStatus();
   if(typeof renderTags==='function')renderTags();
   if(typeof renderSecKws==='function')renderSecKws();
-  if(typeof renderComments==='function')renderComments();
+  if(typeof _normalizeInlineCommentMarkers==='function')_normalizeInlineCommentMarkers();
   try{
     var focusTarget=(new URLSearchParams(window.location.search)).get('focus')||window.location.hash.replace('#','');
-    if(focusTarget==='editorial-comments'){
-      var commentInput=document.getElementById('comment_inp');
-      var commentSection=document.getElementById('editorial-comments');
+    if(focusTarget==='inline-comments' || focusTarget==='editorial-comments'){
+      var commentSection=document.getElementById('inline-comments');
       if(commentSection)commentSection.scrollIntoView({behavior:'smooth',block:'center'});
-      if(commentInput)setTimeout(function(){commentInput.focus();},250);
+      if(typeof focusInlineComment==='function' && inlineCommentsState && inlineCommentsState.length){
+        setTimeout(function(){
+          focusInlineComment(inlineCommentsState[0].comment_id);
+        },250);
+      }
     }
   }catch(e){}
 })();

@@ -215,7 +215,6 @@ def merge_soft_split_paragraphs(content):
 
     return ''.join(output).strip()
 
-
 def _wrap_article_text_fragment(fragment):
     fragment = str(fragment or '').strip()
     if not fragment:

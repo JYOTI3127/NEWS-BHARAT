@@ -3609,6 +3609,7 @@ class ArticleAdmin(admin.ModelAdmin):
         publish_history = []
         version_preview = None
         reporter_assignment_rows = []
+        inline_comment_rows = []
         if object_id:
             article = self.get_queryset(request).filter(pk=object_id).first()
             if article:
@@ -3627,6 +3628,8 @@ class ArticleAdmin(admin.ModelAdmin):
                         'deadline': timezone.localtime(article.deadline).strftime('%Y-%m-%dT%H:%M') if article.deadline else '',
                         'assignment_message': '',
                     }]
+                from .views import _serialize_inline_comments
+                inline_comment_rows = _serialize_inline_comments(article)
                 version_preview_id = (request.GET.get('version_preview') or '').strip()
                 if version_preview_id.isdigit():
                     version_preview = (
@@ -3648,6 +3651,7 @@ class ArticleAdmin(admin.ModelAdmin):
         )
         extra_context['article_version_history_url'] = '/admin/newsapp/articleversion/'
         extra_context['reporter_assignment_rows'] = reporter_assignment_rows
+        extra_context['article_inline_comments'] = inline_comment_rows
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     class Media:

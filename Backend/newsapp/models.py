@@ -424,6 +424,38 @@ class ArticleWorkflowLog(models.Model):
         return f"{self.article.title}: {self.old_status} → {self.new_status}"
 
 
+class ArticleInlineComment(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='inline_comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='article_inline_comments')
+    comment_id = models.CharField(max_length=64)
+    quoted_text = models.TextField(blank=True, default='')
+    body = models.TextField()
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        unique_together = ('article', 'comment_id')
+
+    def __str__(self):
+        return f"{self.article.title} â€” comment {self.comment_id}"
+
+
+class ArticleInlineCommentReply(models.Model):
+    comment = models.ForeignKey(ArticleInlineComment, on_delete=models.CASCADE, related_name='replies')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='article_inline_comment_replies')
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f"Reply on {self.comment.comment_id}"
+
+
 class ArticleAssignment(models.Model):
     ROLE_TYPES = [
         ('reporter', 'Reporter'),
@@ -1313,6 +1345,7 @@ class Notification(models.Model):
     NOTIF_TYPES = (
         ("article","Article"),
         ("assign","Assignment"),
+        ("comment","Comment"),
         ("role","Role"),
         ("message","Message"),
         ("social","Social"),

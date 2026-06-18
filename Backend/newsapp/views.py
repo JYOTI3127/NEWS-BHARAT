@@ -92,6 +92,198 @@ def _parse_ist_datetime(raw_value):
     return parsed_value.astimezone(IST)
 
 
+def _parse_inline_comments_payload(raw_value):
+    if raw_value in (None, ''):
+        return []
+    try:
+        parsed = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+
+    normalized = []
+    for item in parsed[:200]:
+        if not isinstance(item, dict):
+            continue
+        comment_id = re.sub(r'[^A-Za-z0-9_-]', '', str(item.get('comment_id') or '').strip())[:64]
+        body = re.sub(r'\s+', ' ', str(item.get('body') or '').strip())
+        quoted_text = re.sub(r'\s+', ' ', str(item.get('quoted_text') or '').strip())
+        if not comment_id or not body:
+            continue
+        normalized.append({
+            'comment_id': comment_id,
+            'body': body,
+            'quoted_text': quoted_text[:500],
+            'is_resolved': bool(item.get('is_resolved')),
+            'replies': [
+                {
+                    'body': re.sub(r'\s+', ' ', str(reply.get('body') or '').strip())[:2000]
+                }
+                for reply in (item.get('replies') or [])
+                if isinstance(reply, dict) and str(reply.get('body') or '').strip()
+            ][:100],
+        })
+    return normalized
+
+
+def _sync_inline_comments(*, article, actor, comments_payload):
+    from newsapp.signals import _article_comments_admin_url
+
+    existing_by_id = {
+        item.comment_id: item
+        for item in article.inline_comments.select_related('author').all()
+    }
+    seen_comment_ids = []
+    created_comments = []
+    created_replies = []
+
+    for item in comments_payload:
+        comment_id = item['comment_id']
+        seen_comment_ids.append(comment_id)
+        existing = existing_by_id.get(comment_id)
+        if existing is None:
+            existing = ArticleInlineComment.objects.create(
+                article=article,
+                author=actor,
+                comment_id=comment_id,
+                quoted_text=item['quoted_text'],
+                body=item['body'],
+                is_resolved=item['is_resolved'],
+            )
+            created_comments.append(existing)
+
+        changed_fields = []
+        if existing.body != item['body']:
+            existing.body = item['body']
+            changed_fields.append('body')
+        if existing.quoted_text != item['quoted_text']:
+            existing.quoted_text = item['quoted_text']
+            changed_fields.append('quoted_text')
+        if existing.is_resolved != item['is_resolved']:
+            existing.is_resolved = item['is_resolved']
+            changed_fields.append('is_resolved')
+        if changed_fields:
+            existing.save(update_fields=changed_fields + ['updated_at'])
+
+        existing_replies = list(existing.replies.select_related('author').order_by('created_at', 'id'))
+        incoming_replies = item.get('replies') or []
+        while len(existing_replies) > len(incoming_replies):
+            existing_replies.pop().delete()
+        for index, reply_payload in enumerate(incoming_replies):
+            if index < len(existing_replies):
+                reply_obj = existing_replies[index]
+                if reply_obj.body != reply_payload['body']:
+                    reply_obj.body = reply_payload['body']
+                    reply_obj.save(update_fields=['body', 'updated_at'])
+            else:
+                created_replies.append(
+                    ArticleInlineCommentReply.objects.create(
+                        comment=existing,
+                        author=actor,
+                        body=reply_payload['body'],
+                    )
+                )
+
+    if seen_comment_ids:
+        article.inline_comments.exclude(comment_id__in=seen_comment_ids).delete()
+    else:
+        article.inline_comments.all().delete()
+
+    if not created_comments and not created_replies:
+        return
+
+    actor_name = actor.get_full_name() or actor.username
+    recipient_ids = {article.author_id}
+    if article.assigned_to_id:
+        recipient_ids.add(article.assigned_to_id)
+    recipient_ids.update(article.assignments.values_list('user_id', flat=True))
+    recipient_ids.update(User.objects.filter(is_active=True, is_superuser=True).values_list('id', flat=True))
+    recipient_ids.discard(actor.id)
+
+    if not recipient_ids:
+        return
+
+    action_url = _article_comments_admin_url(article.id)
+    preview_source = None
+    if created_comments:
+        preview_source = created_comments[0].quoted_text or created_comments[0].body
+    elif created_replies:
+        preview_source = created_replies[0].body
+    preview = preview_source or article.title
+    if len(preview) > 80:
+        preview = preview[:77].rstrip() + '...'
+    action_text = 'left a comment' if created_comments else 'replied to a comment'
+    message = f'{actor_name} {action_text} on "{article.title}".'
+    if preview:
+        message += f' Reference: "{preview}"'
+
+    for user in User.objects.filter(id__in=recipient_ids, is_active=True):
+        Notification.objects.create(
+            user=user,
+            notif_type='comment',
+            title='Comment On Article',
+            message=message,
+            action_url=action_url,
+            icon='CM',
+        )
+
+
+def _serialize_inline_comments(article):
+    return [
+        {
+            'comment_id': item.comment_id,
+            'body': item.body,
+            'quoted_text': item.quoted_text,
+            'is_resolved': item.is_resolved,
+            'author_name': item.author.get_full_name() or item.author.username,
+            'created_at': timezone.localtime(item.created_at).strftime('%d %b %Y, %I:%M %p'),
+            'replies': [
+                {
+                    'body': reply.body,
+                    'author_name': reply.author.get_full_name() or reply.author.username,
+                    'created_at': timezone.localtime(reply.created_at).strftime('%d %b %Y, %I:%M %p'),
+                }
+                for reply in item.replies.select_related('author').order_by('created_at', 'id')
+            ],
+        }
+        for item in article.inline_comments.select_related('author').prefetch_related('replies__author').order_by('created_at', 'id')
+    ]
+
+
+def _can_access_article_comments(user, article):
+    if not user.is_authenticated or not user.is_staff:
+        return False
+    if user.is_superuser or has_permission(user, 'edit_any_article'):
+        return True
+    if article.author_id == user.id or article.assigned_to_id == user.id:
+        return True
+    return article.assignments.filter(user_id=user.id).exists()
+
+
+@api_view(['GET', 'POST'])
+def article_inline_comments_api(request, pk):
+    article = get_object_or_404(Article, pk=pk)
+    if not _can_access_article_comments(request.user, article):
+        raise PermissionDenied('You do not have permission to comment on this article.')
+
+    if request.method == 'GET':
+        return Response({
+            'ok': True,
+            'comments': _serialize_inline_comments(article),
+        })
+
+    payload = _parse_inline_comments_payload(request.data.get('inline_comments_payload', []))
+    with transaction.atomic():
+        _sync_inline_comments(article=article, actor=request.user, comments_payload=payload)
+
+    article.refresh_from_db()
+    return Response({
+        'ok': True,
+        'comments': _serialize_inline_comments(article),
+    })
+
+
 def _normalize_video_room_name(room_name):
     cleaned = VIDEO_MEETING_ROOM_RE.sub('-', str(room_name or '').strip()).strip('-_')
     return cleaned[:80]
@@ -1667,6 +1859,10 @@ def _save_article_from_request(request, article=None):
     except (json.JSONDecodeError, TypeError):
         article.selected_subcategories = {}
 
+    inline_comments_payload = None
+    if _has_key('inline_comments_payload'):
+        inline_comments_payload = _parse_inline_comments_payload(_data_get('inline_comments_payload', '[]'))
+
     try:
         with transaction.atomic():
             article.primary_category_id = primary_category_id
@@ -1698,6 +1894,12 @@ def _save_article_from_request(request, article=None):
                 fallback_message=assignment_message,
                 fallback_deadline=fallback_deadline,
             )
+            if inline_comments_payload is not None:
+                _sync_inline_comments(
+                    article=article,
+                    actor=request.user,
+                    comments_payload=inline_comments_payload,
+                )
     except Exception as e:
         return None, {'error': _friendly_storage_error_message(e)}
 

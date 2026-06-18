@@ -26,6 +26,7 @@ from .attendance import clock_in_attendance
 from .attendance_reminders import process_attendance_reminders
 from .models import (
     Article,
+    ArticleInlineComment,
     ArticleAssignment,
     ArticleVersion,
     AttendanceRecord,
@@ -53,6 +54,12 @@ class ArticleStatusFlowTests(TestCase):
         self.user = User.objects.create_user(
             username='editor',
             password='testpass123',
+        )
+        self.super_admin = User.objects.create_user(
+            username='superadmin',
+            password='testpass123',
+            is_superuser=True,
+            is_staff=True,
         )
         self.client.force_authenticate(self.user)
 
@@ -118,6 +125,183 @@ class ArticleStatusFlowTests(TestCase):
         article = Article.objects.get(slug='json-working-draft')
         self.assertEqual(article.status, 'draft')
         self.assertEqual(article.content, 'Draft body from JSON')
+
+    def test_inline_comments_are_saved_and_notify_super_admins(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Commented story',
+            content='<p>Original line for comment.</p>',
+            status='draft',
+        )
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Commented story',
+                'subtitle': '',
+                'content': '<p><span class="article-inline-comment" data-comment-id="ic_demo_1">Original line for comment.</span></p>',
+                'status': 'draft',
+                'slug': article.slug,
+                'inline_comments_payload': json.dumps([
+                    {
+                        'comment_id': 'ic_demo_1',
+                        'body': 'Please tighten this sentence.',
+                        'quoted_text': 'Original line for comment.',
+                        'is_resolved': False,
+                    }
+                ]),
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        article.refresh_from_db()
+        comment = ArticleInlineComment.objects.get(article=article, comment_id='ic_demo_1')
+        self.assertEqual(comment.body, 'Please tighten this sentence.')
+        self.assertEqual(comment.quoted_text, 'Original line for comment.')
+        notification = Notification.objects.filter(
+            user=self.super_admin,
+            title='Comment On Article',
+        ).first()
+        self.assertIsNotNone(notification)
+        self.assertIn('left a comment', notification.message)
+        self.assertTrue(
+            str(notification.action_url or '').endswith(
+                f'/admin/newsapp/article/{article.pk}/change/?focus=inline-comments#inline-comments'
+            )
+        )
+
+    def test_inline_comment_reply_also_notifies_super_admins(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Reply story',
+            content='<p>Original line for comment.</p>',
+            status='draft',
+        )
+        ArticleInlineComment.objects.create(
+            article=article,
+            author=self.user,
+            comment_id='ic_reply_1',
+            quoted_text='Original line for comment.',
+            body='First comment',
+        )
+
+        response = self.client.put(
+            f'/api/articles/{article.pk}/',
+            {
+                'title': 'Reply story',
+                'subtitle': '',
+                'content': '<p><span class="article-inline-comment" data-comment-id="ic_reply_1">Original line for comment.</span></p>',
+                'status': 'draft',
+                'slug': article.slug,
+                'inline_comments_payload': json.dumps([
+                    {
+                        'comment_id': 'ic_reply_1',
+                        'body': 'First comment',
+                        'quoted_text': 'Original line for comment.',
+                        'is_resolved': False,
+                        'replies': [
+                            {'body': 'Please revise this sentence.'}
+                        ],
+                    }
+                ]),
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        notification = Notification.objects.filter(
+            user=self.super_admin,
+            title='Comment On Article',
+        ).first()
+        self.assertIsNotNone(notification)
+        self.assertIn('replied to a comment', notification.message)
+        self.assertEqual(
+            Notification.objects.filter(user=self.super_admin, title='Comment On Article').count(),
+            1,
+        )
+
+        second_response = self.client.post(
+            f'/api/articles/{article.pk}/inline-comments/',
+            {
+                'inline_comments_payload': [
+                    {
+                        'comment_id': 'ic_reply_1',
+                        'body': 'First comment',
+                        'quoted_text': 'Original line for comment.',
+                        'is_resolved': False,
+                        'replies': [
+                            {'body': 'Please revise this sentence.'},
+                            {'body': 'Second reply for popup check.'}
+                        ],
+                    }
+                ]
+            },
+            format='json',
+        )
+        self.assertEqual(second_response.status_code, 200, second_response.content)
+        self.assertEqual(
+            Notification.objects.filter(user=self.super_admin, title='Comment On Article').count(),
+            2,
+        )
+
+    def test_inline_comments_api_persists_comments_without_full_article_save(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Autosave story',
+            content='<p>Autosave target sentence.</p>',
+            status='draft',
+        )
+
+        response = self.client.post(
+            f'/api/articles/{article.pk}/inline-comments/',
+            {
+                'inline_comments_payload': [
+                    {
+                        'comment_id': 'ic_auto_1',
+                        'body': 'Keep this tighter.',
+                        'quoted_text': 'Autosave target sentence.',
+                        'is_resolved': False,
+                        'replies': [],
+                    }
+                ]
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(ArticleInlineComment.objects.filter(article=article, comment_id='ic_auto_1').exists())
+        payload = response.json()
+        self.assertTrue(payload.get('ok'))
+        self.assertEqual(payload['comments'][0]['body'], 'Keep this tighter.')
+
+    def test_inline_comments_api_get_returns_saved_threads(self):
+        article = Article.objects.create(
+            author=self.user,
+            title='Reload story',
+            content='<p>Reload target sentence.</p>',
+            status='draft',
+        )
+        comment = ArticleInlineComment.objects.create(
+            article=article,
+            author=self.user,
+            comment_id='ic_reload_1',
+            quoted_text='Reload target sentence.',
+            body='Saved comment',
+        )
+        comment.replies.create(author=self.user, body='Saved reply')
+
+        response = self.client.get(
+            f'/api/articles/{article.pk}/inline-comments/',
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertTrue(payload.get('ok'))
+        self.assertEqual(len(payload['comments']), 1)
+        self.assertEqual(payload['comments'][0]['body'], 'Saved comment')
+        self.assertEqual(payload['comments'][0]['replies'][0]['body'], 'Saved reply')
 
 
 class VideoConferencingFeatureTests(TestCase):
@@ -1048,7 +1232,7 @@ class ArticleWorkflowNotificationTests(TestCase):
         self.assertIn('Review me', mail.outbox[0].body)
         self.assertIn('A useful subtitle', mail.outbox[0].body)
         self.assertIn('First para for preview.', mail.outbox[0].body)
-        self.assertIn(f'/admin/newsapp/article/{article.pk}/change/?focus=editorial-comments#editorial-comments', mail.outbox[0].body)
+        self.assertIn(f'/admin/newsapp/article/{article.pk}/change/?focus=inline-comments#inline-comments', mail.outbox[0].body)
         self.assertIn(f'/api/articles/{article.pk}/review-action/approve/', mail.outbox[0].body)
         self.assertTrue(mail.outbox[0].alternatives)
         html_body = mail.outbox[0].alternatives[0][0]

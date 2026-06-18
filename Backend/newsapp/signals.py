@@ -38,7 +38,7 @@ def _article_review_action_url(article_id, action):
 
 
 def _article_comments_admin_url(article_id):
-    return f"{_article_admin_url(article_id)}?focus=editorial-comments#editorial-comments"
+    return f"{_article_admin_url(article_id)}?focus=inline-comments#inline-comments"
 
 
 def _article_preview_paragraphs(article, limit=3):

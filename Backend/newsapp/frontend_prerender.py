@@ -176,6 +176,46 @@ def _read_prerender_status(page):
     return str(getattr(settings, "FRONTEND_PRERENDER_SUCCESS_STATUS", "200") or "200").strip()
 
 
+def _google_analytics_snippet(ga_id):
+    ga_id = str(ga_id or "").strip()
+    if not ga_id:
+        return ""
+    return (
+        f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
+        "<script>\n"
+        "window.dataLayer = window.dataLayer || [];\n"
+        "function gtag(){dataLayer.push(arguments);}\n"
+        "gtag('js', new Date());\n"
+        f"gtag('config', '{ga_id}');\n"
+        "</script>"
+    )
+
+
+def _inject_google_analytics(html, ga_id):
+    ga_id = str(ga_id or "").strip()
+    if not ga_id:
+        return html
+
+    existing_src_pattern = re.compile(
+        rf'https://www\.googletagmanager\.com/gtag/js\?id={re.escape(ga_id)}',
+        re.IGNORECASE,
+    )
+    existing_config_pattern = re.compile(
+        rf"gtag\(\s*['\"]config['\"]\s*,\s*['\"]{re.escape(ga_id)}['\"]\s*\)",
+        re.IGNORECASE,
+    )
+    if existing_src_pattern.search(html) or existing_config_pattern.search(html):
+        return html
+
+    snippet = _google_analytics_snippet(ga_id)
+    head_close_pattern = re.compile(r"</head>", re.IGNORECASE)
+    if head_close_pattern.search(html):
+        return head_close_pattern.sub(snippet + "\n</head>", html, count=1)
+
+    _log(logging.WARNING, "GA4 injection skipped because </head> tag not found.")
+    return html
+
+
 def _render_once(slug):
     try:
         from playwright.sync_api import sync_playwright
@@ -210,21 +250,9 @@ def _render_once(slug):
 
                 html = page.content()
 
-                # GA tags inject karo closing </head> se pehle
                 ga_id = str(getattr(settings, "GOOGLE_ANALYTICS_ID", "") or "").strip()
                 if ga_id:
-                    ga_script = f"""<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
-                    <script>
-                    window.dataLayer = window.dataLayer || [];
-                    function gtag(){{dataLayer.push(arguments);}}
-                    gtag('js', new Date());
-                    gtag('config', '{ga_id}');
-                    </script>"""
-                    head_close_pattern = re.compile(r"</head>", re.IGNORECASE)
-                    if head_close_pattern.search(html):
-                        html = head_close_pattern.sub(ga_script + "</head>", html, count=1)
-                    else:
-                        _log(logging.WARNING, "GA4 injection skipped because </head> tag not found for slug=%s", slug)
+                    html = _inject_google_analytics(html, ga_id)
             elif status in non_retry_statuses:
                 raise NonRetryablePrerenderError(f"Frontend prerender reported terminal status {status} for slug '{slug}'.")
             else:

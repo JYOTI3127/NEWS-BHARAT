@@ -9,6 +9,7 @@ from newsapp.frontend_build import trigger_frontend_build
 from newsapp.frontend_prerender import (
     NonRetryablePrerenderError,
     RetryablePrerenderError,
+    _inject_google_analytics,
     _read_prerender_status,
     _output_file_path,
     run_prerender_pipeline,
@@ -170,3 +171,26 @@ def test_read_prerender_status_from_generic_selector():
             return FakeLocator()
 
     assert _read_prerender_status(FakePage()) == "200"
+
+
+def test_inject_google_analytics_adds_ga4_snippet_before_head_close():
+    html = "<html><head><title>Story</title></head><body>Hello</body></html>"
+
+    updated = _inject_google_analytics(html, "G-NR6G1PPS6N")
+
+    assert 'https://www.googletagmanager.com/gtag/js?id=G-NR6G1PPS6N' in updated
+    assert "gtag('config', 'G-NR6G1PPS6N');" in updated
+    assert updated.index("gtag('config', 'G-NR6G1PPS6N');") < updated.index("</head>")
+
+
+def test_inject_google_analytics_skips_duplicate_existing_snippet():
+    html = (
+        '<html><head>'
+        '<script async src="https://www.googletagmanager.com/gtag/js?id=G-NR6G1PPS6N"></script>'
+        "<script>gtag('config', 'G-NR6G1PPS6N');</script>"
+        '</head><body>Hello</body></html>'
+    )
+
+    updated = _inject_google_analytics(html, "G-NR6G1PPS6N")
+
+    assert updated == html

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import Client, TestCase
 from django.test.utils import override_settings
@@ -18,6 +19,7 @@ from urllib.parse import urlparse
 from .admin import (
     ArticleAdmin,
     ArticleAssignmentAdmin,
+    PermissionAdmin,
     _build_editorial_calendar_events,
     _sync_guest_profile_state_for_profile,
     admin_site,
@@ -30,8 +32,11 @@ from .models import (
     ArticleAssignment,
     ArticleVersion,
     AttendanceRecord,
+    CareerApplication,
     Category,
+    ContactQuery,
     HomepageSlot,
+    JobOpening,
     LeaveRequest,
     Notification,
     Permission,
@@ -302,6 +307,188 @@ class ArticleStatusFlowTests(TestCase):
         self.assertEqual(len(payload['comments']), 1)
         self.assertEqual(payload['comments'][0]['body'], 'Saved comment')
         self.assertEqual(payload['comments'][0]['replies'][0]['body'], 'Saved reply')
+
+
+class AdminSupportSurfaceTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.api_client = APIClient()
+        self.superuser = User.objects.create_superuser(
+            username='adminboss',
+            email='adminboss@example.com',
+            password='testpass123',
+        )
+        self.staff_user = User.objects.create_user(
+            username='deskeditor',
+            email='deskeditor@example.com',
+            password='testpass123',
+            is_staff=True,
+        )
+
+    def test_contact_query_create_saves_new_record(self):
+        response = self.api_client.post(
+            '/api/contact-queries/',
+            {
+                'full_name': 'Aditi Sharma',
+                'email': 'aditi@example.com',
+                'phone_number': '9999999999',
+                'subject': 'Need help with article correction',
+                'message': 'Please help me update the mistake in this article.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(ContactQuery.objects.count(), 1)
+        query = ContactQuery.objects.get()
+        self.assertEqual(query.status, 'new')
+        self.assertEqual(query.subject, 'Need help with article correction')
+        self.assertEqual(response.json()['id'], query.id)
+
+    def test_contact_query_create_rejects_too_short_message(self):
+        response = self.api_client.post(
+            '/api/contact-queries/',
+            {
+                'full_name': 'Aditi Sharma',
+                'email': 'aditi@example.com',
+                'phone_number': '9999999999',
+                'subject': 'Short message check',
+                'message': 'Too short',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(ContactQuery.objects.count(), 0)
+        self.assertIn('message', response.json()['error'])
+
+    def test_career_application_create_saves_resume_submission(self):
+        resume = SimpleUploadedFile(
+            'resume.pdf',
+            b'%PDF-1.4 test resume content',
+            content_type='application/pdf',
+        )
+
+        response = self.api_client.post(
+            '/api/career-applications/',
+            {
+                'full_name': 'Rohan Verma',
+                'email': 'rohan@example.com',
+                'phone_number': '8888888888',
+                'portfolio_url': 'https://example.com/portfolio',
+                'job_title': 'Senior Reporter',
+                'job_type': 'full_time',
+                'resume': resume,
+                'cover_note': 'I have newsroom and field reporting experience.',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(CareerApplication.objects.count(), 1)
+        application = CareerApplication.objects.get()
+        self.assertEqual(application.status, 'new')
+        self.assertTrue(application.resume.name.endswith('.pdf'))
+
+    def test_job_openings_list_returns_only_active_jobs_in_display_order(self):
+        JobOpening.objects.create(
+            title='Politics Reporter',
+            team='Editorial',
+            employment_type='full_time',
+            location='Delhi',
+            short_description='Cover the politics beat.',
+            skills='Reporting,Research',
+            apply_url='https://example.com/jobs/politics',
+            display_order=2,
+            is_active=True,
+        )
+        JobOpening.objects.create(
+            title='Video Producer',
+            team='Studio',
+            employment_type='full_time',
+            location='Remote',
+            short_description='Produce short-form video stories.',
+            skills='Editing,Scripting',
+            apply_url='https://example.com/jobs/video',
+            display_order=0,
+            is_active=True,
+        )
+        JobOpening.objects.create(
+            title='Archived Role',
+            team='Archive',
+            employment_type='part_time',
+            location='Noida',
+            short_description='Inactive role should stay hidden.',
+            skills='Ops',
+            apply_url='https://example.com/jobs/archive',
+            display_order=1,
+            is_active=False,
+        )
+
+        response = self.api_client.get('/api/jobs/')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload['count'], 2)
+        self.assertEqual(
+            [item['title'] for item in payload['results']],
+            ['Video Producer', 'Politics Reporter'],
+        )
+        self.assertEqual(payload['results'][0]['skills_list'], ['Editing', 'Scripting'])
+
+    def test_job_opening_admin_post_creates_new_vacancy(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.post(
+            '/admin/newsapp/jobopening/',
+            {
+                '_create_job_opening': '1',
+                'title': 'Copy Editor',
+                'team': 'Desk',
+                'employment_type': 'full_time',
+                'location': 'Noida',
+                'short_description': 'Polish long-form and breaking stories.',
+                'skills': 'Editing,Headlines',
+                'icon_key': 'briefcase',
+                'apply_url': 'https://example.com/jobs/copy-editor',
+                'display_order': '1',
+                'is_active': 'on',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(JobOpening.objects.filter(title='Copy Editor', team='Desk').exists())
+
+    def test_role_admin_changelist_includes_summary_context(self):
+        permission = Permission.objects.create(
+            code='manage_contacts',
+            description='Can manage contact queries',
+        )
+        role = Role.objects.create(name='Desk Manager')
+        role.permissions.add(permission)
+        self.staff_user.profile.roles.add(role)
+        self.client.force_login(self.superuser)
+
+        response = self.client.get('/admin/newsapp/role/?q=Desk')
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.context['permission_count'], 1)
+        self.assertEqual(response.context['user_count'], 1)
+        self.assertEqual(response.context['active_count'], 1)
+        self.assertEqual(response.context['current_query'], 'Desk')
+
+    def test_permission_admin_changelist_includes_context_counters(self):
+        Permission.objects.create(
+            code='manage_jobs',
+            description='Can manage job openings',
+        )
+        request = RequestFactory().get('/admin/newsapp/permission/')
+        request.user = self.superuser
+
+        response = PermissionAdmin(Permission, admin_site).changelist_view(request)
+
+        self.assertEqual(response.context_data['group_count'], 0)
+        self.assertEqual(response.context_data['user_count'], 0)
 
 
 class VideoConferencingFeatureTests(TestCase):

@@ -128,6 +128,238 @@
     grid-template-columns: 1fr;
   }
 }
+@media (max-width: 700px) {
+  .dash-mid-row,
+  .dash-bottom-row,
+  .dash-logs-row,
+  .quick-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-mid-row,
+  .dash-bottom-row,
+  .dash-logs-row,
+  .quick-access,
+  .hpc-card {
+    margin-top: 14px;
+  }
+
+  .dash-card--chart,
+  .dash-card--donut,
+  .dash-card--factcheck,
+  .dash-card--categories,
+  .dash-card--logs,
+  .dash-card--articles {
+    min-width: 0;
+  }
+
+  .chart-wrap {
+    min-height: 220px;
+    overflow: hidden;
+  }
+
+  .hpc-card {
+    border-radius: 20px;
+  }
+
+  .hpc-card-header,
+  .hpc-header-actions,
+  .hpc-tabs,
+  .hero-topbar,
+  .hero-summary,
+  .hero-mode-row,
+  .hero-layout,
+  .ln-topbar,
+  .ln-row,
+  .ln-mode-row,
+  .saved-banners-modal__head,
+  .saved-banners-modal__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hpc-card-header,
+  .hpc-panel {
+    padding: 14px;
+  }
+
+  .hpc-header-actions {
+    gap: 8px;
+  }
+
+  .hpc-secondary-btn,
+  .hpc-save-btn,
+  .hpc-tab,
+  .ln-mode-btn,
+  .hero-change-btn,
+  .saved-banners-modal__close {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hpc-tabs {
+    padding: 10px 14px 0;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hpc-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hpc-tab {
+    flex: 0 0 auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    margin-bottom: 0;
+    background: #fff;
+    white-space: nowrap;
+  }
+
+  .hero-summary-chip,
+  .ln-summary-chip {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .hero-main-slot,
+  .overlay-col,
+  .picker-wrap,
+  .ln-manual-list,
+  .saved-banners-modal,
+  .saved-banners-modal__body {
+    min-width: 0;
+  }
+
+  .overlay-col {
+    width: 100%;
+  }
+
+  .ad-size-card,
+  .saved-banner-library-card,
+  .quick-item-wrapper {
+    min-width: 0;
+  }
+
+  .saved-banners-modal {
+    width: min(100%, 100vw - 20px);
+    max-height: min(88vh, 760px);
+    border-radius: 20px;
+  }
+
+  .saved-banners-modal__body {
+    padding-right: 2px;
+  }
+
+  .donut-wrap {
+    transform: scale(0.94);
+    transform-origin: top center;
+  }
+
+  .donut-legend,
+  .factcheck-rows,
+  .top-reporters,
+  .log-list {
+    gap: 10px;
+  }
+
+  .reporter-row,
+  .log-row {
+    align-items: flex-start;
+  }
+
+  .log-row {
+    flex-direction: column;
+  }
+
+  .log-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  .dash-card--articles {
+    overflow: hidden;
+  }
+
+  .articles-table,
+  .articles-table tbody,
+  .articles-table tr,
+  .articles-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .articles-table thead {
+    display: none;
+  }
+
+  .articles-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .articles-table tbody tr {
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  .articles-table td {
+    border: 0;
+    padding: 0;
+    margin-top: 10px;
+  }
+
+  .articles-table td:first-child {
+    margin-top: 0;
+  }
+
+  .articles-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .articles-table td:first-child::before {
+    display: none;
+  }
+
+  .article-cell {
+    align-items: flex-start;
+  }
+
+  .article-meta {
+    min-width: 0;
+  }
+
+  .article-name {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .date-cell,
+  .status-badge {
+    font-size: 12px;
+  }
+
+  .dash-card--chart .chart-legend,
+  .dash-card--donut .donut-legend {
+    flex-wrap: wrap;
+  }
+
+  .quick-access {
+    padding-bottom: 6px;
+  }
+}
 </style>
 {% endblock %}
 
@@ -454,7 +686,7 @@
         {% if recent_articles %}
           {% for article in recent_articles %}
           <tr class="table-row-anim table-row-delay-{{ forloop.counter }}">
-            <td>
+            <td data-label="Title">
               <div class="article-cell">
                 <div class="article-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg></div>
                 <div class="article-meta">
@@ -464,10 +696,10 @@
               </div>
             </td>
             <td>{% if article.categories.all %}{% for cat in article.categories.all %}{{ cat.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}—{% endif %}</td>
-            <td>{{ article.author.get_full_name|default:article.author.username }}</td>
-            <td>{% if article.assigned_to %}{{ article.assigned_to.get_full_name|default:article.assigned_to.username }}{% else %}<span class="unassigned">Unassigned</span>{% endif %}</td>
-            <td class="date-cell">{{ article.created_at|date:"M d, Y" }}</td>
-            <td><span class="status-badge status-badge--{{ article.status }}">{{ article.get_status_display }}</span></td>
+            <td data-label="Author">{{ article.author.get_full_name|default:article.author.username }}</td>
+            <td data-label="Assigned To">{% if article.assigned_to %}{{ article.assigned_to.get_full_name|default:article.assigned_to.username }}{% else %}<span class="unassigned">Unassigned</span>{% endif %}</td>
+            <td data-label="Date" class="date-cell">{{ article.created_at|date:"M d, Y" }}</td>
+            <td data-label="Status"><span class="status-badge status-badge--{{ article.status }}">{{ article.get_status_display }}</span></td>
           </tr>
           {% endfor %}
         {% else %}

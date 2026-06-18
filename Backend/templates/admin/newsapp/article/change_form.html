@@ -6105,11 +6105,6 @@ function openInlineCommentComposer(){
     focusInlineComment(existingComment.comment_id||'');
     return;
   }
-  const fragment=selectionState.range.cloneContents();
-  if(fragment&&fragment.querySelector&&fragment.querySelector('p,div,ul,ol,li,table,blockquote,h1,h2,h3,h4,h5,h6')){
-    alert('Please select text from a single line or paragraph for one inline comment.');
-    return;
-  }
   inlineCommentDraftRange=selectionState.range.cloneRange();
   inlineCommentDraftQuote=selectedText;
   activeInlineCommentId='';

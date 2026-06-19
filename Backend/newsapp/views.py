@@ -54,7 +54,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.images import get_image_dimensions
-from django.core.files.storage import default_storage
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.db.models import Prefetch
 from zoneinfo import ZoneInfo
 from .seo_direct import article_path, article_url, clean_url_segment, normalized_canonical
@@ -725,6 +725,33 @@ def inline_image_upload(request):
         "name": stored_name,
         "content_type": 'image/webp',
     }, status=201)
+
+
+def _save_article_image_to_local_media(uploaded_file, article):
+    if hasattr(uploaded_file, 'seek'):
+        uploaded_file.seek(0)
+
+    try:
+        file_to_store = _compress_uploaded_image(
+            uploaded_file,
+            _unique_article_image_name(article, uploaded_file.name, '.webp'),
+            output_format='WEBP',
+            quality=84,
+            max_width=1200,
+        )
+    except Exception:
+        if hasattr(uploaded_file, 'seek'):
+            uploaded_file.seek(0)
+        original_ext = os.path.splitext(uploaded_file.name or '')[1] or '.img'
+        uploaded_file.name = _unique_article_image_name(article, uploaded_file.name, original_ext)
+        file_to_store = uploaded_file
+
+    local_media_storage = FileSystemStorage(
+        location=getattr(settings, 'MEDIA_ROOT', ''),
+        base_url=getattr(settings, 'MEDIA_URL', '/media/'),
+    )
+    stored_name = local_media_storage.save(file_to_store.name, file_to_store)
+    return local_media_storage.url(stored_name)
 
 
 def _load_crop_source_image(source_url, request):
@@ -1597,6 +1624,11 @@ def _save_article_from_request(request, article=None):
     def _friendly_storage_error_message(exc):
         raw = str(exc or '').strip()
         lowered = raw.lower()
+        if 'billing account' in lowered and 'closed' in lowered:
+            return (
+                'Google Cloud Storage billing is disabled for this project. '
+                'The article can still be saved by using the local media fallback.'
+            )
         if 'invalid_grant' in lowered or 'invalid jwt signature' in lowered:
             return (
                 'Image upload failed because the Google Cloud Storage credentials '
@@ -1609,6 +1641,19 @@ def _save_article_from_request(request, article=None):
                 'Google Cloud Storage. Please verify the configured GCS credentials.'
             )
         return raw
+
+    def _is_google_storage_failure(exc):
+        lowered = str(exc or '').strip().lower()
+        markers = (
+            'storage.googleapis.com',
+            'google cloud storage',
+            'googleapis',
+            'invalid_grant',
+            'invalid jwt signature',
+            'billing account',
+            'owning project is disabled',
+        )
+        return any(marker in lowered for marker in markers)
     is_new = article is None
     old_slug = '' if is_new else (article.slug or '')
     old_published_at = None if is_new else article.published_at
@@ -1825,8 +1870,11 @@ def _save_article_from_request(request, article=None):
         article.author_display_articles_count = 0
 
     # ── IMAGE UPLOAD + COMPRESS ──
+    uploaded_featured_image = None
+
     if 'image' in files and files['image']:
         uploaded_file = files['image']
+        uploaded_featured_image = uploaded_file
         try:
             original_name = _unique_article_image_name(article, uploaded_file.name, '.webp')
             article.image = _compress_uploaded_image(
@@ -1863,7 +1911,7 @@ def _save_article_from_request(request, article=None):
     if _has_key('inline_comments_payload'):
         inline_comments_payload = _parse_inline_comments_payload(_data_get('inline_comments_payload', '[]'))
 
-    try:
+    def _persist_article_record():
         with transaction.atomic():
             article.primary_category_id = primary_category_id
             article.save()
@@ -1900,8 +1948,21 @@ def _save_article_from_request(request, article=None):
                     actor=request.user,
                     comments_payload=inline_comments_payload,
                 )
+
+    try:
+        _persist_article_record()
     except Exception as e:
-        return None, {'error': _friendly_storage_error_message(e)}
+        if uploaded_featured_image is not None and _is_google_storage_failure(e):
+            try:
+                article.image = None
+                article.image_url = _save_article_image_to_local_media(uploaded_featured_image, article)
+                if not article.schema_image_url:
+                    article.schema_image_url = article.image_url
+                _persist_article_record()
+            except Exception as fallback_exc:
+                return None, {'error': _friendly_storage_error_message(fallback_exc)}
+        else:
+            return None, {'error': _friendly_storage_error_message(e)}
 
     # Cache invalidate
     _invalidate_article_caches(article, old_slug=old_slug)

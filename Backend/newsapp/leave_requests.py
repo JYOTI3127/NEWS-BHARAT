@@ -38,7 +38,6 @@ def read_leave_request_action_token(token, expected_action=None):
         raise signing.BadSignature("Leave action mismatch")
     return payload
 
-
 def execute_leave_request_action(token, action, reviewer=None):
     payload = read_leave_request_action_token(token, expected_action=action)
     leave_request = LeaveRequest.objects.select_related("user", "reviewed_by").get(
@@ -52,7 +51,6 @@ def execute_leave_request_action(token, action, reviewer=None):
         leave_request.reviewed_by = reviewer
     leave_request.save(update_fields=["status", "reviewed_at", "reviewed_by", "updated_at"])
     return leave_request
-
 
 def send_leave_request_submission_email(leave_request, request):
     User = get_user_model()
